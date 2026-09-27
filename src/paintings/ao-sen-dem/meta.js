@@ -38,6 +38,7 @@ export default {
         author: 'Nguyễn Du',
       },
     },
+    { id: 'vang-la', name: 'Vàng lá', files: ['paintings/ao-sen-dem/layers/l5-vang-la.js'] },
     phuBong,
   ],
   // Từ vựng riêng của bức: test luật cấm xưởng (engine/, ui/, lib/tsl/) nhắc tới.
