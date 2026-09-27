@@ -1,0 +1,13 @@
+/* styles/tokens.css — Bảng màu sơn mài dạng biến CSS; tests/unit/tokens-css.test.js giữ cho khớp engine/palette.js. */
+:root {
+  --den-then: #0E0A08;     /* đen then: nền sơn */
+  --canh-gian: #3B1F14;    /* nâu cánh gián */
+  --do-son: #B3261E;       /* đỏ son */
+  --vang-la: #D4A94A;      /* vàng lá */
+  --vang-la-sang: #F2D48A; /* vàng lá sáng */
+  --bac-la: #C9C6BD;       /* bạc lá */
+  --nga: #EDE3CF;          /* ngà vỏ trứng */
+  --cham: #1B2A4A;         /* chàm */
+  --xanh-luc: #2E4A3A;     /* xanh lục (màu lá) */
+  --dat-set: #8A8580;      /* đất sét: màu của cốt khi mài hết mọi lớp */
+}
