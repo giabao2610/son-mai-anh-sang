@@ -6,6 +6,7 @@ import { mergePalette } from '../../src/engine/palette.js';
 import { createWeights, createKnobs } from '../../src/engine/gpu/layers.js';
 import meta from '../../src/paintings/ao-sen-dem/meta.js';
 import * as cot from '../../src/paintings/ao-sen-dem/layers/l1-cot.js';
+import * as matNuoc from '../../src/paintings/ao-sen-dem/layers/l4-mat-nuoc.js';
 
 /** ctx giống run.js dựng (EngineCtx [0]) + knob() của chính lớp; renderer giả chỉ ghi lời gọi compute. */
 function makeCtx(module, { level = 'cao', budget = {} } = {}) {
@@ -77,6 +78,40 @@ describe('l1-cot (Cốt v0)', () => {
     expect(shared.cot.leafMaterial).toBe(leaves.material);
     expect(shared.cot.hemi.isHemisphereLight).toBe(true);
     expect(ctx.scene.children).toEqual(expect.arrayContaining([leaves, shared.cot.hemi]));
+    layer.dispose();
+    layer.dispose();
+    expect(ctx.scene.children).toHaveLength(0);
+  });
+});
+
+describe('l4-mat-nuoc (Mặt nước v0)', () => {
+  it('đĩa nước nằm ngang bán kính 60, MeshBasicNodeMaterial có colorNode và emissiveNode', () => {
+    const layer = matNuoc.createLayer(makeCtx(matNuoc), {});
+    const [water] = layer.objects;
+    expect(water.isMesh).toBe(true);
+    expect(water.material.isMeshBasicNodeMaterial).toBe(true);
+    expect(water.material.colorNode).toBeTruthy();
+    expect(water.material.emissiveNode).toBeTruthy();
+    water.geometry.computeBoundingSphere();
+    expect(water.geometry.boundingSphere.radius).toBeCloseTo(60, 5);
+    expect(water.geometry.getAttribute('normal').getY(0)).toBeCloseTo(1, 5);
+  });
+
+  it('target của reflector nằm TRONG scene và trục +Z của nó chỉ lên trời (gương nằm ngang)', () => {
+    const ctx = makeCtx(matNuoc);
+    matNuoc.createLayer(ctx, {});
+    const target = ctx.scene.children.find((o) => !o.isMesh);
+    expect(target?.parent).toBe(ctx.scene);
+    ctx.scene.updateMatrixWorld();
+    expect(new Vector3(0, 0, 1).transformDirection(target.matrixWorld).y).toBeCloseTo(1, 5);
+  });
+
+  it('knobs tĩnh distortion + fresnelPower; dispose gỡ nước và target (2 lần vẫn an toàn)', () => {
+    expect(matNuoc.id).toBe('mat-nuoc');
+    expect(matNuoc.knobs.map((k) => [k.id, k.value])).toEqual([['distortion', 0.02], ['fresnelPower', 5]]);
+    const ctx = makeCtx(matNuoc);
+    const layer = matNuoc.createLayer(ctx, {});
+    expect(ctx.scene.children).toHaveLength(2);
     layer.dispose();
     layer.dispose();
     expect(ctx.scene.children).toHaveLength(0);

@@ -28,6 +28,16 @@ export default {
   // THỨ TỰ PHỦ: lớp đầu luôn là Cốt; lớp cuối là Phủ bóng dùng chung của xưởng.
   layers: [
     { id: 'cot', name: 'Cốt', files: ['paintings/ao-sen-dem/layers/l1-cot.js'] },
+    {
+      id: 'mat-nuoc',
+      name: 'Mặt nước',
+      files: ['paintings/ao-sen-dem/layers/l4-mat-nuoc.js'],
+      poem: {
+        lines: ['Vầng trăng ai xẻ làm đôi', 'Nửa in gối chiếc, nửa soi dặm trường'],
+        source: 'Truyện Kiều',
+        author: 'Nguyễn Du',
+      },
+    },
     phuBong,
   ],
   // Từ vựng riêng của bức: test luật cấm xưởng (engine/, ui/, lib/tsl/) nhắc tới.
