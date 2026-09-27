@@ -30,6 +30,7 @@ export function buildOutputNode({ color, channel, layers, weight }) {
 /**
  * Dựng pipeline hậu kỳ của cảnh.
  * @param {{ renderer: any, scene: any, camera: any, layers: { id: string, layer: object }[], weight: (id: string) => any }} options
+ * @returns {{ scenePass: any, renderPipeline: any, render: () => void, compile: () => Promise<void>, views: () => { id: string, label: string, ready: boolean }[], dispose: () => void }}
  */
 export function createPipeline({ renderer, scene, camera, layers, weight }) {
   const scenePass = pass(scene, camera);
@@ -55,6 +56,10 @@ export function createPipeline({ renderer, scene, camera, layers, weight }) {
 
   return {
     scenePass,
+    // Lộ renderPipeline ra ngoài để test canh giữ outputColorTransform === false: nếu dòng đó
+    // bị xóa, RenderPipeline sẽ tự renderOutput() thêm một lần nữa bằng renderer.toneMapping/
+    // outputColorSpace lúc render() thật, tô màu tuyến tính → sRGB hai lần trên outputNode đã sRGB.
+    renderPipeline,
     render: () => renderPipeline.render(),
     // Biên dịch trước với ĐÚNG render target + MRT của pass. renderer.compileAsync(scene, camera)
     // thì biên dịch cho canvas, không có MRT, nên khung đầu vẫn phải biên dịch lại.

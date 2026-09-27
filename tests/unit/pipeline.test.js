@@ -102,4 +102,25 @@ describe('createPipeline (dựng đồ thị, không cần GPU)', () => {
     expect(typeof p.compile).toBe('function');
     expect(() => { p.dispose(); p.dispose(); }).not.toThrow();
   });
+
+  it('renderPipeline.outputColorTransform = false: renderOutput chỉ chạy một lần, trong outputNode do buildOutputNode dựng', () => {
+    const p = createPipeline({
+      renderer: fakeRenderer, scene: new Scene(), camera: new PerspectiveCamera(), layers: [], weight: () => uniform(1),
+    });
+
+    // Nếu dòng này bị mất: RenderPipeline._updateContext() sẽ tự bọc thêm MỘT renderOutput nữa
+    // quanh outputNode (đã sRGB) bằng renderer.toneMapping/outputColorSpace lúc render() thật,
+    // tô màu tuyến tính → sRGB hai lần. Test này canh trực tiếp cờ đó, không chỉ hình dạng đồ thị.
+    expect(p.renderPipeline.outputColorTransform).toBe(false);
+
+    const join = unwrap(p.renderPipeline.outputNode);
+    expect(join.nodeType).toBe('vec4');
+    expect(join.nodes[1].value).toBe(1);
+    const ro = join.nodes[0].node;
+    expect(ro.isRenderOutputNode).toBe(true);
+    expect(ro.colorNode).toBe(p.scenePass.getTextureNode('output'));
+    expect(ro.getToneMapping()).toBe(NoToneMapping);
+
+    p.dispose();
+  });
 });
