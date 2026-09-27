@@ -1,0 +1,247 @@
+/* styles/shell.css — vỏ trang dùng chung cho mọi bức: poster, tên, thơ, con dấu, huy hiệu, ghi chú tầng tĩnh */
+
+/* Màu lấy từ bảng sơn mài (tokens.css được unit test giữ khớp với engine/palette.js).
+   Font tự host: mỗi file <weight>.css chứa đủ các subset kèm unicode-range, nên trình duyệt
+   chỉ tải latin + latin-ext + vietnamese. KHÔNG import vietnamese-*.css lẻ: chúng thiếu unicode-range
+   và thiếu phần Latin cơ bản. */
+@import './tokens.css';
+@import '@fontsource/cormorant-garamond/500.css';
+@import '@fontsource/cormorant-garamond/500-italic.css';
+@import '@fontsource/be-vietnam-pro/400.css';
+@import '@fontsource/be-vietnam-pro/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+
+:root {
+  --gutter: 32px;
+  --serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --sans: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --veil: color-mix(in srgb, var(--den-then) 78%, transparent);
+  --veil-strong: color-mix(in srgb, var(--den-then) 92%, transparent);
+  --ink-shadow: 0 1px 2px var(--den-then), 0 0 18px color-mix(in srgb, var(--den-then) 85%, transparent);
+  color-scheme: dark;
+}
+
+@media (max-width: 640px) { :root { --gutter: 16px; } } /* điện thoại: lề 16px */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+/* Thuộc tính hidden phải luôn thắng. Nếu không, một luật "display: grid" bất kỳ sẽ làm phần tử hiện lại. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  overflow: hidden; /* trang là một bức tranh kín khung: không cuộn */
+  background: var(--den-then);
+  color: var(--nga);
+  font: 400 15px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--vang-la); color: var(--den-then); }
+
+/* ── Lớp 0: poster ─────────────────────────────────────────────────────────────────────── */
+/* Ảnh tĩnh phủ kín màn hình. object-fit: cover cắt bớt mép thay vì bóp méo ảnh;
+   object-position lệch phải để điện thoại dọc vẫn thấy trăng. */
+[data-poster] {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 62% 50%;
+}
+
+/* ── Lớp 1: sân khấu 3D ───────────────────────────────────────────────────────────────── */
+/* Canvas được gắn vào đây với opacity 0, nên xưởng vẽ được một khung ẩn sau poster.
+   ui/shell.js thêm data-visible → opacity chuyển 0 → 1: poster "hòa" sang cảnh 3D. */
+[data-stage] { position: fixed; inset: 0; }
+[data-stage] canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 900ms ease-out;
+}
+[data-stage] canvas[data-visible] { opacity: 1; }
+body[data-state='static'] [data-stage] { display: none; }
+
+/* ── Lớp 2: chữ ───────────────────────────────────────────────────────────────────────── */
+/* Lưới 3 hàng: đầu (tên + huy hiệu) · giữa (ghi chú tầng tĩnh) · chân (thơ + con dấu).
+   pointer-events: none để thao tác kéo/chạm rơi xuống canvas; chỗ bấm được thì bật lại. */
+.frame {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: var(--gutter);
+  pointer-events: none;
+  text-shadow: var(--ink-shadow);
+}
+
+/* Ghim từng khối vào hàng của nó: ô ghi chú bị ẩn (display: none) thì rời khỏi lưới, và nếu không ghim,
+   chân trang sẽ trượt lên hàng 1fr ở giữa rồi bị kéo giãn. */
+.top {
+  grid-row: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+header small {
+  display: block;
+  font: 600 12px/1.4 var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vang-la);
+}
+
+header h1 {
+  margin: 4px 0 0;
+  font: 500 clamp(34px, 2.4vw + 22px, 64px) / 1.05 var(--serif);
+  letter-spacing: 0.01em;
+}
+
+/* ── Huy hiệu tầng: chạm để đọc giải thích ──────────────────────────────────────────── */
+.badge-box { position: relative; flex-shrink: 0; }
+
+[data-badge] {
+  padding: 8px 14px;
+  font: 600 12px/1 var(--sans);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: var(--vang-la-sang);
+  background: var(--veil);
+  border: 1px solid color-mix(in srgb, var(--vang-la) 55%, transparent);
+  border-radius: 999px;
+  text-shadow: none;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+[data-badge]:hover { border-color: var(--vang-la); }
+[data-badge][data-backend='static'] { color: var(--bac-la); border-color: color-mix(in srgb, var(--bac-la) 45%, transparent); }
+
+[data-badge-note] {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(300px, calc(100vw - 2 * var(--gutter)));
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--veil-strong);
+  border: 1px solid color-mix(in srgb, var(--vang-la) 40%, transparent);
+  border-radius: 10px;
+  text-shadow: none;
+  pointer-events: auto;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* ── Ghi chú của tầng tĩnh (engine/static.js chọn chữ theo lý do) ───────────────────── */
+[data-static] {
+  grid-row: 2;
+  align-self: start;
+  justify-self: start;
+  max-width: 34rem;
+  max-height: 100%;
+  overflow: auto;
+  padding: 14px 18px;
+  background: var(--veil);
+  border: 1px solid color-mix(in srgb, var(--vang-la) 35%, transparent);
+  border-left: 3px solid var(--do-son);
+  border-radius: 10px;
+  text-shadow: none;
+  pointer-events: auto;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+[data-static] p { margin: 0; }
+[data-static] button {
+  margin-top: 12px;
+  padding: 9px 18px;
+  font: 600 14px/1 var(--sans);
+  color: var(--den-then);
+  background: var(--vang-la);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+[data-static] button:hover { background: var(--vang-la-sang); }
+[data-badge]:focus-visible, [data-static] button:focus-visible { outline: 2px solid var(--vang-la-sang); outline-offset: 3px; }
+
+[data-static] pre {
+  margin: 12px 0 0;
+  max-height: 40vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere; /* dòng stack dài không được đẩy trang tràn ngang */
+  font: 400 12px/1.5 var(--mono);
+  color: var(--bac-la);
+}
+
+/* ── Chân trang: thơ và con dấu ─────────────────────────────────────────────────────── */
+/* flex-wrap: màn hẹp không đủ chỗ thì con dấu xuống dòng dưới thơ, không đè lên chữ. */
+.foot {
+  grid-row: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  align-content: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+}
+
+.poem { min-width: 0; margin: 0; }
+[data-poem] { margin: 0; font: italic 500 clamp(18px, 0.8vw + 13px, 24px) / 1.4 var(--serif); }
+[data-poem] p { margin: 0; }
+.poem figcaption {
+  margin-top: 10px;
+  font: 600 11px/1.4 var(--sans);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--vang-la);
+}
+.poem figcaption::before { content: '— '; }
+.poem cite { font-style: normal; }
+
+/* Con dấu: ô son đỏ, chữ ngà. Viền kép vẽ bằng hai box-shadow inset chồng nhau: bóng son 4px nằm trên
+   che bớt bóng ngà 5px, nên chỉ còn một vòng ngà mảnh cách mép 4px. Nghiêng nhẹ như dấu đóng tay.
+   Khi JS chưa điền chữ thì ẩn, để không lộ một ô đỏ trống. */
+[data-seal] {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  aspect-ratio: 1;
+  margin-left: auto;
+  padding: 12px 10px;
+  font: 600 13px/1.3 var(--sans);
+  text-align: center;
+  text-wrap: balance;
+  color: var(--nga);
+  background: var(--do-son);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 4px var(--do-son),
+    inset 0 0 0 5px color-mix(in srgb, var(--nga) 75%, transparent),
+    0 2px 12px color-mix(in srgb, var(--den-then) 60%, transparent);
+  text-shadow: none;
+  transform: rotate(-4deg);
+}
+[data-seal]:empty { display: none; }
+
+/* Màn thấp (điện thoại xoay ngang): thu lề, khoảng cách và cỡ chữ để ghi chú dài vẫn đủ chỗ. */
+@media (max-height: 520px) {
+  :root { --gutter: 16px; }
+  .frame { gap: 8px; }
+  header h1 { font-size: 28px; }
+  [data-poem] { font-size: 15px; line-height: 1.3; }
+}
+
+/* Người xem xin giảm chuyển động: canvas hiện ngay, không hòa dần (shell.js cũng không chờ). */
+@media (prefers-reduced-motion: reduce) { [data-stage] canvas { transition: none; } }

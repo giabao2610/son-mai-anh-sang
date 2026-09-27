@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ao Sen Đêm · Sơn Mài Ánh Sáng</title>
+    <meta name="description" content="Một ao sen đêm, sơn từ sáu lớp ánh sáng." />
+    <meta name="theme-color" content="#0E0A08" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styles/shell.css" />
+  </head>
+  <body data-painting="ao-sen-dem" data-state="poster">
+    <img
+      class="poster"
+      data-poster
+      src="/paintings/ao-sen-dem/poster.svg"
+      width="1600"
+      height="1000"
+      alt="Tranh sơn mài ao sen đêm: trăng soi mặt nước đen, lá sen và những đốm vàng lá."
+      fetchpriority="high"
+    />
+    <div class="stage" data-stage></div>
+    <main class="frame">
+      <div class="top">
+        <header>
+          <small>Sơn Mài Ánh Sáng · Bức 1</small>
+          <h1>Ao Sen Đêm</h1>
+        </header>
+        <div class="badge-box">
+          <button data-badge hidden type="button" aria-expanded="false" aria-controls="badge-note"></button>
+          <p id="badge-note" data-badge-note hidden></p>
+        </div>
+      </div>
+      <section data-static hidden aria-live="polite"></section>
+      <footer class="foot">
+        <figure class="poem">
+          <blockquote data-poem>
+            <p>Trong đầm gì đẹp bằng sen</p>
+            <p>Lá xanh bông trắng lại chen nhị vàng</p>
+            <p>Nhị vàng bông trắng lá xanh</p>
+            <p>Gần bùn mà chẳng hôi tanh mùi bùn</p>
+          </blockquote>
+          <figcaption><cite>Ca dao</cite></figcaption>
+        </figure>
+        <span class="dau" data-seal></span>
+      </footer>
+    </main>
+    <script type="module">
+      import { boot } from '/src/engine/boot.js';
+      import entry from '/src/paintings/ao-sen-dem/index.js';
+      import t from '/src/ui/strings.vi.js';
+      boot(entry, { lang: 'vi', t });
+    </script>
+  </body>
+</html>
