@@ -27,7 +27,16 @@ export default {
   },
   // THỨ TỰ PHỦ: lớp đầu luôn là Cốt; lớp cuối là Phủ bóng dùng chung của xưởng.
   layers: [
-    { id: 'cot', name: 'Cốt', files: ['paintings/ao-sen-dem/layers/l1-cot.js'] },
+    {
+      id: 'cot',
+      name: 'Cốt',
+      files: [
+        'paintings/ao-sen-dem/layers/l1-cot.js',
+        'paintings/ao-sen-dem/parts/cot-leaf.js',
+        'paintings/ao-sen-dem/parts/cot-flower.js',
+        'paintings/ao-sen-dem/parts/cot-reeds.js',
+      ],
+    },
     {
       id: 'mat-nuoc',
       name: 'Mặt nước',

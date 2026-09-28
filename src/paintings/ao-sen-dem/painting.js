@@ -15,14 +15,17 @@ export { setup } from './shared.js';
 
 /**
  * Dữ liệu thuần; xưởng dựng PerspectiveCamera + OrbitControls có giới hạn từ đây.
- * Camera đứng ở z = 30, cao 7, nhìn về tâm ao: l1-cot chừa "lối trăng" hướng về đúng chỗ này.
+ * Camera đứng ở z = 32, cao 6, nhìn gần ngang về phía xa (−z): trăng thấp (4°–13°) nằm ở phần ba trên
+ * của khung, lối trăng chạy từ chân trời về tiền cảnh. l1-cot chừa "lối trăng" hướng về đúng chỗ này.
+ * breathe: camera "thở" nhẹ quanh điểm nhìn (xưởng tắt khi người xem xin giảm chuyển động).
  * @type {import('../../engine/contracts/runtime.js').CameraSpec}
  */
 export const camera = {
-  position: [0, 7, 30],
-  target: [0, 0, 0],
-  fov: 40,
+  position: [0, 6, 32],
+  target: [0, 2.2, -14],
+  fov: 42,
   azimuth: [-0.6, 0.6],
-  polar: [1.0, 1.45],
-  distance: [18, 45],
+  polar: [1.1, 1.52],
+  distance: [24, 60],
+  breathe: 0.4,
 };
