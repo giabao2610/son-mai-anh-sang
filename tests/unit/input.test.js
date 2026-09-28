@@ -1,5 +1,6 @@
 // tests/unit/input.test.js — con trỏ → hàng đợi cử chỉ có NDC + tia; ctx.u.pointer; camera đứng yên khi giữ tay.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { JSDOM } from 'jsdom';
 import { PerspectiveCamera, Vector2 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
 import { GESTURE } from '../../src/engine/gpu/gesture.js';
@@ -67,6 +68,38 @@ describe('createInput', () => {
     canvas.dispatchEvent(pointer('pointerup', 60, 50));
     expect(input.drain().map((g) => g.kind)).toEqual(['hold-start', 'hold-move', 'hold-end']);
     expect(controls.enabled).toBe(true);
+  });
+
+  it('mất pointerup giữa lúc giữ: lần chạm sau khép cái giữ cũ, camera chạy lại', () => {
+    canvas.dispatchEvent(pointer('pointerdown', 50, 50));
+    clock = GESTURE.holdMs;
+    vi.advanceTimersByTime(GESTURE.holdMs);
+    expect(controls.enabled).toBe(false);
+    clock = 2000;
+    canvas.dispatchEvent(pointer('pointerdown', 80, 80)); // pointerup trước đó không bao giờ tới
+    expect(controls.enabled).toBe(true);
+    canvas.dispatchEvent(pointer('pointerup', 80, 80));
+    expect(input.drain().map((g) => g.kind)).toEqual(['hold-start', 'hold-end', 'tap']);
+  });
+
+  it('ngón thứ hai giữa lúc giữ: camera (nghe TRƯỚC input.js) đã được thả khi thấy ngón đó', () => {
+    // OrbitControls gắn listener lúc dựng camera, trước input.js, và bỏ qua pointerdown khi enabled = false.
+    // input.js nghe ở pha capture nên chạy trước: thả camera kịp để OrbitControls nhận ngón thứ hai (chụm zoom).
+    // jsdom (như trình duyệt) gọi listener capture trước ở chính phần tử đích; EventTarget của Node thì không.
+    const { window } = new JSDOM('<canvas></canvas>');
+    const el = window.document.querySelector('canvas');
+    el.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 100 });
+    const seen = [];
+    el.addEventListener('pointerdown', (e) => seen.push([e.pointerId, controls.enabled]));
+    const late = createInput({ canvas: el, camera, controls, pointer: u, win });
+    const down = (id, x) => Object.assign(new window.Event('pointerdown'), { clientX: x, clientY: 50, pointerId: id, button: 0 });
+    el.dispatchEvent(down(1, 50));
+    clock = GESTURE.holdMs;
+    vi.advanceTimersByTime(GESTURE.holdMs);
+    expect(controls.enabled).toBe(false);
+    el.dispatchEvent(down(2, 150));
+    expect(seen).toEqual([[1, true], [2, true]]);
+    late.dispose();
   });
 
   it('onFirst: gọi đúng một lần ở lần chạm đầu tiên', () => {

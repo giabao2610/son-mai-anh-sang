@@ -64,6 +64,40 @@ describe('createGestureTracker', () => {
     expect(g.state).toBe('idle');
   });
 
+  it('mất pointerup giữa lúc giữ: chạm xuống lại → hold-end ở chỗ giữ cuối, rồi là cử chỉ mới', () => {
+    const g = createGestureTracker();
+    g.down(p(10, 10, 0));
+    g.poll(GESTURE.holdMs);
+    g.move(p(20, 30, 500));
+    // pointerup bị mất (thả chuột ngoài cửa sổ, trình duyệt nuốt sự kiện): lần chạm sau khép cái giữ cũ lại.
+    expect(g.down(p(80, 80, 2000))).toEqual([{ kind: 'hold-end', x: 20, y: 30 }]);
+    expect(g.state).toBe('pending');
+    expect(g.up(p(80, 80, 2100))).toEqual([{ kind: 'tap', x: 80, y: 80 }]);
+  });
+
+  it('mất pointerup, lần chạm sau có id mới nhưng là con trỏ chính → không kẹt ở "hai ngón"', () => {
+    const g = createGestureTracker();
+    g.down(p(10, 10, 0, 1));
+    g.poll(GESTURE.holdMs);
+    expect(g.down({ ...p(80, 80, 2000, 7), primary: true })).toEqual([{ kind: 'hold-end', x: 10, y: 10 }]);
+    expect(g.up(p(80, 80, 2100, 7))).toEqual([{ kind: 'tap', x: 80, y: 80 }]);
+    expect(g.state).toBe('idle');
+  });
+
+  it('hold-end ở chỗ ngón giữ đang đứng, dù kết thúc bằng ngón thứ hai hay cancel', () => {
+    const g = createGestureTracker();
+    g.down(p(10, 10, 0, 1));
+    g.poll(GESTURE.holdMs);
+    g.move(p(20, 20, 400, 1));
+    expect(g.down(p(300, 300, 500, 2))).toEqual([{ kind: 'hold-end', x: 20, y: 20 }]);
+
+    const h = createGestureTracker();
+    h.down(p(10, 10, 0));
+    h.poll(GESTURE.holdMs);
+    h.move(p(40, 15, 400));
+    expect(h.cancel()).toEqual([{ kind: 'hold-end', x: 40, y: 15 }]);
+  });
+
   it('ngưỡng tùy chỉnh được', () => {
     const g = createGestureTracker({ holdMs: 50 });
     g.down(p(0, 0, 0));

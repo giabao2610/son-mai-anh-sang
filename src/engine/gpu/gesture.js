@@ -12,6 +12,7 @@ export const GESTURE = Object.freeze({ tapPx: 8, holdMs: 350, swipePx: 40, swipe
  *                 └─poll (≥ holdMs, chưa lệch)→ 'hold-start' → hold ─move→ 'hold-move' ─up→ 'hold-end'
  * Ngón thứ hai chạm xuống (chụm hai ngón = zoom camera) thì hủy: đang giữ thì phát 'hold-end'.
  * 'drag' không phát ra ngoài: kéo là của camera (OrbitControls tự nghe).
+ * 'hold-end' luôn ở chỗ ngón giữ đứng lần cuối, dù cái giữ kết thúc bằng cách nào.
  *
  * @param {Partial<typeof GESTURE>} [options]
  */
@@ -19,31 +20,47 @@ export function createGestureTracker(options = {}) {
   const { tapPx, holdMs, swipePx, swipeMs } = { ...GESTURE, ...options };
   let state = 'idle';
   let start = null; // { id, x, y, t } lúc chạm xuống
+  let last = null; // vị trí mới nhất của ngón đó
   const pointers = new Set();
 
   const moved = (p) => Math.hypot(p.x - start.x, p.y - start.y);
   const at = (kind, p, extra = {}) => ({ kind, x: p.x, y: p.y, ...extra });
+
+  /** Bỏ cử chỉ dở dang; đang giữ thì phát 'hold-end'. */
+  function cancel() {
+    const out = state === 'hold' && start ? [at('hold-end', last ?? start)] : [];
+    pointers.clear();
+    start = null;
+    last = null;
+    state = 'idle';
+    return out;
+  }
 
   return {
     get state() {
       return state;
     },
 
-    /** @param {{ id: number, x: number, y: number, t: number }} p */
+    /** @param {{ id: number, x: number, y: number, t: number, primary?: boolean }} p  primary: PointerEvent.isPrimary */
     down(p) {
+      // Cùng một con trỏ chạm xuống lần nữa, hoặc trình duyệt báo đây là con trỏ chính (mọi ngón khác đã rời):
+      // pointerup trước đó đã bị mất. Khép cử chỉ cũ lại rồi bắt đầu như mới, để không kẹt ở "giữ" hay "hai ngón".
+      const out = pointers.has(p.id) || (p.primary === true && pointers.size > 0) ? cancel() : [];
       pointers.add(p.id);
       if (pointers.size > 1) {
-        const out = state === 'hold' ? [at('hold-end', p)] : [];
+        if (state === 'hold') out.push(at('hold-end', last ?? start));
         state = 'multi';
         return out;
       }
       state = 'pending';
       start = p;
-      return [];
+      last = p;
+      return out;
     },
 
     move(p) {
       if (!start || p.id !== start.id) return [];
+      last = p;
       if (state === 'pending' && moved(p) > tapPx) state = 'drag';
       if (state === 'hold') return [at('hold-move', p)];
       return [];
@@ -74,17 +91,12 @@ export function createGestureTracker(options = {}) {
         }
       }
       start = null;
+      last = null;
       state = pointers.size === 0 ? 'idle' : 'multi';
       return out;
     },
 
     /** Mất con trỏ (pointercancel, rời trang): bỏ cử chỉ dở dang; đang giữ thì phát 'hold-end'. */
-    cancel() {
-      const out = state === 'hold' && start ? [at('hold-end', start)] : [];
-      pointers.clear();
-      start = null;
-      state = 'idle';
-      return out;
-    },
+    cancel,
   };
 }

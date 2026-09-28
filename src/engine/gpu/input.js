@@ -39,7 +39,7 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
     }
   };
 
-  const point = (e) => ({ id: e.pointerId ?? 1, x: e.clientX, y: e.clientY, t: win.performance.now() });
+  const point = (e) => ({ id: e.pointerId ?? 1, x: e.clientX, y: e.clientY, t: win.performance.now(), primary: e.isPrimary });
   const clearHold = () => win.clearTimeout(holdTimer);
 
   const onDown = (e) => {
@@ -75,7 +75,9 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
     ['pointercancel', onCancel],
     ['contextmenu', onMenu],
   ];
-  for (const [type, fn] of listeners) canvas.addEventListener(type, fn);
+  // Pha capture: chạy TRƯỚC OrbitControls (gắn listener lúc dựng camera, trước input.js). Nhờ vậy khi ngón thứ hai
+  // chạm xuống giữa lúc giữ, camera đã được thả kịp để OrbitControls nhận ngón đó (chụm zoom), thay vì bỏ qua nó.
+  for (const [type, fn] of listeners) canvas.addEventListener(type, fn, { capture: true });
   // Rời trang giữa lúc giữ (chuyển tab, có cuộc gọi) thì không bao giờ có pointerup: coi như thả tay.
   win.addEventListener('blur', onCancel);
 
@@ -87,7 +89,7 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
     },
     dispose() {
       clearHold();
-      for (const [type, fn] of listeners) canvas.removeEventListener(type, fn);
+      for (const [type, fn] of listeners) canvas.removeEventListener(type, fn, { capture: true });
       win.removeEventListener('blur', onCancel);
       if (controls) controls.enabled = true;
       queue.length = 0;
