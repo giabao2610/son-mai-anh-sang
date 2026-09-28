@@ -59,6 +59,8 @@ const t = {
     debugHint: 'Thêm ?debug vào địa chỉ để xem chi tiết.',
     reload: 'Tải lại',
   },
+  /** Lời mời sau lần chạm đầu tiên; n = số lớp của bức. */
+  invite: (n) => `Bức tranh này có ${n} lớp — mài thử?`,
   formatSeal,
 };
 

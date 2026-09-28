@@ -70,7 +70,7 @@ for (const { meta, page, lang } of paintings) {
       expect([...svgColors(svg)].filter((h) => !allowed.has(h))).toEqual([]);
     });
 
-    it('có đủ các ô mà xưởng điền vào: stage, con dấu, huy hiệu (+ ghi chú), tầng tĩnh', () => {
+    it('có đủ các ô mà xưởng điền vào: stage, con dấu, huy hiệu (+ ghi chú), tầng tĩnh, gợi ý', () => {
       expect($('[data-stage]')).not.toBeNull();
       expect($('[data-seal]')).not.toBeNull();
       const badge = $('button[data-badge]');
@@ -78,6 +78,9 @@ for (const { meta, page, lang } of paintings) {
       expect(badge.hidden).toBe(true);
       expect($('[data-badge-note]')?.hidden).toBe(true);
       expect($('[data-badge-note]').getAttribute('aria-live')).toBe('polite');
+      const hint = $('[data-hint]');
+      expect(hint?.hidden).toBe(true);
+      expect(hint.getAttribute('aria-live')).toBe('polite');
       const note = $('section[data-static]');
       expect(note?.hidden).toBe(true);
       expect(note.getAttribute('aria-live')).toBe('polite');

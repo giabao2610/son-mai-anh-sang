@@ -116,6 +116,8 @@ describe('boot', () => {
           await shell.crossfade(doc.createElement('canvas'));
           shell.setState('live');
           shell.showBadge({ tier: 'webgl2', level: 'vua' });
+          shell.showHint('Chạm vào đây');
+          shell.invite();
           resolve(handle);
         };
       });
@@ -131,6 +133,7 @@ describe('boot', () => {
     expect(win.__sma.state).toBe('static');
     expect(page.poster.hidden).toBe(false);
     expect(page.badge.dataset.backend).toBe('static');
+    expect(page.hint.hidden).toBe(true); // gợi ý đến muộn cũng bị chặn
   });
 
   it('(f) onFail sau khi đã live → tầng tĩnh với đúng lý do đó', async () => {

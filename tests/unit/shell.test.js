@@ -5,7 +5,7 @@ import { mountShell } from '../../src/ui/shell.js';
 import t from '../../src/ui/strings.vi.js';
 import { mountPage } from '../helpers/page.js';
 
-const meta = { slug: 'thu', title: 'Tranh thử', layers: [{ id: 'cot' }] };
+const meta = { slug: 'thu', title: 'Tranh thử', layers: [{ id: 'cot' }, { id: 'phu-bong' }, { id: 'lop-ba' }] };
 const NOW = new Date('2026-09-28T21:00:00+07:00');
 
 let page;
@@ -160,5 +160,37 @@ describe('trăng SVG', () => {
   it('trang không có [data-moon] (bức không có trăng) thì bỏ qua, không lỗi', () => {
     page.moon.remove();
     expect(() => mountShell(document, meta, { now: NOW, t })).not.toThrow();
+  });
+});
+
+
+describe('gợi ý và lời mời', () => {
+  it('showHint hiện chữ của bức; invite đổi thành lời mời có số lớp', () => {
+    const shell = mountShell(document, meta, { now: NOW, t });
+    expect(page.hint.hidden).toBe(true);
+    shell.showHint('Chạm vào đây');
+    expect(page.hint.hidden).toBe(false);
+    expect(page.hint.textContent).toBe('Chạm vào đây');
+    shell.invite();
+    expect(page.hint.textContent).toBe(t.invite(3));
+    expect(page.hint.dataset.kind).toBe('invite');
+  });
+
+  it('về tầng tĩnh thì ẩn gợi ý; lời mời đến muộn cũng không hiện lại', () => {
+    const shell = mountShell(document, meta, { now: NOW, t });
+    shell.showHint('Chạm vào đây');
+    shell.setState('static');
+    expect(page.hint.hidden).toBe(true);
+    shell.invite();
+    expect(page.hint.hidden).toBe(true);
+  });
+
+  it('showHint không có chữ, hoặc trang không có [data-hint], thì bỏ qua', () => {
+    const shell = mountShell(document, meta, { now: NOW, t });
+    shell.showHint('');
+    expect(page.hint.hidden).toBe(true);
+    page.hint.remove();
+    expect(() => shell.showHint('x')).not.toThrow();
+    expect(() => shell.invite()).not.toThrow();
   });
 });

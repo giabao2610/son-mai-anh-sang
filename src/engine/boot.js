@@ -52,6 +52,8 @@ export async function boot(entry, { lang = 'vi', t, win = window, doc = document
     crossfade: (canvas) => (late ? Promise.resolve() : shell.crossfade(canvas)),
     showBadge: unlessLate(shell.showBadge),
     showNote: unlessLate(shell.showNote),
+    showHint: unlessLate(shell.showHint),
+    invite: unlessLate(shell.invite),
   };
 
   try {

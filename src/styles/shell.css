@@ -246,6 +246,21 @@ header h1 {
 /* Người xem xin giảm chuyển động: canvas hiện ngay, không hòa dần (shell.js cũng không chờ). */
 @media (prefers-reduced-motion: reduce) { [data-stage] canvas { transition: none; } }
 
+/* ── Gợi ý / lời mời: một dòng thơ nhỏ giữa khung, trên chân trang ─────────────────── */
+.hint {
+  grid-row: 2;
+  align-self: end;
+  justify-self: center;
+  margin: 0;
+  font: italic 500 clamp(16px, 0.6vw + 12px, 20px) / 1.4 var(--serif);
+  color: var(--vang-la-sang);
+  letter-spacing: 0.02em;
+  animation: hint-in 1.2s ease-out both;
+}
+.hint[data-kind='invite'] { color: var(--nga); }
+@keyframes hint-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .hint { animation: none; } }
+
 /* ── Trăng đêm nay (ui/moon-svg.js vẽ) cạnh con dấu ─────────────────────────────── */
 .marks { display: flex; align-items: flex-end; gap: 14px; margin-left: auto; }
 .marks [data-seal] { margin-left: 0; }

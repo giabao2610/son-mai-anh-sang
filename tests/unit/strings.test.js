@@ -100,6 +100,11 @@ describe('t: chữ của xưởng', () => {
     expect(t.static.reload).toBe('Tải lại');
   });
 
+  it('lời mời có số lớp', () => {
+    expect(t.invite(5)).toBe('Bức tranh này có 5 lớp — mài thử?');
+  });
+
+
   it('t.formatSeal chính là formatSeal', () => {
     expect(t.formatSeal).toBe(formatSeal);
   });
