@@ -26,6 +26,9 @@ export function formatSeal({ day, month, leap, can, chi }, { traditional = false
   if (!Number.isInteger(month) || month < 1 || month > 12) {
     throw new RangeError(`Tháng âm không hợp lệ: ${month}`);
   }
+  if (!Number.isInteger(can) || can < 0 || can > 9 || !Number.isInteger(chi) || chi < 0 || chi > 11) {
+    throw new RangeError(`Can chi không hợp lệ: can ${can}, chi ${chi}`);
+  }
   const name = traditional && month === 11 ? 'Một' : THANG[month];
   return `${day} tháng ${name}${leap ? ' nhuận' : ''} · ${CAN[can]} ${CHI[chi]}`;
 }
@@ -51,10 +54,13 @@ const t = {
       + 'bật “Use hardware acceleration when available” (có bản ghi là “Use graphics acceleration when available”) '
       + 'rồi mở lại trình duyệt.',
     chunkLoad: 'Trang vừa được cập nhật, tải lại nhé.',
+    timeout: 'Mạng chậm hoặc máy đang bận nên cảnh 3D chưa kịp dựng. Tải lại thử nhé.',
     error: 'Cảnh 3D gặp lỗi trên máy này.',
     debugHint: 'Thêm ?debug vào địa chỉ để xem chi tiết.',
     reload: 'Tải lại',
   },
+  /** Lời mời sau lần chạm đầu tiên; n = số lớp của bức. */
+  invite: (n) => `Bức tranh này có ${n} lớp — mài thử?`,
   formatSeal,
 };
 

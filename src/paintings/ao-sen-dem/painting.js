@@ -1,5 +1,6 @@
 // paintings/ao-sen-dem/painting.js — phần nặng của Bức 1: chồng lớp (cùng thứ tự với meta.layers) và camera.
 import * as cot from './layers/l1-cot.js';
+import * as anhTrang from './layers/l2-anh-trang.js';
 import * as matNuoc from './layers/l4-mat-nuoc.js';
 import * as vangLa from './layers/l5-vang-la.js';
 import * as phuBong from '../../engine/stock/phu-bong/layer.js';
@@ -8,18 +9,24 @@ import * as phuBong from '../../engine/stock/phu-bong/layer.js';
  * Mỗi lớp là một module { id, knobs, createLayer }; import namespace (`* as`) cho ra đúng object đó.
  * @type {import('../../engine/contracts/runtime.js').LayerModule[]}
  */
-export const layers = [cot, matNuoc, vangLa, phuBong];
+export const layers = [cot, anhTrang, matNuoc, vangLa, phuBong];
+
+/** setup() chạy TRƯỚC mọi createLayer: giờ, hướng trăng, gợn sóng, cử chỉ (shared.js). */
+export { setup } from './shared.js';
 
 /**
  * Dữ liệu thuần; xưởng dựng PerspectiveCamera + OrbitControls có giới hạn từ đây.
- * Camera đứng ở z = 30, cao 7, nhìn về tâm ao: l1-cot chừa "lối trăng" hướng về đúng chỗ này.
+ * Camera đứng ở z = 32, cao 6, nhìn gần ngang về phía xa (−z): trăng thấp (4°–13°) nằm ở phần ba trên
+ * của khung, lối trăng chạy từ chân trời về tiền cảnh. l1-cot chừa "lối trăng" hướng về đúng chỗ này.
+ * breathe: camera "thở" nhẹ quanh điểm nhìn (xưởng tắt khi người xem xin giảm chuyển động).
  * @type {import('../../engine/contracts/runtime.js').CameraSpec}
  */
 export const camera = {
-  position: [0, 7, 30],
-  target: [0, 0, 0],
-  fov: 40,
+  position: [0, 6, 32],
+  target: [0, 2.2, -14],
+  fov: 42,
   azimuth: [-0.6, 0.6],
-  polar: [1.0, 1.45],
-  distance: [18, 45],
+  polar: [1.1, 1.52],
+  distance: [24, 60],
+  breathe: 0.4,
 };

@@ -1,4 +1,5 @@
 // e2e/painting.spec.js — E2E chung cho MỌI bức trong registry: tầng tĩnh, và cảnh 3D trên WebGL2 / WebGPU.
+import { readdirSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { paintings } from '../src/paintings/registry.js';
 import { waitForSettled, waitForFrames, canvasStats, gpuReport, collectConsole, readSma } from './helpers.js';
@@ -11,6 +12,15 @@ function urlOf(page, ...parts) {
   const dir = page.replace(/index\.html$/, '');
   const query = parts.map((p) => p.replace(/^\?/, '')).filter(Boolean).join('&');
   return `./${dir}${query ? `?${query}` : ''}`;
+}
+
+/**
+ * Tên file chunk three trong bản build (dist/assets/three-<hash>.js). Đọc từ đĩa để kiểm "không tải three"
+ * không thể đúng rỗng: nếu đổi cách đặt tên chunk mà không ai để ý, test báo ngay thay vì lặng lẽ qua.
+ */
+function threeChunk() {
+  const files = readdirSync(new URL('../dist/assets/', import.meta.url));
+  return files.find((f) => /^three-[\w-]+\.js$/.test(f)) ?? null;
 }
 
 let log;
@@ -54,7 +64,9 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       await expect(page.locator('[data-seal]')).toBeVisible();
       await expect(page.locator('[data-seal]')).not.toBeEmpty();
       await expect(page.locator('canvas')).toHaveCount(0);
-      expect(requests.filter((url) => /\/three-[\w-]+\.js/.test(url))).toEqual([]);
+      const chunk = threeChunk();
+      expect(chunk, 'dist/assets không có three-*.js: kiểm này sẽ đúng rỗng').toBeTruthy();
+      expect(requests.filter((url) => url.endsWith(`/${chunk}`))).toEqual([]);
     });
 
     test('?static&at=… → con dấu đúng ngày âm', async ({ page }) => {
@@ -149,6 +161,19 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       await expect(page.locator('[data-stage] canvas')).toHaveCount(0);
       await expect(page.locator(posterImg)).toBeVisible();
     });
+
+    for (const [flag, name] of [['debug', 'inspector'], ['debug=stats', 'stats']]) {
+      test(`?${flag} → công cụ thợ "${name}" hiện, cảnh vẫn chạy, không lỗi console`, async ({ page }, testInfo) => {
+        const { query } = testInfo.project.metadata;
+        await page.goto(urlOf(htmlPage, query, flag, 'freeze=20'));
+        const settled = await waitForSettled(page);
+        expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+        await expect(page.locator(`[data-debug="${name}"]`)).toBeAttached();
+        const sma = await waitForFrames(page, 20);
+        expect(sma.state).toBe('live');
+        expect(log.errors).toEqual([]);
+      });
+    }
 
     // Review Focus #5 · giảm chuyển động: CSS bỏ transition nên không có transitionend để chờ, và crossfade
     // phải xong ngay. Chỉ kiểm "tới live" thì chưa đủ, vì lưới an toàn 1200 ms của shell cũng đưa tới live.

@@ -1,6 +1,8 @@
 // ui/shell.js — vỏ trang của mọi bức: con dấu âm lịch, data-state, hòa dần poster → canvas, huy hiệu, ghi chú tầng tĩnh
 import { lunarFromDate, canChiIndex } from '../lib/astro/lunar.js';
+import { moonPhase } from '../lib/astro/moon.js';
 import { renderBadge } from './badge.js';
+import { drawMoon } from './moon-svg.js';
 
 /** Transition CSS dài 900 ms. Lưới an toàn: quá 1200 ms mà chưa có transitionend thì coi như đã hòa xong. */
 const FADE_TIMEOUT_MS = 1200;
@@ -19,10 +21,13 @@ export function mountShell(doc, meta, { now, t, onState = () => {} }) {
   const badge = $('[data-badge]');
   const badgeNote = $('[data-badge-note]');
   const note = $('[data-static]');
+  const hint = $('[data-hint]'); // gợi ý / lời mời (trang nào không có ô này thì bỏ qua)
+  const moon = $('[data-moon]'); // trăng SVG đúng pha (bức nào không có trăng thì bỏ ô này đi)
 
   // Con dấu: ngày âm theo giờ Việt Nam; can chi lấy theo NĂM ÂM (trước Tết vẫn là năm cũ).
   const lunar = lunarFromDate(now);
   $('[data-seal]').textContent = t.formatSeal({ ...lunar, ...canChiIndex(lunar.year) });
+  if (moon) drawMoon(moon, moonPhase(now).phase);
 
   // title chỉ hiện khi rê chuột; điện thoại không có chuột, nên chạm vào huy hiệu thì mở/đóng ô giải thích.
   badge.addEventListener('click', () => {
@@ -34,7 +39,10 @@ export function mountShell(doc, meta, { now, t, onState = () => {} }) {
   /** Đổi body[data-state] (CSS và e2e đọc) rồi báo cho boot để __sma.state luôn khớp. */
   function setState(state) {
     doc.body.dataset.state = state;
-    if (state === 'static') poster.hidden = false; // tầng tĩnh luôn có poster, kể cả khi rơi xuống sau lúc đã live
+    if (state === 'static') {
+      poster.hidden = false; // tầng tĩnh luôn có poster, kể cả khi rơi xuống sau lúc đã live
+      if (hint) hint.hidden = true; // "chạm vào…" vô nghĩa khi không còn cảnh 3D
+    }
     onState(state);
   }
 
@@ -101,5 +109,21 @@ export function mountShell(doc, meta, { now, t, onState = () => {} }) {
     note.hidden = parts.length === 0;
   }
 
-  return { stageEl, setState, crossfade, showBadge, showNote };
+  /** Gợi ý của bức (content.hint), hiện khi cảnh đã live. */
+  function showHint(text) {
+    if (!hint || !text) return;
+    hint.textContent = text;
+    hint.dataset.kind = 'hint';
+    hint.hidden = false;
+  }
+
+  /** Sau lần chạm đầu tiên: lời mời mài lớp, n = số lớp của bức (meta.layers.length). */
+  function invite() {
+    if (!hint || doc.body.dataset.state === 'static') return;
+    hint.textContent = t.invite(meta.layers.length);
+    hint.dataset.kind = 'invite';
+    hint.hidden = false;
+  }
+
+  return { stageEl, setState, crossfade, showBadge, showNote, showHint, invite };
 }

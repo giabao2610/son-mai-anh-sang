@@ -58,6 +58,15 @@ describe('boot', () => {
     expect(page.note.hidden).toBe(true);
   });
 
+  it('(b2) đọc window ném lỗi (trình duyệt lạ, extension chặn) → vẫn về tầng tĩnh, không ném ra ngoài', async () => {
+    const win = fakeWin();
+    Object.defineProperty(win, 'navigator', { get() { throw new Error('bị chặn'); } });
+    const loadRun = vi.fn();
+    await boot(entry, { t, win, doc, loadRun });
+    expect(loadRun).not.toHaveBeenCalled();
+    expect(win.__sma).toMatchObject({ state: 'static', tier: 'static', reason: 'no-gpu' });
+  });
+
   it('(b) không có GPU → tầng tĩnh lý do "no-gpu" kèm hướng dẫn', async () => {
     const win = fakeWin();
     const loadRun = vi.fn();
@@ -107,6 +116,8 @@ describe('boot', () => {
           await shell.crossfade(doc.createElement('canvas'));
           shell.setState('live');
           shell.showBadge({ tier: 'webgl2', level: 'vua' });
+          shell.showHint('Chạm vào đây');
+          shell.invite();
           resolve(handle);
         };
       });
@@ -122,6 +133,7 @@ describe('boot', () => {
     expect(win.__sma.state).toBe('static');
     expect(page.poster.hidden).toBe(false);
     expect(page.badge.dataset.backend).toBe('static');
+    expect(page.hint.hidden).toBe(true); // gợi ý đến muộn cũng bị chặn
   });
 
   it('(f) onFail sau khi đã live → tầng tĩnh với đúng lý do đó', async () => {

@@ -237,6 +237,7 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
   - **Hoa:** khoảng 12 bông và 20 nụ, dựng từ **một cánh hoa được instance**. Mỗi bông 3 vòng cánh, có tham số độ nở, có gương sen, nhị vàng và cuống.
   - Khoảng 300 ngọn lau sậy ở rìa ao.
   - Lá được rải theo hạt giống cố định (jittered Poisson, `lib/random.js`), chừa một **"lối trăng"** trống để thấy bóng trăng phản chiếu.
+  - (GĐ 1) Hai bông "chủ đề" đặt tay ở tiền cảnh, hai bên lối trăng (bố cục của poster); mỗi việc ngẫu nhiên (lá, lá đứng, hoa, lau) một hạt giống riêng, nên hoa và lau không đổi theo mức.
 - **Đèn xưởng:** một `HemisphereLight` xám trung tính, để đất sét đọc được hình khối khi mọi lớp khác bằng 0. Cốt công bố đèn này qua `shared.cot.hemi`, và lớp Ánh trăng giảm nó theo `w2`. Cường độ đèn là uniform, nên không gây biên dịch lại.
 - **Kỹ thuật:**
   - `BufferGeometry` tự sinh; `InstancedMesh`, cảnh chính của cả ao chỉ khoảng 5 draw call.
@@ -296,6 +297,9 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
     - **Một hàm TSL `rippleHeight(xz)` dùng chung**, nằm trong `shared.js` của bức, cho normal của nước lẫn độ nhấp nhô của lá.
     - Lá đọc attribute tâm instance của lớp 1. Trong r186, `positionNode` chạy **sau** instancing.
   - `emissiveNode` của nước lấy phần sáng vượt ngưỡng trong ảnh phản chiếu, nên bóng đom đóm và bóng trăng trên nước cũng bloom nhẹ. Đây là cách duy nhất, vì ảnh phản chiếu không có kênh emissive.
+  - (GĐ 1) Nước là `MeshStandardNodeMaterial` (có chiếu sáng, nên trọng số 0 là đất sét như mọi hình khác). Ảnh phản chiếu cộng
+    vào qua `emissiveNode`; `mrtNode` ghi kênh `emissive` riêng (chỉ phần vượt ngưỡng). Độ nhám rất thấp trên pháp tuyến gợn làm
+    specular của ánh trăng (lớp 2) thành lối trăng lấp lánh, tự tắt khi lớp Ánh trăng tắt.
 - **Mức thấp:** "phản chiếu giả" bằng màu trời cộng vệt trăng tính theo công thức, không render cảnh lần thứ hai.
 - **Núm:** `amplitude`, `speed`, `decay`, `wavelength`, `distortion`, `fresnelPower` (uniform), `reflectionResolution` (js, 0.1–1).
 - **Phá:** *"Độ phân giải 0.1"* (phản chiếu vỡ hạt), *"Tắt fresnel"*, *"Xem heightfield"*.
@@ -445,6 +449,8 @@ son-mai-anh-sang/
         layers.js                    [0→2] trọng số, uniform núm từ khai báo tĩnh (tên hợp lệ); GĐ 2: tween, onKnob, snapshot
         input.js                     [1] pointer → cử chỉ + tia; công cụ trước, bức sau; 'drag' cho camera
         debug.js                     [1] ?debug → Inspector; ?debug=stats → stats-gl (import động)
+        gesture.js                   [1] phân loại cử chỉ (hàm thuần): tap / hold-* / swipe; kéo là của camera
+        breath.js                    [1] camera "thở": breathAmplitude, breathOffset (hàm thuần)
       stock/phu-bong/                LỚP DÙNG CHUNG "Phủ bóng"
         meta.js                      [0] { id: 'phu-bong', name: 'Phủ bóng', files } (dữ liệu thuần)
         layer.js                     [0→4] build: bloom chọn lọc + tone; GĐ 4: display (LUT, grain, vignette, FXAA) + tap
@@ -457,7 +463,7 @@ son-mai-anh-sang/
       random.js                      [0] PRNG có hạt giống (mulberry32)
       astro/lunar.js                 [0] âm lịch Hồ Ngọc Đức (tz tham số, mặc định +7); canChiIndex
       astro/moon.js                  [0] tuổi trăng, độ sáng, tonight(), hourOfNight(), sunDirection()
-      tsl/noise.js                   [1] Fn noise / fbm / curl
+      tsl/noise.js                   [1] fbm; [3] thêm curl
     ui/                              DOM thuần: không three, không import engine/; nhận t qua tham số
       strings.vi.js                  [0] export default t: chữ của xưởng, bảng tên tháng/can/chi, formatSeal()
       shell.js                       [0] poster ↔ canvas, data-state, con dấu, hòa dần; [1]: gợi ý, lời mời "{n} lớp"
@@ -482,7 +488,8 @@ son-mai-anh-sang/
         layers/l3-suong.js           [3]
         layers/l4-mat-nuoc.js        [0→1] GĐ 0: đĩa nước + reflector thô
         layers/l5-vang-la.js         [0→3] GĐ 0: sprite compute thô
-        parts/                       [khi cần] helper của bức khi một file lớp vượt 250 dòng
+        parts/cot-{leaf,flower,reeds}.js       [1] của lớp Cốt (lá, hoa nở bằng uniform, cuống + lau)
+        parts/anh-trang-{moon,paint}.js        [1] của lớp Ánh trăng (trăng, chất liệu)
         diagrams/*.svg               [2]
   tests/
     unit/                            [0] flags tier quality palette tokens-css random lunar moon strings deadline disposer layers source
@@ -851,6 +858,7 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
   - `'flag'`: không thêm gì.
   - `'no-gpu'`: hướng dẫn kiểm tra `chrome://gpu` và bật "Use hardware acceleration when available".
   - `'chunk-load'`: "Trang vừa được cập nhật, tải lại nhé", kèm nút tải lại.
+  - `'timeout'` (GĐ 1): "Mạng chậm hoặc máy đang bận nên cảnh 3D chưa kịp dựng. Tải lại thử nhé.", kèm nút tải lại. Không gợi ý `?debug`, vì quá hạn thường không phải lỗi.
   - Các lý do khác: "Cảnh 3D gặp lỗi trên máy này", kèm gợi ý `?debug`.
 - Có `?debug` thì in thêm `error.message`.
 
@@ -1267,3 +1275,16 @@ Các mục dưới đây đã được kiểm bằng ba cách:
 18. **Vite 8:**
     - `parseSync(file, code)` trả `{ program, comments, module }` với vị trí chú thích đúng, kể cả khi có chữ tiếng Việt đứng trước.
     - Script module inline trong HTML, `rolldownOptions.input` nhiều trang và `codeSplitting.groups` đều build được. Entry không preload three. `vite:preloadError` có phát ra.
+19. **`mrtNode` của material** (kiểm ở GĐ 1): ghép đè MRT của pass cho riêng material đó. Khi material bị vẽ vào render target
+    không có MRT (ảnh của reflector), three dùng MỘT MÌNH `mrtNode` làm đầu ra: WGSL báo "structures must have at least one
+    member", WebGL2 báo "Active draw buffers with missing fragment shader outputs". Chỉ dùng cho material không bao giờ lọt vào
+    target như thế (mặt nước: reflector tự ẩn nó).
+20. **`normalLocal` trong `positionNode`** (kiểm ở GĐ 1): `positionNode` chạy sau instancing; gán `normalLocal.assign(…)` bên
+    trong nó có hiệu lực cho ánh sáng trên cả WebGPU lẫn WebGL2 (cánh xoay 90° sáng đúng như khi bật flatShading). Shadow
+    map cũng dùng `positionNode` của material.
+21. **Đo thời gian GPU của công cụ thợ** (kiểm ở GĐ 1, đọc mã nguồn): stats-gl 4.2.3 và `Inspector` của r186 tự bật
+    `renderer.backend.trackTimestamp = true` mà không hỏi máy; `WebGPUBackend` chỉ tự kiểm `timestamp-query` lúc `init`. Máy không
+    có tính năng này thì WebGPU báo lỗi validation mỗi khung. `engine/gpu/debug.js` tắt lại cờ sau khi gắn công cụ.
+22. **OrbitControls và cử chỉ của bức** (kiểm ở GĐ 1): `onPointerDown` của OrbitControls bỏ qua sự kiện khi `enabled === false`.
+    `input.js` nghe ở pha capture (chạy trước listener của OrbitControls trên cùng canvas) để thả camera kịp khi ngón thứ hai chạm
+    xuống giữa lúc giữ. Dời `controls.target` rồi `update()` thì camera giữ nguyên vị trí, chỉ quay theo điểm nhìn.

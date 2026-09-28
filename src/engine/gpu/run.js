@@ -7,19 +7,43 @@ import { createDisposer } from './disposer.js';
 import { createWeights, buildLayers, ensureEmissive } from './layers.js';
 import { createPipeline } from './pipeline.js';
 import { createFailCounter, createBurstCounter } from './guards.js';
+import { createInput } from './input.js';
+import { mountDebug } from './debug.js';
+
+/** content.<lang>.js của bức, hoặc null nếu bức không có hay tải hỏng (3D không phụ thuộc chữ). */
+function loadContent(entry, lang) {
+  const load = entry.content?.[lang];
+  if (!load) return Promise.resolve(null);
+  return load().then((m) => m.default, (err) => {
+    console.warn(`Không tải được chữ của bức (${lang}):`, err);
+    return null;
+  });
+}
+
+/** Công cụ ?debug (engine/gpu/debug.js), đăng ký vào disposer; tải hỏng thì null (chế độ thợ không được làm hỏng cảnh). */
+async function loadDebug(mode, renderer, disposer) {
+  try {
+    const tool = await mountDebug(mode, renderer);
+    if (tool) disposer.add(() => tool.dispose());
+    return tool;
+  } catch (err) {
+    console.warn('Không mở được công cụ ?debug:', err);
+    return null;
+  }
+}
 
 /**
  * Chạy một bức ở tầng A/B (spec §8.5). boot.js gọi hàm này qua import() động, trong hạn 10 giây.
  * Resolve { dispose } khi cảnh đã "live". Ném lỗi (sau khi tự gỡ sạch) nếu hỏng TRƯỚC khi live;
  * hỏng SAU khi live thì gọi onFail(reason, error) đúng một lần.
  * @param {import('../contracts/painting.js').PaintingEntry} entry
- * @param {object} shell   vỏ trang (ui/shell.js): setState, stageEl, crossfade, showBadge
+ * @param {object} shell   vỏ trang (ui/shell.js): setState, stageEl, crossfade, showBadge, showHint, invite
  * @param {object} opts
  * @param {'webgpu'|'webgl2'} opts.tier   tầng boot dò được (backend thật có thể khác: xem stage.backend)
  * @param {object} opts.flags             kết quả readFlags()
  * @param {Date} opts.now                 flags.at ?? giờ thật, cố định lúc khởi động
  * @param {string} opts.lang              ngôn ngữ trang (GĐ 1 dùng để tải content)
- * @param {object} opts.t                 chữ giao diện (GĐ 1+ dùng cho gợi ý, Sổ tay)
+ * @param {object} opts.t                 chữ giao diện (Sổ tay GĐ 2 dùng; gợi ý của bức nằm trong content)
  * @param {object} opts.sma               window.__sma (engine/sma.js)
  * @param {(reason: string, error?: unknown) => void} opts.onFail   về tầng tĩnh
  * @param {Window} [opts.win]
@@ -51,12 +75,14 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
   try {
     // Song song: tải module nặng của bức và dựng renderer. Sân khấu vào disposer NGAY khi dựng xong,
     // nên dù load() hỏng trước, renderer vẫn được gỡ (add() sau closeAll() chạy fn ngay).
-    const [painting, stage] = await Promise.all([
+    // Chữ của bức (gợi ý…) tải cùng lúc; hỏng thì cảnh 3D vẫn chạy, chỉ thiếu chữ (bảng lỗi §9).
+    const [painting, stage, content] = await Promise.all([
       entry.load(),
       createStage({ tier, flags, parent: shell.stageEl, clearColor: hex.denThen, reducedMotion, win }).then((s) => {
         disposer.add(() => s.dispose());
         return s;
       }),
+      loadContent(entry, lang),
     ]);
     if (stopped()) return quit();
 
@@ -115,20 +141,34 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     });
     disposer.add(() => pipeline.dispose());
 
+    // Con trỏ → cử chỉ (hàng đợi, xử lý đầu mỗi khung). Kéo là của camera; công cụ học (GĐ 4) nhận trước bức.
+    const input = createInput({
+      canvas: stage.renderer.domElement,
+      camera: stage.camera,
+      controls: stage.controls,
+      pointer: stage.u.pointer,
+      win,
+    });
+    disposer.add(() => input.dispose());
+
     // Biên dịch trước bằng scenePass.compileAsync (có MRT + render target của pass), trong lúc poster còn hiện.
+    // ?debug / ?debug=stats tải song song; hỏng thì chỉ cảnh báo, cảnh vẫn chạy.
     shell.setState('compiling');
-    await pipeline.compile();
+    const [, debugTool] = await Promise.all([pipeline.compile(), loadDebug(flags.debug, stage.renderer, disposer)]);
     if (stopped()) return quit();
 
     const limit = typeof flags.freeze === 'number' ? flags.freeze : Infinity;
     let frames = 0;
-    // Một khung: đồng hồ → setup.update → layer.update theo thứ tự → camera → render → đếm khung.
+    // Một khung: đồng hồ → cử chỉ → setup.update → layer.update theo thứ tự → camera → render → đếm khung.
     const step = (ms) => {
       const { t: time, dt } = stage.tick(ms);
+      for (const g of input.drain()) setup?.onGesture?.(g);
       setup?.update?.(dt, time);
       for (const { layer } of layers) layer.update?.(dt, time);
+      stage.breathe(time);
       stage.controls?.update();
       pipeline.render();
+      debugTool?.update();
       frames += 1;
       sma.frame();
     };
@@ -141,6 +181,9 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     if (stopped()) return quit();
     shell.setState('live');
     shell.showBadge({ tier: stage.backend, level });
+    // Gợi ý của bức ("Chạm vào mặt nước"); lần chạm đầu tiên đổi thành lời mời mài lớp.
+    if (content?.hint) shell.showHint(content.hint);
+    input.onFirst(() => shell.invite());
 
     const frameErrors = createFailCounter({ limit: 3 });
     const loop = (ms) => {

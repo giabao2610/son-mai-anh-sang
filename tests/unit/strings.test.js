@@ -68,6 +68,12 @@ describe('formatSeal: chữ trên con dấu', () => {
     expect(() => formatSeal({ day: 1, month: 0, leap: false, can: 0, chi: 0 })).toThrow(RangeError);
     expect(() => formatSeal({ day: 1, month: 13, leap: false, can: 0, chi: 0 })).toThrow(RangeError);
   });
+
+  it('can ngoài 0..9 hoặc chi ngoài 0..11 cũng ném RangeError (không in "undefined" lên con dấu)', () => {
+    expect(() => formatSeal({ day: 1, month: 1, leap: false, can: 10, chi: 0 })).toThrow(RangeError);
+    expect(() => formatSeal({ day: 1, month: 1, leap: false, can: 0, chi: 12 })).toThrow(RangeError);
+    expect(() => formatSeal({ day: 1, month: 1, leap: false, can: -1, chi: 0 })).toThrow(RangeError);
+  });
 });
 
 describe('t: chữ của xưởng', () => {
@@ -88,10 +94,16 @@ describe('t: chữ của xưởng', () => {
     expect(t.static.noGpu).toContain('chrome://gpu');
     expect(t.static.noGpu).toContain('Use hardware acceleration when available');
     expect(t.static.chunkLoad).toBe('Trang vừa được cập nhật, tải lại nhé.');
+    expect(t.static.timeout).toContain('Mạng chậm');
     expect(t.static.error).toBe('Cảnh 3D gặp lỗi trên máy này.');
     expect(t.static.debugHint).toBe('Thêm ?debug vào địa chỉ để xem chi tiết.');
     expect(t.static.reload).toBe('Tải lại');
   });
+
+  it('lời mời có số lớp', () => {
+    expect(t.invite(5)).toBe('Bức tranh này có 5 lớp — mài thử?');
+  });
+
 
   it('t.formatSeal chính là formatSeal', () => {
     expect(t.formatSeal).toBe(formatSeal);

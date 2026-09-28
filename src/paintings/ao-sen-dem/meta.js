@@ -27,7 +27,25 @@ export default {
   },
   // THỨ TỰ PHỦ: lớp đầu luôn là Cốt; lớp cuối là Phủ bóng dùng chung của xưởng.
   layers: [
-    { id: 'cot', name: 'Cốt', files: ['paintings/ao-sen-dem/layers/l1-cot.js'] },
+    {
+      id: 'cot',
+      name: 'Cốt',
+      files: [
+        'paintings/ao-sen-dem/layers/l1-cot.js',
+        'paintings/ao-sen-dem/parts/cot-leaf.js',
+        'paintings/ao-sen-dem/parts/cot-flower.js',
+        'paintings/ao-sen-dem/parts/cot-reeds.js',
+      ],
+    },
+    {
+      id: 'anh-trang',
+      name: 'Ánh trăng',
+      files: [
+        'paintings/ao-sen-dem/layers/l2-anh-trang.js',
+        'paintings/ao-sen-dem/parts/anh-trang-moon.js',
+        'paintings/ao-sen-dem/parts/anh-trang-paint.js',
+      ],
+    },
     {
       id: 'mat-nuoc',
       name: 'Mặt nước',
@@ -42,5 +60,5 @@ export default {
     phuBong,
   ],
   // Từ vựng riêng của bức: test luật cấm xưởng (engine/, ui/, lib/tsl/) nhắc tới.
-  fence: ['ripple', 'lotus', 'firefl', 'uhour', 'moondir', 'mặt nước', 'đom đóm', 'hoa sen'],
+  fence: ['ripple', 'lotus', 'firefl', 'uhour', 'moondir', 'lantern', 'mặt nước', 'đom đóm', 'hoa sen', 'hoa đăng'],
 };

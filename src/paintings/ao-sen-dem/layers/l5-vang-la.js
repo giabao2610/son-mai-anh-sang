@@ -1,10 +1,11 @@
-// paintings/ao-sen-dem/layers/l5-vang-la.js — Lớp 5 · Vàng lá v0: đom đóm tính vị trí trên GPU (compute), vẽ bằng một Sprite.
+// paintings/ao-sen-dem/layers/l5-vang-la.js — Lớp 5 · Vàng lá (bản đơn giản): đom đóm tính trên GPU, tụ quanh tay, tản khi chạm.
 import { AdditiveBlending, Sprite, SpriteNodeMaterial } from 'three/webgpu';
 import {
   Fn,
   clamp,
   color,
   cos,
+  exp,
   float,
   fract,
   hash,
@@ -26,14 +27,19 @@ export const id = 'vang-la';
 export const knobs = [
   { id: 'size', min: 0.02, max: 0.5, step: 0.005, value: 0.12 },
   { id: 'glow', min: 0, max: 10, step: 0.1, value: 3 },
+  { id: 'attraction', min: 0, max: 3, step: 0.01, value: 1 },
 ];
 
 const RADIUS = 40; // đom đóm lượn trong đĩa bán kính này
 const LOW = 0.3; // và trong khoảng độ cao [LOW, HIGH] trên mặt nước
 const HIGH = 4;
+const MAX_SPEED = 6; // bung ra nhanh cỡ nào cũng không văng khỏi ao
 
-/** @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx */
-export function createLayer(ctx) {
+/**
+ * @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx
+ * @param {object} shared  shared.attract (setup của bức): điểm hút và lực hút theo cử chỉ
+ */
+export function createLayer(ctx, shared) {
   const count = ctx.budget.fireflies ?? { cao: 3000, vua: 1500, thap: 600 }[ctx.level];
   const w = ctx.weight(id);
   const t = ctx.u.time; // đồng hồ của xưởng: ?freeze cho ra đúng cùng một đàn đom đóm
@@ -72,6 +78,15 @@ export function createLayer(ctx) {
     const swirl = vec3(p.z.negate(), 0, p.x).mul(0.012);
     // Quán tính: vận tốc chỉ ngả dần về hướng muốn bay, nên đường bay mềm, không giật.
     const v = mix(vs.xyz, wander.add(swirl), min(dt.mul(1.5), 1)).toVar();
+    // Tay người xem: lực > 0 hút về điểm chạm và kéo bay vòng quanh; lực < 0 đẩy ra (tản, bung).
+    // Chỉ con ở gần mới chịu lực (giảm theo exp của khoảng cách). Lực là gia tốc: cộng thẳng vào vận tốc.
+    const toward = shared.attract.point.sub(p);
+    const dist = max(length(toward), 0.001);
+    const dir = toward.div(dist);
+    const orbit = vec3(dir.z.negate(), 0, dir.x).mul(0.8);
+    const pull = dir.add(orbit).mul(shared.attract.strength).mul(exp(dist.div(10).negate()));
+    v.addAssign(pull.mul(ctx.knob('attraction')).mul(8).mul(dt)); // @knob attraction
+    v.assign(v.mul(min(float(1), float(MAX_SPEED).div(max(length(v), 0.001)))));
     p.addAssign(v.mul(dt));
     // Giữ đàn trong đĩa bán kính RADIUS và trong khoảng độ cao.
     const k = min(float(1), float(RADIUS).div(max(length(p.xz), 0.001)));

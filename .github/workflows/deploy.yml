@@ -21,6 +21,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:
@@ -35,14 +37,14 @@ jobs:
       - name: Build (Vite, base /son-mai-anh-sang/)
         run: npm run build
 
-      - name: Cài Chromium headless shell và thư viện hệ thống
-        run: npx playwright install --with-deps --only-shell chromium
+      - name: Cài Chromium (đầy đủ + headless shell) và thư viện hệ thống
+        run: npx playwright install --with-deps chromium
 
       - name: E2E chặn · tranh tĩnh + WebGL2 trên SwiftShader
         run: npx playwright test --project=static --project=webgl2-swiftshader
 
       # Playwright xóa thư mục output ở đầu mỗi lần chạy, nên lần này ghi vào thư mục con riêng.
-      - name: E2E không chặn · WebGPU trên SwiftShader (chờ lần chạy đầu trên ubuntu)
+      - name: E2E không chặn · WebGPU trên SwiftShader (Chromium đầy đủ)
         continue-on-error: true
         run: npx playwright test --project=webgpu-swiftshader --output=e2e/.results/webgpu-swiftshader
 
@@ -66,6 +68,7 @@ jobs:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       pages: write
       id-token: write
