@@ -104,8 +104,9 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
     },
 
     /**
-     * Camera "thở": dời điểm nhìn theo breathOffset(t). OrbitControls giữ nguyên góc và khoảng cách
-     * quanh điểm nhìn, nên camera dời theo đúng độ lệch đó (luôn quanh gốc, không trôi dần).
+     * Camera "thở": dời điểm nhìn theo breathOffset(t), luôn quanh điểm gốc của bức nên không trôi dần.
+     * OrbitControls.update() giữ nguyên VỊ TRÍ camera và chỉ quay camera về điểm nhìn mới (lookAt), nên "thở"
+     * là một cái nhìn đảo rất chậm, cỡ breathe / khoảng cách radian (0,4 ở 46 đơn vị ≈ 0,5°), không có thị sai.
      * Gọi TRƯỚC controls.update() mỗi khung.
      */
     breathe(t) {
