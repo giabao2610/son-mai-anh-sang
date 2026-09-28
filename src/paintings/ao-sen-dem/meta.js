@@ -38,6 +38,15 @@ export default {
       ],
     },
     {
+      id: 'anh-trang',
+      name: 'Ánh trăng',
+      files: [
+        'paintings/ao-sen-dem/layers/l2-anh-trang.js',
+        'paintings/ao-sen-dem/parts/anh-trang-moon.js',
+        'paintings/ao-sen-dem/parts/anh-trang-paint.js',
+      ],
+    },
+    {
       id: 'mat-nuoc',
       name: 'Mặt nước',
       files: ['paintings/ao-sen-dem/layers/l4-mat-nuoc.js'],
@@ -51,5 +60,5 @@ export default {
     phuBong,
   ],
   // Từ vựng riêng của bức: test luật cấm xưởng (engine/, ui/, lib/tsl/) nhắc tới.
-  fence: ['ripple', 'lotus', 'firefl', 'uhour', 'moondir', 'mặt nước', 'đom đóm', 'hoa sen'],
+  fence: ['ripple', 'lotus', 'firefl', 'uhour', 'moondir', 'lantern', 'mặt nước', 'đom đóm', 'hoa sen', 'hoa đăng'],
 };
