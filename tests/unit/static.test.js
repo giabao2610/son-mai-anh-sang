@@ -31,7 +31,8 @@ describe('staticNote', () => {
     expect(staticNote('flag', t)).toEqual({ text: null, reload: false });
     expect(staticNote('no-gpu', t)).toEqual({ text: t.static.noGpu, reload: false });
     expect(staticNote('chunk-load', t)).toEqual({ text: t.static.chunkLoad, reload: true });
-    for (const reason of ['timeout', 'frame-errors', 'gpu-error', 'device-lost', 'error']) {
+    expect(staticNote('timeout', t)).toEqual({ text: t.static.timeout, reload: true });
+    for (const reason of ['frame-errors', 'gpu-error', 'device-lost', 'error']) {
       expect(staticNote(reason, t)).toEqual({ text: t.static.error, reload: false });
     }
   });
@@ -79,11 +80,18 @@ describe('showStatic', () => {
     expect(sma.error).toBe('Failed to fetch dynamically imported module: x');
   });
 
-  it('lỗi runtime, không ?debug: báo lỗi kèm gợi ý ?debug, không in chi tiết', () => {
+  it("'timeout': mạng chậm, kèm nút tải lại, không gợi ý ?debug", () => {
     showStatic(entry, shell, { reason: 'timeout', error: new Error('quá hạn'), t, sma });
+    expect(page.note.querySelector('p').textContent).toBe(t.static.timeout);
+    expect(page.note.querySelector('button').textContent).toBe(t.static.reload);
+    expect(sma).toMatchObject({ reason: 'timeout', error: 'quá hạn' });
+  });
+
+  it('lỗi runtime, không ?debug: báo lỗi kèm gợi ý ?debug, không in chi tiết', () => {
+    showStatic(entry, shell, { reason: 'frame-errors', error: new Error('3 khung lỗi'), t, sma });
     expect(page.note.querySelector('p').textContent).toBe(`${t.static.error} ${t.static.debugHint}`);
     expect(page.note.querySelector('pre')).toBeNull();
-    expect(sma).toMatchObject({ reason: 'timeout', error: 'quá hạn' });
+    expect(sma).toMatchObject({ reason: 'frame-errors', error: '3 khung lỗi' });
   });
 
   it('lỗi runtime, có ?debug: in message và stack, bỏ gợi ý', () => {

@@ -25,7 +25,13 @@ export async function boot(entry, { lang = 'vi', t, win = window, doc = document
   const shell = mountShell(doc, entry.meta, { now, t, onState: (state) => sma.set({ state }) });
   shell.setState('detecting');
 
-  const tier = await detectTier(flags, envFromWindow(win)).catch(() => 'static');
+  // Dò tầng không bao giờ được làm trắng trang: lỗi bất ngờ, kể cả lúc đọc window, đều về tầng tĩnh.
+  let tier = 'static';
+  try {
+    tier = await detectTier(flags, envFromWindow(win));
+  } catch {
+    // giữ 'static'
+  }
   sma.set({ tier });
   const debug = !!flags.debug;
   if (tier === 'static') {

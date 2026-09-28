@@ -851,6 +851,7 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
   - `'flag'`: không thêm gì.
   - `'no-gpu'`: hướng dẫn kiểm tra `chrome://gpu` và bật "Use hardware acceleration when available".
   - `'chunk-load'`: "Trang vừa được cập nhật, tải lại nhé", kèm nút tải lại.
+  - `'timeout'` (GĐ 1): "Mạng chậm hoặc máy đang bận nên cảnh 3D chưa kịp dựng. Tải lại thử nhé.", kèm nút tải lại. Không gợi ý `?debug`, vì quá hạn thường không phải lỗi.
   - Các lý do khác: "Cảnh 3D gặp lỗi trên máy này", kèm gợi ý `?debug`.
 - Có `?debug` thì in thêm `error.message`.
 

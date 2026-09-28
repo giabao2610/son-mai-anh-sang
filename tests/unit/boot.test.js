@@ -58,6 +58,15 @@ describe('boot', () => {
     expect(page.note.hidden).toBe(true);
   });
 
+  it('(b2) đọc window ném lỗi (trình duyệt lạ, extension chặn) → vẫn về tầng tĩnh, không ném ra ngoài', async () => {
+    const win = fakeWin();
+    Object.defineProperty(win, 'navigator', { get() { throw new Error('bị chặn'); } });
+    const loadRun = vi.fn();
+    await boot(entry, { t, win, doc, loadRun });
+    expect(loadRun).not.toHaveBeenCalled();
+    expect(win.__sma).toMatchObject({ state: 'static', tier: 'static', reason: 'no-gpu' });
+  });
+
   it('(b) không có GPU → tầng tĩnh lý do "no-gpu" kèm hướng dẫn', async () => {
     const win = fakeWin();
     const loadRun = vi.fn();

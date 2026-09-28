@@ -8,7 +8,7 @@
 const CHUNK_ERROR = /dynamically imported module|Importing a module script failed|error loading dynamically imported|Unable to preload/i;
 
 /** Những lý do có lời riêng. Mọi lý do khác là "lỗi": dùng chung một câu, kèm gợi ý ?debug. */
-const NAMED_REASONS = ['flag', 'no-gpu', 'chunk-load'];
+const NAMED_REASONS = ['flag', 'no-gpu', 'chunk-load', 'timeout'];
 
 /** @param {unknown} err */
 export function isChunkError(err) {
@@ -25,6 +25,8 @@ export function staticNote(reason, t) {
   if (reason === 'flag') return { text: null, reload: false }; // người xem tự chọn ?static: không cần giải thích
   if (reason === 'no-gpu') return { text: t.static.noGpu, reload: false };
   if (reason === 'chunk-load') return { text: t.static.chunkLoad, reload: true };
+  // Quá hạn 10 giây thường là mạng chậm hoặc máy đang bận: tải lại hay được, nên có nút.
+  if (reason === 'timeout') return { text: t.static.timeout, reload: true };
   return { text: t.static.error, reload: false };
 }
 
