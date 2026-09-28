@@ -52,7 +52,14 @@ export default defineConfig({
       use: {
         browserName: 'chromium',
         channel: 'chromium',
-        launchOptions: { args: ['--enable-unsafe-webgpu', ...SWIFTSHADER] },
+        launchOptions: {
+          args: [
+            '--enable-unsafe-webgpu',
+            ...SWIFTSHADER,
+            // Chỉ trên CI (ubuntu): cho Dawn dùng SwiftShader qua Vulkan.
+            ...(process.env.CI ? ['--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-webgpu-adapter=swiftshader'] : []),
+          ],
+        },
       },
       metadata: { kind: '3d', query: '?force3d', backend: 'webgpu' },
     },
