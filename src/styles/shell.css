@@ -245,3 +245,11 @@ header h1 {
 
 /* Người xem xin giảm chuyển động: canvas hiện ngay, không hòa dần (shell.js cũng không chờ). */
 @media (prefers-reduced-motion: reduce) { [data-stage] canvas { transition: none; } }
+
+/* ── Trăng đêm nay (ui/moon-svg.js vẽ) cạnh con dấu ─────────────────────────────── */
+.marks { display: flex; align-items: flex-end; gap: 14px; margin-left: auto; }
+.marks [data-seal] { margin-left: 0; }
+[data-moon] { width: 40px; height: 40px; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--vang-la-sang) 35%, transparent)); }
+[data-moon]:empty { display: none; }
+.moon-dark { fill: color-mix(in srgb, var(--cham) 80%, var(--den-then)); }
+.moon-lit { fill: var(--nga); }

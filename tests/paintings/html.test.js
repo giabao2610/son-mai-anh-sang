@@ -83,6 +83,15 @@ for (const { meta, page, lang } of paintings) {
       expect(note.getAttribute('aria-live')).toBe('polite');
     });
 
+    it('nếu có ô trăng [data-moon] thì là <svg> rỗng, viewBox bao đĩa bán kính 1, ẩn với trình đọc màn hình', () => {
+      const moon = $('[data-moon]');
+      if (!moon) return; // bức không có trăng thì bỏ ô này
+      expect(moon.tagName.toLowerCase()).toBe('svg');
+      expect(moon.getAttribute('viewBox')).toBe('-1.1 -1.1 2.2 2.2');
+      expect(moon.getAttribute('aria-hidden')).toBe('true');
+      expect(moon.childElementCount).toBe(0);
+    });
+
     it('favicon và stylesheet trỏ tới file có thật', () => {
       const icon = $('link[rel="icon"]')?.getAttribute('href') ?? '';
       expect(icon.startsWith('/')).toBe(true);

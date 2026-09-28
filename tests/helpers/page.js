@@ -8,6 +8,7 @@ export const PAGE_BODY = `
   <p id="badge-note" data-badge-note hidden aria-live="polite"></p>
   <span data-seal></span>
   <section data-static hidden aria-live="polite"></section>
+  <svg data-moon viewBox="-1.1 -1.1 2.2 2.2" aria-hidden="true"></svg>
 `;
 
 /** Ghi đè body bằng khung trang mới; trả các phần tử để test đọc. */
@@ -22,5 +23,6 @@ export function mountPage(doc = document) {
     badgeNote: $('[data-badge-note]'),
     seal: $('[data-seal]'),
     note: $('[data-static]'),
+    moon: $('[data-moon]'),
   };
 }

@@ -149,3 +149,16 @@ describe('showNote', () => {
     expect(page.note.childElementCount).toBe(0);
   });
 });
+
+describe('trăng SVG', () => {
+  it('vẽ trăng đúng pha của "bây giờ" vào [data-moon] ngay lúc gắn vỏ', () => {
+    mountShell(document, meta, { now: NOW, t });
+    expect(page.moon.querySelector('.moon-lit')).not.toBeNull();
+    expect(page.moon.querySelector('.moon-dark')).not.toBeNull();
+  });
+
+  it('trang không có [data-moon] (bức không có trăng) thì bỏ qua, không lỗi', () => {
+    page.moon.remove();
+    expect(() => mountShell(document, meta, { now: NOW, t })).not.toThrow();
+  });
+});
