@@ -150,12 +150,27 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       await expect(page.locator(posterImg)).toBeVisible();
     });
 
-    // Review Focus #5 · giảm chuyển động: CSS bỏ transition nên không có transitionend để chờ.
-    // tests/unit/shell.test.js giữ "crossfade xong ngay"; ở đây kiểm trang thật: tới live, poster ẩn, canvas hiện ngay.
-    test('giảm chuyển động → tới live (không kẹt ở fading), poster ẩn, canvas hiện ngay', async ({
+    // Review Focus #5 · giảm chuyển động: CSS bỏ transition nên không có transitionend để chờ, và crossfade
+    // phải xong ngay. Chỉ kiểm "tới live" thì chưa đủ, vì lưới an toàn 1200 ms của shell cũng đưa tới live.
+    // Nên đo lúc body[data-state] đổi: fading → live dưới 600 ms (đường ngay ≈ 0 ms, lưới an toàn ≈ 1200 ms).
+    test('giảm chuyển động → live ngay sau fading (dưới 600 ms), poster ẩn, canvas hiện ngay', async ({
       page,
     }, testInfo) => {
       const { query } = testInfo.project.metadata;
+      // Ghi mọi lần body[data-state] đổi vào window.__stateLog, kèm performance.now(). Gắn lúc DOMContentLoaded
+      // (ghi luôn trạng thái lúc đó) là đủ sớm: 'fading' chỉ đến sau khi tải chunk three và biên dịch shader.
+      await page.addInitScript(() => {
+        window.__stateLog = [];
+        const push = (state) => window.__stateLog.push({ state, t: performance.now() });
+        document.addEventListener('DOMContentLoaded', () => {
+          const { body } = document;
+          push(body.dataset.state);
+          // Một lần gọi có thể gom nhiều lần đổi: trạng thái mới của bản ghi i là oldValue của bản ghi i + 1.
+          new MutationObserver((records) => {
+            records.forEach((_, i) => push(i + 1 < records.length ? records[i + 1].oldValue : body.dataset.state));
+          }).observe(body, { attributeFilter: ['data-state'], attributeOldValue: true });
+        });
+      });
       // Đặt TRƯỚC khi mở trang: run.js và shell.js đọc matchMedia lúc khởi động.
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.goto(urlOf(htmlPage, query, 'freeze=10'));
@@ -163,6 +178,13 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
       const settled = await waitForSettled(page);
       expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+      const stateLog = await page.evaluate(() => window.__stateLog);
+      const at = (state) => stateLog.find((entry) => entry.state === state)?.t;
+      const trace = `__stateLog = ${JSON.stringify(stateLog)}`;
+      expect(at('fading'), `không ghi được 'fading' · ${trace}`).toBeDefined();
+      expect(at('live'), `không ghi được 'live' · ${trace}`).toBeDefined();
+      const fadeMs = at('live') - at('fading');
+      expect(fadeMs, `fading → live quá lâu: crossfade đã chờ transition/lưới an toàn · ${trace}`).toBeLessThan(600);
       await expect(page.locator('[data-poster]')).toBeHidden();
       const canvas = page.locator('[data-stage] canvas');
       await expect(canvas).toHaveAttribute('data-visible', '');

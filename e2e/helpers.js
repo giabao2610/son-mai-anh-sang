@@ -32,13 +32,18 @@ export async function waitForFrames(page, n, { timeout = 30_000 } = {}) {
   return readSma(page);
 }
 
+/** Stylesheet chỉ áp lúc chụp: ẩn mọi con của body trừ [data-stage] (poster, tên, thơ, huy hiệu, con dấu). */
+const STAGE_ONLY = 'body > :not([data-stage]) { visibility: hidden !important; }';
+
 /**
  * Chụp canvas bằng locator.screenshot() rồi giải mã PNG ngay trong trang (không cần thư viện PNG ở Node).
+ * Ảnh chụp là một vùng của trang, nên lớp chữ vẽ đè lên canvas cũng lọt vào. Vì vậy lúc chụp ẩn lớp đó
+ * (tùy chọn `style`, không phụ thuộc bức nào): số đo chỉ nói về canvas, và canvas đen cho bright ≈ 0.
  * Không dùng canvas.toDataURL(): với WebGL2 nó trả ảnh đen vì three không bật preserveDrawingBuffer.
  * bright = tỉ lệ pixel có kênh lớn nhất > 60; dark = tỉ lệ pixel có kênh lớn nhất < 30.
  */
 export async function canvasStats(page, selector = '[data-stage] canvas') {
-  const png = await page.locator(selector).screenshot();
+  const png = await page.locator(selector).screenshot({ style: STAGE_ONLY });
   return page.evaluate(async (b64) => {
     const img = new Image();
     img.src = `data:image/png;base64,${b64}`;
