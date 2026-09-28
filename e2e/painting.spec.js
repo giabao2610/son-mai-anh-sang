@@ -162,6 +162,19 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       await expect(page.locator(posterImg)).toBeVisible();
     });
 
+    for (const [flag, name] of [['debug', 'inspector'], ['debug=stats', 'stats']]) {
+      test(`?${flag} → công cụ thợ "${name}" hiện, cảnh vẫn chạy, không lỗi console`, async ({ page }, testInfo) => {
+        const { query } = testInfo.project.metadata;
+        await page.goto(urlOf(htmlPage, query, flag, 'freeze=20'));
+        const settled = await waitForSettled(page);
+        expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+        await expect(page.locator(`[data-debug="${name}"]`)).toBeAttached();
+        const sma = await waitForFrames(page, 20);
+        expect(sma.state).toBe('live');
+        expect(log.errors).toEqual([]);
+      });
+    }
+
     // Review Focus #5 · giảm chuyển động: CSS bỏ transition nên không có transitionend để chờ, và crossfade
     // phải xong ngay. Chỉ kiểm "tới live" thì chưa đủ, vì lưới an toàn 1200 ms của shell cũng đưa tới live.
     // Nên đo lúc body[data-state] đổi: fading → live dưới 600 ms (đường ngay ≈ 0 ms, lưới an toàn ≈ 1200 ms).

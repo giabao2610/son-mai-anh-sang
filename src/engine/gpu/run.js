@@ -8,6 +8,7 @@ import { createWeights, buildLayers, ensureEmissive } from './layers.js';
 import { createPipeline } from './pipeline.js';
 import { createFailCounter, createBurstCounter } from './guards.js';
 import { createInput } from './input.js';
+import { mountDebug } from './debug.js';
 
 /** content.<lang>.js của bức, hoặc null nếu bức không có hay tải hỏng (3D không phụ thuộc chữ). */
 function loadContent(entry, lang) {
@@ -17,6 +18,18 @@ function loadContent(entry, lang) {
     console.warn(`Không tải được chữ của bức (${lang}):`, err);
     return null;
   });
+}
+
+/** Công cụ ?debug (engine/gpu/debug.js), đăng ký vào disposer; tải hỏng thì null (chế độ thợ không được làm hỏng cảnh). */
+async function loadDebug(mode, renderer, disposer) {
+  try {
+    const tool = await mountDebug(mode, renderer);
+    if (tool) disposer.add(() => tool.dispose());
+    return tool;
+  } catch (err) {
+    console.warn('Không mở được công cụ ?debug:', err);
+    return null;
+  }
 }
 
 /**
@@ -139,8 +152,9 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     disposer.add(() => input.dispose());
 
     // Biên dịch trước bằng scenePass.compileAsync (có MRT + render target của pass), trong lúc poster còn hiện.
+    // ?debug / ?debug=stats tải song song; hỏng thì chỉ cảnh báo, cảnh vẫn chạy.
     shell.setState('compiling');
-    await pipeline.compile();
+    const [, debugTool] = await Promise.all([pipeline.compile(), loadDebug(flags.debug, stage.renderer, disposer)]);
     if (stopped()) return quit();
 
     const limit = typeof flags.freeze === 'number' ? flags.freeze : Infinity;
@@ -154,6 +168,7 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
       stage.breathe(time);
       stage.controls?.update();
       pipeline.render();
+      debugTool?.update();
       frames += 1;
       sma.frame();
     };
