@@ -83,7 +83,7 @@ Số gzip do `npm run build` (Vite 8) in ra, đo ngày 2026-09-28 ở commit `89
 | `assets/three-*.js` | 895.51 kB | 244.69 kB |
 | **Tổng JS** | | **263.88 kB** |
 
-Tầng tĩnh chỉ tải CSS và chunk vào của trang. Chunk `three-*.js` và phần 3D chỉ tải khi máy dùng được GPU.
+Tầng tĩnh chỉ tải CSS (kèm font), poster và chunk vào của trang. Chunk `three-*.js` và phần 3D chỉ tải khi máy dùng được GPU.
 Mục tiêu của spec (§10): cả đường 3D ≤ 450 KB gzip.
 
 ## Giấy phép

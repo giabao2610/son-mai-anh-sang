@@ -4,3 +4,7 @@ e2e/.results/
 test-results/
 playwright-report/
 .DS_Store
+
+# Thư mục làm việc cục bộ của công cụ AI (Claude Code, superpowers): không đưa lên repo
+.claude/
+.superpowers/
