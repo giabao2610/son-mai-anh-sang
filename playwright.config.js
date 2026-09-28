@@ -47,7 +47,13 @@ export default defineConfig({
       // Tầng A trên adapter WebGPU phần mềm. Không chặn; spec tự bỏ qua nếu không có adapter.
       // Thiếu --use-angle=swiftshader thì canvas WebGPU hỏng ("Invalid Texture … CreateView").
       name: 'webgpu-swiftshader',
-      use: { browserName: 'chromium', launchOptions: { args: ['--enable-unsafe-webgpu', ...SWIFTSHADER] } },
+      // channel 'chromium' = trình duyệt Chromium đầy đủ ở chế độ headless mới, thay cho headless shell.
+      // Trên ubuntu, headless shell làm mất device WebGPU ("A valid external Instance reference no longer exists").
+      use: {
+        browserName: 'chromium',
+        channel: 'chromium',
+        launchOptions: { args: ['--enable-unsafe-webgpu', ...SWIFTSHADER] },
+      },
       metadata: { kind: '3d', query: '?force3d', backend: 'webgpu' },
     },
     // Tùy chọn, chỉ chạy ở máy local: Chromium đầy đủ dùng GPU thật. Bật bằng E2E_REAL_GPU=1.
