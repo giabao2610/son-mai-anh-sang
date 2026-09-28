@@ -6,4 +6,8 @@ import meta from './meta.js';
  * nên trang tĩnh (tầng C) không bao giờ tải three.
  * @type {import('../../engine/contracts/painting.js').PaintingEntry}
  */
-export default { meta, load: () => import('./painting.js') };
+export default {
+  meta,
+  load: () => import('./painting.js'),
+  content: { vi: () => import('./content.vi.js') },
+};

@@ -10,6 +10,9 @@ import * as phuBong from '../../engine/stock/phu-bong/layer.js';
  */
 export const layers = [cot, matNuoc, vangLa, phuBong];
 
+/** setup() chạy TRƯỚC mọi createLayer: giờ, hướng trăng, gợn sóng, cử chỉ (shared.js). */
+export { setup } from './shared.js';
+
 /**
  * Dữ liệu thuần; xưởng dựng PerspectiveCamera + OrbitControls có giới hạn từ đây.
  * Camera đứng ở z = 30, cao 7, nhìn về tâm ao: l1-cot chừa "lối trăng" hướng về đúng chỗ này.
