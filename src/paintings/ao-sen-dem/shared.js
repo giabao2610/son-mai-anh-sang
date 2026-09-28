@@ -1,6 +1,6 @@
 // paintings/ao-sen-dem/shared.js — setup() của Bức 1: giờ đêm nay, hướng trăng, bộ đệm gợn sóng, điểm hút đom đóm, cử chỉ.
 import { Plane, Vector3, Vector4 } from 'three/webgpu';
-import { Fn, Loop, exp, float, length, sin, step, uniform, uniformArray } from 'three/tsl';
+import { Fn, Loop, exp, float, length, pow2, sin, step, uniform, uniformArray } from 'three/tsl';
 import { hourOfNight, tonight } from '../../lib/astro/moon.js';
 
 export const POND_RADIUS = 60; // bằng bán kính đĩa nước của lớp 4: chạm ngoài đĩa thì không gợn
@@ -66,7 +66,9 @@ export function makeRippleHeight({ ripples, time, amplitude, speed, decay, wavel
       const r = ripples.element(i);
       const age = time.sub(r.z);
       const x = length(xz.sub(r.xy)).sub(age.mul(speed)); // khoảng cách tới đỉnh vòng đang lan
-      const ring = exp(x.div(wavelength).pow(2).negate());
+      // pow2(q) = q·q. Không viết q.pow(2): x âm ở phía trong vòng gợn (và ở mọi ô trống), mà GLSL/WGSL không định
+      // nghĩa pow của số âm: SwiftShader vẫn ra số, còn GPU thật thường ra NaN (nước đen, lá biến mất).
+      const ring = exp(pow2(x.div(wavelength)).negate());
       const fade = exp(age.mul(decay).negate()).mul(step(0, age));
       h.addAssign(sin(x.mul(Math.PI * 2).div(wavelength)).mul(ring).mul(fade).mul(r.w));
     });

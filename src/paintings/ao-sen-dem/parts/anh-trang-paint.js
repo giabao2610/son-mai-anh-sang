@@ -14,6 +14,7 @@ import {
   oneMinus,
   positionWorld,
   pow,
+  pow4,
   saturate,
   sin,
   smoothstep,
@@ -60,8 +61,10 @@ export function paintCot(ctx, cot, w, moonDir) {
   const view = normalize(cameraPosition.sub(positionWorld));
   const edge = oneMinus(abs(dot(normalWorld, view)));
   const rimPower = ctx.knob('rimPower'); // @knob rimPower
-  const rim = pow(edge, rimPower).mul(ctx.knob('rimColor')); // @knob rimColor
-  const back = pow(saturate(dot(view.negate(), moonDir)), 4).mul(ctx.knob('translucency')); // @knob translucency
+  // saturate: hai vector đơn vị chỉ đơn vị tới sai số làm tròn, nên |dot| có thể nhỉnh hơn 1 và edge hơi âm; pow của số âm
+  // là NaN trên GPU thật, lọt vào kênh emissive rồi bloom loang thành mảng đen.
+  const rim = pow(saturate(edge), rimPower).mul(ctx.knob('rimColor')); // @knob rimColor
+  const back = pow4(saturate(dot(view.negate(), moonDir))).mul(ctx.knob('translucency')); // @knob translucency
   cot.petalMaterial.emissiveNode = rim.mul(0.5).add(color(hex.nga).mul(back).mul(0.35)).mul(w);
 
   // Gương sen xanh vàng, nhị vàng lá (thuộc tính 'part' của Cốt: 0 gương, 1 nhị).

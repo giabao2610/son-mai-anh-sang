@@ -16,6 +16,35 @@ const report = (title, errors) => `${title}\n${errors.map((e) => `  ${e}`).join(
 /** Số dòng (từ 1) của vị trí index. */
 const lineOf = (code, index) => code.slice(0, index).split('\n').length;
 
+/**
+ * Các lời gọi pow(…) và x.pow(…) của TSL trong code (bỏ qua Math.pow): vị trí và số mũ. Đếm ngoặc để tách đối số,
+ * vì cơ số hay có ngoặc lồng nhau: pow(saturate(dot(a, b)), 4).
+ */
+function powExponents(code) {
+  const calls = [];
+  for (const m of code.matchAll(/(?<!Math)(\.pow|\bpow)\s*\(/g)) {
+    const args = [];
+    let depth = 0;
+    let last = m.index + m[0].length;
+    for (let i = last; i < code.length; i++) {
+      const c = code[i];
+      if ('([{'.includes(c)) depth++;
+      else if (')]}'.includes(c)) {
+        if (depth === 0) {
+          args.push(code.slice(last, i).trim());
+          break;
+        }
+        depth--;
+      } else if (c === ',' && depth === 0) {
+        args.push(code.slice(last, i).trim());
+        last = i + 1;
+      }
+    }
+    calls.push({ index: m.index, exponent: m[1] === '.pow' ? args[0] : args[1] });
+  }
+  return calls;
+}
+
 afterAll(() => {
   if (nearLimit.length === 0) return;
   const rows = nearLimit.map(({ file, lines }) => `  ${String(lines).padStart(4)} dòng  ${file}`);
@@ -77,5 +106,18 @@ describe('luật file', () => {
       }
     }
     expect(errors, report('time/deltaTime của TSL chạy theo đồng hồ riêng của renderer, phá ?freeze:', errors)).toEqual([]);
+  });
+
+  it('lũy thừa 2, 3, 4 trong TSL viết bằng pow2 / pow3 / pow4 (pow của cơ số âm là NaN trên GPU thật)', () => {
+    const errors = [];
+    for (const file of FILES) {
+      const code = stripComments(read(file), file);
+      for (const { index, exponent } of powExponents(code)) {
+        if (/^[234](\.0*)?$/.test(exponent ?? '')) errors.push(`${file}:${lineOf(code, index)} — pow(…, ${exponent})`);
+      }
+    }
+    // GLSL ES và WGSL không định nghĩa pow(x, y) khi x < 0: SwiftShader vẫn ra số, còn Metal/D3D/GPU thật thường ra NaN.
+    // pow2(x) = x·x đúng với mọi dấu và nhanh hơn.
+    expect(errors, report('Dùng pow2/pow3/pow4 thay cho pow(…, 2|3|4):', errors)).toEqual([]);
   });
 });
