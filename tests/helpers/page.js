@@ -5,7 +5,7 @@ export const PAGE_BODY = `
   <img class="poster" data-poster src="/poster.svg" width="16" height="10" alt="">
   <div data-stage></div>
   <button data-badge hidden type="button" aria-expanded="false" aria-controls="badge-note"></button>
-  <p id="badge-note" data-badge-note hidden></p>
+  <p id="badge-note" data-badge-note hidden aria-live="polite"></p>
   <span data-seal></span>
   <section data-static hidden aria-live="polite"></section>
 `;

@@ -9,6 +9,22 @@ import { mergePalette } from '../../src/engine/palette.js';
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const nfc = (s) => s.normalize('NFC').trim();
 
+/**
+ * Mã màu hex trong một SVG. Bỏ các tham chiếu id trước (url(#bed), href="#bed"): id như "bed", "face"
+ * trông giống mã màu 3 chữ số hex nhưng không phải màu.
+ */
+function svgColors(svg) {
+  const text = svg.replace(/url\(#[^)]*\)/g, '').replace(/href="#[^"]*"/g, '');
+  return new Set((text.match(/#[0-9A-Fa-f]{3,8}\b/g) ?? []).map((h) => h.toUpperCase()));
+}
+
+describe('svgColors (tự kiểm)', () => {
+  it('bắt màu thật, bỏ qua tham chiếu id', () => {
+    expect([...svgColors('<rect fill="#bed"/><use href="#bed"/><rect fill="url(#bed)"/>')]).toEqual(['#BED']);
+    expect([...svgColors('<use href="#face"/><path fill="url(#cafe)"/>')]).toEqual([]);
+  });
+});
+
 for (const { meta, page, lang } of paintings) {
   describe(`${page} · ${meta.slug}`, () => {
     let doc;
@@ -51,8 +67,7 @@ for (const { meta, page, lang } of paintings) {
       if (!meta.poster.src.endsWith('.svg')) return;
       const svg = readFileSync(ROOT + 'public' + meta.poster.src, 'utf8');
       const allowed = new Set(Object.values(mergePalette(meta.palette)).map((h) => h.toUpperCase()));
-      const used = new Set((svg.match(/#[0-9A-Fa-f]{3,8}\b/g) ?? []).map((h) => h.toUpperCase()));
-      expect([...used].filter((h) => !allowed.has(h))).toEqual([]);
+      expect([...svgColors(svg)].filter((h) => !allowed.has(h))).toEqual([]);
     });
 
     it('có đủ các ô mà xưởng điền vào: stage, con dấu, huy hiệu (+ ghi chú), tầng tĩnh', () => {
@@ -62,6 +77,7 @@ for (const { meta, page, lang } of paintings) {
       expect(badge?.getAttribute('type')).toBe('button');
       expect(badge.hidden).toBe(true);
       expect($('[data-badge-note]')?.hidden).toBe(true);
+      expect($('[data-badge-note]').getAttribute('aria-live')).toBe('polite');
       const note = $('section[data-static]');
       expect(note?.hidden).toBe(true);
       expect(note.getAttribute('aria-live')).toBe('polite');
