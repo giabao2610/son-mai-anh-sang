@@ -49,6 +49,12 @@ npx playwright install chromium    # chỉ cần lần đầu, trước khi ch�
 npm run e2e                        # build rồi chạy e2e (tranh tĩnh, WebGL2, WebGPU)
 ```
 
+**WebGPU e2e trên CI (ubuntu):** với headless shell của Playwright, mọi test WebGPU rơi về tranh tĩnh vì
+`device-lost: "A valid external Instance reference no longer exists"`. Project `webgpu-swiftshader` vì vậy dùng Chromium
+đầy đủ (`channel: 'chromium'`) và, chỉ khi chạy trên CI, thêm cờ Vulkan của SwiftShader
+(`--enable-features=Vulkan --use-vulkan=swiftshader --use-webgpu-adapter=swiftshader`). Chỉ đổi Chromium thì chưa đủ; thêm cờ
+Vulkan thì WebGPU e2e xanh trên ubuntu. Bước này vẫn không chặn deploy cho tới khi chạy ổn qua nhiều lần.
+
 ## Cờ URL
 
 Thêm vào sau địa chỉ trang, ví dụ `…/son-mai-anh-sang/?webgl&freeze=40`. Cờ bật khi có mặt; `=0` hoặc `=false` thì tắt.
