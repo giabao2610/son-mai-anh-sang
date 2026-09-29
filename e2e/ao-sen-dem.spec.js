@@ -1,6 +1,6 @@
-// e2e/ao-sen-dem.spec.js — tương tác riêng của Bức 1: chạm mặt nước thì ảnh đổi; gợi ý → lời mời → chế độ mài; trăng SVG ở tầng tĩnh.
+// e2e/ao-sen-dem.spec.js — tương tác riêng của Bức 1: chạm, giữ, vuốt mặt nước; chế độ mài; chất lượng (draw call, mức thấp); CPU vs GPU; trăng SVG.
 import { test, expect } from '@playwright/test';
-import { waitForSettled, waitForFrames, canvasStats, gpuReport, collectConsole, readSma } from './helpers.js';
+import { DARK, waitForSettled, waitForFrames, canvasStats, gpuReport, collectConsole, readSma } from './helpers.js';
 
 const AT = 'at=2026-09-28T21:00';
 const N = 90; // số khung của mỗi lần chạy; vòng gợn kịp lan trong ~1 giây đồng hồ của cảnh
@@ -30,18 +30,24 @@ test.afterEach(async ({ page }, testInfo) => {
  * Mở cảnh ở ?freeze=N, (tùy chọn) chạm hoặc GIỮ tay trên mặt nước sau khung TAP_AFTER, chờ đủ N khung rồi đo canvas.
  * Giữ = nhấn xuống, đợi thêm HOLD_FRAMES khung (dài hơn 350 ms giữ của gesture.js), rồi mới thả.
  */
-async function run(page, testInfo, { tap = false, hold = false }) {
+async function run(page, testInfo, { tap = false, hold = false, swipe = false }) {
   const { query } = testInfo.project.metadata;
   await page.goto(`./?${query.replace(/^\?/, '')}&${AT}&freeze=${N}`);
   const settled = await waitForSettled(page, { timeout: 60_000 });
   expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
   let tappedAt = null;
-  if (tap || hold) {
+  if (tap || hold || swipe) {
     await page.waitForFunction((n) => window.__sma.frames >= n, TAP_AFTER, { timeout: 60_000 });
     const box = await page.locator('[data-stage] canvas').boundingBox();
     const [x, y] = [box.x + box.width * WATER.x, box.y + box.height * WATER.y];
     if (tap) await page.mouse.click(x, y);
-    else {
+    else if (swipe) {
+      // Vuốt = kéo nhanh (dưới 300 ms) và xa (trên 40 px) rồi thả (gesture.js). Kéo cũng xoay camera một chút.
+      await page.mouse.move(x - 60, y);
+      await page.mouse.down();
+      await page.mouse.move(x + 60, y, { steps: 3 });
+      await page.mouse.up();
+    } else {
       await page.mouse.move(x, y);
       await page.mouse.down();
       const from = (await readSma(page)).frames;
@@ -82,6 +88,16 @@ test.describe('Ao Sen Đêm · chạm mặt nước', () => {
     expect(log.errors).toEqual([]);
   });
 
+  test('vuốt trên mặt nước: cảnh vẫn chạy, không lỗi, ảnh khác lần không vuốt (cùng ?at&freeze)', async ({ page }, testInfo) => {
+    // Kéo cũng xoay camera, nên ảnh khác chưa chứng minh sương xoáy: luật xoáy có unit test (shared.test.js). Ở đây giữ
+    // đường đi thật: vuốt → shared.swirl → sương (shader có xoáy) biên dịch và vẽ được trên cả hai backend.
+    test.setTimeout(300_000);
+    const a = await run(page, testInfo, {});
+    const swiped = await run(page, testInfo, { swipe: true });
+    expect(swiped.stats.checksum, 'vuốt mà ảnh không đổi').not.toBe(a.stats.checksum);
+    expect(log.errors).toEqual([]);
+  });
+
   test('gợi ý "Chạm vào mặt nước" khi live; chạm lần đầu thì thành lời mời mài lớp', async ({ page }, testInfo) => {
     const { query } = testInfo.project.metadata;
     await page.goto(`./?${query.replace(/^\?/, '')}&${AT}`);
@@ -118,10 +134,70 @@ test.describe('Ao Sen Đêm · chế độ mài', () => {
     await page.locator('[data-rail] .rail-next').click();
     await expect(notebook.locator('h2')).toHaveText('Ánh trăng');
     await expect.poll(async () => (await weights(page))['anh-trang'], { timeout: 30_000 }).toBe(1);
-    await expect(page.locator('[data-rail] .rail-next')).toHaveText(/Mặt nước$/);
+    await expect(page.locator('[data-rail] .rail-next')).toHaveText(/Sương$/);
     await page.locator('[data-rail] .rail-close').click();
     await expect(page.locator('[data-rail]')).toBeHidden();
     await expect.poll(async () => Object.values(await weights(page)).every((w) => w === 1), { timeout: 30_000 }).toBe(true);
+    expect(log.errors).toEqual([]);
+  });
+});
+
+test.describe('Ao Sen Đêm · chất lượng', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  /** Mở cảnh ở một mức ép bằng ?level, chờ N khung, trả __sma.stats() và ảnh. */
+  async function atLevel(page, testInfo, level) {
+    const { query } = testInfo.project.metadata;
+    await page.goto(`./?${query.replace(/^\?/, '')}&${AT}&level=${level}&freeze=30`);
+    const settled = await waitForSettled(page, { timeout: 60_000 });
+    expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+    const sma = await waitForFrames(page, 30, { timeout: 120_000 });
+    expect(sma.level).toBe(level);
+    return { stats: await page.evaluate(() => window.__sma.stats()), image: await canvasStats(page) };
+  }
+
+  test('mức cao: tổng draw call mỗi khung ≤ 45 (spec §10; bóng tĩnh không vẽ lại mỗi khung)', async ({ page }, testInfo) => {
+    const { stats } = await atLevel(page, testInfo, 'cao');
+    expect(stats.drawCalls).toBeGreaterThan(10);
+    expect(stats.drawCalls).toBeLessThanOrEqual(45);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('?level=thap: phản chiếu giả, không bóng; vẫn có sáng có tối, ít draw call hơn mức cao', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const low = await atLevel(page, testInfo, 'thap');
+    await page.screenshot({ path: testInfo.outputPath('muc-thap.png') });
+    expect(low.image.bright).toBeGreaterThan(0.02);
+    expect(low.image.dark).toBeGreaterThan(DARK);
+    await expect(page.locator('[data-badge]')).toContainText('thấp');
+    const high = await atLevel(page, testInfo, 'cao');
+    expect(low.stats.drawCalls, 'mức thấp không vẽ cảnh lần hai cho phản chiếu').toBeLessThan(high.stats.drawCalls);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('Sổ tay › Vàng lá › Phá: bật rồi tắt "CPU vs GPU" thì hai cột Tắt / Bật đều có số', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const { query } = testInfo.project.metadata;
+    await page.goto(`./?${query.replace(/^\?/, '')}&${AT}`);
+    expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
+    const box = await page.locator('[data-stage] canvas').boundingBox();
+    await page.mouse.click(box.x + box.width * WATER.x, box.y + box.height * WATER.y);
+    await page.locator('[data-hint] button').click();
+    await page.evaluate(() => window.__sma.setWeight('vang-la', 1)); // chế độ mài đưa mọi lớp về 0: phủ lại Vàng lá
+    await page.locator('[data-rail] [data-layer="vang-la"] .rail-name').click();
+    const notebook = page.locator('[data-notebook]');
+    await notebook.locator('[data-tab="pha"]').click();
+    const button = notebook.locator('[data-experiment="cpu"]');
+    const bars = notebook.locator('[data-compare]');
+    await expect(bars.locator('[data-side="off"] .nb-compare-value')).toContainText('ms', { timeout: 30_000 });
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect(bars.locator('[data-side="on"] .nb-compare-value')).toContainText('ms', { timeout: 30_000 });
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+    await page.screenshot({ path: testInfo.outputPath('cpu-vs-gpu.png') });
     expect(log.errors).toEqual([]);
   });
 });
