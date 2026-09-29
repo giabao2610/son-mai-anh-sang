@@ -45,14 +45,17 @@
  * @property {Record<string, LayerContent>} [layers]    khóa = LayerMeta.id (bắt buộc từ GĐ 2)
  */
 /** @typedef {{ label: string, notes?: Record<string, string> }} DialText */
-/** @typedef {Object} LayerContent
+/** Chữ của một lớp trong Sổ tay (GĐ 2). tests/paintings/contract.test.js giữ các luật ghi ở đây.
+ * @typedef {Object} LayerContent
  * @property {string} understand     tab Hiểu, ≤ 150 chữ (đếm theo khoảng trắng)
- * @property {string} [diagram]      tên SVG trong diagrams/
+ * @property {string} [diagram]      nội dung SVG của sơ đồ: import './diagrams/<tên>.svg?raw'. Phải có <title>
+ *                                   (trình đọc màn hình đọc nó) và chỉ dùng màu của bảng sơn mài
  * @property {string[]} learned      "Bạn vừa học" (≥ 1 mục)
  * @property {{ title: string, url: string }[]} readMore   chỉ https
- * @property {Record<string, string | { label: string, options: Record<string, string> }>} knobs
- * @property {Record<string, { label: string, explain: string }>} [experiments]
- * @property {Record<string, string>} [readouts]
+ * @property {Record<string, string | { label: string, options: Record<string, string> }>} knobs   nhãn cho MỌI núm;
+ *                                   núm 'select' dùng dạng { label, options } có nhãn cho mọi lựa chọn
+ * @property {Record<string, { label: string, explain: string }>} [experiments]   cho MỌI thí nghiệm của lớp
+ * @property {Record<string, string>} [readouts]   nhãn cho MỌI số đo riêng của lớp
  * @property {Record<string, string>} [taps]    nhãn các bước chụp của post (Lột lớp, Kính mài)
  */
 

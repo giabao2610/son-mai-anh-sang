@@ -5,18 +5,11 @@ import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
 import { paintings } from '../../src/paintings/registry.js';
 import { mergePalette } from '../../src/engine/palette.js';
+import { svgColors } from '../helpers/svg.js';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const nfc = (s) => s.normalize('NFC').trim();
 
-/**
- * Mã màu hex trong một SVG. Bỏ các tham chiếu id trước (url(#bed), href="#bed"): id như "bed", "face"
- * trông giống mã màu 3 chữ số hex nhưng không phải màu.
- */
-function svgColors(svg) {
-  const text = svg.replace(/url\(#[^)]*\)/g, '').replace(/href="#[^"]*"/g, '');
-  return new Set((text.match(/#[0-9A-Fa-f]{3,8}\b/g) ?? []).map((h) => h.toUpperCase()));
-}
 
 describe('svgColors (tự kiểm)', () => {
   it('bắt màu thật, bỏ qua tham chiếu id', () => {

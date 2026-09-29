@@ -1,6 +1,184 @@
-// paintings/ao-sen-dem/content.vi.js — chữ tiếng Việt của Bức 1: gợi ý tương tác (GĐ 1); Hiểu/Phá của từng lớp (GĐ 2).
+// paintings/ao-sen-dem/content.vi.js — chữ tiếng Việt của Bức 1: gợi ý tương tác; Hiểu/Chỉnh/Phá của từng lớp trong Sổ tay.
+import phuBong from '../../engine/stock/phu-bong/content.vi.js';
+import cotDiagram from './diagrams/cot.svg?raw';
+import anhTrangDiagram from './diagrams/anh-trang.svg?raw';
+import matNuocDiagram from './diagrams/mat-nuoc.svg?raw';
+import vangLaDiagram from './diagrams/vang-la.svg?raw';
 
-/** @type {import('../../engine/contracts/painting.js').PaintingContent} */
+/**
+ * Mọi nhãn tra theo id (lớp, núm, thí nghiệm, số đo): đổi chữ không đụng tới code của lớp.
+ * understand ≤ 150 chữ (đếm theo khoảng trắng); đường dẫn "Đọc thêm" chỉ https. Test hợp đồng giữ các luật này.
+ * @type {import('../../engine/contracts/painting.js').PaintingContent}
+ */
 export default {
   hint: 'Chạm vào mặt nước',
+  layers: {
+    cot: {
+      understand:
+        'Cốt là lớp đất sét dưới cùng: chỉ có hình khối, chưa có màu hay ánh sáng của bức. Cả ao có hơn một '
+        + 'nghìn chiếc lá, nhưng GPU chỉ nhận MỘT hình lá. Instancing gửi hình đó một lần, kèm một bảng ma trận: '
+        + 'mỗi lá một ma trận nói lá nằm đâu, xoay bao nhiêu, to nhỏ thế nào. Nhờ vậy cả nghìn lá chỉ tốn một '
+        + 'draw call, tức một lần CPU bảo GPU vẽ. Cánh sen cũng thế: 388 cánh của 12 bông và 20 nụ là một hình '
+        + 'cánh vẽ 388 lần, cùng nở theo một uniform. Đèn xưởng xám giúp đất sét đọc được khối lõm của lòng lá. '
+        + 'Mài hết các lớp khác thì bức trở về đúng lớp này.',
+      diagram: cotDiagram,
+      learned: [
+        'Instancing: một hình, nhiều bản sao, một draw call.',
+        'Ma trận instance chứa vị trí, hướng xoay và cỡ của từng bản sao.',
+        'Hạt giống cố định cho ra đúng một ao sen mỗi lần mở trang.',
+      ],
+      readMore: [
+        { title: 'three.js · InstancedMesh', url: 'https://threejs.org/docs/#api/en/objects/InstancedMesh' },
+        { title: 'Ví dụ three.js: instancing với WebGPU', url: 'https://threejs.org/examples/#webgpu_instance_mesh' },
+        { title: 'Sơn mài (Wikipedia tiếng Việt)', url: 'https://vi.wikipedia.org/wiki/S%C6%A1n_m%C3%A0i' },
+      ],
+      knobs: {
+        leafCount: 'Số lá',
+        seed: 'Hạt giống (bố cục ao)',
+        sizeVariance: 'Độ chênh cỡ lá',
+        cupAmount: 'Độ lõm lòng lá',
+        openness: 'Độ nở của hoa',
+        wireframe: 'Chỉ vẽ khung dây',
+      },
+      experiments: {
+        noInstancing: {
+          label: 'Tắt instancing',
+          explain: 'Mỗi lá thành một Mesh riêng, tức một draw call riêng. Nhìn số draw call nhảy vọt và số mili '
+            + 'giây mỗi khung tăng theo: CPU phải ra lệnh vẽ hàng trăm lần thay vì một lần.',
+        },
+        flatNormals: {
+          label: 'Normal phẳng',
+          explain: 'Pháp tuyến là hướng mà bề mặt quay về; ánh sáng đọc nó để biết chỗ nào sáng, chỗ nào tối. '
+            + 'Bỏ pháp tuyến trơn thì mỗi tam giác sáng một màu: lá lộ ra là những mảnh phẳng ghép lại.',
+        },
+      },
+      readouts: { leaves: 'Số lá', vertices: 'Số đỉnh mỗi lần vẽ' },
+    },
+
+    'anh-trang': {
+      understand:
+        'Lớp này thắp đèn và sơn màu. Trăng là quả cầu tự phát sáng, đúng pha của đêm nay: đường ranh sáng tối '
+        + 'tính từ tuổi trăng. Ánh trăng là một DirectionalLight chiếu từ phía trăng, kèm MỘT shadow map: một '
+        + 'ảnh độ sâu nhìn từ trăng, để biết chỗ nào bị hoa và lá đứng che. Màu lấy đúng câu ca dao: lá xanh, '
+        + 'bông trắng, nhị vàng; màu nào cũng trộn từ đất sét theo trọng số của lớp. Mép cánh sen sáng lên nhờ '
+        + 'fresnel: chỗ mặt cánh gần song song với hướng nhìn thì phản quang mạnh. Lá có lớp clearcoat bóng như '
+        + 'sáp. Chiếc đèn hoa đăng là một ngọn đèn điểm ấm: cùng một ánh sáng, mỗi chất liệu đáp lại một khác.',
+      diagram: anhTrangDiagram,
+      learned: [
+        'DirectionalLight: ánh sáng song song từ rất xa, như trăng hay mặt trời.',
+        'Shadow map: vẽ cảnh từ phía đèn để biết chỗ nào khuất sáng.',
+        'Fresnel: bề mặt phản quang mạnh hơn khi nhìn xiên.',
+        'Mọi màu đi từ đất sét: mix(đất sét, màu, trọng số).',
+      ],
+      readMore: [
+        { title: 'LearnOpenGL · Shadow Mapping', url: 'https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping' },
+        { title: 'Xấp xỉ Schlick cho fresnel (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Schlick%27s_approximation' },
+        { title: 'three.js · MeshPhysicalMaterial', url: 'https://threejs.org/docs/#api/en/materials/MeshPhysicalMaterial' },
+      ],
+      knobs: {
+        moonPhase: 'Pha trăng (0 trăng mới, π rằm)',
+        rimPower: 'Độ mảnh của viền fresnel',
+        rimColor: 'Màu viền cánh',
+        translucency: 'Cánh trong khi ngược sáng',
+        clearcoat: 'Lớp bóng trên lá',
+        candleColor: 'Màu đèn hoa đăng',
+        candleIntensity: 'Độ sáng đèn hoa đăng',
+        shadowMapSize: 'Cỡ shadow map (điểm ảnh)',
+        shadowBias: 'Shadow bias',
+      },
+      experiments: {
+        biasZero: {
+          label: 'Bias = 0',
+          explain: 'Bias đẩy nhẹ phép so độ sâu để một mặt không tự che chính nó. Đặt bằng 0 thì trên lá hiện '
+            + 'sọc lốm đốm, gọi là shadow acne. Ở mức chất lượng thấp không có bóng nên không thấy gì.',
+        },
+        noRim: {
+          label: 'Tắt fresnel',
+          explain: 'Bỏ viền sáng ở mép cánh sen: bông hoa bẹt hẳn đi, mất cảm giác cánh mỏng và cong.',
+        },
+        redCandle: {
+          label: 'Đổi màu đèn',
+          explain: 'Đèn hoa đăng chuyển sang đỏ son. Lá bóng hắt lại thành vệt, cánh sen nhám thì ửng đều, '
+            + 'còn mặt nước soi nguyên ngọn đèn.',
+        },
+      },
+      readouts: { shadowMap: 'Cỡ shadow map' },
+    },
+
+    'mat-nuoc': {
+      understand:
+        'Mặt nước là một đĩa phẳng, nhưng soi được trăng, hoa và trời. Mỗi khung, reflector vẽ lại toàn cảnh từ '
+        + 'một camera lật ngược qua mặt nước, vào một ảnh nhỏ hơn màn hình, rồi dán ảnh ấy lên đĩa. Chạm vào '
+        + 'nước là thêm một vòng gợn vào bộ đệm tám vòng; một hàm TSL tính độ cao gợn tại mỗi điểm, và pháp '
+        + 'tuyến lấy từ độ dốc của hàm ấy. Pháp tuyến lệch thì chỗ đọc ảnh phản chiếu lệch theo: vòng gợn đi '
+        + 'qua là bóng trăng bị xẻ đôi. Fresnel quyết định soi bao nhiêu: nhìn xiên về chân trời thì nước như '
+        + 'gương, nhìn thẳng xuống thì thấy nước sâu đen. Lá nổi nhấp nhô theo cùng một hàm gợn.',
+      diagram: matNuocDiagram,
+      learned: [
+        'Phản chiếu phẳng: vẽ cảnh thêm một lần từ camera lật qua mặt gương.',
+        'Pháp tuyến lấy từ độ dốc của một hàm độ cao.',
+        'Một hàm TSL dùng chung cho mặt nước và cho lá.',
+      ],
+      readMore: [
+        { title: 'Ví dụ three.js: phản chiếu (WebGPU)', url: 'https://threejs.org/examples/#webgpu_reflection' },
+        { title: 'Three.js Shading Language (TSL)', url: 'https://github.com/mrdoob/three.js/wiki/Three.js-Shading-Language' },
+      ],
+      knobs: {
+        amplitude: 'Độ cao gợn',
+        speed: 'Tốc độ lan',
+        decay: 'Độ tắt dần',
+        wavelength: 'Bước sóng',
+        distortion: 'Độ méo ảnh phản chiếu',
+        fresnelPower: 'Số mũ fresnel',
+        reflectionResolution: 'Độ phân giải phản chiếu',
+      },
+      experiments: {
+        lowRes: {
+          label: 'Độ phân giải 0.1',
+          explain: 'Ảnh phản chiếu chỉ còn một phần mười chiều rộng màn hình: bóng trăng vỡ thành khối. Đổi lại, '
+            + 'lần vẽ thêm này rẻ hơn nhiều; máy yếu dùng mức 0.35.',
+        },
+        noFresnel: {
+          label: 'Tắt fresnel',
+          explain: 'Nước soi mạnh như nhau ở mọi góc nhìn, giống một tấm gương phẳng: mất cái sâu thăm thẳm '
+            + 'khi nhìn gần xuống.',
+        },
+        heightfield: {
+          label: 'Xem heightfield',
+          explain: 'Hiện thẳng độ cao gợn dưới dạng ảnh xám: sáng là đỉnh sóng, tối là đáy sóng. Chạm vào mặt '
+            + 'nước để thấy vòng gợn lan ra.',
+        },
+      },
+      readouts: { reflectionScale: 'Độ phân giải phản chiếu (so với màn hình)' },
+    },
+
+    'vang-la': {
+      understand:
+        'Đom đóm ở đây không do CPU tính. Vị trí và vận tốc của từng con nằm trong hai bộ đệm trên GPU; mỗi '
+        + 'khung, một compute shader chạy song song hàng nghìn luồng, mỗi luồng lo đúng một con: lượn theo nhịp '
+        + 'riêng, xoáy chậm quanh ao, bị tay người xem hút lại hay đẩy ra. Rồi MỘT Sprite vẽ cả đàn, đọc vị trí '
+        + 'thẳng từ bộ đệm mà không đi qua CPU. Đom đóm chỉ phát sáng (emissive), cộng dồn màu lên nhau '
+        + '(additive), và nhấp nháy theo sin của đồng hồ cảnh. Phần phát sáng đi vào bloom của lớp Phủ bóng, '
+        + 'nên chúng tỏa vàng lá.',
+      diagram: vangLaDiagram,
+      learned: [
+        'Compute shader: GPU chạy cùng một hàm trên hàng nghìn phần tử cùng lúc.',
+        'Dữ liệu ở lại trên GPU: bộ đệm vừa được tính vừa được vẽ.',
+        'Additive blending: ánh sáng cộng dồn, không che nhau.',
+      ],
+      readMore: [
+        { title: 'Ví dụ three.js: hạt tính bằng compute (WebGPU)', url: 'https://threejs.org/examples/#webgpu_compute_particles' },
+        { title: 'WebGPU Fundamentals · Compute shader', url: 'https://webgpufundamentals.org/webgpu/lessons/webgpu-compute-shaders.html' },
+      ],
+      knobs: {
+        size: 'Cỡ đom đóm',
+        glow: 'Độ sáng',
+        attraction: 'Lực hút của tay',
+        count: 'Số con',
+      },
+    },
+
+    // Lớp dùng chung: chữ viết trung tính cho mọi bức. Muốn ví dụ riêng của ao sen thì ghi đè bằng spread ở đây.
+    'phu-bong': { ...phuBong.layers['phu-bong'] },
+  },
 };
