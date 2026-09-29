@@ -19,7 +19,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # GĐ 3 trên ubuntu-latest: e2e chặn khoảng 12 phút, e2e WebGPU không chặn khoảng 10 phút (SwiftShader vẽ bằng CPU).
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -47,6 +48,7 @@ jobs:
       # Playwright xóa thư mục output ở đầu mỗi lần chạy, nên lần này ghi vào thư mục con riêng.
       - name: E2E không chặn · WebGPU trên SwiftShader (Chromium đầy đủ)
         continue-on-error: true
+        timeout-minutes: 15 # treo thì chỉ bước này hỏng, job vẫn xong
         run: npx playwright test --project=webgpu-swiftshader --output=e2e/.results/webgpu-swiftshader
 
       - name: Giữ ảnh chụp và trace của e2e
