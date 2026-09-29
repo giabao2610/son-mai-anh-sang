@@ -1063,6 +1063,8 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
    dài ấy thành "rớt khung" ở mọi cửa sổ và các màn đó không bao giờ nâng lại được (review GĐ 3 tìm ra).
    Chống dao động: nâng một nấc mà trong 3 cửa sổ sau lại phải hạ đúng nấc đó thì khóa nấc ấy, không nâng nó nữa trong phiên.
 2. **Trình duyệt khóa ở 30 fps** (Energy Saver của Chrome khi chạy pin, Low Power Mode của iPhone): hạ nấc nào cũng không nhanh hơn.
+   Mốc "lúc bắt đầu hạ" là trung bình của cửa sổ khiến hạ nấc đầu tiên, ghi cả khi Sổ tay đang mở, và bỏ đi khi đã nâng về hết
+   nấc (lần hạ sau đo mốc mới; dùng lại mốc cũ thì có thể trả nấc sai lúc, review GĐ 3 tìm ra).
    Vì vậy khi đã hạ hết thang (từ lúc chưa hạ nấc nào) mà trung bình vẫn không nhanh hơn 10% so với lúc bắt đầu hạ, thì đó là nhịp
    bị khóa, không phải GPU yếu: trả lại mọi nấc và thôi hạ ("bị khóa nhịp"). Hết khóa khi nhịp nhanh hẳn lên: trung bình
    ≤ 1,05 × ngân sách (cùng dung sai với "dư vừa", nên màn 59,94 Hz hay một khung rớt lẻ vẫn thoát được), hoặc nhanh hơn nhịp

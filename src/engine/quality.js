@@ -70,6 +70,7 @@ export function budgetFor(level, qualitySpec) {
  * 1. "Dư" gồm cả "không rớt khung nào mà trung bình không vượt ngân sách": màn 60 Hz mới nâng lại được.
  *    Nâng một nấc mà phải hạ lại ngay đúng nấc đó thì khóa nó: không dao động qua lại.
  * 2. Hạ hết thang mà không nhanh hơn lúc bắt đầu hạ thì nhịp đang bị khóa: trả lại hết ('reset') rồi thôi hạ.
+ *    Mốc "lúc bắt đầu hạ" ghi ở nấc đầu tiên (cả khi đang canh) và bỏ khi đã nâng về hết.
  *    Hết khóa khi nhịp nhanh hẳn lên (≤ 1,05 × ngân sách như "dư vừa", hay nhanh hơn nhịp bị khóa ÷ 1,25). Còn khóa
  *    mà chậm hẳn hơn nhịp bị khóa (× 1,25, 2 cửa sổ liền) thì là quá tải thật: vẫn hạ, để về lại nhịp ấy.
  * 3. guard(true) khi Sổ tay mở: người xem cố ý làm chậm để học (tắt instancing, nhiều đom đóm), nên chậm vừa phải
@@ -122,7 +123,7 @@ export function createTuner({ budgetMs, ...options }) {
       overRun = 0;
       spareRun = 0;
       if (applied < steps) {
-        if (applied === 0 && !guarding) descentStart = avg;
+        if (applied === 0) descentStart = avg; // mốc của lần hạ này, ghi cả khi đang canh (Sổ tay mở)
         if (lastUp && lastUp.index === applied && windowNo - lastUp.windowNo <= o.lockWithin) locked.add(applied);
         return 'down';
       }
@@ -138,6 +139,7 @@ export function createTuner({ budgetMs, ...options }) {
     if (spareRun >= o.upAfter && applied > 0 && !locked.has(applied - 1)) {
       spareRun = 0;
       lastUp = { index: applied - 1, windowNo };
+      if (applied === 1) descentStart = null; // nâng về hết: lần hạ sau đo mốc mới, không dùng lại mốc cũ
       return 'up';
     }
     return null;

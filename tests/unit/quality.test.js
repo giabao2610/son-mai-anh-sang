@@ -192,6 +192,36 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
     }
   });
 
+  it('mốc "lúc bắt đầu hạ" không dùng lại mốc cũ: hạ ở 25 ms rồi nâng về hết; sau đó Sổ tay mở hạ từ 50 ms còn 38 ms → đóng Sổ tay vẫn giữ nấc', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 0, steps: 4 };
+    const first = run(tuner, { seconds: 8, gapFor: (k) => (k === 0 ? 25 : DESKTOP), ladder });
+    expect(kinds(first.actions)).toEqual(['down']);
+    const idle = run(tuner, { seconds: 14, gapFor: () => DESKTOP, ladder, from: first.end });
+    expect(kinds(idle.actions)).toEqual(['up']);
+    tuner.guard(true);
+    const heavy = (k) => 50 - k * 3; // thí nghiệm nặng: mỗi nấc bớt 3 ms, hạ hết còn 38 ms
+    const open = run(tuner, { seconds: 20, gapFor: heavy, ladder, from: idle.end });
+    expect(kinds(open.actions)).toEqual(['down', 'down', 'down', 'down']);
+    tuner.guard(false); // đóng Sổ tay, thí nghiệm vẫn bật: hạ đã giúp (50 → 38 ms), không được trả lại
+    const closed = run(tuner, { seconds: 30, gapFor: heavy, ladder, from: open.end });
+    expect(closed.actions).toEqual([]);
+    expect(ladder.applied).toBe(4);
+    expect(tuner.state().capped).toBe(false);
+  });
+
+  it('bắt đầu hạ lúc Sổ tay mở (quá tải nặng), hạ hết mà không nhanh hơn: đóng Sổ tay thì trả lại hết như luật khóa nhịp', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 0, steps: 3 };
+    tuner.guard(true);
+    const open = run(tuner, { seconds: 16, gapFor: () => 50, ladder });
+    expect(kinds(open.actions)).toEqual(['down', 'down', 'down']);
+    tuner.guard(false);
+    const closed = run(tuner, { seconds: 10, gapFor: () => 50, ladder, from: open.end });
+    expect(kinds(closed.actions)).toEqual(['reset']);
+    expect(tuner.state().capped).toBe(true);
+  });
+
   it('khoảng giữa hai khung > 250 ms (tab ẩn, debugger) thì bỏ cả cửa sổ đang đo', () => {
     const tuner = createTuner({ budgetMs: DESKTOP });
     // 40 fps nhưng cứ 1,5 giây lại có một khoảng 400 ms: không cửa sổ nào đo xong, nên không quyết gì.
