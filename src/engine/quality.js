@@ -26,6 +26,7 @@ export const TUNER = Object.freeze({
   upAfter: 5, // số cửa sổ dư liền nhau thì nâng một nấc
   lockWithin: 3, // nâng một nấc mà trong chừng này cửa sổ phải hạ lại đúng nấc đó thì khóa nó
   gain: 0.9, // hạ hết thang mà trung bình vẫn ≥ 90% lúc bắt đầu hạ: nhịp bị khóa, không phải GPU yếu
+  beyond: 1.25, // đang bị khóa nhịp: chậm hơn nhịp ấy × 1,25 là quá tải thật (hạ); nhanh hơn ÷ 1,25 là hết khóa
 });
 
 /**
@@ -68,8 +69,9 @@ export function budgetFor(level, qualitySpec) {
  * chế độ tiết kiệm pin (30 fps). Ba luật ngoài spec gốc sinh ra từ đó (spec §10, GĐ 3):
  * 1. "Dư" gồm cả "không rớt khung nào mà trung bình không vượt ngân sách": màn 60 Hz mới nâng lại được.
  *    Nâng một nấc mà phải hạ lại ngay đúng nấc đó thì khóa nó: không dao động qua lại.
- * 2. Hạ hết thang mà không nhanh hơn lúc bắt đầu hạ thì nhịp đang bị khóa: trả lại hết ('reset') rồi thôi hạ,
- *    cho tới khi trung bình về dưới ngân sách.
+ * 2. Hạ hết thang mà không nhanh hơn lúc bắt đầu hạ thì nhịp đang bị khóa: trả lại hết ('reset') rồi thôi hạ.
+ *    Hết khóa khi nhịp nhanh hẳn lên (≤ 1,05 × ngân sách như "dư vừa", hay nhanh hơn nhịp bị khóa ÷ 1,25). Còn khóa
+ *    mà chậm hẳn hơn nhịp bị khóa (× 1,25, 2 cửa sổ liền) thì là quá tải thật: vẫn hạ, để về lại nhịp ấy.
  * 3. guard(true) khi Sổ tay mở: người xem cố ý làm chậm để học (tắt instancing, nhiều đom đóm), nên chậm vừa phải
  *    thì để yên cho số đo trung thực; nhưng quá tải NẶNG (> ngân sách × 2,2) thì vẫn hạ, để máy không bị ép quá sức.
  *    Lúc canh không bao giờ nâng.
@@ -87,7 +89,9 @@ export function createTuner({ budgetMs, ...options }) {
   let overRun = 0;
   let spareRun = 0;
   let descentStart = null; // trung bình của cửa sổ khiến hạ nấc đầu tiên (từ lúc chưa hạ gì)
-  let capped = false; // nhịp đang bị khóa: không hạ nữa
+  let capped = false; // nhịp đang bị khóa: không hạ nữa, trừ khi chậm hẳn hơn nhịp bị khóa
+  let capAvg = null; // trung bình lúc nhận ra nhịp bị khóa
+  let beyondRun = 0; // số cửa sổ liền nhau chậm hẳn hơn nhịp bị khóa
   let lastUp = null; // { index, windowNo } của lần nâng gần nhất
   const locked = new Set();
 
@@ -103,8 +107,16 @@ export function createTuner({ budgetMs, ...options }) {
     overRun = over ? overRun + 1 : 0;
     spareRun = spare ? spareRun + 1 : 0;
     if (capped) {
-      if (avg > budgetMs) return null;
-      capped = false; // nhịp hết bị khóa (cắm sạc, tắt tiết kiệm pin): chạy lại như thường
+      beyondRun = avg > capAvg * o.beyond ? beyondRun + 1 : 0;
+      if (avg <= budgetMs * o.near || avg < capAvg / o.beyond) {
+        capped = false; // hết khóa (cắm sạc, tắt tiết kiệm pin; màn 59,94 Hz hay rớt lẻ một khung vẫn tính): chạy lại
+        beyondRun = 0;
+      } else {
+        // Còn khóa mà chậm hẳn hơn nhịp bị khóa (người xem kéo núm nặng): quá tải thật, hạ để về lại nhịp ấy.
+        if (beyondRun < o.downAfter || applied >= steps) return null;
+        beyondRun = 0;
+        return 'down';
+      }
     }
     if (overRun >= o.downAfter) {
       overRun = 0;
@@ -116,6 +128,8 @@ export function createTuner({ budgetMs, ...options }) {
       }
       if (!guarding && descentStart !== null && avg >= descentStart * o.gain) {
         capped = true;
+        capAvg = avg;
+        beyondRun = 0;
         descentStart = null;
         return 'reset';
       }

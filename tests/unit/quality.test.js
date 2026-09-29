@@ -163,6 +163,35 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
     expect(kinds(again.actions)).toEqual(['down']);
   });
 
+  it('hết khóa nhịp trên màn 59,94 Hz, hay khi mỗi cửa sổ rớt một khung: thoát "bị khóa nhịp", rồi chậm thật thì lại hạ', () => {
+    const idles = { '59,94 Hz': () => 1000 / 59.94, '60 Hz rớt 1 khung / 2 s': (k, i) => (i % 120 === 60 ? 2 * DESKTOP : DESKTOP) };
+    for (const [name, idle] of Object.entries(idles)) {
+      const tuner = createTuner({ budgetMs: DESKTOP });
+      const ladder = { applied: 0, steps: 3 };
+      const locked = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, ladder });
+      expect(kinds(locked.actions), name).toEqual(['down', 'down', 'down', 'reset']);
+      const unlocked = run(tuner, { seconds: 10, gapFor: idle, ladder, from: locked.end });
+      expect(unlocked.actions, name).toEqual([]);
+      expect(tuner.state().capped, name).toBe(false);
+      const slow = run(tuner, { seconds: 6, gapFor: () => 25, ladder, from: unlocked.end });
+      expect(kinds(slow.actions), name).toEqual(['down']);
+    }
+  });
+
+  it('đang "bị khóa nhịp" mà quá tải thật (chậm hẳn hơn nhịp bị khóa) thì vẫn hạ về lại nhịp ấy, kể cả khi Sổ tay mở', () => {
+    for (const guarding of [false, true]) {
+      const tuner = createTuner({ budgetMs: DESKTOP });
+      const ladder = { applied: 0, steps: 3 };
+      const locked = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, ladder });
+      expect(tuner.state().capped).toBe(true);
+      tuner.guard(guarding);
+      // Người xem kéo 200.000 đom đóm: khung 50 ms (20 fps). Hạ một nấc là về lại nhịp bị khóa 33 ms: dừng ở đó.
+      const heavy = run(tuner, { seconds: 20, gapFor: (k) => (k === 0 ? 50 : 1000 / 30), ladder, from: locked.end });
+      expect(kinds(heavy.actions), `canh: ${guarding}`).toEqual(['down']);
+      expect(tuner.state().capped).toBe(true);
+    }
+  });
+
   it('khoảng giữa hai khung > 250 ms (tab ẩn, debugger) thì bỏ cả cửa sổ đang đo', () => {
     const tuner = createTuner({ budgetMs: DESKTOP });
     // 40 fps nhưng cứ 1,5 giây lại có một khoảng 400 ms: không cửa sổ nào đo xong, nên không quyết gì.

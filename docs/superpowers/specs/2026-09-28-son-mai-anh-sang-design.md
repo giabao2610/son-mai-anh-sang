@@ -1064,7 +1064,10 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
    Chống dao động: nâng một nấc mà trong 3 cửa sổ sau lại phải hạ đúng nấc đó thì khóa nấc ấy, không nâng nó nữa trong phiên.
 2. **Trình duyệt khóa ở 30 fps** (Energy Saver của Chrome khi chạy pin, Low Power Mode của iPhone): hạ nấc nào cũng không nhanh hơn.
    Vì vậy khi đã hạ hết thang (từ lúc chưa hạ nấc nào) mà trung bình vẫn không nhanh hơn 10% so với lúc bắt đầu hạ, thì đó là nhịp
-   bị khóa, không phải GPU yếu: trả lại mọi nấc và thôi hạ ("bị khóa nhịp"). Hết khóa khi trung bình về dưới ngân sách.
+   bị khóa, không phải GPU yếu: trả lại mọi nấc và thôi hạ ("bị khóa nhịp"). Hết khóa khi nhịp nhanh hẳn lên: trung bình
+   ≤ 1,05 × ngân sách (cùng dung sai với "dư vừa", nên màn 59,94 Hz hay một khung rớt lẻ vẫn thoát được), hoặc nhanh hơn nhịp
+   bị khóa ÷ 1,25. Còn khóa mà chậm hẳn hơn nhịp bị khóa (× 1,25, 2 cửa sổ liền: người xem kéo 200.000 đom đóm) là quá tải
+   thật: vẫn hạ, kể cả khi Sổ tay mở, để về lại nhịp bị khóa rồi dừng.
 3. **Sổ tay cố ý làm chậm** (tắt instancing, nhiều đom đóm, CPU vs GPU): hạ nấc vì chậm vừa phải thì số đo sai, bài học hỏng;
    nhưng để máy bị ép quá sức thì trái mục tiêu hợp nhiều phần cứng. Vì vậy khi thanh lớp mở, bộ điều chỉnh chuyển sang chế độ
    **canh**: chậm vừa phải thì để yên, chỉ hạ khi quá tải NẶNG (trung bình > 2,2 × ngân sách trong 2 cửa sổ), không bao giờ nâng.
