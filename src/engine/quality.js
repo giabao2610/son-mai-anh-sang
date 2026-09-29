@@ -21,7 +21,7 @@ export const TUNER = Object.freeze({
   severe: 2.2, // "quá tải nặng": trung bình > ngân sách × 2,2 (khi Sổ tay mở, chỉ phản ứng với mức này)
   spare: 0.7, // "dư nhiều": trung bình < ngân sách × 0,7
   near: 1.05, // "dư vừa": trung bình ≤ ngân sách × 1,05 VÀ không rớt khung nào
-  drop: 1.5, // một khoảng dài hơn 1,5 × trung vị của cửa sổ là một lần rớt khung
+  frameMs: 1000 / 60, // nhịp của bộ chặn khung (MAX_FPS của gpu/clock.js): cửa sổ thiếu ≥ 0,75 nhịp là rớt khung
   downAfter: 2, // số cửa sổ quá tải liền nhau thì hạ một nấc
   upAfter: 5, // số cửa sổ dư liền nhau thì nâng một nấc
   lockWithin: 3, // nâng một nấc mà trong chừng này cửa sổ phải hạ lại đúng nấc đó thì khóa nó
@@ -150,8 +150,11 @@ export function createTuner({ budgetMs, ...options }) {
       total += gap;
       if (total < o.windowMs) return null;
       const avg = total / gaps.length;
-      const median = [...gaps].sort((a, b) => a - b)[gaps.length >> 1];
-      const drops = gaps.filter((g) => g > median * o.drop).length;
+      // Rớt khung = số nhịp 60 khung/giây trôi qua mà không có khung nào, đếm trên cả cửa sổ. Không so từng khoảng:
+      // sau bộ chặn khung, màn 75 Hz hay 144 Hz có nhịp lệch đều (75 Hz: 26,7 + 13,3 + 13,3 + 13,3 ms) mà không
+      // rớt khung nào; phần lẻ dưới 0,75 nhịp là lệch pha ở hai đầu cửa sổ.
+      const missed = total / o.frameMs - gaps.length;
+      const drops = missed < 0.75 ? 0 : Math.round(missed);
       clear();
       windowNo += 1;
       return decide(avg, drops, applied, steps);

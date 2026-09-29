@@ -1,6 +1,8 @@
 // tests/unit/quality.test.js — chọn mức, ngân sách của bức, và bộ điều chỉnh có trễ chạy trên chuỗi khung giả.
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_LEVELS, FRAME_BUDGET_MS, LEVELS, budgetFor, createTuner, isMobile, pickLevel } from '../../src/engine/quality.js';
+import { DEFAULT_LEVELS, FRAME_BUDGET_MS, LEVELS, TUNER, budgetFor, createTuner, isMobile, pickLevel } from '../../src/engine/quality.js';
+import { MAX_FPS, createFrameCap } from '../../src/engine/gpu/clock.js';
+import { mulberry32 } from '../../src/lib/random.js';
 
 const UA = {
   android: 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36',
@@ -198,5 +200,27 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
     const { actions } = run(tuner, { seconds: 30, gapFor: () => 1000 / 120, ladder });
     expect(kinds(actions)).toEqual(['up', 'up']);
     expect(ladder.applied).toBe(0);
+  });
+
+  it('sau bộ chặn 60 khung/giây (như run.js): màn 72/75/85/144 Hz, nhịp lệch ±0,3 ms, máy rảnh thì nâng lại hết', () => {
+    // Nhịp sau bộ chặn không đều (75 Hz: 26,7 + 13,3 + 13,3 + 13,3 ms) mà không rớt khung nào.
+    for (const hz of [60, 72, 75, 85, 90, 120, 144, 165]) {
+      const tuner = createTuner({ budgetMs: DESKTOP });
+      const cap = createFrameCap();
+      const jitter = mulberry32(hz);
+      const ladder = { applied: 3, steps: 4 };
+      for (let i = 1; i < hz * 60; i++) {
+        const ms = (i * 1000) / hz + (jitter() - 0.5) * 0.6;
+        if (!cap.ready(ms)) continue;
+        const action = tuner.sample(ms, ladder);
+        if (action === 'up') ladder.applied -= 1;
+        else if (action) ladder.applied = action === 'down' ? ladder.applied + 1 : 0;
+      }
+      expect(ladder.applied, `${hz} Hz`).toBe(0);
+    }
+  });
+
+  it('nhịp của bộ chặn khung là nhịp mà bộ điều chỉnh dùng để đếm khung rớt', () => {
+    expect(TUNER.frameMs).toBeCloseTo(1000 / MAX_FPS, 9);
   });
 });

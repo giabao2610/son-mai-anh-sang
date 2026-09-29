@@ -1057,7 +1057,10 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
 **(GĐ 3) Ba cái bẫy khi đo bằng nhịp `requestAnimationFrame`, và cách tránh:**
 1. **Màn 60 Hz không bao giờ "dư".** Trình duyệt khóa nhịp rAF theo màn hình: khung 16,7 ms không bao giờ dưới 0,7 × 16,7 = 11,7 ms.
    Chỉ một lần giật tạm (mở app khác) là hạ nấc mãi mãi. Vì vậy một cửa sổ là "dư" khi trung bình dưới 0,7 × ngân sách, **hoặc**
-   trung bình không quá 1,05 × ngân sách và không rớt khung nào (không khoảng nào dài hơn 1,5 × trung vị của cửa sổ).
+   trung bình không quá 1,05 × ngân sách và không rớt khung nào. Rớt khung đếm trên cả cửa sổ: số nhịp 60 khung/giây đã trôi qua
+   trừ số khung đã vẽ, thiếu từ 0,75 nhịp trở lên mới tính. Không so từng khoảng với trung vị: sau bộ chặn 60 khung/giây, màn
+   72/75/85/144 Hz có nhịp lệch đều (75 Hz: 26,7 + 13,3 + 13,3 + 13,3 ms) mà không rớt khung nào; so với trung vị thì khoảng
+   dài ấy thành "rớt khung" ở mọi cửa sổ và các màn đó không bao giờ nâng lại được (review GĐ 3 tìm ra).
    Chống dao động: nâng một nấc mà trong 3 cửa sổ sau lại phải hạ đúng nấc đó thì khóa nấc ấy, không nâng nó nữa trong phiên.
 2. **Trình duyệt khóa ở 30 fps** (Energy Saver của Chrome khi chạy pin, Low Power Mode của iPhone): hạ nấc nào cũng không nhanh hơn.
    Vì vậy khi đã hạ hết thang (từ lúc chưa hạ nấc nào) mà trung bình vẫn không nhanh hơn 10% so với lúc bắt đầu hạ, thì đó là nhịp
