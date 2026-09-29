@@ -1,0 +1,292 @@
+/* styles/notebook.css — thanh lớp, Sổ tay (ba tab), núm Tweakpane và code sống; màu từ bảng sơn mài (tokens.css). */
+
+/* ── Khung chung của thanh lớp và Sổ tay: tấm sơn đen then mờ, viền vàng lá ─────────────── */
+.rail,
+.notebook {
+  position: fixed;
+  z-index: 2; /* trên lớp chữ (.frame), dưới công cụ ?debug */
+  color: var(--nga);
+  background: var(--veil-strong);
+  border: 1px solid color-mix(in srgb, var(--vang-la) 35%, transparent);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--den-then) 70%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.rail button,
+.notebook button { font: inherit; color: inherit; cursor: pointer; }
+.rail button:focus-visible,
+.notebook :focus-visible { outline: 2px solid var(--vang-la-sang); outline-offset: 2px; }
+
+/* Lúc mất GPU, hay đang dựng lại cảnh, thanh lớp và Sổ tay nhường chỗ cho poster và nút "Dựng lại cảnh". */
+body:is([data-state='lost'], [data-state='loading'], [data-state='compiling'], [data-state='fading']) :is(.rail, .notebook) {
+  display: none;
+}
+
+/* ── Thanh lớp: máy tính đặt dọc bên trái, điện thoại đặt ngang dưới đáy ─────────────── */
+.rail {
+  left: var(--gutter);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 224px;
+  max-height: calc(100vh - 2 * var(--gutter));
+  padding: 14px 14px 12px;
+  overflow: auto;
+}
+.rail ol { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.rail li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 8px; }
+.rail li[data-on='false'] .rail-name { color: var(--dat-set); } /* lớp đang mài: chữ đất sét */
+.rail-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  font-weight: 600;
+  font-size: 13px;
+  text-align: left;
+  background: none;
+  border: 0;
+}
+.rail-name[aria-current='true'] { color: var(--vang-la-sang); }
+.rail-no {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  font-size: 11px;
+  border: 1px solid color-mix(in srgb, var(--vang-la) 70%, transparent);
+  border-radius: 50%;
+}
+
+/* Công tắc: role="switch", aria-checked là ý người xem (đích của tween). */
+.rail-switch {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  padding: 0;
+  background: var(--den-then);
+  border: 1px solid var(--dat-set);
+  border-radius: 999px;
+}
+.rail-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--dat-set);
+  border-radius: 50%;
+  transition: transform 200ms ease-out;
+}
+.rail-switch[aria-checked='true'] {
+  background: color-mix(in srgb, var(--vang-la) 30%, var(--den-then));
+  border-color: var(--vang-la);
+}
+.rail-switch[aria-checked='true']::after { transform: translateX(14px); background: var(--vang-la-sang); }
+
+/* Vạch trọng số: dài theo --w (0 → 1) mà thanh lớp cập nhật mỗi khung trong lúc tween. */
+.rail-bar {
+  grid-column: 1 / -1;
+  height: 2px;
+  background: color-mix(in srgb, var(--dat-set) 30%, transparent);
+  border-radius: 2px;
+}
+.rail-bar::after {
+  content: '';
+  display: block;
+  height: 100%;
+  width: calc(var(--w, 1) * 100%);
+  background: var(--vang-la);
+  border-radius: inherit;
+}
+
+.rail-next {
+  padding: 9px 14px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--den-then) !important;
+  background: var(--vang-la);
+  border: 0;
+  border-radius: 999px;
+}
+.rail-next:hover { background: var(--vang-la-sang); }
+.rail-close,
+.nb-close {
+  width: 30px;
+  height: 30px;
+  font-size: 20px !important;
+  line-height: 1;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 50%;
+}
+.rail-close { align-self: flex-end; order: -1; margin: -6px -6px -4px 0; }
+.rail-close:hover,
+.nb-close:hover { border-color: color-mix(in srgb, var(--vang-la) 55%, transparent); }
+
+/* ── Sổ tay: máy tính là panel bên phải, điện thoại là tấm trượt dưới ─────────────────── */
+.notebook {
+  top: calc(var(--gutter) + 52px); /* chừa hàng trên cùng cho huy hiệu tầng (và ô giải thích của nó) */
+  right: var(--gutter);
+  bottom: var(--gutter);
+  display: flex;
+  flex-direction: column;
+  width: min(440px, calc(100vw - 300px));
+  overflow: hidden;
+}
+.nb-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 16px 8px 20px; }
+.nb-no { margin: 0; font: 600 11px/1.4 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--vang-la); }
+.notebook h2 { margin: 2px 0 0; font: 500 30px/1.1 var(--serif); }
+.nb-tabs { display: flex; gap: 2px; padding: 0 12px; border-bottom: 1px solid color-mix(in srgb, var(--vang-la) 25%, transparent); }
+.nb-tabs [role='tab'] {
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--bac-la);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+}
+.nb-tabs [role='tab'][aria-selected='true'] { color: var(--vang-la-sang); border-bottom-color: var(--vang-la); }
+.notebook [role='tabpanel'] { flex: 1; min-height: 0; padding: 14px 20px 20px; overflow: auto; }
+.notebook h3 {
+  margin: 20px 0 8px;
+  font: 600 11px/1.4 var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vang-la);
+}
+.notebook ul { margin: 0; padding-left: 20px; }
+.notebook li + li { margin-top: 4px; }
+.notebook a { color: var(--vang-la-sang); }
+.nb-understand { margin: 0; font-size: 15px; line-height: 1.65; }
+.nb-missing { margin: 0; color: var(--bac-la); }
+.nb-poem { margin: 0 0 14px; }
+.nb-poem blockquote { margin: 0; font: italic 500 19px/1.4 var(--serif); }
+.nb-poem blockquote p { margin: 0; }
+.nb-poem figcaption { margin-top: 6px; font: 600 11px/1.4 var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--vang-la); }
+.nb-poem cite { font-style: normal; }
+.nb-diagram { margin: 16px 0 0; }
+.nb-diagram svg { display: block; width: 100%; height: auto; }
+/* Dòng trạng thái ở đáy Sổ tay (vùng aria-live, thấy ở mọi tab). Trống thì thu lại, không ẩn bằng display: none. */
+.nb-busy {
+  margin: 0;
+  padding: 8px 20px 12px;
+  font-size: 12px;
+  color: var(--vang-la-sang);
+  border-top: 1px solid color-mix(in srgb, var(--vang-la) 25%, transparent);
+}
+.nb-busy:empty { padding: 0; border: 0; }
+
+/* ── Núm (Tweakpane): đổi biến CSS của nó sang bảng sơn mài ─────────────────────────── */
+.nb-knobs {
+  --tp-base-background-color: transparent;
+  --tp-base-shadow-color: transparent;
+  --tp-base-font-family: var(--sans);
+  --tp-container-background-color: color-mix(in srgb, var(--nga) 8%, transparent);
+  --tp-container-background-color-hover: color-mix(in srgb, var(--nga) 12%, transparent);
+  --tp-container-background-color-focus: color-mix(in srgb, var(--nga) 14%, transparent);
+  --tp-container-background-color-active: color-mix(in srgb, var(--nga) 16%, transparent);
+  --tp-container-foreground-color: var(--nga);
+  --tp-input-background-color: color-mix(in srgb, var(--nga) 8%, transparent);
+  --tp-input-background-color-hover: color-mix(in srgb, var(--nga) 12%, transparent);
+  --tp-input-background-color-focus: color-mix(in srgb, var(--vang-la) 18%, transparent);
+  --tp-input-background-color-active: color-mix(in srgb, var(--vang-la) 22%, transparent);
+  --tp-input-foreground-color: var(--nga);
+  --tp-label-foreground-color: var(--bac-la);
+  --tp-groove-foreground-color: color-mix(in srgb, var(--vang-la) 30%, transparent);
+  --tp-button-background-color: var(--vang-la);
+  --tp-button-background-color-hover: var(--vang-la-sang);
+  --tp-button-background-color-focus: var(--vang-la-sang);
+  --tp-button-background-color-active: var(--vang-la-sang);
+  --tp-button-foreground-color: var(--den-then);
+  --tp-monitor-background-color: color-mix(in srgb, var(--nga) 6%, transparent);
+  --tp-monitor-foreground-color: var(--bac-la);
+  --tp-blade-value-width: 150px;
+  color: var(--bac-la);
+}
+
+/* ── Code sống: HTML của Shiki (theme sơn mài), dòng của núm đang rê thì sáng lên ────── */
+.code-files { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.code-files button {
+  padding: 4px 10px;
+  font: 400 12px/1.4 var(--mono);
+  color: var(--bac-la);
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--bac-la) 30%, transparent);
+  border-radius: 999px;
+}
+.code-files button[aria-pressed='true'] { color: var(--den-then); background: var(--vang-la); border-color: var(--vang-la); }
+.code-view {
+  position: relative; /* offsetTop của dòng tính từ khung này: code-view.js tự cuộn khung, không cuộn cả Sổ tay */
+  max-height: 46vh;
+  overflow: auto;
+  font: 400 12px/1.55 var(--mono);
+  border: 1px solid color-mix(in srgb, var(--vang-la) 20%, transparent);
+  border-radius: 8px;
+}
+.code-view pre { margin: 0; padding: 10px 0; }
+.code-view .line { display: inline-block; min-width: 100%; padding: 0 12px; }
+.code-view .line.is-lit {
+  background: color-mix(in srgb, var(--vang-la) 22%, transparent);
+  box-shadow: inset 3px 0 0 var(--vang-la);
+}
+
+/* ── Phá: nút bật/tắt thí nghiệm và bảng số đo ─────────────────────────────────────── */
+.nb-experiments { padding: 0 !important; list-style: none; }
+.nb-experiments li { padding: 10px 0; border-bottom: 1px solid color-mix(in srgb, var(--vang-la) 15%, transparent); }
+.nb-experiments button {
+  padding: 7px 14px;
+  font-weight: 600;
+  font-size: 13px;
+  background: none;
+  border: 1px solid var(--vang-la);
+  border-radius: 999px;
+}
+.nb-experiments button[aria-pressed='true'] { color: var(--nga); background: var(--do-son); border-color: var(--do-son); }
+.nb-experiments button[aria-busy='true'] { opacity: 0.6; cursor: progress; }
+.nb-experiments button:disabled { cursor: default; opacity: 0.55; }
+.nb-experiments p { margin: 6px 0 0; font-size: 13px; line-height: 1.55; color: var(--bac-la); }
+.nb-readouts { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; margin: 0; }
+.nb-readouts div { display: contents; }
+.nb-readouts dt { color: var(--bac-la); }
+.nb-readouts dd { margin: 0; font: 400 13px/1.5 var(--mono); text-align: right; color: var(--vang-la-sang); }
+
+/* ── Điện thoại: thanh lớp là dải ngang dưới đáy, Sổ tay là tấm trượt ngay trên nó ─── */
+@media (max-width: 640px) {
+  .rail {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    transform: none;
+    flex-direction: row;
+    align-items: center;
+    width: auto;
+    height: 68px;
+    padding: 8px 10px;
+    border-radius: 14px 14px 0 0;
+    overflow-x: auto;
+  }
+  .rail ol { grid-auto-flow: column; gap: 8px; }
+  .rail li { grid-template-columns: auto auto; }
+  .rail-name { white-space: nowrap; }
+  .rail-next { flex-shrink: 0; white-space: nowrap; }
+  .rail-close { order: 0; margin: 0; flex-shrink: 0; }
+  .notebook {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 68px;
+    width: auto;
+    height: min(62vh, calc(100vh - 140px));
+    border-radius: 14px 14px 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) { .rail-switch::after { transition: none; } }

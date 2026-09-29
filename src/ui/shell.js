@@ -1,4 +1,4 @@
-// ui/shell.js — vỏ trang của mọi bức: con dấu âm lịch, data-state, hòa dần poster → canvas, huy hiệu, ghi chú tầng tĩnh
+// ui/shell.js — vỏ trang của mọi bức: con dấu âm lịch, data-state, hòa dần poster → canvas, huy hiệu, ghi chú, gợi ý và lời mời
 import { lunarFromDate, canChiIndex } from '../lib/astro/lunar.js';
 import { moonPhase } from '../lib/astro/moon.js';
 import { renderBadge } from './badge.js';
@@ -6,12 +6,18 @@ import { drawMoon } from './moon-svg.js';
 
 /** Transition CSS dài 900 ms. Lưới an toàn: quá 1200 ms mà chưa có transitionend thì coi như đã hòa xong. */
 const FADE_TIMEOUT_MS = 1200;
+/** Trạng thái có poster phủ màn hình: tầng tĩnh, và lúc mất GPU chờ "Dựng lại cảnh". */
+const POSTER_STATES = ['static', 'lost'];
 
 /**
  * Gắn vỏ trang vào HTML tĩnh của một bức. Vỏ không biết bức nào: nó chỉ tìm các ô data-* mà trang nào
  * cũng có (tests/paintings/html.test.js giữ luật đó). Chữ lấy từ `t`, không import strings.
+ *
+ * Ba ô có aria-live ([data-hint], [data-static], [data-badge-note]) KHÔNG bao giờ bị ẩn bằng `hidden`: chúng luôn
+ * nằm trong cây trợ năng và chỉ để trống khi không có gì để nói (CSS thu chúng lại khi :empty). Một vùng live vừa
+ * được bỏ `hidden` vừa được điền chữ trong cùng một nhịp thường bị VoiceOver bỏ qua, không đọc.
  * @param {Document} doc
- * @param {object} meta  PaintingMeta của bức (GĐ 1 dùng cho lời mời "{n} lớp")
+ * @param {object} meta  PaintingMeta của bức (lời mời "{n} lớp")
  * @param {{ now: Date, t: Record<string, any>, onState?: (state: string) => void }} opts
  */
 export function mountShell(doc, meta, { now, t, onState = () => {} }) {
@@ -30,18 +36,26 @@ export function mountShell(doc, meta, { now, t, onState = () => {} }) {
   if (moon) drawMoon(moon, moonPhase(now).phase);
 
   // title chỉ hiện khi rê chuột; điện thoại không có chuột, nên chạm vào huy hiệu thì mở/đóng ô giải thích.
+  const badgeOpen = () => badge.getAttribute('aria-expanded') === 'true';
   badge.addEventListener('click', () => {
-    badgeNote.textContent = badge.title;
-    badgeNote.hidden = !badgeNote.hidden;
-    badge.setAttribute('aria-expanded', String(!badgeNote.hidden));
+    const open = !badgeOpen();
+    badge.setAttribute('aria-expanded', String(open));
+    badgeNote.textContent = open ? badge.title : '';
   });
+
+  const clearHint = () => {
+    if (!hint) return;
+    hint.replaceChildren();
+    delete hint.dataset.kind;
+  };
+  const showingPoster = () => POSTER_STATES.includes(doc.body.dataset.state);
 
   /** Đổi body[data-state] (CSS và e2e đọc) rồi báo cho boot để __sma.state luôn khớp. */
   function setState(state) {
     doc.body.dataset.state = state;
-    if (state === 'static') {
-      poster.hidden = false; // tầng tĩnh luôn có poster, kể cả khi rơi xuống sau lúc đã live
-      if (hint) hint.hidden = true; // "chạm vào…" vô nghĩa khi không còn cảnh 3D
+    if (POSTER_STATES.includes(state)) {
+      poster.hidden = false; // tầng tĩnh (và lúc mất GPU) luôn có poster, kể cả khi rơi xuống sau lúc đã live
+      clearHint(); // "chạm vào…" vô nghĩa khi không còn cảnh 3D
     }
     onState(state);
   }
@@ -58,7 +72,7 @@ export function mountShell(doc, meta, { now, t, onState = () => {} }) {
         clearTimeout(timer);
         canvas.removeEventListener('transitionend', onEnd);
         // Cảnh có thể hỏng ngay giữa lúc hòa (đã về tầng tĩnh): khi đó poster phải ở lại.
-        if (doc.body.dataset.state !== 'static') poster.hidden = true;
+        if (!showingPoster()) poster.hidden = true;
         resolve();
       };
       const onEnd = (event) => {
@@ -80,7 +94,7 @@ export function mountShell(doc, meta, { now, t, onState = () => {} }) {
   /** @param {{ tier: 'webgpu' | 'webgl2' | 'static', level?: string | null }} info */
   function showBadge(info) {
     renderBadge(badge, info, t);
-    badgeNote.textContent = badge.title; // ô giải thích đang mở thì đổi theo tầng mới
+    if (badgeOpen()) badgeNote.textContent = badge.title; // ô giải thích đang mở thì đổi theo tầng mới
   }
 
   const make = (tag, text) => {
@@ -88,42 +102,67 @@ export function mountShell(doc, meta, { now, t, onState = () => {} }) {
     el.textContent = text;
     return el;
   };
+  const button = (label, run) => {
+    const el = make('button', label);
+    el.type = 'button';
+    el.addEventListener('click', run);
+    return el;
+  };
 
   /**
-   * Điền ô ghi chú [data-static]: đoạn chữ, nút "Tải lại" nếu cần, chi tiết lỗi (chỉ khi ?debug).
-   * Gọi lại thì thay hẳn nội dung cũ. Không có gì để nói thì ô vẫn ẩn.
-   * @param {{ text: string | null, reload: boolean }} content
+   * Điền ô ghi chú [data-static]: đoạn chữ, nút "Tải lại" nếu cần, một nút hành động (Dựng lại cảnh, Xem các lớp…),
+   * chi tiết lỗi (chỉ khi ?debug). Gọi lại thì thay hẳn nội dung cũ. Không có gì để nói thì ô để trống.
+   * @param {{ text: string | null, reload: boolean, action?: { label: string, run: () => void } }} content
    * @param {string | null} [detail]
    */
-  function showNote({ text, reload }, detail = null) {
+  function showNote({ text, reload, action }, detail = null) {
     const parts = [];
     if (text) parts.push(make('p', text));
-    if (reload) {
-      const button = make('button', t.static.reload);
-      button.type = 'button';
-      button.addEventListener('click', () => doc.defaultView.location.reload());
-      parts.push(button);
-    }
+    if (reload) parts.push(button(t.static.reload, () => doc.defaultView.location.reload()));
+    if (action) parts.push(button(action.label, action.run));
     if (detail) parts.push(make('pre', detail));
     note.replaceChildren(...parts);
-    note.hidden = parts.length === 0;
   }
 
-  /** Gợi ý của bức (content.hint), hiện khi cảnh đã live. */
+  /** Gợi ý của bức (content.hint), hiện khi cảnh đã live. Tầng tĩnh thì thôi. */
   function showHint(text) {
-    if (!hint || !text) return;
-    hint.textContent = text;
+    if (!hint || !text || showingPoster()) return;
     hint.dataset.kind = 'hint';
-    hint.hidden = false;
+    hint.textContent = text;
   }
 
-  /** Sau lần chạm đầu tiên: lời mời mài lớp, n = số lớp của bức (meta.layers.length). */
-  function invite() {
-    if (!hint || doc.body.dataset.state === 'static') return;
-    hint.textContent = t.invite(meta.layers.length);
+  /**
+   * Sau lần chạm đầu tiên: lời mời mài lớp (n = meta.layers.length) là một NÚT. Bấm thì lời mời biến mất
+   * và onOpen() đưa người xem vào chế độ mài.
+   * @param {() => void} [onOpen]
+   */
+  function invite(onOpen) {
+    if (!hint || showingPoster()) return;
     hint.dataset.kind = 'invite';
-    hint.hidden = false;
+    hint.replaceChildren(button(t.invite(meta.layers.length), () => {
+      clearHint();
+      onOpen?.();
+    }));
   }
 
-  return { stageEl, setState, crossfade, showBadge, showNote, showHint, invite };
+  /**
+   * Mất GPU lần đầu (GĐ 2): poster hiện lại, kèm lời giải thích và nút "Dựng lại cảnh".
+   * @param {() => void} onRebuild
+   */
+  function showLost(onRebuild) {
+    setState('lost');
+    showNote({
+      text: t.lost.text,
+      reload: false,
+      action: {
+        label: t.lost.rebuild,
+        run: () => {
+          note.replaceChildren();
+          onRebuild();
+        },
+      },
+    });
+  }
+
+  return { stageEl, setState, crossfade, showBadge, showNote, showHint, invite, showLost };
 }

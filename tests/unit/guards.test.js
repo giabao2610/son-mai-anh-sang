@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { createFailCounter, createBurstCounter } from '../../src/engine/gpu/guards.js';
+import { describe, it, expect, vi } from 'vitest';
+import { createFailCounter, createBurstCounter, createLatch } from '../../src/engine/gpu/guards.js';
 
 describe('createFailCounter: 3 khung lỗi LIÊN TIẾP thì dừng', () => {
   it('báo true đúng ở lần lỗi thứ 3 liên tiếp', () => {
@@ -63,5 +63,31 @@ describe('createBurstCounter: 3 lỗi GPU trong 1 giây thì dừng', () => {
     b.hit(10);
     b.hit(20);
     expect(b.hit(1009)).toBe(true);
+  });
+});
+
+describe('createLatch', () => {
+  it('người nghe trước được báo ngay; người nghe sau được báo bù ở microtask kế tiếp', async () => {
+    const latch = createLatch();
+    const early = vi.fn();
+    latch.on(early);
+    expect(latch.fired).toBe(false);
+    latch.fire({ message: 'mất' });
+    expect(early).toHaveBeenCalledWith({ message: 'mất' });
+    const late = vi.fn();
+    latch.on(late);
+    expect(late).not.toHaveBeenCalled();
+    await Promise.resolve();
+    expect(late).toHaveBeenCalledWith({ message: 'mất' });
+    expect(latch.fired).toBe(true);
+  });
+
+  it('clear() bỏ mọi người nghe: sự kiện tới sau đó không gọi ai', () => {
+    const latch = createLatch();
+    const cb = vi.fn();
+    latch.on(cb);
+    latch.clear();
+    latch.fire({});
+    expect(cb).not.toHaveBeenCalled();
   });
 });

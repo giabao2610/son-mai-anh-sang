@@ -18,6 +18,7 @@ import {
   saturate,
   sin,
   smoothstep,
+  uniform,
   uv,
 } from 'three/tsl';
 
@@ -28,6 +29,7 @@ import {
  * @param {object} cot  shared.cot
  * @param {any} w  trọng số của lớp
  * @param {any} moonDir  uniform vec3: hướng tới trăng (world)
+ * @returns {{ rimOn: any }}  uniform 1/0 của viền fresnel (thí nghiệm "Tắt fresnel")
  */
 export function paintCot(ctx, cot, w, moonDir) {
   const hex = ctx.palette.hex;
@@ -63,7 +65,8 @@ export function paintCot(ctx, cot, w, moonDir) {
   const rimPower = ctx.knob('rimPower'); // @knob rimPower
   // saturate: hai vector đơn vị chỉ đơn vị tới sai số làm tròn, nên |dot| có thể nhỉnh hơn 1 và edge hơi âm; pow của số âm
   // là NaN trên GPU thật, lọt vào kênh emissive rồi bloom loang thành mảng đen.
-  const rim = pow(saturate(edge), rimPower).mul(ctx.knob('rimColor')); // @knob rimColor
+  const rimOn = uniform(1).setName('anh_trang_rimOn');
+  const rim = pow(saturate(edge), rimPower).mul(ctx.knob('rimColor')).mul(rimOn); // @knob rimColor
   const back = pow4(saturate(dot(view.negate(), moonDir))).mul(ctx.knob('translucency')); // @knob translucency
   cot.petalMaterial.emissiveNode = rim.mul(0.5).add(color(hex.nga).mul(back).mul(0.35)).mul(w);
 
@@ -71,4 +74,5 @@ export function paintCot(ctx, cot, w, moonDir) {
   paint(cot.coreMaterial, mix(mix(color(hex.xanhLuc), color(hex.vangLa), 0.45), color(hex.vangLa), attribute('part', 'float')));
   paint(cot.stemMaterial, color(hex.xanhLuc).mul(0.7));
   paint(cot.reedMaterial, mix(color(hex.canhGian), color(hex.xanhLuc), uv().y.mul(0.6)));
+  return { rimOn };
 }

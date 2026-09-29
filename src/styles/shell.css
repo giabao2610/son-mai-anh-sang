@@ -1,10 +1,11 @@
-/* styles/shell.css — vỏ trang dùng chung cho mọi bức: poster, tên, thơ, con dấu, huy hiệu, ghi chú tầng tĩnh */
+/* styles/shell.css — vỏ trang dùng chung cho mọi bức: poster, tên, thơ, con dấu, huy hiệu, ghi chú tầng tĩnh (+ Sổ tay) */
 
 /* Màu lấy từ bảng sơn mài (tokens.css được unit test giữ khớp với engine/palette.js).
    Font tự host: mỗi file <weight>.css chứa đủ các subset kèm unicode-range, nên trình duyệt
    chỉ tải latin + latin-ext + vietnamese. KHÔNG import vietnamese-*.css lẻ: chúng thiếu unicode-range
    và thiếu phần Latin cơ bản. */
 @import './tokens.css';
+@import './notebook.css';
 @import '@fontsource/cormorant-garamond/500.css';
 @import '@fontsource/cormorant-garamond/500-italic.css';
 @import '@fontsource/be-vietnam-pro/400.css';
@@ -127,6 +128,19 @@ header h1 {
 }
 
 [data-badge]:hover { border-color: var(--vang-la); }
+
+/* Ba vùng aria-live ([data-badge-note], [data-static], [data-hint]) không bao giờ bị ẩn bằng hidden hay display: none:
+   trình đọc màn hình chỉ đọc chữ điền vào một vùng live ĐÃ có mặt. Khi trống thì thu hết khung (không viền, không nền). */
+[data-badge-note]:empty,
+[data-static]:empty,
+.hint:empty {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 [data-badge][data-backend='static'] { color: var(--bac-la); border-color: color-mix(in srgb, var(--bac-la) 45%, transparent); }
 
 [data-badge-note] {
@@ -262,7 +276,19 @@ header h1 {
   letter-spacing: 0.02em;
   animation: hint-in 1.2s ease-out both;
 }
-.hint[data-kind='invite'] { color: var(--nga); }
+.hint[data-kind='invite'] { color: var(--nga); pointer-events: auto; }
+/* Lời mời là một nút: bấm để vào chế độ mài. Giữ dáng một dòng thơ, gạch chân vàng lá. */
+.hint button {
+  padding: 4px 2px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--vang-la);
+  cursor: pointer;
+}
+.hint button:hover { color: var(--vang-la-sang); }
+.hint button:focus-visible { outline: 2px solid var(--vang-la-sang); outline-offset: 3px; }
 @keyframes hint-in { from { opacity: 0; transform: translateY(6px); } }
 @media (prefers-reduced-motion: reduce) { .hint { animation: none; } }
 
@@ -273,3 +299,6 @@ header h1 {
 [data-moon]:empty { display: none; }
 .moon-dark { fill: color-mix(in srgb, var(--cham) 80%, var(--den-then)); }
 .moon-lit { fill: var(--nga); }
+
+/* ── Chế độ thợ (?debug=stats): stats-gl tự đặt ở góc trái trên, đè lên tên bức. Dời ra giữa mép trên ── */
+[data-debug='stats'] { left: 50% !important; transform: translateX(-50%); }

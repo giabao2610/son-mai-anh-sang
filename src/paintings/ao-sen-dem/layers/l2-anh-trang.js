@@ -8,12 +8,16 @@ import {
   Object3D,
   PointLight,
 } from 'three/webgpu';
-import { color, mix, uv, vec3 } from 'three/tsl';
+import { color, mix, uniform, uv, vec3 } from 'three/tsl';
 import { moonPhase } from '../../../lib/astro/moon.js';
 import { createMoon } from '../parts/anh-trang-moon.js';
 import { paintCot } from '../parts/anh-trang-paint.js';
 
 export const id = 'anh-trang';
+
+const SHADOW = { cao: 1024, vua: 512, thap: 0 }; // cỡ shadow map theo mức; 0 = tắt bóng
+const BIAS = { bias: -0.0005, normal: 0.03 };
+
 export const knobs = [
   // Mặc định là pha trăng của ĐÊM NAY (ctx.now): value là hàm của env.
   { id: 'moonPhase', min: 0, max: Math.PI * 2, step: 0.01, value: (env) => moonPhase(env.now).phase },
@@ -22,20 +26,30 @@ export const knobs = [
   { id: 'translucency', min: 0, max: 2, step: 0.01, value: 0.8 },
   { id: 'clearcoat', min: 0, max: 1, step: 0.01, value: 0 },
   { id: 'candleColor', kind: 'color', value: '#F2D48A' },
+  { id: 'candleIntensity', via: 'js', min: 0, max: 30, step: 0.5, value: 7 },
+  // Ở mức thấp bóng tắt hẳn (castShadow nằm trong cache key, bật một lần lúc dựng): núm vẫn có nhưng không làm gì.
+  { id: 'shadowMapSize', via: 'js', min: 256, max: 2048, step: 256, value: (env) => (env.budget.shadow ?? SHADOW[env.level]) || 512 },
+  { id: 'shadowBias', via: 'js', min: -0.005, max: 0.005, step: 0.0001, value: BIAS.bias },
 ];
 
 const MOONLIGHT = 3; // cường độ ánh trăng ở trọng số 1
 const SKY_FILL = 7; // trời chàm hắt xuống, nước đen hắt lên
-const CANDLE = { intensity: 7, distance: 14, position: [-5, 0.08, 13] };
+const CANDLE = { distance: 14, position: [-5, 0.08, 13] };
 
-/** Đèn hoa đăng: 8 cánh (dùng lại hình cánh sen của Cốt) quây một ngọn nến là PointLight ấm. */
+/**
+ * Đèn hoa đăng: 8 cánh quây một ngọn nến là PointLight ấm. Cánh dùng lại HÌNH cánh sen của Cốt (shared.cot.petalGeometry)
+ * nhưng mesh và material là của lớp này: tắt lớp Ánh trăng thì đèn cũng về đất sét, không kéo theo hoa của Cốt.
+ */
 function createLantern(ctx, cot, w) {
   const hex = ctx.palette.hex;
   const candle = ctx.knob('candleColor'); // @knob candleColor
+  // Thí nghiệm "Đổi màu đèn": 0 = màu nến của núm, 1 = đỏ son. Cùng một ánh sáng, mỗi chất liệu đáp lại một kiểu.
+  const swap = uniform(0).setName('anh_trang_swap');
+  const flame = mix(candle, color(hex.doSon), swap);
   const material = new MeshStandardNodeMaterial({ roughness: 0.8, side: DoubleSide });
   material.colorNode = mix(color(hex.datSet), color(hex.nga), w);
   // Giấy dó sáng từ trong ra: sáng ở gốc cánh (gần nến), nhạt dần lên mép.
-  material.emissiveNode = candle.mul(mix(1.6, 0.3, uv().y)).mul(w);
+  material.emissiveNode = flame.mul(mix(1.6, 0.3, uv().y)).mul(w);
   const mesh = new InstancedMesh(cot.petalGeometry, material, 8);
   const dummy = new Object3D();
   dummy.rotation.order = 'YXZ';
@@ -49,7 +63,10 @@ function createLantern(ctx, cot, w) {
   }
   const light = new PointLight(candle.value, 0, CANDLE.distance, 2);
   light.position.set(CANDLE.position[0], CANDLE.position[1] + 0.3, CANDLE.position[2]);
-  return { mesh, light, candle };
+  const red = ctx.palette.color('doSon');
+  // Màu của đèn thật (CPU) đi theo cùng công thức với màu của giấy (GPU).
+  const sync = () => light.color.copy(candle.value).lerp(red, swap.value);
+  return { mesh, light, swap, sync };
 }
 
 /**
@@ -62,7 +79,7 @@ export function createLayer(ctx, shared) {
   const { cot } = shared;
 
   const moon = createMoon(ctx, w, ctx.knob('moonPhase')); // @knob moonPhase
-  paintCot(ctx, cot, w, shared.moon.dir);
+  const paint = paintCot(ctx, cot, w, shared.moon.dir);
 
   // Ánh trăng bạc-ngà: DirectionalLight chiếu từ phía trăng. Cường độ là uniform bên trong
   // node đèn, nên đổi mỗi khung theo trọng số mà không biên dịch lại.
@@ -71,19 +88,24 @@ export function createLayer(ctx, shared) {
 
   // MỘT shadow map, bật một lần lúc dựng theo mức (cao 1024 / vừa 512 / thấp tắt).
   // castShadow, receiveShadow, shadowMap.enabled nằm trong cache key: không bao giờ đổi lúc chạy.
-  const shadowSize = ctx.budget.shadow ?? { cao: 1024, vua: 512, thap: 0 }[ctx.level];
-  if (shadowSize > 0) {
+  // Cỡ map và bias thì đổi được: ShadowNode đọc chúng mỗi khung (setSize, reference), không biên dịch lại.
+  const shadowOn = (ctx.budget.shadow ?? SHADOW[ctx.level]) > 0;
+  let bias = ctx.knobValue('shadowBias');
+  let acne = false; // thí nghiệm "Bias = 0" đang bật
+  if (shadowOn) {
+    const size = ctx.knobValue('shadowMapSize');
     ctx.renderer.shadowMap.enabled = true;
     moonlight.castShadow = true;
-    moonlight.shadow.mapSize.set(shadowSize, shadowSize);
+    moonlight.shadow.mapSize.set(size, size);
     Object.assign(moonlight.shadow.camera, { left: -55, right: 55, top: 55, bottom: -55, near: 1, far: 320 });
-    moonlight.shadow.bias = -0.0005;
-    moonlight.shadow.normalBias = 0.03;
+    moonlight.shadow.bias = bias;
+    moonlight.shadow.normalBias = BIAS.normal;
     for (const o of cot.casters) o.castShadow = true;
     for (const o of cot.receivers) o.receiveShadow = true;
   }
 
   const lantern = createLantern(ctx, cot, w);
+  let candleIntensity = ctx.knobValue('candleIntensity');
   const added = [moon.moon, moonlight, moonlight.target, fill, lantern.mesh, lantern.light];
   ctx.scene.add(...added);
 
@@ -100,9 +122,31 @@ export function createLayer(ctx, shared) {
       // Đèn xưởng lui dần khi trăng lên: ở trọng số 1 chỉ còn ánh sáng của bức.
       cot.hemi.intensity = cot.hemiIntensity * (1 - k);
       // Nến lung linh: hai sóng sin lệch nhịp, theo đồng hồ của xưởng (tất định với ?freeze).
-      lantern.light.color.copy(lantern.candle.value);
-      lantern.light.intensity = CANDLE.intensity * k * (0.85 + 0.15 * Math.sin(t * 13 + Math.sin(t * 7)));
+      lantern.sync();
+      lantern.light.intensity = candleIntensity * k * (0.85 + 0.15 * Math.sin(t * 13 + Math.sin(t * 7)));
     },
+    onKnob: {
+      candleIntensity: (v) => { candleIntensity = v; }, // @knob candleIntensity
+      shadowMapSize: (v) => moonlight.shadow.mapSize.set(v, v), // @knob shadowMapSize
+      shadowBias: (v) => { // @knob shadowBias
+        bias = v;
+        if (!acne) moonlight.shadow.bias = v;
+      },
+    },
+    experiments: [
+      {
+        // Không có bias, mặt nhận bóng tự che chính nó: sọc "shadow acne" hiện trên lá.
+        id: 'biasZero',
+        toggle(on) {
+          acne = on;
+          moonlight.shadow.bias = on ? 0 : bias;
+          moonlight.shadow.normalBias = on ? 0 : BIAS.normal;
+        },
+      },
+      { id: 'noRim', toggle: (on) => { paint.rimOn.value = on ? 0 : 1; } },
+      { id: 'redCandle', toggle: (on) => { lantern.swap.value = on ? 1 : 0; } },
+    ],
+    readouts: [{ id: 'shadowMap', get: () => (shadowOn ? moonlight.shadow.mapSize.x : 0), unit: 'px' }],
     dispose() {
       if (disposed) return;
       disposed = true;

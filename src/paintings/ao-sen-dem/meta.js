@@ -35,6 +35,7 @@ export default {
         'paintings/ao-sen-dem/parts/cot-leaf.js',
         'paintings/ao-sen-dem/parts/cot-flower.js',
         'paintings/ao-sen-dem/parts/cot-reeds.js',
+        'paintings/ao-sen-dem/parts/cot-lab.js',
       ],
     },
     {

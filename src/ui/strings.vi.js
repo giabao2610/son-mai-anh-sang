@@ -1,4 +1,4 @@
-// ui/strings.vi.js — Chữ tiếng Việt của xưởng: tên tầng, lời giải thích, chữ tầng tĩnh, tên tháng/can/chi, con dấu.
+// ui/strings.vi.js — Chữ tiếng Việt của xưởng: tầng, tầng tĩnh, lời mời, thanh lớp, Sổ tay, mất GPU, tháng/can/chi, con dấu.
 //
 // Quy ước: file này KHÔNG import gì và không file nào trong src/ import nó. Chỉ trang HTML import rồi
 // truyền `t` vào boot(); engine/ và ui/ nhận `t` qua tham số. Thêm ngôn ngữ = thêm strings.<lang>.js cùng bộ khóa.
@@ -59,8 +59,44 @@ const t = {
     debugHint: 'Thêm ?debug vào địa chỉ để xem chi tiết.',
     reload: 'Tải lại',
   },
-  /** Lời mời sau lần chạm đầu tiên; n = số lớp của bức. */
+  /** Lời mời sau lần chạm đầu tiên (là một nút: bấm để vào chế độ mài); n = số lớp của bức. */
   invite: (n) => `Bức tranh này có ${n} lớp — mài thử?`,
+  /** Mất GPU lần đầu (GĐ 2): poster hiện lại kèm nút dựng lại. */
+  lost: {
+    text: 'Trình duyệt vừa dừng GPU của trang (máy ngủ, đổi card đồ họa, hoặc thiếu bộ nhớ). Cảnh có thể dựng lại như cũ.',
+    rebuild: 'Dựng lại cảnh',
+  },
+  /** Thanh lớp: tên từng lớp theo thứ tự phủ, công tắc (trừ Cốt), nút phủ lớp kế tiếp. */
+  rail: {
+    label: 'Các lớp của bức tranh',
+    toggle: (name) => `Bật hoặc tắt lớp ${name}`,
+    next: (name) => `Phủ lớp tiếp theo · ${name}`,
+    close: 'Đóng thanh lớp, xem lại bức tranh',
+  },
+  /** Sổ tay của một lớp: ba tab Hiểu / Chỉnh / Phá. */
+  notebook: {
+    label: 'Sổ tay',
+    layerNo: (i, n) => `Lớp ${i} / ${n}`,
+    close: 'Đóng Sổ tay',
+    tabs: { hieu: 'Hiểu', chinh: 'Chỉnh', pha: 'Phá' },
+    learned: 'Bạn vừa học',
+    readMore: 'Đọc thêm',
+    code: 'Code thật của lớp',
+    loading: 'Đang tải…',
+    knobsFailed: 'Chưa tải được núm. Mở lại tab này để thử lại, hoặc tải lại trang.',
+    building: 'đang dựng…',
+    changeFailed: 'Thay đổi vừa rồi không áp được; chi tiết ở console của trình duyệt.',
+    codeMissing: 'Chưa tải được code của file này.',
+    contentMissing: 'Chưa tải được chữ của lớp này.',
+    noKnobs: 'Lớp này không có núm.',
+    noExperiments: 'Lớp này chưa có thí nghiệm.',
+    knobsStatic: 'Núm chỉ chạy khi có cảnh 3D. Code thì đọc được ngay.',
+    experimentsStatic: 'Thử phá cần cảnh 3D.',
+    measure: 'Số đo trực tiếp',
+    readouts: { drawCalls: 'Draw call mỗi khung', triangles: 'Tam giác mỗi khung', ms: 'Mili giây mỗi khung' },
+    /** Nút mở Sổ tay ở tầng tĩnh (chỉ đọc). */
+    openStatic: (n) => `Xem ${n} lớp của bức tranh`,
+  },
   formatSeal,
 };
 

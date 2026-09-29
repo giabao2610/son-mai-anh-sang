@@ -4,7 +4,7 @@ import { Scene, PerspectiveCamera } from 'three/webgpu';
 import { pass, uniform } from 'three/tsl';
 import * as phuBong from '../../src/engine/stock/phu-bong/layer.js';
 import phuBongMeta from '../../src/engine/stock/phu-bong/meta.js';
-import { createKnobs } from '../../src/engine/gpu/layers.js';
+import { createKnobs } from '../../src/engine/gpu/knob-set.js';
 
 // Bọc bloom() thật để xem lớp gọi nó với tham số nào (vẫn dựng BloomNode thật).
 const created = vi.hoisted(() => []);
@@ -43,29 +43,47 @@ describe('engine/stock/phu-bong/meta.js', () => {
 });
 
 describe('engine/stock/phu-bong/layer.js', () => {
-  it('knobs tĩnh: bloomStrength và exposure, đều là núm uniform', () => {
+  it('knobs tĩnh: đủ núm của chặng build, tất cả là uniform; tone mapping là select none/agx/aces', () => {
     expect(phuBong.id).toBe('phu-bong');
-    expect(phuBong.knobs.map((k) => k.id)).toEqual(['bloomStrength', 'exposure']);
+    expect(phuBong.knobs.map((k) => k.id)).toEqual(['bloomStrength', 'bloomRadius', 'bloomThreshold', 'toneMapping', 'exposure']);
     for (const k of phuBong.knobs) expect(k.via ?? 'uniform').toBe('uniform');
+    const tone = phuBong.knobs.find((k) => k.id === 'toneMapping');
+    expect([tone.kind, tone.options, tone.value]).toEqual(['select', ['none', 'agx', 'aces'], 'agx']);
   });
 
-  it('GĐ 0 chỉ có post.build (chưa có display)', () => {
+  it('chỉ có post.build (chặng display là GĐ 4)', () => {
     const layer = phuBong.createLayer(makeCtx());
     expect(typeof layer.post.build).toBe('function');
     expect(layer.post.display).toBeUndefined();
     expect(typeof layer.dispose).toBe('function');
   });
 
-  it('build dựng node từ texture của một pass thật; bloom đọc kênh emissive và uniform của núm', () => {
+  it('build dựng node từ texture của một pass thật; bloom nhận ĐÚNG uniform của ba núm bloom', () => {
     const ctx = makeCtx();
     const { out, channel, glow, layer } = buildOnce(ctx);
     expect(out.isNode).toBe(true);
     expect(channel).toHaveBeenCalledWith('emissive');
-    expect(ctx.knob).toHaveBeenCalledWith('bloomStrength');
-    expect(ctx.knob).toHaveBeenCalledWith('exposure');
-    expect(glow.args[1]).toBe(ctx.knobs.uniforms.bloomStrength);
-    expect(glow.args.slice(2)).toEqual([0.4, 0]);
+    for (const id of ['bloomStrength', 'bloomRadius', 'bloomThreshold', 'toneMapping', 'exposure']) {
+      expect(ctx.knob).toHaveBeenCalledWith(id);
+    }
+    expect(glow.args.slice(1)).toEqual([
+      ctx.knobs.uniforms.bloomStrength, ctx.knobs.uniforms.bloomRadius, ctx.knobs.uniforms.bloomThreshold,
+    ]);
+    // BloomNode dùng thẳng node được truyền vào (không bọc uniform mới): kéo núm là đổi bloom.
+    expect(glow.node.strength).toBe(ctx.knobs.uniforms.bloomStrength);
+    expect(glow.node.radius).toBe(ctx.knobs.uniforms.bloomRadius);
+    expect(glow.node.threshold).toBe(ctx.knobs.uniforms.bloomThreshold);
     expect(glow.node.getResolutionScale()).toBe(0.5);
+    layer.dispose();
+  });
+
+  it("thí nghiệm 'wholeFrame': bloom đọc cả ảnh màu thay vì chỉ emissive (một uniform, không biên dịch lại)", () => {
+    const ctx = makeCtx();
+    const { channel, layer } = buildOnce(ctx);
+    expect(channel).toHaveBeenCalledWith('output');
+    const [exp] = layer.experiments;
+    expect(exp.id).toBe('wholeFrame');
+    expect(() => { exp.toggle(true); exp.toggle(false); }).not.toThrow();
     layer.dispose();
   });
 

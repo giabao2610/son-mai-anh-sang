@@ -38,7 +38,7 @@ function fakeRenderer(timestamps) {
     },
   };
 }
-const doc = { body: { append() {} } };
+const doc = { body: { append: vi.fn() } };
 
 describe('mountDebug', () => {
   it('không có cờ ?debug → null, không đụng tới renderer', async () => {
@@ -60,5 +60,15 @@ describe('mountDebug', () => {
     const renderer = fakeRenderer(true);
     await mountDebug('stats', renderer, doc);
     expect(renderer.backend.trackTimestamp).toBe(true);
+  });
+});
+
+describe('mountDebug · Inspector', () => {
+  it('dời bảng của Inspector ra body (cha của canvas là stacking context nằm dưới lớp chữ)', async () => {
+    doc.body.append.mockClear();
+    const tool = await mountDebug(true, fakeRenderer(true), doc);
+    expect(doc.body.append).toHaveBeenCalledTimes(1);
+    expect(doc.body.append.mock.calls[0][0].dataset.debug).toBe('inspector');
+    tool.dispose();
   });
 });

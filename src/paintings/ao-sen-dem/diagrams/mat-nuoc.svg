@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" role="img" aria-labelledby="dg-mn-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-mn-title">Phản chiếu phẳng: reflector vẽ lại cảnh từ một camera lật ngược qua mặt nước. Tia từ mắt chạm nước rồi đi tới trăng, cũng chính là tia thẳng từ camera lật tới trăng. Gợn sóng làm lệch chỗ đọc ảnh, nên bóng trăng bị xẻ đôi.</title>
+  <defs>
+    <marker id="dg-mn-mui" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#F2D48A"/>
+    </marker>
+  </defs>
+  <!-- mặt nước -->
+  <path d="M10 100 H350" stroke="#C9C6BD" stroke-width="2"/>
+  <path d="M150 100 q 8 -6 16 0 t 16 0 t 16 0" stroke="#D4A94A" stroke-width="2" fill="none"/>
+  <text x="14" y="94" fill="#C9C6BD">mặt nước</text>
+  <!-- trăng -->
+  <circle cx="320" cy="26" r="13" fill="#EDE3CF"/>
+  <!-- mắt (camera) và camera lật -->
+  <g fill="none" stroke="#EDE3CF" stroke-width="1.6">
+    <rect x="24" y="36" width="26" height="18" rx="3"/>
+    <path d="M50 42 L58 38 V52 L50 48"/>
+  </g>
+  <text x="37" y="30" fill="#EDE3CF" text-anchor="middle">camera</text>
+  <g fill="none" stroke="#8A8580" stroke-width="1.6" stroke-dasharray="3 3">
+    <rect x="24" y="146" width="26" height="18" rx="3"/>
+    <path d="M50 152 L58 148 V162 L50 158"/>
+  </g>
+  <text x="37" y="178" fill="#8A8580" text-anchor="middle">camera lật</text>
+  <!-- tia: mắt → nước → trăng; camera lật → trăng -->
+  <path d="M58 48 L174 100 L310 34" stroke="#F2D48A" stroke-width="1.6" fill="none" marker-end="url(#dg-mn-mui)"/>
+  <path d="M58 152 L174 100" stroke="#8A8580" stroke-width="1.2" stroke-dasharray="4 4" fill="none"/>
+  <text x="200" y="128" fill="#D4A94A">gợn sóng: lệch chỗ đọc ảnh</text>
+  <text x="200" y="144" fill="#D4A94A">→ bóng trăng xẻ đôi</text>
+</svg>

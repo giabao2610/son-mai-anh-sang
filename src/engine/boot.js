@@ -54,6 +54,7 @@ export async function boot(entry, { lang = 'vi', t, win = window, doc = document
     showNote: unlessLate(shell.showNote),
     showHint: unlessLate(shell.showHint),
     invite: unlessLate(shell.invite),
+    showLost: unlessLate(shell.showLost),
   };
 
   try {

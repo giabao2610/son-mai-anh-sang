@@ -83,6 +83,8 @@ export function createGestureTracker(options = {}) {
       }
       let out = [];
       if (state === 'hold') out = [at('hold-end', p)];
+      // Đã giữ đủ lâu nhưng đồng hồ hẹn giờ chưa kịp poll (máy bận, tab bị bóp nhịp): vẫn là một lần giữ, không phải chạm.
+      else if (state === 'pending' && p.t - start.t >= holdMs) out = [at('hold-start', start), at('hold-end', p)];
       else if (state === 'pending') out = [at('tap', start)];
       else if (state === 'drag') {
         const dt = p.t - start.t;

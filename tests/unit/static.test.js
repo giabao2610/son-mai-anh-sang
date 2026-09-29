@@ -61,22 +61,22 @@ describe('showStatic', () => {
     expect(sma).toMatchObject({ state: 'static', reason: 'flag', error: null });
     expect(document.body.dataset.state).toBe('static');
     expect(page.badge.dataset.backend).toBe('static');
-    expect(page.note.hidden).toBe(true);
+    expect(page.note.querySelector('p')).toBeNull(); // không có lời giải thích, chỉ có nút mở Sổ tay
     expect(page.seal.textContent).toBe('18 tháng Tám · Bính Ngọ');
   });
 
   it("'no-gpu': hướng dẫn bật tăng tốc phần cứng, không nút, không gợi ý ?debug", () => {
     showStatic(entry, shell, { reason: 'no-gpu', t, sma });
-    expect(page.note.hidden).toBe(false);
-    expect(page.note.textContent).toBe(t.static.noGpu);
-    expect(page.note.querySelector('button')).toBeNull();
+    expect(page.note.querySelector('p').textContent).toBe(t.static.noGpu);
+    expect([...page.note.querySelectorAll('button')].map((b) => b.textContent)).toEqual([t.notebook.openStatic(1)]);
   });
 
   it("'chunk-load': lời nhắc tải lại kèm nút", () => {
     const error = new TypeError('Failed to fetch dynamically imported module: x');
     showStatic(entry, shell, { reason: 'chunk-load', error, t, sma });
     expect(page.note.querySelector('p').textContent).toBe(t.static.chunkLoad);
-    expect(page.note.querySelector('button').textContent).toBe(t.static.reload);
+    // Chunk vừa hỏng thì chunk của Sổ tay cũng hỏng: chỉ có nút tải lại.
+    expect([...page.note.querySelectorAll('button')].map((b) => b.textContent)).toEqual([t.static.reload]);
     expect(sma.error).toBe('Failed to fetch dynamically imported module: x');
   });
 
@@ -119,5 +119,65 @@ describe('showStatic', () => {
     showStatic(entry, shell, { reason: 'device-lost', t, sma });
     expect(page.poster.hidden).toBe(false);
     expect(sma.state).toBe('static');
+  });
+});
+
+describe('Sổ tay chỉ đọc ở tầng tĩnh (GĐ 2)', () => {
+  const meta = {
+    slug: 'thu',
+    title: 'Tranh thử',
+    layers: [{ id: 'cot', name: 'Cốt', files: ['x.js'] }, { id: 'lop-hai', name: 'Lớp hai', files: ['y.js'] }],
+  };
+  const content = { hint: 'x', layers: { cot: { understand: 'Đất sét.', learned: ['Một điều'], readMore: [], knobs: {} } } };
+
+  it('nút "Xem N lớp" mở thanh lớp (tên lớp, không công tắc) và Sổ tay trang Cốt; bấm lần hai không dựng thêm', async () => {
+    mountPage(document);
+    const sma = createSma({});
+    const shell = mountShell(document, meta, { now: new Date('2026-09-28T21:00:00+07:00'), t, onState: (s) => sma.set({ state: s }) });
+    const load = vi.fn(async () => ({ default: content }));
+    showStatic({ meta, content: { vi: load } }, shell, { reason: 'flag', t, sma });
+    const button = document.querySelector('[data-static] button');
+    expect(button.textContent).toBe(t.notebook.openStatic(2));
+    button.click();
+    await vi.waitFor(() => expect(document.querySelector('[data-rail]')?.hidden).toBe(false));
+    const rail = document.querySelector('[data-rail]');
+    expect([...rail.querySelectorAll('.rail-name')].map((b) => b.textContent)).toEqual(['1Cốt', '2Lớp hai']);
+    expect(rail.querySelector('[role="switch"]')).toBeNull();
+    const notebook = document.querySelector('[data-notebook]');
+    expect(notebook.hidden).toBe(false);
+    expect(notebook.querySelector('.nb-understand').textContent).toBe('Đất sét.');
+    button.click();
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    expect(document.querySelectorAll('[data-rail]')).toHaveLength(1);
+  });
+
+  it('chữ tải hỏng → cảnh báo, Sổ tay vẫn mở và báo thiếu chữ', async () => {
+    mountPage(document);
+    const sma = createSma({});
+    const shell = mountShell(document, meta, { now: new Date('2026-09-28T21:00:00+07:00'), t, onState: (s) => sma.set({ state: s }) });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const load = vi.fn(async () => {
+      throw new Error('mất mạng');
+    });
+    showStatic({ meta, content: { vi: load } }, shell, { reason: 'flag', t, sma });
+    document.querySelector('[data-static] button').click();
+    await vi.waitFor(() => expect(document.querySelector('[data-notebook]')?.hidden).toBe(false));
+    expect(document.querySelector('[data-notebook] .nb-missing').textContent).toBe(t.notebook.contentMissing);
+    expect(warn).toHaveBeenCalledWith('Không tải được chữ của bức (vi):', expect.any(Error));
+    warn.mockRestore();
+  });
+
+  it('chunk của Sổ tay tải hỏng (trang vừa deploy) → ghi chú thành lời mời tải lại có nút, kèm cảnh báo', async () => {
+    mountPage(document);
+    const sma = createSma({});
+    const shell = mountShell(document, meta, { now: new Date('2026-09-28T21:00:00+07:00'), t, onState: (s) => sma.set({ state: s }) });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const chunkError = new TypeError('Failed to fetch dynamically imported module: workshop-abc.js');
+    showStatic({ meta }, shell, { reason: 'no-gpu', t, sma, loadWorkshop: () => Promise.reject(chunkError) });
+    document.querySelector('[data-static] button').click();
+    await vi.waitFor(() => expect(document.querySelector('[data-static] p').textContent).toBe(t.static.chunkLoad));
+    expect([...document.querySelectorAll('[data-static] button')].map((b) => b.textContent)).toEqual([t.static.reload]);
+    expect(warn).toHaveBeenCalledWith('Không mở được Sổ tay:', chunkError);
+    warn.mockRestore();
   });
 });

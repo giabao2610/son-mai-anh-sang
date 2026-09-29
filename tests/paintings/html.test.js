@@ -5,18 +5,11 @@ import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
 import { paintings } from '../../src/paintings/registry.js';
 import { mergePalette } from '../../src/engine/palette.js';
+import { svgColors } from '../helpers/svg.js';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const nfc = (s) => s.normalize('NFC').trim();
 
-/**
- * Mã màu hex trong một SVG. Bỏ các tham chiếu id trước (url(#bed), href="#bed"): id như "bed", "face"
- * trông giống mã màu 3 chữ số hex nhưng không phải màu.
- */
-function svgColors(svg) {
-  const text = svg.replace(/url\(#[^)]*\)/g, '').replace(/href="#[^"]*"/g, '');
-  return new Set((text.match(/#[0-9A-Fa-f]{3,8}\b/g) ?? []).map((h) => h.toUpperCase()));
-}
 
 describe('svgColors (tự kiểm)', () => {
   it('bắt màu thật, bỏ qua tham chiếu id', () => {
@@ -76,14 +69,15 @@ for (const { meta, page, lang } of paintings) {
       const badge = $('button[data-badge]');
       expect(badge?.getAttribute('type')).toBe('button');
       expect(badge.hidden).toBe(true);
-      expect($('[data-badge-note]')?.hidden).toBe(true);
-      expect($('[data-badge-note]').getAttribute('aria-live')).toBe('polite');
-      const hint = $('[data-hint]');
-      expect(hint?.hidden).toBe(true);
-      expect(hint.getAttribute('aria-live')).toBe('polite');
-      const note = $('section[data-static]');
-      expect(note?.hidden).toBe(true);
-      expect(note.getAttribute('aria-live')).toBe('polite');
+      // Vùng aria-live có sẵn trong cây trợ năng từ đầu (không hidden) và để trống: nhờ vậy trình đọc màn hình
+      // đọc được chữ điền vào sau. Vừa bỏ hidden vừa điền chữ trong cùng một nhịp thì VoiceOver hay bỏ qua.
+      for (const sel of ['[data-badge-note]', '[data-hint]', 'section[data-static]']) {
+        const live = $(sel);
+        expect(live, sel).not.toBeNull();
+        expect(live.hidden, `${sel} không được có hidden`).toBe(false);
+        expect(live.getAttribute('aria-live'), sel).toBe('polite');
+        expect(live.childNodes.length, `${sel} phải trống`).toBe(0);
+      }
     });
 
     it('nếu có ô trăng [data-moon] thì là <svg> rỗng, viewBox bao đĩa bán kính 1, ẩn với trình đọc màn hình', () => {
@@ -121,11 +115,12 @@ for (const { meta, page, lang } of paintings) {
 }
 
 describe('styles/shell.css (trang nào cũng dùng)', () => {
-  it('@import tokens.css rồi đúng 5 file font theo trọng lượng (spec §5), tất cả trước luật đầu tiên', () => {
+  it('@import tokens.css, notebook.css (GĐ 2) rồi đúng 5 file font theo trọng lượng (spec §5), tất cả trước luật đầu tiên', () => {
     const css = readFileSync(ROOT + 'src/styles/shell.css', 'utf8');
     const imports = [...css.matchAll(/@import\s+'([^']+)'/g)].map((m) => m[1]);
     expect(imports).toEqual([
       './tokens.css',
+      './notebook.css',
       '@fontsource/cormorant-garamond/500.css',
       '@fontsource/cormorant-garamond/500-italic.css',
       '@fontsource/be-vietnam-pro/400.css',

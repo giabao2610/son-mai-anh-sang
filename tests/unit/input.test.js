@@ -32,7 +32,12 @@ beforeEach(() => {
   camera.updateMatrixWorld();
   controls = { enabled: true };
   u = uniform(new Vector2());
-  win = Object.assign(new EventTarget(), { performance: { now: () => clock }, setTimeout, clearTimeout });
+  win = Object.assign(new EventTarget(), {
+    performance: { now: () => clock },
+    setTimeout,
+    clearTimeout,
+    document: Object.assign(new EventTarget(), { hidden: false }),
+  });
   input = createInput({ canvas, camera, controls, pointer: u, win });
 });
 afterEach(() => {
@@ -111,6 +116,35 @@ describe('createInput', () => {
     expect(first).toHaveBeenCalledTimes(1);
   });
 
+  it('onFirst: người chỉ dùng bàn phím → phím đầu tiên cũng tính, một lần; phím tắt, phím bổ trợ thì không; dispose gỡ', () => {
+    const first = vi.fn();
+    input.onFirst(first);
+    const key = (k, extra = {}) => win.dispatchEvent(Object.assign(new Event('keydown'), { key: k, ...extra }));
+    // Phím tắt của hệ điều hành hay trình duyệt (Cmd+Tab, Cmd+Opt+I, Ctrl+R…) và phím bổ trợ đứng một mình: không phải
+    // người xem đang dùng trang, nên gợi ý "Chạm vào…" của người dùng chuột phải còn nguyên.
+    key('Meta');
+    key('Tab', { metaKey: true });
+    key('i', { altKey: true, metaKey: true });
+    key('r', { ctrlKey: true });
+    key('Shift');
+    key('Tab', { repeat: true });
+    expect(first).not.toHaveBeenCalled();
+    // Safari mặc định chỉ đưa Tab qua ô nhập liệu; muốn tới nút và liên kết thì bấm Option+Tab: phải tính.
+    key('Tab', { altKey: true });
+    expect(first).toHaveBeenCalledTimes(1);
+    input.onFirst(first);
+    key('Tab', { shiftKey: true }); // Shift+Tab (đi lùi giữa các ô) cũng tính
+    expect(first).toHaveBeenCalledTimes(2);
+    key('Tab');
+    canvas.dispatchEvent(pointer('pointerdown', 1, 1));
+    expect(first).toHaveBeenCalledTimes(2);
+    const later = vi.fn();
+    input.onFirst(later);
+    input.dispose();
+    key('Tab');
+    expect(later).not.toHaveBeenCalled();
+  });
+
   it('nhấn giữ trên điện thoại không mở menu ngữ cảnh', () => {
     const menu = new Event('contextmenu', { cancelable: true });
     canvas.dispatchEvent(menu);
@@ -129,6 +163,55 @@ describe('createInput', () => {
     vi.advanceTimersByTime(GESTURE.holdMs);
     canvas.dispatchEvent(pointer('pointercancel', 50, 50));
     expect(input.drain().map((g) => g.kind)).toEqual(['hold-start', 'hold-end']);
+  });
+
+  it('tab bị ẩn giữa lúc giữ (điện thoại chuyển app: không có blur) → hold-end, camera chạy lại', () => {
+    canvas.dispatchEvent(pointer('pointerdown', 50, 50));
+    clock = GESTURE.holdMs;
+    vi.advanceTimersByTime(GESTURE.holdMs);
+    win.document.dispatchEvent(new Event('visibilitychange')); // vẫn hiện: không làm gì
+    expect(controls.enabled).toBe(false);
+    win.document.hidden = true;
+    win.document.dispatchEvent(new Event('visibilitychange'));
+    expect(input.drain().map((g) => g.kind)).toEqual(['hold-start', 'hold-end']);
+    expect(controls.enabled).toBe(true);
+  });
+
+  it('nhả nút phải giữa lúc giữ nút trái: cái giữ vẫn tiếp tục', () => {
+    canvas.dispatchEvent(pointer('pointerdown', 50, 50));
+    clock = GESTURE.holdMs;
+    vi.advanceTimersByTime(GESTURE.holdMs);
+    canvas.dispatchEvent(pointer('pointerup', 50, 50, { button: 2 }));
+    expect(input.drain().map((g) => g.kind)).toEqual(['hold-start']);
+    expect(controls.enabled).toBe(false);
+  });
+
+  it('vuốt nhanh qua canvas → swipe kèm vận tốc tính theo NDC mỗi giây', () => {
+    canvas.dispatchEvent(pointer('pointerdown', 20, 50));
+    clock = 50;
+    canvas.dispatchEvent(pointer('pointermove', 60, 50));
+    clock = 100;
+    canvas.dispatchEvent(pointer('pointerup', 120, 50));
+    const [g] = input.drain();
+    expect(g.kind).toBe('swipe');
+    // 100 px trong 100 ms trên canvas rộng 200 px = 1000 px/s = 10 NDC/s theo trục x; trục y đảo chiều.
+    expect(g.velocity.x).toBeCloseTo(10, 6);
+    expect(g.velocity.y).toBeCloseTo(0, 6);
+    expect(controls.enabled).toBe(true);
+  });
+
+  it('dispose chỉ trả camera khi chính input.js đã khóa nó', () => {
+    controls.enabled = false; // ai khác (một công cụ) đang khóa camera
+    input.dispose();
+    expect(controls.enabled).toBe(false);
+    controls.enabled = true;
+    const again = createInput({ canvas, camera, controls, pointer: u, win });
+    canvas.dispatchEvent(pointer('pointerdown', 50, 50));
+    clock += GESTURE.holdMs;
+    vi.advanceTimersByTime(GESTURE.holdMs);
+    expect(controls.enabled).toBe(false);
+    again.dispose(); // gỡ giữa lúc giữ: trả camera
+    expect(controls.enabled).toBe(true);
   });
 
   it('bỏ qua nút phụ của chuột; dispose gỡ listener', () => {

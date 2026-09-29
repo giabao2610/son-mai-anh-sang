@@ -8,3 +8,6 @@ playwright-report/
 # Thư mục làm việc cục bộ của công cụ AI (Claude Code, superpowers): không đưa lên repo
 .claude/
 .superpowers/
+
+# Ảnh và snapshot của công cụ trình duyệt (Playwright MCP)
+.playwright-mcp/

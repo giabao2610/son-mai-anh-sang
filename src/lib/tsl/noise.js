@@ -3,7 +3,7 @@ import { float, mx_noise_float } from 'three/tsl';
 
 /**
  * fbm ("fractal Brownian motion"): cộng nhiều tầng noise. Tầng sau có tần số gấp `lacunarity` lần
- * và biên độ nhân `gain`, nên có cả mảng lớn lẫn chi tiết nhỏ (vết biển trên trăng, sương, mây).
+ * và biên độ nhân `gain`, nên có cả mảng lớn lẫn chi tiết nhỏ (vân đá, sương, mây).
  *
  * `octaves` là số JS, không phải uniform: vòng lặp chạy lúc DỰNG đồ thị node, nên shader sinh ra
  * chỉ là một chuỗi phép cộng, không có vòng lặp. Đổi số tầng = dựng lại đồ thị (núm 'rebuild').

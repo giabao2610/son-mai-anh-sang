@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 170" role="img" aria-labelledby="dg-vl-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-vl-title">Compute shader: vị trí và vận tốc của mọi con nằm trong bộ đệm trên GPU. Mỗi khung, mỗi luồng GPU cập nhật đúng một con. Rồi một Sprite vẽ cả đàn, đọc vị trí thẳng từ bộ đệm, không đi qua CPU.</title>
+  <defs>
+    <marker id="dg-vl-mui" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#D4A94A"/>
+    </marker>
+    <radialGradient id="dg-vl-sang">
+      <stop offset="0" stop-color="#F2D48A"/>
+      <stop offset="1" stop-color="#F2D48A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- bộ đệm: mỗi con một ô -->
+  <text x="14" y="24" fill="#EDE3CF">bộ đệm trên GPU</text>
+  <g fill="#1B2A4A" stroke="#C9C6BD" stroke-width="1">
+    <rect x="14" y="34" width="22" height="22"/><rect x="36" y="34" width="22" height="22"/>
+    <rect x="58" y="34" width="22" height="22"/><rect x="80" y="34" width="22" height="22"/>
+    <rect x="102" y="34" width="22" height="22"/><rect x="124" y="34" width="22" height="22"/>
+  </g>
+  <text x="80" y="74" fill="#8A8580" text-anchor="middle">vị trí · vận tốc · pha</text>
+  <!-- luồng compute -->
+  <g stroke="#D4A94A" stroke-width="1.4" fill="none">
+    <path d="M25 58 V92" marker-end="url(#dg-vl-mui)"/><path d="M47 58 V92" marker-end="url(#dg-vl-mui)"/>
+    <path d="M69 58 V92" marker-end="url(#dg-vl-mui)"/><path d="M91 58 V92" marker-end="url(#dg-vl-mui)"/>
+    <path d="M113 58 V92" marker-end="url(#dg-vl-mui)"/><path d="M135 58 V92" marker-end="url(#dg-vl-mui)"/>
+  </g>
+  <text x="80" y="112" fill="#D4A94A" text-anchor="middle">compute: mỗi luồng một con</text>
+  <text x="80" y="128" fill="#8A8580" text-anchor="middle">chạy song song, mỗi khung</text>
+  <!-- sprite vẽ cả đàn -->
+  <path d="M160 45 H200" stroke="#D4A94A" stroke-width="2" marker-end="url(#dg-vl-mui)"/>
+  <text x="180" y="36" fill="#D4A94A" text-anchor="middle">đọc thẳng</text>
+  <rect x="210" y="22" width="136" height="112" rx="8" fill="#0E0A08" stroke="#3B1F14"/>
+  <g fill="url(#dg-vl-sang)">
+    <circle cx="238" cy="52" r="9"/><circle cx="276" cy="40" r="7"/><circle cx="310" cy="64" r="10"/>
+    <circle cx="252" cy="96" r="8"/><circle cx="296" cy="106" r="7"/><circle cx="328" cy="92" r="6"/>
+    <circle cx="232" cy="118" r="6"/>
+  </g>
+  <text x="278" y="154" fill="#F2D48A" text-anchor="middle">1 Sprite vẽ cả đàn</text>
+</svg>

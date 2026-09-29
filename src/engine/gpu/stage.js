@@ -3,6 +3,7 @@ import { WebGPURenderer, Scene, PerspectiveCamera, Vector2, Vector3 } from 'thre
 import { uniform } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createClock } from './clock.js';
+import { createLatch } from './guards.js';
 import { breathAmplitude, breathOffset } from './breath.js';
 
 /**
@@ -38,9 +39,10 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
   const clock = createClock({ freeze: flags.freeze });
 
   // Ghi đè hai callback của renderer. Lỗi GPU đến KHÔNG đồng bộ (không ném từ render()), nên phải nghe ở đây.
-  const lostCallbacks = [];
+  // Mất thiết bị đi qua một chốt: nếu nó xảy ra trước khi run.js kịp gắn onLost(), run.js vẫn được báo bù.
+  const lost = createLatch();
   const errorCallbacks = [];
-  renderer.onDeviceLost = (info) => lostCallbacks.forEach((cb) => cb(info));
+  renderer.onDeviceLost = (info) => lost.fire(info);
   renderer.onError = (info) => errorCallbacks.forEach((cb) => cb(info));
 
   let controls = null;
@@ -130,7 +132,7 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
     },
 
     onLost(cb) {
-      lostCallbacks.push(cb);
+      lost.on(cb);
     },
     onError(cb) {
       errorCallbacks.push(cb);
@@ -141,7 +143,7 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
       if (disposed) return;
       disposed = true;
       // Bỏ callback TRƯỚC: WebGLBackend.dispose() tự gọi loseContext(), không được để nó báo "mất thiết bị".
-      lostCallbacks.length = 0;
+      lost.clear();
       errorCallbacks.length = 0;
       observer.disconnect();
       controls?.dispose();

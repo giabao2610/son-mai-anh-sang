@@ -1,4 +1,4 @@
-// engine/contracts/runtime.js — hợp đồng NẶNG (chỉ JSDoc): Painting, LayerModule, Knob, Layer, PostStage, EngineCtx… (spec §8.4).
+// engine/contracts/runtime.js — hợp đồng NẶNG (chỉ JSDoc): Painting, LayerModule, Knob, Layer, PostStage, EngineCtx, Studio… (spec §8.4).
 /** Module nặng: src/paintings/<slug>/painting.js
  * @typedef {Object} Painting
  * @property {LayerModule[]} layers     [0] cùng id, cùng thứ tự với meta.layers (test so khớp)
@@ -36,10 +36,13 @@
  */
 /** Khai báo TĨNH của một núm. Xưởng tạo uniform cho núm 'uniform', tên đặt bằng
  * setName(`${layerId.replaceAll('-', '_')}_${knobId}`): tên phải là định danh WGSL/GLSL hợp lệ.
+ * Giá trị luôn được chuẩn hóa (engine/gpu/knob-set.js): số kẹp trong [min, trần của tầng], màu '#rrggbb' chữ thường,
+ * 'select' phải có trong options. Nhãn hiện trong Sổ tay nằm ở content.layers[layerId].knobs[id], không ở đây.
  * @typedef {Object} Knob
- * @property {string} id           camelCase, duy nhất TRONG LỚP
+ * @property {string} id           camelCase, duy nhất TRONG LỚP. Đã deploy thì là API công khai: 'layerId.knobId'
  * @property {'number'|'select'|'color'|'bool'} [kind]      mặc định 'number'
  * @property {'uniform'|'js'|'rebuild'} [via]   [0] mặc định 'uniform'; 'js'/'rebuild' xử lý ở Layer.onKnob [2]
+ *                                 Marker '// @knob <id>': núm 'uniform' ở dòng dùng uniform; 'js'/'rebuild' ở dòng xử lý onKnob.
  * @property {number|string|boolean|((env: KnobEnv) => any)} value   mặc định; hàm khi phụ thuộc mức/tầng/đêm nay
  * @property {number} [min]
  * @property {number | { webgpu: number, webgl2: number }} [max]   trần theo tầng
@@ -53,17 +56,20 @@
  * @property {(dt: number, t: number) => void} [update]   [0] lớp 5 gọi ctx.renderer.compute() ở đây
  * @property {PostStage} [post]           [0] xử lý ẢNH sau scene pass
  * @property {() => void} dispose         [0] gọi 2 lần vẫn an toàn; tự gỡ object khỏi scene
- * @property {Record<string, (v: any) => void | Promise<void>>} [onKnob]   [2] cho núm 'js' | 'rebuild'
+ * @property {Record<string, (v: any) => void | Promise<void>>} [onKnob]   [2] cho núm 'js' | 'rebuild'. Thiếu hàm cho
+ *                                        một núm như thế thì buildLayers báo lỗi ngay lúc dựng. Nhận giá trị đã chuẩn hóa.
  * @property {Experiment[]} [experiments] [2] tab Phá
  * @property {Readout[]} [readouts]       [2] xưởng luôn thêm draw calls / tam giác / ms
  * @property {DegradeStep[]} [degrade]    [3] nấc hạ chất lượng mà lớp đưa ra
  */
-/** @typedef {Object} Experiment
+/** Nhãn và lời giải thích ở content.layers[layerId].experiments[id].
+ * @typedef {Object} Experiment
  * @property {string} id
- * @property {(on: boolean) => void | Promise<void>} toggle   trả Promise → UI hiện "đang dựng…"
- * @property {'toggle'|'compare'} [kind]  'compare': xưởng đo ms lúc tắt/bật và vẽ biểu đồ nhỏ
+ * @property {(on: boolean) => void | Promise<void>} toggle   trả Promise → UI hiện "đang dựng…"; bật hai lần vẫn an toàn
+ * @property {'toggle'|'compare'} [kind]  'compare' [3]: xưởng đo ms lúc tắt/bật và vẽ biểu đồ nhỏ
  */
-/** @typedef {{ id: string, get: () => number | string, unit?: string }} Readout */
+/** Nhãn ở content.layers[layerId].readouts[id]. get() đọc ngay lúc gọi (Sổ tay đọc 4 lần mỗi giây).
+ * @typedef {{ id: string, get: () => number | string, unit?: string }} Readout */
 /** Nấc chỉ hạ TRẦN của lớp, KHÔNG BAO GIỜ ghi vào uniform của núm.
  * Núm = ý người xem, nấc = trần của máy, hiệu lực = min(núm, trần).
  * Nấc không được đổi thứ nằm trong cache key (castShadow, receiveShadow, shadowMap.enabled, fogNode…).
@@ -127,6 +133,30 @@
  * @property {(layerId: string) => any} weight [0] uniform trọng số; 'cot' luôn là 1; id lạ → ném lỗi
  * @property {boolean} debug                   [0]
  */
-/** @typedef {EngineCtx & { knob: (knobId: string) => any }} LayerCtx   [0] knob(): uniform của núm 'uniform' của CHÍNH lớp đang dựng */
+/** Ctx mà createLayer nhận: EngineCtx cộng hai hàm của CHÍNH lớp đang dựng.
+ * @typedef {Object} LayerCtxExtra
+ * @property {(knobId: string) => any} knob         [0] uniform của một núm 'uniform'; id lạ hay núm 'js'/'rebuild' → ném lỗi
+ * @property {(knobId: string) => any} knobValue    [2] giá trị ban đầu (đã chuẩn hóa) của MỌI núm, kể cả 'js'/'rebuild':
+ *                                                  lớp dựng hình theo đúng giá trị này, rồi onKnob đổi nó lúc chạy
+ */
+/** @typedef {EngineCtx & LayerCtxExtra} LayerCtx   [0] */
+
+/** Trạng thái tác phẩm dạng JSON (spec §16): trọng số và núm khác mặc định; GĐ 4 thêm dials.
+ * @typedef {{ weights: Record<string, number>, knobs: Record<string, any> }} Snapshot   [2] khóa núm là 'layerId.knobId'
+ */
+/** Bàn thợ [2] (engine/gpu/studio.js): API DUY NHẤT mà Sổ tay (ui/) và __sma thấy. Không có ở tầng tĩnh.
+ * @typedef {Object} Studio
+ * @property {() => { id: string, name: string, knobs: object[], experiments: { id: string, kind: string }[], readouts: { id: string, unit: string }[] }[]} layers
+ * @property {(id: string) => { value: number, target: number }} weight   giá trị hiện tại và đích của tween
+ * @property {(id: string, v: number, opts?: { tween?: boolean }) => void} setWeight   tween: thanh lớp; không tween: __sma, e2e
+ * @property {(layerId: string) => Record<string, any>} knobs
+ * @property {(layerId: string, knobId: string, v: any) => Promise<void>} setKnob
+ * @property {(layerId: string, expId: string) => boolean} experiment
+ * @property {(layerId: string, expId: string, on: boolean) => Promise<void>} toggleExperiment
+ * @property {(layerId: string) => { id: string, value: number | string, unit: string }[]} readouts
+ * @property {() => { drawCalls: number, triangles: number, ms: number }} stats   số của khung vừa vẽ
+ * @property {() => Snapshot} snapshot
+ * @property {(s: Snapshot) => Promise<void>} restore
+ */
 
 export {};

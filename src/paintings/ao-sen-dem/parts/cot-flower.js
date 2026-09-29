@@ -20,6 +20,11 @@ const RINGS = [
   { count: 10, radius: 0.18, closed: 0.2, open: 1.1, scale: 1 },
 ];
 const BUD = { count: 5, radius: 0.05, tilt: 0.08, scale: 0.75 };
+/** Số hoa và nụ của ao (kể cả hai bông chủ đề). Sức chứa của các InstancedMesh tính từ đây. */
+export const FLOWERS = 12;
+export const BUDS = 20;
+export const PETALS_PER_FLOWER = RINGS.reduce((n, ring) => n + ring.count, 0); // 24
+export const PETAL_CAPACITY = FLOWERS * PETALS_PER_FLOWER + BUDS * BUD.count;
 // Hai bông "chủ đề" đặt tay ở tiền cảnh, hai bên lối trăng (như bông sen giữa poster): bố cục không phó mặc cho số ngẫu nhiên.
 const HERO = [
   { x: -7, z: 13, y: 1.9, scale: 2, open: 1, twist: 0.3 },
@@ -62,7 +67,7 @@ export function makePetalGeometry({ across = 6, along = 10, width = 0.5, cup = 0
  * Chọn chỗ cho hoa và nụ: gần tâm các cụm lá, ngoài lối trăng. Cùng rng thì cùng kết quả.
  * @returns {{ flowers: object[], buds: object[] }}
  */
-export function placeFlowers(rng, clumps, { flowers = 12, buds = 20 } = {}) {
+export function placeFlowers(rng, clumps, { flowers = FLOWERS, buds = BUDS, azimuth = 0 } = {}) {
   // Một nửa số hoa dồn về 5 cụm gần camera (z lớn) để tiền cảnh luôn có hoa.
   const near = [...clumps].sort((a, b) => b.z - a.z).slice(0, 5);
   const pick = (n, make) => {
@@ -74,7 +79,7 @@ export function placeFlowers(rng, clumps, { flowers = 12, buds = 20 } = {}) {
       const r = c.r * 0.7 * Math.sqrt(rng());
       const x = c.x + Math.cos(a) * r;
       const z = c.z + Math.sin(a) * r;
-      if (!inMoonPath(x, z)) out.push({ x, z, ...make() });
+      if (!inMoonPath(x, z, azimuth)) out.push({ x, z, ...make() });
     }
     return out;
   };
@@ -92,14 +97,8 @@ export function placeFlowers(rng, clumps, { flowers = 12, buds = 20 } = {}) {
 /** Xoay vector v quanh trục đơn vị k một góc a (công thức Rodrigues), viết bằng TSL. */
 const rotateAxis = (v, k, a) => v.mul(cos(a)).add(cross(k, v).mul(sin(a))).add(k.mul(dot(k, v)).mul(oneMinus(cos(a))));
 
-/**
- * Mọi cánh của mọi bông và nụ trong MỘT InstancedMesh (một draw call).
- * Ma trận instance đặt cánh ở dáng KHÉP; positionNode ngả cánh ra quanh bản lề của nó thêm
- * `range × openness`. positionNode chạy SAU instancing (r186), nên bản lề và trục xoay tính theo
- * tọa độ của ao; normalLocal cũng xoay theo để ánh sáng đúng với cánh đã ngả.
- * @param {{ flowers: object[], buds: object[], geometry: any, material: any, openness: any }} p
- */
-export function makePetals({ flowers, buds, geometry, material, openness }) {
+/** Danh sách cánh của mọi bông (3 vòng) và nụ (khép), theo thứ tự: mỗi cánh một instance. */
+function petalItems(flowers, buds) {
   const items = [];
   for (const f of flowers) {
     RINGS.forEach((ring, r) => {
@@ -114,9 +113,36 @@ export function makePetals({ flowers, buds, geometry, material, openness }) {
       items.push({ f: b, yaw: (k / BUD.count) * Math.PI * 2 + b.twist, radius: BUD.radius, tilt: BUD.tilt, range: 0, scale: BUD.scale });
     }
   }
-  const mesh = new InstancedMesh(geometry, material, items.length);
-  const hinge = new Float32Array(items.length * 4);
-  const yaws = new Float32Array(items.length);
+  return items;
+}
+
+/**
+ * Mọi cánh của mọi bông và nụ trong MỘT InstancedMesh (một draw call), cấp phát theo PETAL_CAPACITY.
+ * Ma trận instance đặt cánh ở dáng KHÉP; positionNode ngả cánh ra quanh bản lề của nó thêm
+ * `range × openness`. positionNode chạy SAU instancing (r186), nên bản lề và trục xoay tính theo
+ * tọa độ của ao; normalLocal cũng xoay theo để ánh sáng đúng với cánh đã ngả.
+ * @param {{ geometry: any, material: any, openness: any }} p
+ */
+export function makePetals({ geometry, material, openness }) {
+  const mesh = new InstancedMesh(geometry, material, PETAL_CAPACITY);
+  geometry.setAttribute('petalHinge', new InstancedBufferAttribute(new Float32Array(PETAL_CAPACITY * 4), 4));
+  geometry.setAttribute('petalYaw', new InstancedBufferAttribute(new Float32Array(PETAL_CAPACITY), 1));
+  const h = attribute('petalHinge', 'vec4');
+  const yaw = attribute('petalYaw', 'float');
+  const axis = vec3(sin(yaw), 0, cos(yaw).negate()); // trục nằm ngang, vuông góc với hướng cánh
+  const angle = h.w.mul(openness);
+  material.positionNode = Fn(() => {
+    normalLocal.assign(rotateAxis(normalLocal, axis, angle));
+    return rotateAxis(positionLocal.sub(h.xyz), axis, angle).add(h.xyz);
+  })();
+  return mesh;
+}
+
+/** Ghi cánh của `flowers` và `buds` vào mesh của makePetals: ma trận, bản lề (xyz + góc mở), hướng cánh. */
+export function fillPetals(mesh, flowers, buds) {
+  const items = petalItems(flowers, buds);
+  const hinge = mesh.geometry.getAttribute('petalHinge');
+  const yaws = mesh.geometry.getAttribute('petalYaw');
   const dummy = new Object3D();
   // Thứ tự 'YXZ': ma trận = Ry · Rx · Rz, nên cánh ngả quanh X trước, rồi mới quay theo hướng Y.
   dummy.rotation.order = 'YXZ';
@@ -129,21 +155,14 @@ export function makePetals({ flowers, buds, geometry, material, openness }) {
     dummy.scale.setScalar(scale * s);
     dummy.updateMatrix();
     mesh.setMatrixAt(i, dummy.matrix);
-    hinge.set([x, f.y, z, range], i * 4);
-    yaws[i] = yaw;
+    hinge.setXYZW(i, x, f.y, z, range);
+    yaws.setX(i, yaw);
   });
-  geometry.setAttribute('petalHinge', new InstancedBufferAttribute(hinge, 4));
-  geometry.setAttribute('petalYaw', new InstancedBufferAttribute(yaws, 1));
-
-  const h = attribute('petalHinge', 'vec4');
-  const yaw = attribute('petalYaw', 'float');
-  const axis = vec3(sin(yaw), 0, cos(yaw).negate()); // trục nằm ngang, vuông góc với hướng cánh
-  const angle = h.w.mul(openness);
-  material.positionNode = Fn(() => {
-    normalLocal.assign(rotateAxis(normalLocal, axis, angle));
-    return rotateAxis(positionLocal.sub(h.xyz), axis, angle).add(h.xyz);
-  })();
-  return mesh;
+  mesh.count = items.length;
+  mesh.instanceMatrix.needsUpdate = true;
+  hinge.needsUpdate = true;
+  yaws.needsUpdate = true;
+  mesh.computeBoundingSphere();
 }
 
 /** Ghép nhiều BufferGeometry có index thành một, kèm thuộc tính 'part' cho biết mảnh nào (0, 1…). */
@@ -184,9 +203,13 @@ export function makeCoreGeometry() {
   return mergeParts(parts);
 }
 
-/** Một instance gương sen cho mỗi bông đã nở (nụ không có). */
-export function makeCores(flowers, material) {
-  const mesh = new InstancedMesh(makeCoreGeometry(), material, flowers.length);
+/** Gương sen: một instance cho mỗi bông đã nở (nụ không có), cấp phát cho FLOWERS bông. */
+export function makeCores(material) {
+  return new InstancedMesh(makeCoreGeometry(), material, FLOWERS);
+}
+
+/** Ghi vị trí và cỡ của từng gương sen. */
+export function fillCores(mesh, flowers) {
   const dummy = new Object3D();
   flowers.forEach((f, i) => {
     dummy.position.set(f.x, f.y, f.z);
@@ -194,5 +217,7 @@ export function makeCores(flowers, material) {
     dummy.updateMatrix();
     mesh.setMatrixAt(i, dummy.matrix);
   });
-  return mesh;
+  mesh.count = flowers.length;
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.computeBoundingSphere();
 }
