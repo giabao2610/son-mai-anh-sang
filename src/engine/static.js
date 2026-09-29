@@ -47,18 +47,25 @@ const readers = new WeakMap();
  * @param {object} entry
  * @param {object} shell
  * @param {Record<string, any>} t
+ * @param {() => Promise<{ mountWorkshop: Function }>} loadWorkshop
  */
-function openReader(entry, shell, t) {
+function openReader(entry, shell, t, loadWorkshop) {
   if (!readers.has(shell)) {
     const loadContent = entry.content?.[t.lang];
     readers.set(shell, Promise.all([
-      import('../ui/workshop.js'),
-      loadContent ? loadContent().then((m) => m.default, () => null) : null,
+      loadWorkshop(),
+      // Chữ tải hỏng thì Sổ tay vẫn mở (báo thiếu chữ), như ở tầng 3D.
+      loadContent ? loadContent().then((m) => m.default, (err) => {
+        console.warn(`Không tải được chữ của bức (${t.lang}):`, err);
+        return null;
+      }) : null,
     ]).then(([{ mountWorkshop }, content]) => mountWorkshop(shell.stageEl.ownerDocument, { meta: entry.meta, content, t })));
   }
   readers.get(shell).then((workshop) => workshop.open({ grind: true }), (err) => {
-    readers.delete(shell);
+    readers.delete(shell); // lần bấm sau thử tải lại
     console.warn('Không mở được Sổ tay:', err);
+    // Chunk hỏng thường là trang vừa được cập nhật: nút "Xem các lớp" không làm được gì nữa, nên mời tải lại.
+    if (isChunkError(err)) shell.showNote(staticNote('chunk-load', t));
   });
 }
 
@@ -67,9 +74,10 @@ function openReader(entry, shell, t) {
  * lời giải thích, và nút mở Sổ tay chỉ đọc. Gọi nhiều lần vẫn an toàn: cùng lý do thì bỏ qua, lý do khác thì cập nhật.
  * @param {object} entry  PaintingEntry của bức (Sổ tay chỉ đọc dùng meta và content)
  * @param {object} shell  vỏ trang từ ui/shell.js#mountShell
- * @param {{ reason: string, error?: any, debug?: boolean, t: Record<string, any>, sma: object }} opts
+ * @param {{ reason: string, error?: any, debug?: boolean, t: Record<string, any>, sma: object,
+ *           loadWorkshop?: () => Promise<{ mountWorkshop: Function }> }} opts   loadWorkshop: test thay bộ nạp Sổ tay
  */
-export function showStatic(entry, shell, { reason, error = null, debug = false, t, sma }) {
+export function showStatic(entry, shell, { reason, error = null, debug = false, t, sma, loadWorkshop = () => import('../ui/workshop.js') }) {
   if (sma.state === 'static' && sma.reason === reason) return;
   if (error) console.error(`Về tranh tĩnh (${reason}):`, error);
   sma.set({ reason, error: error ? String(error.message ?? error) : null });
@@ -82,6 +90,6 @@ export function showStatic(entry, shell, { reason, error = null, debug = false, 
   // Trang vừa được cập nhật (chunk-load) thì chunk của Sổ tay cũng hỏng: chỉ mời tải lại.
   const action = reason === 'chunk-load'
     ? undefined
-    : { label: t.notebook.openStatic(entry.meta.layers.length), run: () => openReader(entry, shell, t) };
+    : { label: t.notebook.openStatic(entry.meta.layers.length), run: () => openReader(entry, shell, t, loadWorkshop) };
   shell.showNote({ text, reload: note.reload, action }, debug ? errorDetail(error) : null);
 }

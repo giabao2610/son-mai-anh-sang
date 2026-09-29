@@ -150,4 +150,34 @@ describe('Sổ tay chỉ đọc ở tầng tĩnh (GĐ 2)', () => {
     await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
     expect(document.querySelectorAll('[data-rail]')).toHaveLength(1);
   });
+
+  it('chữ tải hỏng → cảnh báo, Sổ tay vẫn mở và báo thiếu chữ', async () => {
+    mountPage(document);
+    const sma = createSma({});
+    const shell = mountShell(document, meta, { now: new Date('2026-09-28T21:00:00+07:00'), t, onState: (s) => sma.set({ state: s }) });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const load = vi.fn(async () => {
+      throw new Error('mất mạng');
+    });
+    showStatic({ meta, content: { vi: load } }, shell, { reason: 'flag', t, sma });
+    document.querySelector('[data-static] button').click();
+    await vi.waitFor(() => expect(document.querySelector('[data-notebook]')?.hidden).toBe(false));
+    expect(document.querySelector('[data-notebook] .nb-missing').textContent).toBe(t.notebook.contentMissing);
+    expect(warn).toHaveBeenCalledWith('Không tải được chữ của bức (vi):', expect.any(Error));
+    warn.mockRestore();
+  });
+
+  it('chunk của Sổ tay tải hỏng (trang vừa deploy) → ghi chú thành lời mời tải lại có nút, kèm cảnh báo', async () => {
+    mountPage(document);
+    const sma = createSma({});
+    const shell = mountShell(document, meta, { now: new Date('2026-09-28T21:00:00+07:00'), t, onState: (s) => sma.set({ state: s }) });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const chunkError = new TypeError('Failed to fetch dynamically imported module: workshop-abc.js');
+    showStatic({ meta }, shell, { reason: 'no-gpu', t, sma, loadWorkshop: () => Promise.reject(chunkError) });
+    document.querySelector('[data-static] button').click();
+    await vi.waitFor(() => expect(document.querySelector('[data-static] p').textContent).toBe(t.static.chunkLoad));
+    expect([...document.querySelectorAll('[data-static] button')].map((b) => b.textContent)).toEqual([t.static.reload]);
+    expect(warn).toHaveBeenCalledWith('Không mở được Sổ tay:', chunkError);
+    warn.mockRestore();
+  });
 });
