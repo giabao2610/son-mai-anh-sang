@@ -72,7 +72,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     meta,
     layers,
     weights,
-    tier: stage.backend,
+    env, // trần của núm theo tầng và theo mức (knob-set.js#knobMax)
     tweenSeconds: reducedMotion ? 0 : undefined, // giảm chuyển động: lớp bật/tắt ngay, không mờ dần
     redraw,
   });

@@ -21,33 +21,38 @@ describe('knobValue / knobMax', () => {
     expect(knobValue({ id: 'size', value: 0.5 }, env)).toBe(0.5);
   });
 
-  it('max theo tầng hoặc một số', () => {
-    expect(knobMax({ id: 'count', max: { webgpu: 200000, webgl2: 20000 } }, 'webgl2')).toBe(20000);
-    expect(knobMax({ id: 'count', max: { webgpu: 200000, webgl2: 20000 } }, 'webgpu')).toBe(200000);
-    expect(knobMax({ id: 'size', max: 0.5 }, 'webgpu')).toBe(0.5);
-    expect(knobMax({ id: 'size' }, 'webgpu')).toBeUndefined();
+  it('max theo tầng, một số, hoặc (GĐ 3) một hàm của env: trần theo mức chất lượng', () => {
+    const webgl2 = { tier: 'webgl2', level: 'vua' };
+    const webgpu = { tier: 'webgpu', level: 'cao' };
+    expect(knobMax({ id: 'count', max: { webgpu: 200000, webgl2: 20000 } }, webgl2)).toBe(20000);
+    expect(knobMax({ id: 'count', max: { webgpu: 200000, webgl2: 20000 } }, webgpu)).toBe(200000);
+    expect(knobMax({ id: 'size', max: 0.5 }, webgpu)).toBe(0.5);
+    expect(knobMax({ id: 'size' }, webgpu)).toBeUndefined();
+    const byLevel = { id: 'count', max: (e) => ({ cao: 9, vua: 5, thap: 2 })[e.level] };
+    expect([knobMax(byLevel, webgpu), knobMax(byLevel, { tier: 'webgpu', level: 'thap' })]).toEqual([9, 2]);
+    expect(normalizeKnob('x', { ...byLevel, min: 1 }, 7, webgl2)).toBe(5);
   });
 });
 
 describe('normalizeKnob', () => {
   it('số: kẹp trong [min, trần của tầng]; chuỗi số cũng nhận; không phải số thì ném lỗi', () => {
     const count = { id: 'count', min: 100, max: { webgpu: 200000, webgl2: 20000 } };
-    expect(normalizeKnob('vang-la', count, 50000, 'webgl2')).toBe(20000);
-    expect(normalizeKnob('vang-la', count, 50000, 'webgpu')).toBe(50000);
-    expect(normalizeKnob('vang-la', count, 3, 'webgpu')).toBe(100);
-    expect(normalizeKnob('vang-la', count, '1500', 'webgpu')).toBe(1500);
-    expect(() => normalizeKnob('vang-la', count, 'nhiều', 'webgpu')).toThrow('Núm "vang-la.count": "nhiều" không phải số');
+    expect(normalizeKnob('vang-la', count, 50000, { tier: 'webgl2' })).toBe(20000);
+    expect(normalizeKnob('vang-la', count, 50000, { tier: 'webgpu' })).toBe(50000);
+    expect(normalizeKnob('vang-la', count, 3, { tier: 'webgpu' })).toBe(100);
+    expect(normalizeKnob('vang-la', count, '1500', { tier: 'webgpu' })).toBe(1500);
+    expect(() => normalizeKnob('vang-la', count, 'nhiều', { tier: 'webgpu' })).toThrow('Núm "vang-la.count": "nhiều" không phải số');
   });
 
   it("bool → true/false; color → '#rrggbb' chữ thường; select phải có trong options", () => {
-    expect(normalizeKnob('cot', { id: 'wireframe', kind: 'bool' }, 1, 'webgpu')).toBe(true);
-    expect(normalizeKnob('cot', { id: 'wireframe', kind: 'bool' }, 0, 'webgpu')).toBe(false);
-    expect(normalizeKnob('x', { id: 'c', kind: 'color' }, '#F2D48A', 'webgpu')).toBe('#f2d48a');
-    expect(() => normalizeKnob('x', { id: 'c', kind: 'color' }, 'vàng', 'webgpu')).toThrow('màu phải có dạng #rrggbb');
+    expect(normalizeKnob('cot', { id: 'wireframe', kind: 'bool' }, 1, { tier: 'webgpu' })).toBe(true);
+    expect(normalizeKnob('cot', { id: 'wireframe', kind: 'bool' }, 0, { tier: 'webgpu' })).toBe(false);
+    expect(normalizeKnob('x', { id: 'c', kind: 'color' }, '#F2D48A', { tier: 'webgpu' })).toBe('#f2d48a');
+    expect(() => normalizeKnob('x', { id: 'c', kind: 'color' }, 'vàng', { tier: 'webgpu' })).toThrow('màu phải có dạng #rrggbb');
     const tone = { id: 'tone', kind: 'select', options: ['none', 'agx'] };
-    expect(normalizeKnob('phu-bong', tone, 'agx', 'webgpu')).toBe('agx');
-    expect(() => normalizeKnob('phu-bong', tone, 'aces', 'webgpu')).toThrow('Núm "phu-bong.tone": "aces" không có trong options');
-    expect(() => normalizeKnob('phu-bong', { id: 'x', kind: 'vector' }, 1, 'webgpu')).toThrow('Núm "phu-bong.x" có kind lạ: "vector"');
+    expect(normalizeKnob('phu-bong', tone, 'agx', { tier: 'webgpu' })).toBe('agx');
+    expect(() => normalizeKnob('phu-bong', tone, 'aces', { tier: 'webgpu' })).toThrow('Núm "phu-bong.tone": "aces" không có trong options');
+    expect(() => normalizeKnob('phu-bong', { id: 'x', kind: 'vector' }, 1, { tier: 'webgpu' })).toThrow('Núm "phu-bong.x" có kind lạ: "vector"');
   });
 });
 

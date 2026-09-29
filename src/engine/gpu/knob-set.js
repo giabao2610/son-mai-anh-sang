@@ -22,31 +22,33 @@ export function knobValue(knob, env) {
 }
 
 /**
- * Trần của núm theo tầng: `max` là một số, hoặc `{ webgpu, webgl2 }`.
- * @param {{ max?: number | { webgpu: number, webgl2: number } }} knob
- * @param {'webgpu' | 'webgl2'} tier
+ * Trần của núm: `max` là một số, `{ webgpu, webgl2 }` (theo tầng), hoặc (GĐ 3) một hàm của env, như `value`:
+ * trần theo mức chất lượng, để người xem không kéo được máy yếu quá sức (spec §10).
+ * @param {{ max?: number | { webgpu: number, webgl2: number } | ((env: import('../contracts/runtime.js').KnobEnv) => number) }} knob
+ * @param {import('../contracts/runtime.js').KnobEnv} env
  */
-export function knobMax(knob, tier) {
-  return knob.max !== null && typeof knob.max === 'object' ? knob.max[tier] : knob.max;
+export function knobMax(knob, env) {
+  if (typeof knob.max === 'function') return knob.max(env);
+  return knob.max !== null && typeof knob.max === 'object' ? knob.max[env.tier] : knob.max;
 }
 
 const viaOf = (knob) => knob.via ?? 'uniform';
 
 /**
- * Đưa một giá trị về đúng kiểu của núm. Số bị kẹp trong [min, trần của tầng]; màu là '#rrggbb' chữ thường;
+ * Đưa một giá trị về đúng kiểu của núm. Số bị kẹp trong [min, trần]; màu là '#rrggbb' chữ thường;
  * 'select' phải là một id trong options. Nhờ vậy snapshot() luôn là JSON gọn, và Sổ tay không đưa được số lạ vào.
  * @param {string} layerId
  * @param {import('../contracts/runtime.js').Knob} knob
  * @param {any} raw
- * @param {'webgpu'|'webgl2'} tier
+ * @param {import('../contracts/runtime.js').KnobEnv} env  tầng, mức… của máy này (trần của núm có thể tính từ đây)
  */
-export function normalizeKnob(layerId, knob, raw, tier) {
+export function normalizeKnob(layerId, knob, raw, env) {
   const kind = knob.kind ?? 'number';
   const name = `Núm "${layerId}.${knob.id}"`;
   if (kind === 'number') {
     let v = Number(raw);
     if (!Number.isFinite(v)) throw new Error(`${name}: "${raw}" không phải số`);
-    const max = knobMax(knob, tier);
+    const max = knobMax(knob, env);
     if (knob.min !== undefined) v = Math.max(v, knob.min);
     if (max !== undefined) v = Math.min(v, max);
     return v;
@@ -95,7 +97,7 @@ export function createKnobs(layerId, knobs, env) {
   for (const knob of knobs) {
     if (specs.has(knob.id)) throw new Error(`Lớp "${layerId}" khai báo núm "${knob.id}" hai lần`);
     specs.set(knob.id, knob);
-    const value = normalizeKnob(layerId, knob, knobValue(knob, env), env.tier);
+    const value = normalizeKnob(layerId, knob, knobValue(knob, env), env);
     values[knob.id] = value;
     if (viaOf(knob) === 'uniform') uniforms[knob.id] = knobUniform(knob, value).setName(uniformName(layerId, knob.id));
   }
@@ -135,7 +137,7 @@ export function createKnobs(layerId, knobs, env) {
      */
     set(id, raw) {
       const knob = spec(id);
-      const value = normalizeKnob(layerId, knob, raw, env.tier);
+      const value = normalizeKnob(layerId, knob, raw, env);
       if (viaOf(knob) === 'uniform') {
         assignUniform(uniforms[id], knob, value);
         values[id] = value;

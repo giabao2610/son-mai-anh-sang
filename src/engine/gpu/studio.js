@@ -1,6 +1,18 @@
-// engine/gpu/studio.js — bàn thợ: gom trọng số, núm, thí nghiệm và số đo của các lớp thành MỘT API cho Sổ tay và __sma.
+// engine/gpu/studio.js — bàn thợ: gom trọng số, núm, thí nghiệm, số đo và nấc chất lượng thành MỘT API cho Sổ tay và __sma.
 import { knobMax } from './knob-set.js';
 import { TWEEN_SECONDS } from './layers.js';
+
+/** Sau mỗi lần bật/tắt thí nghiệm 'compare', bỏ chừng này ms đầu (còn biên dịch, còn dựng) rồi mới ghi số đo. */
+export const COMPARE_SKIP_MS = 250;
+
+/** Cảnh không có bộ điều chỉnh (test, bức cũ): nấc không có gì để hạ. */
+const NO_QUALITY = Object.freeze({
+  state: () => ({ level: null, steps: [], guarding: false, capped: false }),
+  degrade: () => false,
+  upgrade: () => false,
+  onChange: () => () => {},
+});
+const ema = (prev, v) => prev * 0.9 + v * 0.1; // trung bình trượt: khung mới góp 10%
 
 /**
  * Sổ tay (ui/) không được import engine/ hay three: nó chỉ thấy object này. Mọi thay đổi đi qua đây:
@@ -14,16 +26,25 @@ import { TWEEN_SECONDS } from './layers.js';
  * @param {import('../contracts/painting.js').PaintingMeta} p.meta
  * @param {{ id: string, module: object, layer: object, knobs: object }[]} p.layers  kết quả của buildLayers
  * @param {ReturnType<import('./layers.js').createWeights>} p.weights
- * @param {'webgpu'|'webgl2'} p.tier                   backend thật: trần của núm theo tầng
+ * @param {import('../contracts/runtime.js').KnobEnv} p.env   tầng, mức… của máy: trần của núm (có thể theo mức)
  * @param {() => (void | Promise<void>)} [p.redraw]    vẽ lại khung hiện tại nếu vòng lặp đã dừng
  * @param {number} [p.tweenSeconds]                    0 khi người xem xin giảm chuyển động
+ * @param {{ state: () => object, degrade: () => boolean, upgrade: () => boolean, onChange: (cb: Function) => Function }} [p.quality]
+ *   bộ điều chỉnh của cảnh (scene.js): mức, nấc đang hạ, hạ/nâng tay một nấc
  */
-export function createStudio({ meta, layers, weights, tier, redraw = () => {}, tweenSeconds = TWEEN_SECONDS }) {
+export function createStudio({ meta, layers, weights, env, redraw = () => {}, tweenSeconds = TWEEN_SECONDS, quality = NO_QUALITY }) {
   const byId = new Map(layers.map((b) => [b.id, b]));
   const names = new Map(meta.layers.map((l) => [l.id, l.name]));
   const experimentsOn = new Set(); // 'layerId.expId' đang bật
-  const stats = { drawCalls: 0, triangles: 0, ms: 0 };
+  const stats = { drawCalls: 0, triangles: 0, ms: 0, cpuMs: 0 };
   let lastWall = null;
+  // Thí nghiệm 'compare': số đo riêng cho lúc tắt (off) và lúc bật (on). fresh = vừa đổi, lần đo tới đặt mốc bỏ qua.
+  const compares = new Map();
+  for (const { id, layer } of layers) {
+    for (const e of layer.experiments ?? []) {
+      if (e.kind === 'compare') compares.set(`${id}.${e.id}`, { off: null, on: null, fresh: true, skipUntil: 0 });
+    }
+  }
 
   const layerOf = (id) => {
     const built = byId.get(id);
@@ -55,7 +76,7 @@ export function createStudio({ meta, layers, weights, tier, redraw = () => {}, t
           kind: k.kind ?? 'number',
           via: k.via ?? 'uniform',
           min: k.min,
-          max: knobMax(k, tier),
+          max: knobMax(k, env),
           step: k.step,
           options: k.options,
         })),
@@ -96,27 +117,72 @@ export function createStudio({ meta, layers, weights, tier, redraw = () => {}, t
       await settle(() => exp.toggle(on));
       if (on) experimentsOn.add(`${layerId}.${expId}`);
       else experimentsOn.delete(`${layerId}.${expId}`);
+      const c = compares.get(`${layerId}.${expId}`);
+      if (c) c.fresh = true;
+    },
+    /**
+     * Số đo của một thí nghiệm 'compare': { off, on }, mỗi bên { ms, cpuMs } (trung bình trượt), hay null khi chưa đo.
+     * Thí nghiệm kiểu khác thì cả hai là null.
+     */
+    compare(layerId, expId) {
+      experimentOf(layerId, expId);
+      const c = compares.get(`${layerId}.${expId}`);
+      return { off: c?.off ? { ...c.off } : null, on: c?.on ? { ...c.on } : null };
     },
 
     /** Số đo riêng của lớp, đọc ngay lúc gọi. */
     readouts(layerId) {
       return (layerOf(layerId).layer.readouts ?? []).map((r) => ({ id: r.id, value: r.get(), unit: r.unit ?? '' }));
     },
-    /** Số đo của xưởng, của khung vừa vẽ: draw call, tam giác, ms giữa hai khung (trung bình trượt). */
+    /** Số đo của xưởng, của khung vừa vẽ: draw call, tam giác, ms giữa hai khung và ms CPU (trung bình trượt). */
     stats: () => ({ ...stats }),
     /**
-     * run.js gọi cuối mỗi khung. `info` là renderer.info (three tự reset đầu mỗi khung của vòng lặp),
+     * scene.js gọi cuối mỗi khung. `info` là renderer.info (three tự reset đầu mỗi khung của vòng lặp),
      * `wallMs` là đồng hồ tường: ms đo khung thật, kể cả khi ?freeze giữ đồng hồ của cảnh ở 1/60 s.
+     * `cpuMs` là thời gian luồng chính làm khung đó (từ đầu step tới sau render): ms giữa hai khung bị khóa theo
+     * nhịp màn hình, còn ms CPU lộ ngay phần việc của JS.
      */
-    measure(info, wallMs) {
+    measure(info, wallMs, cpuMs = 0) {
       stats.drawCalls = info.render.drawCalls;
       stats.triangles = info.render.triangles;
+      stats.cpuMs = stats.cpuMs === 0 ? cpuMs : ema(stats.cpuMs, cpuMs);
       if (lastWall !== null) {
         const dt = wallMs - lastWall;
-        stats.ms = stats.ms === 0 ? dt : stats.ms * 0.9 + dt * 0.1;
+        stats.ms = stats.ms === 0 ? dt : ema(stats.ms, dt);
+        for (const [key, c] of compares) {
+          if (c.fresh) {
+            c.fresh = false;
+            c.skipUntil = wallMs + COMPARE_SKIP_MS;
+          }
+          if (wallMs < c.skipUntil) continue;
+          const side = experimentsOn.has(key) ? 'on' : 'off';
+          const prev = c[side];
+          c[side] = prev ? { ms: ema(prev.ms, dt), cpuMs: ema(prev.cpuMs, cpuMs) } : { ms: dt, cpuMs };
+        }
       }
       lastWall = wallMs;
     },
+
+    /** Bộ điều chỉnh: { level, steps: id các nấc đang hạ, guarding (Sổ tay mở: chỉ canh quá tải nặng), capped }. */
+    quality: () => quality.state(),
+    /** Hạ tay MỘT nấc (DevTools, e2e); false khi hết thang. Xong khi khung đã vẽ lại (nếu ?freeze đã dừng). */
+    async degrade() {
+      let done = false;
+      await settle(() => {
+        done = quality.degrade();
+      });
+      return done;
+    },
+    /** Nâng tay MỘT nấc (gỡ nấc hạ gần nhất); false khi không còn nấc nào. */
+    async upgrade() {
+      let done = false;
+      await settle(() => {
+        done = quality.upgrade();
+      });
+      return done;
+    },
+    /** Báo mỗi lần nấc đổi (run.js vẽ lại huy hiệu). Trả hàm bỏ nghe. */
+    onQuality: (cb) => quality.onChange(cb),
 
     /**
      * Trạng thái tác phẩm dạng JSON (spec §16): { weights: { id: số }, knobs: { 'layerId.knobId': giá trị } }.
