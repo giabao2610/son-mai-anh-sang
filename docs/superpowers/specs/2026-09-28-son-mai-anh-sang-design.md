@@ -228,6 +228,13 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
 - Lớp Mặt nước: *"Vầng trăng ai xẻ làm đôi / Nửa in gối chiếc, nửa soi dặm trường"* (Truyện Kiều, Nguyễn Du).
 - Lớp nào cũng có thể thêm một câu ngắn khác, nhưng phải là văn học dân gian hoặc cổ điển đã hết bản quyền, và phải ghi nguồn.
 
+### Lượt màu (GĐ 3)
+Đo trên GPU thật, cùng khung 1280×800 (độ sáng trung bình / độ bão hòa / tỉ lệ điểm tối): poster 33 / 0,42 / 30%; bản GĐ 2 là
+48 / 0,54 / 30%; bản GĐ 3 trước lượt màu là 64 / 0,31 / 10%. Thứ làm ảnh bệch nhất là **quầng bloom của 3.000 con đom đóm**
+(tắt Vàng lá: độ sáng 63 → 47, điểm tối 8% → 28%), không phải sương hay đèn. Lượt màu: đom đóm dịu lại (`glow` 3 → 1,8), sương
+mỏng và tối hơn, đỉnh trời chàm đậm hơn, đèn trời chàm yếu đi (7 → 4), thân lá bớt bóng (`specularIntensity` 0,3), nước sâu
+ngả nâu cánh gián như đáy poster. Mọi số là giá trị mặc định của núm hay hằng số, nằm trong một commit riêng.
+
 ### Chi tiết sống
 - **Trăng đúng pha của đêm hôm đó**, tính từ `ctx.now`. Vị trí trăng trên trời là tính nghệ thuật, không theo thiên văn thật.
 - **Con dấu đỏ ghi ngày âm lịch** ở góc tranh, ví dụ *"18 tháng Tám · Bính Ngọ"*. Bức nào cũng có (luật 5).
@@ -1096,12 +1103,12 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
   - "Cảnh" là số đối tượng renderable trong scene; riêng ao sen khoảng 5.
   - Mục tiêu ở mức cao: cảnh ≤ 10 và tổng ≤ 45. Cảnh thử 4 đối tượng đã đo được 21.
   - (GĐ 3) Bóng tĩnh chỉ vẽ khi có thay đổi, nên khung thường không có phần `2 × bóng`. Bức 1 đủ sáu lớp có 11 đối tượng (Cốt 6,
-    trăng, đèn hoa đăng, vòm trời, mặt nước, đom đóm): ước `11 + 10 + 12 + 1 = 34` ở mức cao. Mục tiêu chính là **tổng ≤ 45**
-    (e2e đo ở mức cao); mức thấp không có phản chiếu nên còn khoảng 24.
+    trăng, đèn hoa đăng, vòm trời, mặt nước, đom đóm): `11 + 10 + 12 + 1 = 34` ở mức cao, **đo được đúng 34** trên cả WebGPU lẫn
+    WebGL2; mức thấp không có phản chiếu nên đo được 24. Mục tiêu chính là **tổng ≤ 45** (e2e đo ở mức cao).
 - **Poster:** WebP 150 KB trở xuống (GĐ 4).
 - **JS:**
   - Chunk `three` đo được khoảng 243 KB gzip. Con số này gần như cố định, vì `three/tsl` kéo cả namespace nên không tree-shake được.
-  - Toàn bộ cảnh ước khoảng 253 KB; cộng Tweakpane khoảng 284 KB. (GĐ 2 đo được: đường 3D 289 KB, gồm cả Sổ tay và chữ của nó; cộng Tweakpane 320 KB.)
+  - Toàn bộ cảnh ước khoảng 253 KB; cộng Tweakpane khoảng 284 KB. (GĐ 2 đo được: đường 3D 289 KB, gồm cả Sổ tay và chữ của nó; cộng Tweakpane 320 KB. GĐ 3 đo được: đường 3D 297,6 KB; cộng Tweakpane 328,5 KB.)
   - Mục tiêu cho cả đường 3D: **450 KB gzip trở xuống**. Số đo ghi vào README.
   - Inspector (39 KB) và stats-gl (10 KB) chỉ tải khi có `?debug`.
 - **Máy yếu:** biên dịch trước bằng `scenePass.compileAsync(renderer)`, rồi vẽ một khung ẩn trong lúc poster còn hiện.
@@ -1254,6 +1261,8 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
   - Bức 1: vuốt trên mặt nước thì ảnh khác lần không vuốt (cùng `?at&freeze`); ở mức cao (`webgpu-swiftshader`) `__sma.stats().drawCalls`
     ≤ 45; `?level=thap` lên live với `__sma.level === 'thap'`, ảnh có sáng có tối; Sổ tay › Vàng lá › Phá: bật rồi tắt "CPU vs GPU"
     thì hai cột "Tắt / Bật" đều có số.
+- (GĐ 3) Ngưỡng "có sáng có tối" của e2e: điểm tối (kênh lớn nhất < 30) trên 3% (trước là 10%): trời chàm và sương làm ảnh ít
+  điểm đen tuyệt đối hơn nền đen then cũ (đo được 7–8% ở khung 10); 3% vẫn đủ chứng minh ảnh không cháy trắng, không trống.
 - **GĐ 4:** "mài về cốt". Mọi trọng số về 0 thì ảnh có độ bão hòa thấp, độ sáng trung bình gần `datSet`, và độ lệch chuẩn độ sáng đủ lớn (thấy hình khối).
 - Ảnh chụp và trace lưu vào `e2e/.results/`.
 
@@ -1552,13 +1561,22 @@ Các mục dưới đây đã được kiểm bằng ba cách:
 34. **Sương áp lên đầu ra của MỌI NodeMaterial có `fog = true`, kể cả Sprite** (đọc mã nguồn r186, GĐ 3): `NodeMaterial.setupOutput`
     thay đầu ra bằng `fogNode`, tức `mix(output.rgb, màu sương, hệ số)`, SAU khi emissive đã cộng vào ánh sáng. Hạt vẽ bằng
     `AdditiveBlending` mà để `fog = true` thì mỗi hạt cộng thêm một đĩa màu sương: phải đặt `fog = false` và tự nhân `(1 − hệ số)`.
-35. **Shadow map tĩnh** (đọc mã nguồn r186, GĐ 3): `ShadowNode.updateBefore` vẽ khi `shadow.needsUpdate || shadow.autoUpdate`, tối đa
+35. **Shadow map tĩnh** (đọc mã nguồn r186 và kiểm bằng code chạy thật, GĐ 3: e2e đo 34 draw call ở mức cao, bóng không còn
+    vẽ lại mỗi khung): `ShadowNode.updateBefore` vẽ khi `shadow.needsUpdate || shadow.autoUpdate`, tối đa
     một lần cho mỗi camera mỗi `frameId`, rồi đặt `needsUpdate = false`; không vẽ trong lúc biên dịch trước (`_isPreCompiling`).
     `renderShadow` gọi `shadowMap.setSize(mapSize)` và `shadow.updateMatrices(light)` mỗi lần vẽ. Vì vậy với `autoUpdate = false`,
     đổi cỡ map, bias hay hướng đèn thì phải đặt `needsUpdate = true` thì mới có hiệu lực.
-36. **`BloomNode` đọc `resolutionScale` mỗi khung** (đọc mã nguồn r186, GĐ 3): `updateBefore` gọi `setSize(kích thước, …)` với
+36. **`BloomNode` đọc `resolutionScale` mỗi khung** (đọc mã nguồn r186 và kiểm bằng e2e "hạ hết nấc rồi nâng lại", GĐ 3): `updateBefore` gọi `setSize(kích thước, …)` với
     `_resolutionScale` hiện tại, và `RenderTarget.setSize` chỉ cấp phát lại khi kích thước đổi. `setResolutionScale` lúc chạy
     không biên dịch lại.
-37. **Vòng lặp thật và thuộc tính instance động trong TSL** (đọc mã nguồn r186, GĐ 3): `Loop`, `Break`, `Continue` có trong
-    `three/tsl` (`LoopNode.js`); `instancedDynamicBufferAttribute(attr)` là thuộc tính instance với `DynamicDrawUsage`. Bản dựng
-    thử của GĐ 3 kiểm lại cả ba mục 35–37 bằng code chạy thật, và bổ sung mục mới vào đây.
+37. **Vòng lặp thật và thuộc tính instance động trong TSL** (kiểm bằng code chạy thật trên WebGPU và WebGL2, cả SwiftShader lẫn
+    GPU thật, GĐ 3): `Loop(5, ({ i }) => { If(float(i).greaterThanEqual(u), () => { Break(); }); … })` với `u` là uniform biên dịch
+    và chạy đúng trên WGSL lẫn GLSL (sương của lớp Sương); `i` là số nguyên nên phải đổi sang float trước khi so với uniform.
+    `instancedDynamicBufferAttribute(attr)` (thuộc tính instance, `DynamicDrawUsage`) làm `positionNode` của một `Sprite` có
+    `count` chạy được: CPU ghi mảng rồi `attr.needsUpdate = true` mỗi khung (biến thể CPU của lớp Vàng lá).
+38. **Sao không cần ảnh** (GĐ 3): `mx_cell_noise_float(floor(hướng × 220))` cho mỗi ô lưới một số ngẫu nhiên cố định; ô nào vượt
+    ngưỡng thì có sao, lệch trong ô bằng ba lần `mx_cell_noise_float` nữa. Chạy trên cả hai backend, trong cả ảnh phản chiếu.
+39. **Số đo chi phí** (GĐ 3, máy Mac Apple Silicon, Chromium, GPU thật): noise gradient 3D viết bằng JS tốn khoảng 30 ns một lần
+    gọi (Node 24); một bước của 20.000 đom đóm trên CPU (18 lần gọi noise mỗi con) tốn khoảng 11 ms, 3.000 con khoảng 2 ms, trong
+    khi bản compute chỉ tốn phần gửi lệnh. ms mỗi khung đứng yên ở 16,7 dù CPU bận thêm vài ms: trình duyệt khóa nhịp theo màn
+    hình, nên thí nghiệm so sánh phải đo cả ms CPU.
