@@ -962,7 +962,7 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
 - **Poster:** WebP 150 KB trở xuống (GĐ 4).
 - **JS:**
   - Chunk `three` đo được khoảng 243 KB gzip. Con số này gần như cố định, vì `three/tsl` kéo cả namespace nên không tree-shake được.
-  - Toàn bộ cảnh ước khoảng 253 KB; cộng Tweakpane khoảng 284 KB. (GĐ 2 đo được: đường 3D 288 KB, gồm cả Sổ tay và chữ của nó; cộng Tweakpane 319 KB.)
+  - Toàn bộ cảnh ước khoảng 253 KB; cộng Tweakpane khoảng 284 KB. (GĐ 2 đo được: đường 3D 289 KB, gồm cả Sổ tay và chữ của nó; cộng Tweakpane 320 KB.)
   - Mục tiêu cho cả đường 3D: **450 KB gzip trở xuống**. Số đo ghi vào README.
   - Inspector (39 KB) và stats-gl (10 KB) chỉ tải khi có `?debug`.
 - **Máy yếu:** biên dịch trước bằng `scenePass.compileAsync(renderer)`, rồi vẽ một khung ẩn trong lúc poster còn hiện.
