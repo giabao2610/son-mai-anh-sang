@@ -15,12 +15,13 @@ function urlOf(page, ...parts) {
 }
 
 /**
- * Tên file chunk three trong bản build (dist/assets/three-<hash>.js). Đọc từ đĩa để kiểm "không tải three"
+ * Tên MỌI file chunk three trong bản build (dist/assets/three-<hash>.js). Đọc từ đĩa để kiểm "không tải three"
  * không thể đúng rỗng: nếu đổi cách đặt tên chunk mà không ai để ý, test báo ngay thay vì lặng lẽ qua.
+ * Lấy tất cả (không chỉ file đầu): three bị tách làm hai chunk thì kiểm cả hai.
  */
-function threeChunk() {
+function threeChunks() {
   const files = readdirSync(new URL('../dist/assets/', import.meta.url));
-  return files.find((f) => /^three-[\w-]+\.js$/.test(f)) ?? null;
+  return files.filter((f) => /^three-[\w-]+\.js$/.test(f));
 }
 
 let log;
@@ -64,9 +65,26 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       await expect(page.locator('[data-seal]')).toBeVisible();
       await expect(page.locator('[data-seal]')).not.toBeEmpty();
       await expect(page.locator('canvas')).toHaveCount(0);
-      const chunk = threeChunk();
-      expect(chunk, 'dist/assets không có three-*.js: kiểm này sẽ đúng rỗng').toBeTruthy();
-      expect(requests.filter((url) => url.endsWith(`/${chunk}`))).toEqual([]);
+      const chunks = threeChunks();
+      expect(chunks, 'dist/assets không có three-*.js: kiểm này sẽ đúng rỗng').not.toEqual([]);
+      expect(requests.filter((url) => chunks.some((c) => url.endsWith(`/${c}`)))).toEqual([]);
+    });
+
+    test('?static → Sổ tay chỉ đọc: nút "Xem N lớp" mở thanh lớp (đủ tên lớp) và chữ Hiểu; vẫn không tải three', async ({ page }) => {
+      const requests = [];
+      page.on('request', (req) => requests.push(req.url()));
+      await page.goto(urlOf(htmlPage, 'static'));
+      expect((await waitForSettled(page)).state).toBe('static');
+      await page.locator('[data-static] button').click();
+      const rail = page.locator('[data-rail]');
+      await expect(rail).toBeVisible();
+      const names = (await rail.locator('.rail-name').allTextContents()).map((s) => s.normalize('NFC'));
+      meta.layers.forEach((layer, i) => expect(names[i]).toContain(layer.name.normalize('NFC')));
+      await expect(rail.locator('[role="switch"]')).toHaveCount(0); // chỉ đọc: không bật/tắt lớp
+      await expect(page.locator('[data-notebook] .nb-understand')).not.toBeEmpty();
+      const chunks = threeChunks();
+      expect(requests.filter((url) => chunks.some((c) => url.endsWith(`/${c}`)))).toEqual([]);
+      expect(log.errors).toEqual([]);
     });
 
     test('?static&at=… → con dấu đúng ngày âm', async ({ page }) => {
@@ -145,21 +163,93 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       expect(log.errors).toEqual([]);
     });
 
-    test('mất context WebGL → tranh tĩnh (device-lost), canvas gỡ, poster hiện lại', async ({ page }, testInfo) => {
+    test('mất context WebGL: lần đầu → poster + "Dựng lại cảnh"; bấm → live lại, giữ trạng thái; lần hai → tranh tĩnh', async ({
+      page,
+    }, testInfo) => {
       const { query, backend } = testInfo.project.metadata;
       test.skip(backend !== 'webgl2', 'chỉ WebGL mô phỏng được mất context (WEBGL_lose_context)');
+      test.setTimeout(120_000);
       await page.goto(urlOf(htmlPage, query));
       const settled = await waitForSettled(page);
       expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
-      await page.evaluate(() => {
+      const second = meta.layers[1].id;
+      await page.evaluate((id) => window.__sma.setWeight(id, 0), second); // trạng thái để restore() đem về
+      const lose = () => page.evaluate(() => {
         const gl = document.querySelector('[data-stage] canvas').getContext('webgl2');
         gl.getExtension('WEBGL_lose_context').loseContext();
       });
+      await lose();
+      await page.waitForFunction(() => window.__sma.state === 'lost');
+      await expect(page.locator('[data-stage] canvas')).toHaveCount(0);
+      await expect(page.locator(posterImg)).toBeVisible();
+      await page.locator('[data-static] button').click(); // "Dựng lại cảnh"
+      await page.waitForFunction(() => ['live', 'static'].includes(window.__sma.state), null, { timeout: 60_000 });
+      let sma = await readSma(page);
+      expect(sma.state, `dựng lại hỏng: ${sma.reason} · ${sma.error}`).toBe('live');
+      await expect(page.locator('[data-stage] canvas')).toHaveCount(1); // renderer và canvas MỚI
+      const weights = await page.evaluate(() => window.__sma.layers());
+      expect(weights.find((l) => l.id === second).weight, 'restore(snapshot) phải đem trọng số cũ về').toBe(0);
+      await lose();
       await page.waitForFunction(() => window.__sma.state === 'static');
-      const sma = await readSma(page);
+      sma = await readSma(page);
       expect(sma.reason).toBe('device-lost');
       await expect(page.locator('[data-stage] canvas')).toHaveCount(0);
       await expect(page.locator(posterImg)).toBeVisible();
+    });
+
+    test('mài từng lớp: __sma.setWeight(id, 0) thì ảnh khác; đặt lại 1 thì về đúng ảnh cũ (cùng khung ?freeze)', async ({
+      page,
+    }, testInfo) => {
+      const { query } = testInfo.project.metadata;
+      test.setTimeout(120_000);
+      await page.goto(urlOf(htmlPage, query, 'freeze=10', 'at=2026-09-28T21:00'));
+      const settled = await waitForSettled(page);
+      expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+      await waitForFrames(page, 10);
+      const base = await canvasStats(page);
+      const layers = await page.evaluate(() => window.__sma.layers());
+      expect(layers.map((l) => l.id)).toEqual(meta.layers.map((l) => l.id));
+      for (const { id } of layers.slice(1)) {
+        await page.evaluate((layerId) => window.__sma.setWeight(layerId, 0), id);
+        const off = await canvasStats(page);
+        expect(off.checksum, `tắt lớp "${id}" mà ảnh không đổi`).not.toBe(base.checksum);
+        await page.evaluate((layerId) => window.__sma.setWeight(layerId, 1), id);
+      }
+      const again = await canvasStats(page);
+      expect(again.checksum, 'bật lại mọi lớp thì phải về đúng ảnh cũ').toBe(base.checksum);
+      expect((await readSma(page)).frames, 'vẽ lại không được tiến đồng hồ').toBe(10);
+      expect(log.errors).toEqual([]);
+      expect(log.warnings).toEqual([]);
+    });
+
+    test('Sổ tay: lời mời → chế độ mài; tab Chỉnh của lớp đầu tiên có núm; rê chuột lên núm thì dòng code sáng', async ({
+      page,
+    }, testInfo) => {
+      const { query } = testInfo.project.metadata;
+      test.setTimeout(120_000);
+      await page.goto(urlOf(htmlPage, query));
+      expect((await waitForSettled(page)).state).toBe('live');
+      const box = await page.locator('[data-stage] canvas').boundingBox();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.8); // lần chạm đầu → lời mời
+      await page.locator('[data-hint] button').click();
+      await expect(page.locator('[data-rail]')).toBeVisible();
+      const notebook = page.locator('[data-notebook]');
+      let found = false;
+      for (const layer of meta.layers) {
+        await page.locator(`[data-rail] [data-layer="${layer.id}"] .rail-name`).click();
+        await notebook.locator('[data-tab="chinh"]').click();
+        // Tweakpane tải lần đầu (import động): chờ ô núm xong ('ready'), hoặc biết lớp không có núm ('empty').
+        await expect(notebook.locator('[data-knobs]')).toHaveAttribute('data-state', /^(ready|empty)$/);
+        if ((await notebook.locator('[data-knobs]').getAttribute('data-state')) === 'empty') continue;
+        const knob = notebook.locator('[data-knob]').first();
+        await expect(notebook.locator('.code-view [data-line]').first()).toBeAttached();
+        await knob.hover();
+        await expect(notebook.locator('.code-view .is-lit').first()).toBeVisible();
+        found = true;
+        break;
+      }
+      test.skip(!found, 'bức không có lớp nào có núm');
+      expect(log.errors).toEqual([]);
     });
 
     for (const [flag, name] of [['debug', 'inspector'], ['debug=stats', 'stats']]) {

@@ -1,10 +1,11 @@
-// e2e/ao-sen-dem.spec.js — tương tác riêng của Bức 1: chạm mặt nước thì ảnh đổi; gợi ý → lời mời; trăng SVG ở tầng tĩnh.
+// e2e/ao-sen-dem.spec.js — tương tác riêng của Bức 1: chạm mặt nước thì ảnh đổi; gợi ý → lời mời → chế độ mài; trăng SVG ở tầng tĩnh.
 import { test, expect } from '@playwright/test';
 import { waitForSettled, waitForFrames, canvasStats, gpuReport, collectConsole, readSma } from './helpers.js';
 
 const AT = 'at=2026-09-28T21:00';
 const N = 90; // số khung của mỗi lần chạy; vòng gợn kịp lan trong ~1 giây đồng hồ của cảnh
 const TAP_AFTER = 15; // chạm sau khung này
+const HOLD_FRAMES = 25; // giữ tay chừng này khung (rồi thêm 400 ms) trước khi thả
 // Điểm chạm: giữa ngang, 80% chiều cao khung — mặt nước ngay trước camera, trên lối trăng.
 const WATER = { x: 0.5, y: 0.8 };
 
@@ -25,17 +26,29 @@ test.afterEach(async ({ page }, testInfo) => {
   await testInfo.attach('console.txt', { body: log.all.join('\n') || '(console trống)', contentType: 'text/plain' });
 });
 
-/** Mở cảnh ở ?freeze=N, (tùy chọn) chạm mặt nước sau khung TAP_AFTER, chờ đủ N khung rồi đo canvas. */
-async function run(page, testInfo, { tap }) {
+/**
+ * Mở cảnh ở ?freeze=N, (tùy chọn) chạm hoặc GIỮ tay trên mặt nước sau khung TAP_AFTER, chờ đủ N khung rồi đo canvas.
+ * Giữ = nhấn xuống, đợi thêm HOLD_FRAMES khung (dài hơn 350 ms giữ của gesture.js), rồi mới thả.
+ */
+async function run(page, testInfo, { tap = false, hold = false }) {
   const { query } = testInfo.project.metadata;
   await page.goto(`./?${query.replace(/^\?/, '')}&${AT}&freeze=${N}`);
   const settled = await waitForSettled(page, { timeout: 60_000 });
   expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
   let tappedAt = null;
-  if (tap) {
+  if (tap || hold) {
     await page.waitForFunction((n) => window.__sma.frames >= n, TAP_AFTER, { timeout: 60_000 });
     const box = await page.locator('[data-stage] canvas').boundingBox();
-    await page.mouse.click(box.x + box.width * WATER.x, box.y + box.height * WATER.y);
+    const [x, y] = [box.x + box.width * WATER.x, box.y + box.height * WATER.y];
+    if (tap) await page.mouse.click(x, y);
+    else {
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      const from = (await readSma(page)).frames;
+      await page.waitForFunction((n) => window.__sma.frames >= n, from + HOLD_FRAMES, { timeout: 60_000 });
+      await page.waitForTimeout(400); // bảo đảm quá holdMs theo đồng hồ tường, kể cả khi khung chạy nhanh
+      await page.mouse.up();
+    }
     tappedAt = (await readSma(page)).frames;
   }
   const sma = await waitForFrames(page, N, { timeout: 120_000 });
@@ -60,6 +73,15 @@ test.describe('Ao Sen Đêm · chạm mặt nước', () => {
     expect(log.errors).toEqual([]);
   });
 
+  test('giữ tay trên mặt nước: đom đóm tụ lại rồi bung ra, ảnh khác lần không chạm (cùng ?at&freeze)', async ({ page }, testInfo) => {
+    test.setTimeout(300_000);
+    const a = await run(page, testInfo, {});
+    const held = await run(page, testInfo, { hold: true });
+    expect(held.tappedAt, 'thả tay quá muộn: đom đóm không kịp bung').toBeLessThan(N - 5);
+    expect(held.stats.checksum, 'giữ tay mà ảnh không đổi: cử chỉ giữ không tới được bức').not.toBe(a.stats.checksum);
+    expect(log.errors).toEqual([]);
+  });
+
   test('gợi ý "Chạm vào mặt nước" khi live; chạm lần đầu thì thành lời mời mài lớp', async ({ page }, testInfo) => {
     const { query } = testInfo.project.metadata;
     await page.goto(`./?${query.replace(/^\?/, '')}&${AT}`);
@@ -69,6 +91,38 @@ test.describe('Ao Sen Đêm · chạm mặt nước', () => {
     const box = await page.locator('[data-stage] canvas').boundingBox();
     await page.mouse.click(box.x + box.width * WATER.x, box.y + box.height * WATER.y);
     await expect(hint).toHaveText(/^Bức tranh này có \d+ lớp — mài thử\?$/);
+  });
+});
+
+test.describe('Ao Sen Đêm · chế độ mài', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  const weights = (page) => page.evaluate(() => Object.fromEntries(window.__sma.layers().map((l) => [l.id, l.weight])));
+
+  test('lời mời là nút: vào chế độ mài (về đất sét), phủ lại từng lớp, đóng thanh lớp thì đủ lớp', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const { query } = testInfo.project.metadata;
+    await page.goto(`./?${query.replace(/^\?/, '')}&${AT}`);
+    expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
+    const box = await page.locator('[data-stage] canvas').boundingBox();
+    await page.mouse.click(box.x + box.width * WATER.x, box.y + box.height * WATER.y);
+    await page.locator('[data-hint] button').click();
+    // Mọi lớp trừ Cốt mờ dần về 0 (tween theo đồng hồ của cảnh).
+    await expect.poll(async () => Object.entries(await weights(page)).every(([id, w]) => (id === 'cot' ? w === 1 : w === 0)), {
+      timeout: 30_000,
+    }).toBe(true);
+    const notebook = page.locator('[data-notebook]');
+    await expect(notebook.locator('h2')).toHaveText('Cốt');
+    await page.locator('[data-rail] .rail-next').click();
+    await expect(notebook.locator('h2')).toHaveText('Ánh trăng');
+    await expect.poll(async () => (await weights(page))['anh-trang'], { timeout: 30_000 }).toBe(1);
+    await expect(page.locator('[data-rail] .rail-next')).toHaveText(/Mặt nước$/);
+    await page.locator('[data-rail] .rail-close').click();
+    await expect(page.locator('[data-rail]')).toBeHidden();
+    await expect.poll(async () => Object.values(await weights(page)).every((w) => w === 1), { timeout: 30_000 }).toBe(true);
+    expect(log.errors).toEqual([]);
   });
 });
 
@@ -87,6 +141,11 @@ test.describe('Ao Sen Đêm · chữ của bức tải hỏng', () => {
     const sma = await waitForFrames(page, 20);
     expect(sma.state).toBe('live');
     await expect(page.locator('[data-hint]')).toBeHidden();
+    // Sổ tay vẫn mở được (chữ thiếu thì báo một dòng), và các núm vẫn chạy vì chúng đến từ code, không từ chữ.
+    const box = await page.locator('[data-stage] canvas').boundingBox();
+    await page.mouse.click(box.x + box.width * WATER.x, box.y + box.height * WATER.y);
+    await page.locator('[data-hint] button').click();
+    await expect(page.locator('[data-notebook] .nb-missing')).toBeVisible();
   });
 });
 
