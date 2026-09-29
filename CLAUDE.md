@@ -20,6 +20,10 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
   đang hiện và **không kéo theo three**. Phần nặng (`src/engine/gpu/`) chỉ được tải bằng `import()` động ở tầng 3D.
 - Lớp dùng chung (thuộc kỹ thuật, bức nào cũng lắp được): `src/engine/stock/<id>/`, hiện có Phủ bóng.
 - `src/paintings/registry.js`: danh sách các bức. Node đọc (vite.config, test, e2e); trình duyệt không import.
+- `src/paintings/_mau/`: tranh mẫu 2 lớp, KHÔNG deploy (không có trong registry). Là fixture của test hợp đồng và là
+  khuôn để copy khi làm bức mới.
+- Sổ tay (GĐ 2): `ui/workshop.js` (thanh lớp + Sổ tay + chế độ mài) chỉ thấy **bàn thợ** `engine/gpu/studio.js`
+  (trọng số, núm, thí nghiệm, số đo, snapshot). `ui/` không import engine hay three.
 - Cách phân biệt: tên một bước của nghề (cốt, phủ, mài, phủ bóng, con dấu) thuộc xưởng; tên chủ đề (sen, trăng,
   gợn nước, đom đóm) thuộc bức.
 
@@ -68,6 +72,13 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   `Fn(() => { const h = node.toVar(); If(cond, () => { … }); … })()`.
 - Tên uniform (`setName`) phải là định danh hợp lệ (`/^[A-Za-z_][A-Za-z0-9_]*$/`), không có `-`.
 - TSL không có `atan2`: dùng `atan(y, x)`. Dùng `setName` thay cho `label()`.
+- Núm `js`/`rebuild` xử lý ở `layer.onKnob[id]` (thiếu thì `buildLayers` báo lỗi lúc dựng); marker `// @knob <id>` đặt ở
+  dòng xử lý đó. Giá trị ban đầu của mọi núm đọc bằng `ctx.knobValue(id)`, không chép lại logic mặc định.
+- Số lượng đổi được lúc chạy (lá, đom đóm…): cấp phát theo trần MỘT lần, lúc chạy chỉ ghi lại dữ liệu và đổi `count`.
+  InstancedMesh và object có `count > 1` có cache key riêng theo uuid, nên đổi `count` không biên dịch lại; đừng để
+  sprite về `count` 0 hay 1.
+- Vẽ lại ngoài vòng lặp (khi `?freeze=N` đã dừng) phải đợi nhịp `requestAnimationFrame` kế tiếp: scene pass và
+  reflector chỉ vẽ lại cảnh một lần mỗi `frameId`, mà `frameId` chỉ tăng ở mỗi nhịp rAF của renderer.
 - `material.mrtNode` chỉ dùng cho material KHÔNG BAO GIỜ bị vẽ vào target không có MRT (ảnh của reflector): nếu lọt vào đó,
   WGSL hỏng ("structures must have at least one member"). Mặt nước của Bức 1 dùng được vì reflector ẩn chính nó.
 - Trong `positionNode` (chạy sau instancing) được gán `normalLocal.assign(…)` để xoay cả pháp tuyến (cánh hoa nở theo uniform).
@@ -82,6 +93,11 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - Mọi material gán `emissiveNode` tường minh, kể cả `vec3(0)`.
 - Chữ người xem thấy nằm trong `strings.*.js`, `content.*.js` và các trường chữ của `meta.js`: tên lớp (`meta.name`), cùng `title`, `tagline`, thơ (`poem`) và `poster.alt`.
   Không file nào trong `src/` import `strings.*.js`: trang HTML import rồi truyền `t` vào `boot`.
+- Chữ của Sổ tay nằm trong `content.<lang>.js › layers[id]`: `understand` (≤ 150 chữ), `learned`, `readMore` (chỉ https),
+  nhãn cho MỌI núm, thí nghiệm và số đo. Sơ đồ là SVG trong `diagrams/`, import bằng `?raw`, có `<title>`, chỉ dùng màu
+  của bảng sơn mài. Test hợp đồng giữ các luật này.
+- Vùng `aria-live` (`[data-hint]`, `[data-static]`, `[data-badge-note]`) không bao giờ dùng `hidden`: để trống khi không có
+  gì để nói (CSS thu lại khi `:empty`). Vừa bỏ `hidden` vừa điền chữ trong cùng một nhịp thì VoiceOver bỏ qua.
 - Thông báo lỗi cho lập trình viên (`throw`, `console`) viết tiếng Việt.
 - Chú thích tiếng Việt ở những điểm cần học (làm gì, vì sao), không chú thích dòng hiển nhiên.
 
@@ -103,4 +119,5 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 ## Gỡ lỗi nhanh
 - Cờ URL (spec §8.7): `?static`, `?webgl`, `?force3d`, `?debug`, `?debug=stats`, `?at=2026-09-28T21:00` (giờ Việt Nam), `?freeze=N`.
 - `?debug` mở three.js Inspector (draw call, thời gian GPU, cây node); `?debug=stats` mở stats-gl.
-- `window.__sma` trong DevTools cho biết `state`, `tier`, `backend`, `level`, `frames`, `reason`.
+- `window.__sma` trong DevTools cho biết `state`, `tier`, `backend`, `level`, `frames`, `reason`. Khi cảnh live còn có
+  `__sma.layers()`, `__sma.setWeight(id, v)` (mài một lớp ngay), `__sma.snapshot()`, `__sma.restore(s)`.

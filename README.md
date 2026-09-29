@@ -13,11 +13,27 @@ Dự án dùng lại đúng ý đó cho đồ họa 3D trên web:
 - **"Mài"** là gỡ dần từng lớp để thấy bức tranh được làm ra thế nào, xuống tận **cốt** đất sét.
 - Cảnh nào cũng phải đẹp trọn vẹn, ghi rõ kỹ thuật đang dùng, và có núm chỉnh ngay trên trang: vừa ngắm vừa học.
 
-**Bức 1 · Ao Sen Đêm:** một ao sen đêm, sơn từ sáu lớp ánh sáng. Bản hiện tại (giai đoạn 1) có 5 lớp:
+**Bức 1 · Ao Sen Đêm:** một ao sen đêm, sơn từ sáu lớp ánh sáng. Bản hiện tại (giai đoạn 2) có 5 lớp:
 Cốt (lá, hoa, lau sậy bằng đất sét, dựng bằng instancing), Ánh trăng (trăng đúng pha đêm nay, ánh trăng và bóng,
 chất liệu), Mặt nước (phản chiếu, gợn sóng), Vàng lá (đom đóm tính trên GPU) và Phủ bóng (bloom chọn lọc,
-tone mapping AgX). Chạm mặt nước để thấy gợn sóng xẻ bóng trăng; giữ tay để đom đóm tụ lại.
+tone mapping AgX/ACES). Chạm mặt nước để thấy gợn sóng xẻ bóng trăng; giữ tay để đom đóm tụ lại.
 Các bức sau sẽ dùng chung kỹ thuật và chung một "xưởng".
+
+## Sổ tay: mài từng lớp
+
+Sau lần chạm đầu tiên, trang mời *"Bức tranh này có 5 lớp — mài thử?"*. Bấm vào là vào **chế độ mài**:
+
+- Mọi lớp trừ Cốt mờ dần về 0, bức trở về đất sét xám. Nút **"Phủ lớp tiếp theo"** sơn lại từng lớp một và mở
+  **Sổ tay** của lớp vừa phủ. Trên **thanh lớp** có thể bật/tắt tự do từng lớp (Cốt thì không). Đóng thanh lớp là về lại
+  bức tranh đầy đủ.
+- Sổ tay của mỗi lớp có ba tab. **Hiểu**: lớp làm gì, một sơ đồ, "Bạn vừa học", "Đọc thêm". **Chỉnh**: núm (Tweakpane)
+  và code thật của lớp; rê chuột lên một núm thì dòng code dùng núm đó sáng lên. **Phá**: thí nghiệm "Thử phá" (tắt
+  instancing, bias = 0, độ phân giải phản chiếu 0.1…) kèm số đo trực tiếp (draw call, tam giác, mili giây mỗi khung).
+- Ở tầng tranh tĩnh vẫn đọc được Sổ tay (nút "Xem 5 lớp của bức tranh"): chữ, sơ đồ và code; núm cần cảnh 3D.
+- Trong DevTools: `__sma.layers()`, `__sma.setWeight('mat-nuoc', 0)` (mài một lớp ngay), `__sma.snapshot()`,
+  `__sma.restore(s)`.
+- Mất GPU (máy ngủ, đổi card đồ họa): lần đầu trang hiện poster và nút "Dựng lại cảnh", dựng lại đúng trạng thái cũ;
+  lần hai thì về tranh tĩnh.
 
 Dựng bằng three.js 0.186.1 (`WebGPURenderer` + TSL, tự lùi về WebGL2) và Vite 8.
 Máy không dùng được GPU vẫn thấy poster, thơ và con dấu ngày âm lịch (tầng tranh tĩnh).
@@ -76,6 +92,8 @@ Thêm vào sau địa chỉ trang, ví dụ `…/son-mai-anh-sang/?webgl&freeze=
 | `src/engine/`, `src/ui/` | **Xưởng**: đồ nghề dùng chung (khởi động, dò tầng, pipeline, lớp dùng chung). Không biết có bức nào |
 | `src/lib/` | **Hộp màu**: hàm thuần (âm lịch, pha trăng, PRNG có hạt giống) |
 | `src/paintings/<slug>/` | **Các bức**: mỗi bức một thư mục; `src/paintings/registry.js` liệt kê các bức |
+| `src/paintings/_mau/` | **Tranh mẫu** hai lớp, không deploy: khuôn để copy khi làm bức mới, và là fixture của test hợp đồng |
+| `plugins/` | Plugin Vite `?code`: tô màu code của lớp bằng Shiki lúc build cho tab Chỉnh của Sổ tay |
 | `tests/` | Unit, luật ranh giới (`tests/rules/`), hợp đồng của các bức |
 | `e2e/` | Playwright: tranh tĩnh, WebGL2 và WebGPU trên SwiftShader |
 
@@ -83,22 +101,26 @@ Luật làm việc với code (cho người và cho AI) nằm trong [CLAUDE.md](
 
 ## Kích thước bundle
 
-Số gzip do `npm run build` (Vite 8) in ra, đo ngày 2026-09-28 ở commit `f895a71`. Tên file đã bỏ phần hash.
+Số gzip do `npm run build` (Vite 8) in ra, đo ngày 2026-09-29 (giai đoạn 2). Tên file đã bỏ phần hash.
 
 | File | Kích thước | gzip |
 |---|---:|---:|
-| `assets/ao-sen-dem-*.css` | 23.56 kB | 10.19 kB |
-| `assets/ao-sen-dem-*.js` (chunk vào) | 15.27 kB | 7.42 kB |
-| `assets/run-*.js` | 32.32 kB | 9.91 kB |
-| `assets/painting-*.js` | 23.98 kB | 9.30 kB |
-| `assets/content.vi-*.js` | 0.06 kB | 0.08 kB |
-| `assets/three-*.js` | 897.45 kB | 245.46 kB |
-| **Tổng đường 3D** (chunk vào + run + painting + content + three) | | **272.17 kB** |
-| `assets/Inspector-*.js` (chỉ tải khi có `?debug`) | 172.83 kB | 38.65 kB |
+| `assets/ao-sen-dem-*.css` | 32.12 kB | 12.17 kB |
+| `assets/ao-sen-dem-*.js` (chunk vào) | 17.40 kB | 8.36 kB |
+| `assets/run-*.js` | 38.45 kB | 12.29 kB |
+| `assets/workshop-*.js` (thanh lớp + Sổ tay) | 10.77 kB | 4.40 kB |
+| `assets/painting-*.js` | 28.64 kB | 10.96 kB |
+| `assets/content.vi-*.js` (chữ + sơ đồ của Sổ tay) | 22.79 kB | 6.97 kB |
+| `assets/three-*.js` | 897.51 kB | 245.49 kB |
+| **Tổng đường 3D** (chunk vào + run + workshop + painting + content + three) | | **288.47 kB** |
+| `assets/knobs-*.js` (Tweakpane, chỉ tải khi mở tab Chỉnh lần đầu) | 149.18 kB | 30.88 kB |
+| 11 chunk `?code` (code đã tô màu của từng file lớp, tải theo lớp) | | 1.8–6.0 kB mỗi file |
+| `assets/Inspector-*.js` (chỉ tải khi có `?debug`) | 172.83 kB | 38.68 kB |
 | `assets/main-*.js` (stats-gl, chỉ tải khi có `?debug=stats`) | 33.10 kB | 8.95 kB |
 
-Tầng tĩnh chỉ tải CSS (kèm font), poster và chunk vào của trang. Chunk `three-*.js` và phần 3D chỉ tải khi máy dùng được GPU.
-Mục tiêu của spec (§10): cả đường 3D ≤ 450 KB gzip.
+Tầng tĩnh chỉ tải CSS (kèm font), poster và chunk vào của trang; mở Sổ tay chỉ đọc thì tải thêm `workshop` và `content`.
+Chunk `three-*.js` và phần 3D chỉ tải khi máy dùng được GPU.
+Mục tiêu của spec (§10): cả đường 3D ≤ 450 KB gzip (kể cả Tweakpane: 319 KB).
 
 ## Giấy phép
 
