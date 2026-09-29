@@ -168,6 +168,9 @@ Ao Sen Đêm là **Bức 1**. Đèn kéo quân, Đông Hồ, Cung Quế về sau
      Núm `rebuild` chỉ áp khi thả tay (dựng lại hình ở mỗi nấc kéo thì khựng); trong lúc dựng hiện "đang dựng…".
    - **Phá:** các thí nghiệm "Thử phá" (nút bật/tắt `aria-pressed` kèm lời giải thích), rồi số đo trực tiếp: số đo riêng
      của lớp, và của xưởng (draw call, tam giác, mili giây mỗi khung), đổi 4 lần mỗi giây.
+     (GĐ 3) Xưởng đo thêm **mili giây CPU mỗi khung**: thời gian luồng chính làm xong một khung. Mili giây mỗi khung bị khóa
+     theo nhịp màn hình (máy mạnh với màn 60 Hz luôn thấy 16,7), còn ms CPU lộ ngay phần việc của JS. Thí nghiệm kiểu
+     `compare` có thêm hai cột ngang nhỏ "Tắt / Bật" dưới nút: ms mỗi khung và ms CPU của từng trạng thái.
    - Tầng tĩnh có **Sổ tay chỉ đọc** (nút "Xem {n} lớp của bức tranh" trong ô ghi chú): thanh lớp chỉ có tên, Hiểu và code
      đọc được, núm và thí nghiệm cần cảnh 3D.
 6. **Công cụ học (GĐ 4):** Kính mài và Lột lớp (§7). Cả hai chạy trên mọi bức, vì chỉ nhìn các view mà xưởng liệt kê.
@@ -176,6 +179,8 @@ Ao Sen Đêm là **Bức 1**. Đèn kéo quân, Đông Hồ, Cung Quế về sau
    - Hiện WebGPU / WebGL2 / Tranh tĩnh cùng mức chất lượng. Chạm vào để đọc giải thích.
    - Ghi **backend thật**, đọc sau `renderer.init()`, vì three có thể lặng lẽ lùi về WebGL2.
    - Có thuộc tính `data-backend` để test đọc.
+   - (GĐ 3) Khi bộ điều chỉnh đang hạ nấc (§10), huy hiệu ghi thêm "hạ {n} nấc" (`data-steps`); chạm vào thì lời giải thích
+     nói máy đang bớt chi tiết để giữ nhịp khung hình.
 9. **Chế độ thợ:**
    - `?debug` ở GĐ 0: in chi tiết lỗi. Từ GĐ 1: mở thêm three.js Inspector.
    - `?debug=stats` (GĐ 1): mở stats-gl. Không bật cùng lúc với Inspector.
@@ -183,6 +188,7 @@ Ao Sen Đêm là **Bức 1**. Đèn kéo quân, Đông Hồ, Cung Quế về sau
 ### 4.2 Trải nghiệm riêng của Bức 1 · Ao Sen Đêm
 - Gợi ý duy nhất: *"Chạm vào mặt nước"*, lấy từ `content.hint` (GĐ 1).
 - Chạm thì tạo gợn sóng, đom đóm tản ra. Giữ thì đom đóm tụ lại quanh ngón tay, thả ra thì chúng bung ra (GĐ 1).
+- Vuốt trên mặt nước thì sương xoáy quanh chỗ vuốt rồi lắng lại (GĐ 3).
 - **Thanh "giờ"** là Dial của Bức 1: kéo từ 18:00 đến 05:30 (§7, GĐ 4). Từ GĐ 1, giờ mặc định đã điều khiển vị trí trăng.
 - Thơ của cả bức, và câu Truyện Kiều ở lớp Mặt nước (§5).
 
@@ -280,6 +286,17 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
   - (GĐ 2) ShadowNode đọc `mapSize` (setSize) và `bias`/`normalBias` (reference) mỗi khung, nên ba núm js này không biên dịch lại.
 - **Phá:** *"Bias = 0"* (`biasZero`, xem shadow acne), *"Tắt fresnel"* (`noRim`), *"Đổi màu đèn"* (`redCandle`: đèn hoa đăng sang đỏ son). Số đo: `shadowMap` (cỡ shadow map).
 - (GĐ 2) Wrap lighting để sau (§16): viền fresnel và ánh xuyên cánh (`translucency`) đã cho cánh cảm giác mỏng; wrap thật cần một lighting model riêng.
+- (GĐ 3) Trăng đặt `material.fog = false`: sương không phủ lên trăng. Quầng trăng nằm trên vòm trời của lớp Sương.
+- (GĐ 3) **Shadow map tĩnh:** `moonlight.shadow.autoUpdate = false`. Lớp đặt `shadow.needsUpdate = true` khi có thứ đổi: hướng trăng,
+  độ nở hoa (`shared.cot.openness`), bố cục của Cốt (`shared.cot.version`: Cốt tăng số này mỗi lần ghi lại hình, hay đổi thứ nằm trong
+  cache key như wireframe, normal phẳng, tắt instancing), cùng núm và thí nghiệm của chính lớp (cỡ map, bias). Trước GĐ 3, bóng được vẽ
+  lại mỗi khung và vẽ HAI lần (camera chính và camera ảo của reflector, Phụ lục A.17); giờ chỉ vẽ khi cần (Phụ lục A.35). Lá nổi nhấp
+  nhô theo sóng là thứ NHẬN bóng: nó tự tra shadow map theo vị trí của mình, không cần vẽ lại bóng.
+- (GĐ 3) **Khung chiếu bóng ôm sát ao:** thay khung ±55 cố định bằng hộp bao của vùng có lá và hoa (bán kính vùng lá, cao vài đơn vị)
+  chiếu vào không gian của đèn; tính lại khi hướng trăng đổi. Trăng thấp (4°–13°) nên chiều dọc của khung giảm từ 110 đơn vị còn
+  khoảng 11–27: cùng cỡ map, bóng nét hơn 4–10 lần theo chiều đó.
+- (GĐ 3) **Nấc `bong`:** trần `mapSize` chia đôi (tối thiểu 256) rồi vẽ lại bóng một lần; hiệu lực = min(núm `shadowMapSize`, trần).
+  Mức thấp tắt bóng nên không đưa nấc này.
 
 ### Lớp 3 · Sương: bầu trời, noise, sương mù (`layers/l3-suong.js`)
 - **Thấy gì:**
@@ -293,8 +310,35 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
   - Vòm trời, trăng và quầng trăng đặt `material.fog = false`.
   - Hàm hệ số sương được công bố qua `shared.suong.fogFactor`. Lớp 5 nhân `emissiveNode` của đom đóm với `(1 − hệSốSương)`, vì sương không tác động lên kênh MRT `emissive`.
   - `Fn()` noise/fbm dùng chung nằm ở `lib/tsl/noise.js`, lớp 5 cũng dùng.
-- **Núm:** `density`, `heightFalloff`, `noiseScale` (uniform), `octaves` (rebuild, 1–5), `windStrength`, `starDensity`, `haloSize` (uniform).
-- **Phá:** *"Xem noise thô"* (hiện hệ số sương dạng ảnh xám), *"Octave 1 vs 5"* (so chi tiết kèm số ms).
+- **Núm:** `density`, `heightFalloff`, `noiseScale` (uniform), `octaves` (uniform, 1–5; GĐ 3 đổi từ rebuild, xem dưới), `windStrength`, `starDensity`, `haloSize` (uniform).
+- **Phá:** *"Xem noise thô"* (`rawNoise`: hiện hệ số sương dạng ảnh xám), *"Chỉ 1 octave"* (`oneOctave`, kiểu compare: so chi tiết và số ms với số octave của núm; GĐ 3 thay cho "Octave 1 vs 5").
+- (GĐ 3) **File:** `layers/l3-suong.js` (dựng lớp, núm, thí nghiệm, nấc), `parts/suong-troi.js` (màu vòm trời: hàm `sky(dir)`),
+  `parts/suong-mu.js` (hệ số sương, xoáy khi vuốt, màu sương).
+- (GĐ 3) **Vòm trời:** `SphereGeometry` bán kính 300 (trăng ở 160 nằm bên trong; camera far 500), `BackSide`, `MeshBasicNodeMaterial`,
+  `fog = false`, `depthWrite = false`, `renderOrder = −1`, `emissiveNode = vec3(0)` (trời không bloom).
+  `colorNode = mix(denThen, sky(hướng), w3)`: trọng số 0 là nền đen then (luật 3). Hàm `sky(dir)`:
+  - dải màu theo poster: chàm ở đỉnh, xuống đen then ở chân trời; dưới chân trời là màu sương, nên mép ao tan vào trời;
+  - chạng vạng còn ấm ở chân trời, gần sáng chàm nhạt dần: đọc `shared.hour` (GĐ 4 gắn thanh giờ vào đúng uniform này);
+  - sao: chia hướng nhìn thành lưới ô, mỗi ô có một sao khi `hash(ô) > 1 − starDensity`; sao nhấp nháy theo `ctx.u.time`, mờ dần
+    về chân trời và khi gần trăng;
+  - quầng trăng vàng lá quanh `shared.moon.dir`, rộng theo `haloSize`;
+  - dải Ngân Hà: một vành quanh một đường tròn lớn của bầu trời, độ sáng theo fbm 2 octave, rất mờ.
+- (GĐ 3) **Màu sương:** bạc lá pha chàm, tối; sáng lên và ngả vàng lá khi hướng nhìn gần hướng trăng (sương tán xạ ánh trăng về phía trước).
+- (GĐ 3) **`octaves` là uniform, không phải rebuild.** `NodeManager.getCacheKey` gộp `fogNode.getCacheKey()` vào cache key của mọi
+  render object (Phụ lục A.33): đổi đồ thị của sương là biên dịch lại MỌI material. Vì vậy `fbm(p, { octaves })` của `lib/tsl/noise.js`
+  nhận thêm một node làm số octave: khi đó shader có vòng lặp thật (`Loop` tối đa 5 lần, `Break` khi đủ), và đổi số octave không
+  biên dịch lại. Nhờ vậy "Chỉ 1 octave" đo ms không dính cú khựng biên dịch, và lớp có được nấc hạ chất lượng `chi-tiet`.
+  Truyền số JS thì `fbm` vẫn khai triển lúc dựng như trước (trăng của lớp Ánh trăng dùng cách này).
+- (GĐ 3) **Vuốt tay:** `shared.js` giữ một "xoáy" (`shared.swirl`: tâm trên mặt nước, lúc bắt đầu, chiều và độ mạnh theo vận tốc vuốt).
+  Hệ số sương xoay miền noise quanh tâm đó một góc giảm dần theo `exp` của thời gian và của khoảng cách: sương xoáy rồi lắng lại.
+  Vuốt vẫn không dời điểm hút của đom đóm.
+- (GĐ 3) **Công bố:** `shared.suong = { fogFactor, sky }`. Vàng lá dùng `fogFactor`. Mặt nước dùng `sky` cho phản chiếu giả ở mức thấp,
+  và `fogFactor` để làm mờ ánh lóe trên nước.
+- (GĐ 3) **"Xem noise thô":** sương thành `fog(mix(màu, vec3(noise), raw), mix(hệ số, 1, raw))`: mọi bề mặt có sương hiện noise xám.
+  Công tắc là uniform, không biên dịch lại. Vòm trời, trăng, đom đóm không có sương nên vẫn như cũ.
+- (GĐ 3) **Số đo:** `octaves` (số octave đang chạy = min(núm, trần)).
+- (GĐ 3) **Nấc `chi-tiet`:** trần số octave về 1.
+- (GĐ 3) **Thơ của lớp:** *"Đêm qua ra đứng bờ ao / Trông cá cá lặn, trông sao sao mờ"* (ca dao).
 
 ### Lớp 4 · Mặt nước: phản chiếu và gợn sóng (`layers/l4-mat-nuoc.js`)
 - **Thấy gì:**
@@ -317,6 +361,12 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
     vào qua `emissiveNode`; `mrtNode` ghi kênh `emissive` riêng (chỉ phần vượt ngưỡng). Độ nhám rất thấp trên pháp tuyến gợn làm
     specular của ánh trăng (lớp 2) thành lối trăng lấp lánh, tự tắt khi lớp Ánh trăng tắt.
 - **Mức thấp:** "phản chiếu giả" bằng màu trời cộng vệt trăng tính theo công thức, không render cảnh lần thứ hai.
+  - (GĐ 3) Mức thấp (`budget.reflection === 0`) không tạo reflector. Phản chiếu giả = `shared.suong.sky(hướng phản xạ)` cộng đĩa trăng
+    phản xạ: `pow(saturate(dot(hướng phản xạ, hướng trăng)), độ gắt)` nhân màu trăng và trọng số của lớp Ánh trăng. Pháp tuyến gợn và
+    noise làm đĩa trăng vỡ thành lối trăng lấp lánh, đúng cách lối trăng thật hình thành. Ở mức này, núm `reflectionResolution` và
+    thí nghiệm "Độ phân giải 0.1" không làm gì; số đo `reflectionScale` là 0. Không có sen, lá hay đom đóm trong nước: đó là cái giá.
+- (GĐ 3) Ánh lóe trong kênh `emissive` (`mrtNode`) nhân `(1 − shared.suong.fogFactor)`: bóng trăng ở xa trong sương không bloom xuyên sương.
+- (GĐ 3) **Nấc `phan-chieu`:** trần độ phân giải phản chiếu nhân 0,5 (tối thiểu 0,15); hiệu lực = min(núm, trần). Mức thấp không có nấc này.
 - **Núm:** `amplitude`, `speed`, `decay`, `wavelength`, `distortion`, `fresnelPower` (uniform), `reflectionResolution` (js, 0.1–1).
 - **Phá:** *"Độ phân giải 0.1"* (`lowRes`, phản chiếu vỡ hạt), *"Tắt fresnel"* (`noFresnel`), *"Xem heightfield"* (`heightfield`: ảnh xám của độ cao gợn). Hai thí nghiệm sau là uniform bên trong node, không biên dịch lại. Số đo: `reflectionScale`.
 
@@ -345,6 +395,21 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
 - **Núm:** `count` (js), `flowScale`, `speed`, `attraction`, `blinkRate`, `size`, `glow` (uniform).
   - (GĐ 2) Đã có `size`, `glow`, `attraction` và `count`. Bộ đệm cấp phát theo trần của tầng (200k / 20k) một lần; `count` chỉ đổi `computeNode.count` và `sprite.count`. `count` tối thiểu 100: sprite có `count > 1` nằm trong cache key của three.
 - **Phá:** *"CPU vs GPU"*, *"Tắt additive"* (thấy lỗi thứ tự vẽ).
+- (GĐ 3) **Dòng bay:** hướng muốn bay = `curl(p × flowScale + trôi theo t) × speed`, cộng xoáy chậm quanh tâm ao; lực hút của tay giữ như
+  GĐ 1. `curl(p)` (`lib/tsl/noise.js`) là curl của trường `mx_noise_vec3`, tính bằng sai phân trung tâm: trường không phân kỳ, nên đàn trôi
+  thành những dòng xoáy mà không dồn về một chỗ. Núm mới `flowScale`, `speed`, `blinkRate` (uniform).
+- (GĐ 3) **Trong sương:** sprite đặt `fog = false` và nhân emissive với `(1 − fogFactor)`. `fog` của three trộn MÀU ĐẦU RA về màu sương
+  (Phụ lục A.34); với `AdditiveBlending`, mỗi con sẽ cộng thêm một đĩa màu sương lên cảnh.
+- (GĐ 3) **Trọng số 0:** không chạy compute và giấu sprite (`visible = false`, không nằm trong cache key): không tốn draw call.
+- (GĐ 3) **Biến thể CPU** (`parts/vang-la-cpu.js`): cùng luật bay viết bằng JS (noise gradient 3D, curl bằng sai phân), tối đa 5.000 con,
+  ghi vào một `InstancedBufferAttribute` mà material đọc qua `instancedDynamicBufferAttribute`. Một Sprite thứ hai (material cùng
+  công thức) được dựng khi thí nghiệm bật lần đầu (Promise → "đang dựng…"); từ đó bật/tắt chỉ đổi sprite nào hiện và phía nào tính.
+  Đàn CPU xuất phát từ hạt giống riêng (`lib/random.js`), không đọc ngược bộ đệm GPU.
+- (GĐ 3) **Thí nghiệm:** *"CPU vs GPU"* (`cpu`, kiểu compare: ms CPU lộ ngay phần việc của JS) và *"Tắt additive"* (`noAdditive`: blending
+  Normal + `needsUpdate`, biên dịch lại một lần như "Normal phẳng"; con đang tắt thành đốm tối, con vẽ sau đè con vẽ trước).
+- (GĐ 3) **Số đo:** `count` (số con đang vẽ = min(núm, trần); ở chế độ CPU còn kẹp ở 5.000).
+- (GĐ 3) **Nấc `dom-dom`:** trần số con = nửa số mặc định của mức (tối thiểu 100).
+- (GĐ 3) **Đường lùi:** biến thể CPU hiện chỉ bật tay qua thí nghiệm. Tự phát hiện compute WebGL2 hỏng trên máy thật để sau (§16).
 
 ### Lớp 6 · Phủ bóng: hậu kỳ (lớp dùng chung `src/engine/stock/phu-bong/`)
 Phủ bóng là bước cuối của nghề sơn mài, nên nó thuộc về kỹ thuật. Bức nào cũng lắp được, qua `post` của hợp đồng lớp (§8.4). Xưởng lo phần chuyển màu cuối: `renderer.toneMapping` luôn là `NoToneMapping`, `renderPipeline.outputColorTransform = false`, và `renderOutput` được chèn giữa hai chặng `build` và `display`.
@@ -373,6 +438,7 @@ Phủ bóng là bước cuối của nghề sơn mài, nên nó thuộc về k�
 - **Núm:** `bloomStrength`, `bloomRadius`, `bloomThreshold`, `toneMapping` (uniform chọn: none/AgX/ACES), `exposure`, `lutIntensity`, `grain`, `vignette`, tất cả là uniform. GĐ 0 có `bloomStrength` và `exposure`; GĐ 2 có đủ núm của chặng `build`; ba núm cuối đi cùng chặng `display` ở GĐ 4.
   - (GĐ 2) `bloom()` giữ nguyên node được truyền vào làm strength/radius/threshold, nên ba núm bloom là uniform thật.
 - **Nấc:** `bloom` nhân `resolutionScale` hiện tại với 0.5 (mặc định lấy `ctx.budget.bloom ?? 0.5`).
+  (GĐ 3) `BloomNode` đọc `resolutionScale` và đặt lại cỡ render target mỗi khung (Phụ lục A.36), nên nấc này không biên dịch lại.
 - **Phá:** *"Bloom cả khung vs chọn lọc"* (bloom lên cả output thì ảnh bết), *"Tắt tone mapping"*, thanh trượt so sánh trước/sau.
   - (GĐ 2) Có *"Bloom cả khung"* (`wholeFrame`: đầu vào của bloom là `mix(emissive, output, uniform)`). "Tắt tone mapping" là núm `toneMapping = none`; thanh trượt trước/sau đi cùng Kính mài (GĐ 4).
 - **Nội dung (Hiểu/Phá) của lớp dùng chung viết trung tính** với mọi bức. Ví dụ riêng của một bức thì bức đó ghi đè khi import (§8.6).
@@ -454,9 +520,9 @@ son-mai-anh-sang/
   src/
     engine/                          XƯỞNG: không biết bức nào tồn tại
       boot.js                        [0] khởi động một bức: cờ URL → tầng → tĩnh | import('./gpu/run.js')
-      flags.js                       [0] đọc cờ URL (§8.7), hàm thuần
+      flags.js                       [0→3] đọc cờ URL (§8.7), hàm thuần; GĐ 3: ?level
       tier.js                        [0] dò tầng A/B/C, hàm thuần nhận env
-      quality.js                     [0→3] GĐ 0: chọn mức, mức mặc định, isMobile; GĐ 3: bộ điều chỉnh có trễ + ladder
+      quality.js                     [0→3] GĐ 0: chọn mức, mức mặc định, isMobile; GĐ 3: bộ điều chỉnh có trễ (hàm thuần, không three)
       palette.js                     [0] 10 token; ghép phần ghi đè của bức (hàm thuần, không three)
       deadline.js                    [0] withDeadline(): hạn 10 s cho khởi động (hàm thuần)
       sma.js                         [0→2] window.__sma: state, tier, backend, level, frames, reason; GĐ 2: expose()
@@ -466,12 +532,13 @@ son-mai-anh-sang/
       gpu/                           PHẦN NẶNG: chỉ tải ở tầng A/B
         run.js                       [0→2] vòng đời: dựng → compileAsync → khung ẩn → hòa dần → chạy → gỡ; GĐ 2: mất GPU lần đầu → dựng lại
         scene.js                     [2] dựng MỘT cảnh trên một sân khấu (ctx → setup → lớp → pipeline → input → bàn thợ) + một khung
+        ladder.js                    [3] thang nấc cụ thể: 'dpr' nở thành nhiều nấc −0,25; '<lớp>.<nấc>' lấy từ layer.degrade
         stage.js                     [0] renderer, nền đặc, camera + OrbitControls theo CameraSpec, đồng hồ, resize, DPR, lỗi GPU
         disposer.js                  [0] đăng ký mọi thứ đã tạo, gỡ theo thứ tự ngược
         pipeline.js                  [0→4] scene pass + MRT; build → renderOutput → display; alpha 1; views(); overlay
         layers.js                    [0→2] trọng số (GĐ 2: tween), createCtx, dựng lớp theo thứ tự + nối onKnob, lưới an toàn emissive
         knob-set.js                  [2] bộ núm của một lớp: uniform có tên hợp lệ, giá trị đã chuẩn hóa, get/set/values, onKnob
-        studio.js                    [2] bàn thợ: API duy nhất cho Sổ tay và __sma (trọng số, núm, thí nghiệm, số đo, snapshot)
+        studio.js                    [2→3] bàn thợ: API duy nhất cho Sổ tay và __sma (trọng số, núm, thí nghiệm, số đo, snapshot); GĐ 3: compare, ms CPU, nấc
         input.js                     [1] pointer → cử chỉ + tia; công cụ trước, bức sau; 'drag' cho camera
         debug.js                     [1→2] ?debug → Inspector; ?debug=stats → stats-gl (import động); GĐ 2: openDebug không bao giờ ném
         gesture.js                   [1] phân loại cử chỉ (hàm thuần): tap / hold-* / swipe; kéo là của camera
@@ -488,14 +555,14 @@ son-mai-anh-sang/
       random.js                      [0] PRNG có hạt giống (mulberry32)
       astro/lunar.js                 [0] âm lịch Hồ Ngọc Đức (tz tham số, mặc định +7); canChiIndex
       astro/moon.js                  [0] tuổi trăng, độ sáng, tonight(), hourOfNight(), sunDirection()
-      tsl/noise.js                   [1] fbm; [3] thêm curl
+      tsl/noise.js                   [1] fbm; [3] thêm curl, và fbm nhận số octave là node (vòng lặp thật trong shader)
     ui/                              DOM thuần: không three, không import engine/; nhận t qua tham số
       strings.vi.js                  [0] export default t: chữ của xưởng, bảng tên tháng/can/chi, formatSeal()
       shell.js                       [0] poster ↔ canvas, data-state, con dấu, hòa dần; [1]: gợi ý, lời mời "{n} lớp"
-      badge.js                       [0] huy hiệu tầng + mức, data-backend
+      badge.js                       [0→3] huy hiệu tầng + mức, data-backend; GĐ 3: "hạ {n} nấc", data-steps
       moon-svg.js                    [1] vẽ trăng đúng pha vào [data-moon] nếu trang có ô đó
       workshop.js                    [2] thanh lớp + Sổ tay + chế độ mài; nhận studio() (null ở tầng tĩnh: chỉ đọc)
-      layer-rail.js notebook.js notebook-pages.js code-view.js dom.js   [2]
+      layer-rail.js notebook.js notebook-pages.js code-view.js dom.js   [2]; GĐ 3: notebook-pages.js vẽ hai cột "Tắt / Bật" của compare
       knobs.js                       [2] Tweakpane; chỉ được import() động khi tab Chỉnh mở lần đầu
       dials.js                       [4] thanh trượt cho các Dial của bức
     styles/ tokens.css shell.css     [0]   notebook.css [2] (shell.css @import)
@@ -506,14 +573,14 @@ son-mai-anh-sang/
         meta.js                      [0] căn cước + fence (từ vựng của bức)
         index.js                     [0] cửa vào nhẹ: export default { meta, load, content }
         painting.js                  [0→4] layers[], camera, quality, setup()
-        shared.js                    [1] giờ (Dial 'gio'), ripples[8], rippleHeight(), moonDir, wind, onGesture
+        shared.js                    [1→3] giờ (Dial 'gio'), ripples[8], rippleHeight(), moonDir, wind, onGesture; GĐ 3: swirl (vuốt → sương xoáy)
         quality.js                   [3] bảng cao/vừa/thấp của bức + ladder
         content.vi.js                [1→2] gợi ý (GĐ 1); Hiểu/Phá/Đọc thêm, nhãn tra theo id (GĐ 2)
         layers/l1-cot.js             [0→1] GĐ 0: lá instanced thô + đèn xưởng
         layers/l2-anh-trang.js       [1]
-        layers/l3-suong.js           [3]
-        layers/l4-mat-nuoc.js        [0→1] GĐ 0: đĩa nước + reflector thô
-        layers/l5-vang-la.js         [0→3] GĐ 0: sprite compute thô
+        layers/l3-suong.js           [3] vòm trời + sương là là; parts/suong-{troi,mu}.js [3]
+        layers/l4-mat-nuoc.js        [0→3] GĐ 0: đĩa nước + reflector thô; GĐ 3: phản chiếu giả ở mức thấp
+        layers/l5-vang-la.js         [0→3] GĐ 0: sprite compute thô; GĐ 3: curl, biến thể CPU (parts/vang-la-cpu.js)
         parts/cot-{leaf,flower,reeds}.js       [1→2] của lớp Cốt (lá, hoa nở bằng uniform, cuống + lau); GĐ 2: cấp phát theo trần, ghi lại
         parts/cot-lab.js             [2] của lớp Cốt: thí nghiệm "Tắt instancing", đếm đỉnh
         parts/anh-trang-{moon,paint}.js        [1] của lớp Ánh trăng (trăng, chất liệu)
@@ -528,8 +595,8 @@ son-mai-anh-sang/
     helpers/svg.js                   [2] đọc mã màu trong SVG (poster, sơ đồ)
   e2e/
     helpers.js                       [0] chờ trạng thái, đọc pixel canvas (screenshot), báo GPU
-    painting.spec.js                 [0→4] lặp qua registry: tĩnh, WebGL2, WebGPU
-    ao-sen-dem.spec.js               [1] chạm mặt nước thì ảnh đổi (so ở cùng ?freeze=N)
+    painting.spec.js                 [0→4] lặp qua registry: tĩnh, WebGL2, WebGPU; GĐ 3: hạ hết nấc rồi nâng lại
+    ao-sen-dem.spec.js               [1→3] chạm mặt nước thì ảnh đổi (so ở cùng ?freeze=N); GĐ 3: vuốt, draw call, ?level=thap, CPU vs GPU
 ```
 
 ### 8.2 Luật hướng phụ thuộc (test giữ)
@@ -694,11 +761,15 @@ son-mai-anh-sang/
  * @property {string} id
  * @property {(on: boolean) => void | Promise<void>} toggle   trả Promise → UI hiện "đang dựng…"
  * @property {'toggle'|'compare'} [kind]  'compare': xưởng đo ms lúc tắt/bật và vẽ biểu đồ nhỏ
+ *   [3] toggle(true) là biến thể, toggle(false) là trạng thái thường. Bàn thợ ghi ms mỗi khung và ms CPU riêng cho
+ *   từng trạng thái (trung bình trượt, bỏ 0,25 s đầu sau mỗi lần đổi); Sổ tay vẽ hai cột "Tắt / Bật".
  */
 /** @typedef {{ id: string, get: () => number | string, unit?: string }} Readout */
 /** Nấc chỉ hạ TRẦN của lớp, KHÔNG BAO GIỜ ghi vào uniform của núm.
  * Núm = ý người xem, nấc = trần của máy, hiệu lực = min(núm, trần).
  * Nấc không được đổi thứ nằm trong cache key (castShadow, receiveShadow, shadowMap.enabled, fogNode…).
+ * [3] Lớp chỉ đưa những nấc có tác dụng ở mức hiện tại (mức thấp tắt bóng thì không có nấc bóng). Xưởng gọi apply và
+ * revert theo kiểu ngăn xếp: revert luôn gỡ nấc được apply gần nhất; mỗi nấc apply tối đa một lần trước khi revert.
  * @typedef {{ id: string, apply: () => void, revert: () => void }} DegradeStep */
 /** Xưởng nối post của các lớp theo thứ tự:
  *   màu scene pass → build của từng lớp → renderOutput(x, NoToneMapping) → display của từng lớp → overlay công cụ → vec4(rgb, 1)
@@ -746,7 +817,7 @@ son-mai-anh-sang/
 /** Thứ xưởng đưa cho bức. Bức chỉ chạm vào thế giới qua đây và qua three.
  * @typedef {Object} EngineCtx
  * @property {'webgpu'|'webgl2'} tier          [0] backend THẬT sau renderer.init()
- * @property {'cao'|'vua'|'thap'} level        [0] mức lúc khởi động
+ * @property {'cao'|'vua'|'thap'} level        [0] mức lúc khởi động ([3] hoặc mức ép bằng ?level); nấc hạ KHÔNG đổi số này
  * @property {Record<string, number>} budget   [0] mức mặc định của xưởng ghép với quality.levels[level] của bức
  * @property {boolean} mobile                  [0]
  * @property {boolean} reducedMotion           [0]
@@ -768,6 +839,9 @@ son-mai-anh-sang/
 /** [2] Bàn thợ (engine/gpu/studio.js): API DUY NHẤT mà Sổ tay (ui/) và __sma thấy; không có ở tầng tĩnh.
  * layers() · weight(id) → { value, target } · setWeight(id, v, { tween }) · knobs(layerId) · setKnob(layerId, knobId, v)
  * experiment(layerId, id) · toggleExperiment(layerId, id, on) · readouts(layerId) · stats() · snapshot() · restore(s)
+ * [3] stats() thêm cpuMs · compare(layerId, id) → { off, on }, mỗi bên { ms, cpuMs } hoặc null khi chưa đo
+ * [3] quality() → { level, steps: string[], paused, capped } · degrade() / upgrade() → Promise<boolean> (hạ/nâng tay MỘT nấc;
+ *     false khi không còn nấc) · onQuality(cb) báo mỗi lần nấc đổi (run.js vẽ lại huy hiệu)
  * Mọi hàm đổi trạng thái trả Promise, xong khi khung đã được vẽ lại (khi ?freeze đã dừng vòng lặp).
  * @typedef {Object} Studio */
 ```
@@ -811,6 +885,10 @@ t=0  HTML tĩnh: poster + tên + thơ + [data-seal]                           da
 Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pipeline → lớp ngược → setup → stage)
 ```
 
+**(GĐ 3) Bộ điều chỉnh trong vòng lặp:** mỗi khung, `quality.sample(thời điểm rAF)` có thể trả lời "hạ một nấc" hay "nâng một nấc";
+`ladder.js` áp nấc đó rồi mới vẽ. Bộ điều chỉnh tạm dừng khi thanh lớp mở (run.js báo), tắt hẳn khi có `?freeze` (ảnh phải
+tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (nấc là trạng thái của máy, không nằm trong snapshot).
+
 ### 8.6 Mỗi mối quan tâm chung nằm ở đâu
 | Mối quan tâm | Nơi ở | Quy tắc |
 |---|---|---|
@@ -825,6 +903,7 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
 | Content và chữ giao diện | Bức: `content.vi.js`. Lớp dùng chung: `engine/stock/<id>/content.vi.js`, viết trung tính; bức **import tường minh** và ghi đè bằng spread: `layers: { 'phu-bong': { ...phuBong.layers['phu-bong'], understand: '…' } }`. Xưởng: `ui/strings.vi.js`, truyền vào dưới dạng `t` | Sẵn sàng đa ngôn ngữ mà không cần framework |
 | Code-view, marker | Plugin chung; `ui/code-view.js` glob file lớp của các bức (trừ `_mau`) và của `engine/stock/` | Marker chỉ hợp lệ trong `LayerMeta.files`; id núm có phạm vi trong lớp |
 | Bảng chất lượng | Xưởng: chọn mức, mức mặc định (`dpr`), ngân sách khung, độ trễ, nấc `dpr`. Bức: số theo mức và `ladder`. Lớp dùng chung: mặc định của riêng nó (`ctx.budget.bloom ?? 0.5`) | Lớp đọc số qua `ctx.budget` và đưa ra `degrade` |
+| Bộ điều chỉnh (GĐ 3) | `engine/quality.js` (quyết định, hàm thuần không three, test bằng chuỗi khung giả) + `engine/gpu/ladder.js` (áp nấc) | Quyết định tách khỏi việc áp: logic trễ test được trong Node, việc áp nấc chạm GPU thì e2e giữ |
 
 ### 8.7 Cờ URL, HTML, poster và chunk trên GitHub Pages
 **Cờ URL** (`engine/flags.js`). Query string là môi trường; hash là trạng thái tác phẩm (giữ chỗ `#r=…` cho link công thức ở GĐ 5).
@@ -838,6 +917,7 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
 | `?at=2026-09-28T21:00` | "bây giờ" giả lập |
 | `?freeze`, `?freeze=N` | đồng hồ tất định |
 | `?poster` | (GĐ 4) ẩn mọi UI trừ canvas, để chụp poster |
+| `?level=cao\|vua\|thap` | (GĐ 3) ép mức chất lượng thay cho `pickLevel` (xem mức thấp ngay trên laptop; e2e phủ đường phản chiếu giả). Giá trị lạ thì bỏ qua (`?debug` in cảnh báo) |
 
 - **`?at`:** giá trị không ghi offset được hiểu là **giờ Việt Nam (+07:00)**, bất kể múi giờ của máy.
   - Muốn ghi offset thì viết `Z` hoặc `%2B07:00`. Dấu `+` trong query string bị giải mã thành khoảng trắng, nên `flags.js` đổi khoảng trắng về `+` trước khi parse.
@@ -896,6 +976,9 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
 - Mỗi lần về tầng tĩnh, `reason` được ghi một trong các giá trị `'flag' | 'no-gpu' | 'chunk-load' | 'timeout' | 'frame-errors' | 'gpu-error' | 'device-lost' | 'error'`.
 - GĐ 2 thêm `layers()`, `setWeight(id, v)`, `snapshot()` và `restore()` qua `sma.expose()`, khi cảnh đã live. `expose()` trả hàm gỡ đúng các hàm đó (dựng lại cảnh thì gắn hàm mới). `setWeight` đặt ngay (không tween) và trả Promise xong khi khung đã được vẽ lại.
 - GĐ 2 thêm trạng thái `'lost'` (mất GPU lần đầu, đang chờ "Dựng lại cảnh"): e2e chờ `live`/`static` nên không coi `lost` là ổn định.
+- GĐ 3 thêm `quality()` (mức, các nấc đang hạ, đang tạm dừng hay không, có đang coi là bị khóa nhịp không), `degrade()` và
+  `upgrade()` (hạ/nâng tay một nấc; Promise xong khi khung đã vẽ lại, trả `false` khi không còn nấc), và `stats()` (draw call,
+  tam giác, ms mỗi khung, ms CPU của khung vừa vẽ). Cả bốn đi qua bàn thợ, như các hàm của GĐ 2.
 
 ### Tranh tĩnh (tầng C) của một bức: `showStatic(entry, shell, { reason, error })`, gọi nhiều lần vẫn an toàn
 - Luôn có: poster, thơ và con dấu lấy từ HTML của chính bức đó. GĐ 1 thêm trăng SVG vào `[data-moon]` nếu trang có ô này. GĐ 2 thêm Sổ tay chỉ đọc: nút "Xem {n} lớp của bức tranh" trong ô ghi chú (trừ lý do `chunk-load`), tải `ui/workshop.js` và chữ của bức bằng `import()` động; vẫn không tải three.
@@ -937,28 +1020,65 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
 
 - "Điện thoại" do `isMobile({ userAgent, maxTouchPoints })` xác định: UA khớp `/Android|iPhone|iPad|Mobile/i`, hoặc `maxTouchPoints > 1` trên UA `Macintosh` (iPadOS).
 - Mức mặc định của xưởng chỉ có `dpr` (cao 2 / vừa 1.5 / thấp 1.25). Bức ghép thêm các khóa của nó.
+- (GĐ 3) Cờ `?level=cao|vua|thap` ép mức, bỏ qua bảng trên (§8.7).
 
 **Bảng của Bức 1** (`paintings/ao-sen-dem/quality.js`, GĐ 3; trước đó các lớp v0 dùng số ở cột mặc định):
 
-| Mức | DPR tối đa | Phản chiếu | Đom đóm | Lá | Bóng | Bloom (`resolutionScale`) |
-|---|---|---|---|---|---|---|
-| **cao** | 2 | 0.5 | 3.000 | 1.200 | 1024 | 0.5 (mặc định của BloomNode) |
-| **vừa** | 1.5 | 0.35 | 1.500 | 800 | 512 | 0.25 |
-| **thấp** | 1.25 | giả | 600 | 500 | tắt | 0.25 |
+| Mức | DPR tối đa | Phản chiếu | Đom đóm | Lá | Bóng | Bloom (`resolutionScale`) | Octave sương (GĐ 3) |
+|---|---|---|---|---|---|---|---|
+| **cao** | 2 | 0.5 | 3.000 | 1.200 | 1024 | 0.5 (mặc định của BloomNode) | 3 |
+| **vừa** | 1.5 | 0.35 | 1.500 | 800 | 512 | 0.25 | 2 |
+| **thấp** | 1.25 | giả | 600 | 500 | tắt | 0.25 | 1 |
+
+(GĐ 3) Khóa trong `quality.js`: `dpr`, `reflection` (0 = phản chiếu giả), `fireflies`, `leaves`, `shadow` (0 = tắt), `bloom`, `fogOctaves`.
 
 ### Bộ điều chỉnh tự động (xưởng, GĐ 3)
 - **Ngân sách khung:** 16,7 ms (60fps) trên desktop, 22,2 ms (45fps) trên điện thoại.
 - Đo frame time trung bình theo cửa sổ 2 giây.
-- Hai cửa sổ liên tiếp vượt ngân sách × 1,2 thì hạ một nấc theo `ladder` của bức. Với Bức 1: `dpr` (−0,25 mỗi nấc) → `mat-nuoc.phan-chieu` → `phu-bong.bloom` → `vang-la.dom-dom` → `anh-trang.bong`.
-- Năm cửa sổ liên tiếp dưới ngân sách × 0,7 thì nâng một nấc, nhưng không vượt mức ban đầu.
+- Hai cửa sổ liên tiếp vượt ngân sách × 1,2 thì hạ một nấc theo `ladder` của bức. Với Bức 1: `dpr` (−0,25 mỗi nấc) → `suong.chi-tiet` → `mat-nuoc.phan-chieu` → `phu-bong.bloom` → `vang-la.dom-dom` → `anh-trang.bong`. (GĐ 3 chen `suong.chi-tiet` lên sớm: noise của sương chạy trên gần như mọi điểm ảnh, bớt octave ít thấy nhất; vị trí chốt lại sau khi đo trên máy thật.)
+- Năm cửa sổ liên tiếp "dư" thì nâng một nấc, nhưng không vượt mức ban đầu.
 - **Nấc chỉ hạ trần, không ghi vào núm.** Hiệu lực = min(núm, trần).
-- **Nấc không đổi thứ nằm trong cache key.** Nấc `anh-trang.bong` là `light.shadow.autoUpdate = false` rồi hạ `mapSize`. Không bao giờ đổi `castShadow`, `receiveShadow` hay `shadowMap.enabled`, vì đổi các thứ đó sẽ biên dịch lại mọi material có ánh sáng.
+- **Nấc không đổi thứ nằm trong cache key.** (GĐ 3) Shadow map đã tĩnh sẵn (§6 Lớp 2), nên nấc `anh-trang.bong` chỉ hạ `mapSize` rồi vẽ lại bóng một lần. Không bao giờ đổi `castShadow`, `receiveShadow` hay `shadowMap.enabled`, vì đổi các thứ đó sẽ biên dịch lại mọi material có ánh sáng.
+
+**(GĐ 3) Ba cái bẫy khi đo bằng nhịp `requestAnimationFrame`, và cách tránh:**
+1. **Màn 60 Hz không bao giờ "dư".** Trình duyệt khóa nhịp rAF theo màn hình: khung 16,7 ms không bao giờ dưới 0,7 × 16,7 = 11,7 ms.
+   Chỉ một lần giật tạm (mở app khác) là hạ nấc mãi mãi. Vì vậy một cửa sổ là "dư" khi trung bình dưới 0,7 × ngân sách, **hoặc**
+   trung bình không quá 1,05 × ngân sách và không rớt khung nào (không khoảng nào dài hơn 1,5 × trung vị của cửa sổ).
+   Chống dao động: nâng một nấc mà trong 3 cửa sổ sau lại phải hạ đúng nấc đó thì khóa nấc ấy, không nâng nó nữa trong phiên.
+2. **Trình duyệt khóa ở 30 fps** (Energy Saver của Chrome khi chạy pin, Low Power Mode của iPhone): hạ nấc nào cũng không nhanh hơn.
+   Vì vậy khi đã hạ hết thang (từ lúc chưa hạ nấc nào) mà trung bình vẫn không nhanh hơn 10% so với lúc bắt đầu hạ, thì đó là nhịp
+   bị khóa, không phải GPU yếu: trả lại mọi nấc và thôi hạ ("bị khóa nhịp"). Hết khóa khi trung bình về dưới ngân sách.
+3. **Sổ tay cố ý làm chậm** (tắt instancing, 200k đom đóm, CPU vs GPU): hạ nấc giữa bài học thì số đo sai và bài học hỏng.
+   Vì vậy bộ điều chỉnh tạm dừng khi thanh lớp mở, giữ nguyên các nấc đang có, và chạy lại (cửa sổ mới) khi thanh lớp đóng.
+
+**(GĐ 3) Chi tiết:**
+- Khoảng giữa hai khung dài hơn 250 ms (tab bị ẩn, dừng ở debugger, biên dịch) thì bỏ cả cửa sổ đang đo. 2 giây đầu sau khi live
+  hay sau khi chạy lại cũng bỏ (còn biên dịch dở).
+- Có `?freeze` thì không có bộ điều chỉnh: ảnh phải tất định. `__sma.degrade()` / `upgrade()` vẫn hạ/nâng tay được (e2e dùng).
+- Nấc `dpr` nở thành nhiều nấc, mỗi nấc −0,25, tính từ DPR thật lúc dựng (`min(devicePixelRatio, budget.dpr)`) xuống tới 1.
+  Màn DPR 1 thì không có nấc `dpr` nào.
+- Mục nào của `ladder` không có lớp nào đưa ra ở mức hiện tại thì bỏ qua (ví dụ `anh-trang.bong` ở mức thấp). Test hợp đồng giữ
+  mọi mục của `ladder` trỏ tới một lớp có thật, và ở mức cao lớp đó có nấc ấy.
+
+**(GĐ 3) Các nấc của Bức 1:**
+
+| Nấc | Làm gì (hiệu lực = min(núm, trần)) | Sàn |
+|---|---|---|
+| `dpr` | trần DPR −0,25 | 1 |
+| `suong.chi-tiet` | trần số octave của sương về 1 | 1 |
+| `mat-nuoc.phan-chieu` | trần độ phân giải phản chiếu × 0,5 | 0,15 |
+| `phu-bong.bloom` | `resolutionScale` của bloom × 0,5 | — |
+| `vang-la.dom-dom` | trần số đom đóm = nửa số mặc định của mức | 100 |
+| `anh-trang.bong` | trần `mapSize` ÷ 2, rồi vẽ lại bóng một lần | 256 |
 
 ### Ngân sách
 - **Draw call:** `renderer.info.render.drawCalls` đếm mọi pass.
   - Tổng mỗi khung = `cảnh + (cảnh − 1) [phản chiếu] + 2 × bóng [bóng vẽ lại cho camera của reflector] + 12 [bloom] + 1 [FXAA] + 1 [quad]`.
   - "Cảnh" là số đối tượng renderable trong scene; riêng ao sen khoảng 5.
   - Mục tiêu ở mức cao: cảnh ≤ 10 và tổng ≤ 45. Cảnh thử 4 đối tượng đã đo được 21.
+  - (GĐ 3) Bóng tĩnh chỉ vẽ khi có thay đổi, nên khung thường không có phần `2 × bóng`. Bức 1 đủ sáu lớp có 11 đối tượng (Cốt 6,
+    trăng, đèn hoa đăng, vòm trời, mặt nước, đom đóm): ước `11 + 10 + 12 + 1 = 34` ở mức cao. Mục tiêu chính là **tổng ≤ 45**
+    (e2e đo ở mức cao); mức thấp không có phản chiếu nên còn khoảng 24.
 - **Poster:** WebP 150 KB trở xuống (GĐ 4).
 - **JS:**
   - Chunk `three` đo được khoảng 243 KB gzip. Con số này gần như cố định, vì `three/tsl` kéo cả namespace nên không tree-shake được.
@@ -1022,6 +1142,17 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
   - Cờ `?webgl`, `?static`, `?force3d`.
   - Không phải secure context; một phép dò ném lỗi.
 - **`quality` (GĐ 0):** bảng `pickLevel`, `isMobile`, `budgetFor`. **GĐ 3:** độ trễ không dao động qua lại, đúng thứ tự `ladder`, không nâng vượt mức ban đầu.
+  - (GĐ 3) Bộ điều chỉnh chạy trên chuỗi thời điểm khung giả: 60 fps đều thì không làm gì; 40 fps thì hạ sau đúng 2 cửa sổ; màn
+    60 Hz không rớt khung thì nâng lại sau 5 cửa sổ; nâng rồi phải hạ ngay thì khóa; khóa nhịp 30 fps thì hạ hết rồi trả lại hết
+    và thôi hạ; khoảng > 250 ms bỏ cửa sổ; tạm dừng không làm gì; 2 giây khởi động bị bỏ.
+- (GĐ 3) **`ladder`:** `'dpr'` nở đúng số nấc theo DPR thật (DPR 1 thì không có); mục không có lớp nào đưa ra thì bỏ qua; apply/revert
+  theo kiểu ngăn xếp; `degrade()` hết nấc thì trả `false`.
+- (GĐ 3) **`studio`:** `compare()` tách số đo theo trạng thái của thí nghiệm, bỏ 0,25 s đầu sau mỗi lần đổi; `stats().cpuMs`.
+- (GĐ 3) **`flags`:** `?level` đúng, sai, thiếu. **`badge`:** "hạ {n} nấc" và `data-steps`.
+- (GĐ 3) **`noise`:** `fbm` với số octave là số (khai triển) và là node (vòng lặp); `curl` dựng được node vec3.
+- (GĐ 3) **Lớp của Bức 1:** Sương (gán `fogNode` một lần; vòm trời `fog = false`; núm, thí nghiệm, nấc), Vàng lá (sprite `fog = false`;
+  bỏ compute khi trọng số 0; CPU vs GPU dựng sprite thứ hai một lần; luật bay JS ra số hữu hạn và ở trong ao), Mặt nước (mức thấp
+  không có reflector), Ánh trăng (bóng tĩnh chỉ vẽ lại khi có thứ đổi; khung bóng ôm hộp của ao).
 - **`palette`, `tokens-css`, `random`, `deadline`, `disposer`.**
 - **`layers`:** mọi tên uniform khớp `/^[A-Za-z_][A-Za-z0-9_]*$/`; `weight('cot')` bằng 1; id lạ thì ném lỗi.
 - **`source`:** các helper chạy trên chuỗi mẫu.
@@ -1066,6 +1197,10 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
     - Mọi núm `js`/`rebuild` áp được giá trị của chính nó; thí nghiệm bật rồi tắt được; số đo trả số hoặc chuỗi.
   - Mọi file trong `LayerMeta.files` của bức đã deploy nằm trong glob `?code` (`hasCode`).
   - Chỉ kiểm HTML cho các dòng registry. Tranh mẫu `_mau` được kiểm như mọi bức, trừ HTML và glob code.
+- **GĐ 3:**
+  - `painting.quality` (nếu có): đủ ba mức; mọi mục của `ladder` là `'dpr'` hoặc `'<layerId>.<stepId>'` với lớp có thật, và khi dựng ở
+    mức cao lớp đó có nấc ấy. Mọi nấc apply rồi revert được, và sau revert thì số đo của lớp về đúng như trước.
+  - Thí nghiệm kiểu `compare` bật rồi tắt được như thí nghiệm thường.
 
 ### E2E (Playwright 1.63, Chromium headless shell, chạy trên bản build qua `vite preview`)
 - **Cấu hình chung:**
@@ -1090,6 +1225,12 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
   - Mất context WebGL: lần đầu → `lost` + "Dựng lại cảnh" → bấm → live với canvas mới và trọng số đã restore; lần hai → tĩnh.
   - `?static`: Sổ tay chỉ đọc mở được và vẫn không tải chunk three.
   - Bức 1: chế độ mài (lời mời → đất sét → "Phủ lớp tiếp theo" → đóng thanh lớp thì đủ lớp); giữ tay trên mặt nước thì ảnh khác.
+- **GĐ 3:**
+  - Mọi bức: hạ hết mọi nấc bằng `__sma.degrade()` (cùng khung `?freeze`) thì cảnh vẫn vẽ, ảnh có sáng có tối, không lỗi console;
+    nâng lại hết bằng `upgrade()` thì về đúng ảnh cũ.
+  - Bức 1: vuốt trên mặt nước thì ảnh khác lần không vuốt (cùng `?at&freeze`); ở mức cao (`webgpu-swiftshader`) `__sma.stats().drawCalls`
+    ≤ 45; `?level=thap` lên live với `__sma.level === 'thap'`, ảnh có sáng có tối; Sổ tay › Vàng lá › Phá: bật rồi tắt "CPU vs GPU"
+    thì hai cột "Tắt / Bật" đều có số.
 - **GĐ 4:** "mài về cốt". Mọi trọng số về 0 thì ảnh có độ bão hòa thấp, độ sáng trung bình gần `datSet`, và độ lệch chuẩn độ sáng đủ lớn (thấy hình khối).
 - Ảnh chụp và trace lưu vào `e2e/.results/`.
 
@@ -1098,6 +1239,8 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
 - Điện thoại thật của Bao, cả Android lẫn iOS nếu có.
 - Safari 26 (WebGPU).
 - Local có project tùy chọn `E2E_REAL_GPU=1`, dùng GPU thật qua `channel: 'chromium'`.
+- (GĐ 3) Điện thoại tầm trung từ 45 fps trở lên (`?debug=stats`), cả khi bộ điều chỉnh đã chạy vài chục giây.
+- (GĐ 3) Lượt màu: ảnh chụp trên GPU thật (1280×800 và 390×844) so với poster; Bao duyệt trước khi ghi giá trị mặc định mới.
 
 ## 13. Repo, CI, deploy
 
@@ -1159,7 +1302,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | **0 · Nền móng** | Xem danh sách ngay dưới bảng | URL công khai chạy Ao Sen Đêm v0 trên cả 2 backend; `?static` hoạt động; unit, luật và hợp đồng đều qua; cổng e2e qua trong CI |
 | **1 · Ao sen đầu tiên ✨** | Lớp 1, 2, 4 hoàn chỉnh (gợn sóng xẻ trăng); đom đóm bản đơn giản; `setup`/`shared.js` (giờ mặc định điều khiển trăng); `input.js` + cử chỉ + tia + `ctx.u.pointer`; `CameraSpec.breathe`; `lib/tsl/noise.js`; `content.vi.js` (gợi ý) + lời mời; `ui/moon-svg.js` + `[data-moon]`; `?debug` Inspector và `?debug=stats` (`gpu/debug.js`); e2e `ao-sen-dem.spec.js` | "Phép màu" hiện rõ trên laptop và điện thoại; đã deploy |
 | **2 · Sổ tay** | Hoàn thiện `contracts/runtime.js`; núm `js`/`rebuild` + `onKnob`; thanh lớp, chế độ mài; Sổ tay 3 tab; Tweakpane (import động); code sống; nhãn chuyển sang content; tween trọng số; `snapshot`/`restore` + "Dựng lại cảnh"; `sma.expose()`; Phủ bóng chọn tone bằng `If` + đủ núm; tranh mẫu `_mau`; contract test đầy đủ; Phá cho lớp 1/2/4; e2e `setWeight` và Sổ tay | Bật/tắt lớp không khựng; test marker và hợp đồng qua |
-| **3 · Sương + Vàng lá GPU** | Lớp 3 hoàn chỉnh; lớp 5 compute + biến thể CPU; `degrade`, `quality.js` của bức và `ladder`; bộ điều chỉnh chất lượng chạy thật | Điện thoại từ 45fps trở lên |
+| **3 · Sương + Vàng lá GPU** | Lớp 3 hoàn chỉnh; lớp 5 compute + biến thể CPU; `degrade`, `quality.js` của bức và `ladder`; bộ điều chỉnh chất lượng chạy thật. Kèm theo (chốt khi lập kế hoạch GĐ 3): vuốt → sương xoáy; curl noise; thí nghiệm `compare` + ms CPU; `?level`; huy hiệu "hạ {n} nấc"; `__sma.quality/degrade/upgrade/stats`; mục hoãn của GĐ 2 (phản chiếu giả ở mức thấp, bóng tĩnh + khung bóng ôm sát, bỏ compute khi `w5 = 0`, đo draw call); Phụ lục A.29+; lượt màu cả bức so với poster | Điện thoại từ 45fps trở lên; mức cao ≤ 45 draw call; đã deploy |
 | **4 · Phủ bóng + Kính mài** | Phủ bóng hoàn chỉnh (chặng `display`: LUT từ bảng màu, grain, vignette, FXAA; `tap`); `Tool` + Kính mài + Lột lớp dựng từ `views()`; `Dial` + `ui/dials.js` + thanh giờ; `?poster` + poster thật + og (`scripts/poster.js`); e2e "mài về cốt"; kiểm tra a11y; README gồm mục "Thêm một bức tranh mới" | Mọi e2e qua; đã deploy; README đầy đủ |
 | 5 · *(tùy chọn)* | Thả hoa đăng mang một dòng thơ; link "công thức" (`#r=`); "Từng sợi"; "Xem bản dịch" (WGSL/GLSL); tiếng đàn bầu tổng hợp (chỉ khi người xem bật); trăng làm thanh tiến độ | tùy |
 | 6 · *(mở rộng)* | Bức mới theo luật 7: Đèn kéo quân (shadow map vs gobo `atan(y, x)`), Đông Hồ (hạt compute), Cung Quế (SDF raymarch) | tùy |
@@ -1248,6 +1391,9 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | Cung Quế | GĐ 6 | Mesh toàn màn hình dùng `vertexNode`/`depthNode`; nấc đầu tiên là `maxSteps`; trường tùy chọn `meta.requires` (tầng tối thiểu) |
 | Wrap lighting cho cánh sen | Khi làm lighting model riêng (GĐ 5+) | `LightingModel` tự viết cho cánh; hiện viền fresnel + `translucency` đã cho cảm giác cánh mỏng |
 | Test số của `rippleHeight` | Khi có bộ tính TSL trên CPU | Hiện chỉ kiểm dựng được node; e2e "chạm mặt nước đổi ảnh" giữ hành vi |
+| Đo ms GPU thật cho thí nghiệm `compare` | Khi máy mạnh cần thấy khác biệt (hai cột ms khung bằng nhau vì khóa 60 Hz) | `trackTimestamp` chỉ khi `hasFeature('timestamp-query')` (Phụ lục A.21: máy không có thì tắt lại cờ); `resolveTimestampsAsync` mỗi khung |
+| Tự lùi về đom đóm CPU khi compute WebGL2 hỏng | Khi gặp máy thật lỗi | Đếm lỗi của `renderer.onError` trong vài khung đầu; quá ngưỡng thì bật biến thể CPU làm mặc định cho lần dựng đó |
+| Rút `curl`, noise JS sang dùng chung | Luật hai lần | `curl` đã ở `lib/tsl/noise.js` (spec đặt từ đầu); noise JS của biến thể CPU ở lại `parts/vang-la-cpu.js` tới khi bức thứ hai cần |
 
 **Không làm**, và lý do:
 - **npm workspaces:** một repo, một người đọc; thư mục cộng test ranh giới là đủ.
@@ -1275,6 +1421,10 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 - **Logic của bức rò vào xưởng.** Có hàng rào từ vựng lấy từ meta của mọi bức, test ranh giới và luật hai lần.
 - **Mở rộng làm chậm Bức 1.** Các điểm nối tốn khoảng 1–1,5 ngày tính cả test, rải qua các giai đoạn. GĐ 0–4 chỉ làm những gì ghi ở §14.
 - **Phạm vi phình to.** Chưa đạt ngân sách FPS thì không thêm lớp; giai đoạn nào xong cũng phải deploy; giai đoạn 5 và 6 là tùy chọn.
+- **(GĐ 3) Bộ điều chỉnh đoán sai.** Nhịp rAF không phải thời gian GPU: nó bị khóa theo màn hình và theo chế độ tiết kiệm pin.
+  - Luật "dư" tính cả trường hợp không rớt khung; nâng rồi phải hạ ngay thì khóa nấc; hạ hết mà không nhanh hơn thì trả lại hết (§10).
+  - Logic nằm trong một hàm thuần, test bằng chuỗi khung giả cho từng tình huống; tạm dừng khi Sổ tay mở; tắt khi `?freeze`.
+  - Huy hiệu và `__sma.quality()` cho thấy máy đang hạ gì, nên người xem và Bao biết khi nó hạ.
 - **Máy của Bao đang tắt WebGL và dùng Node 20.** Kiểm tra `chrome://gpu`; cài Node 24 bằng fnm (§13). Tầng C giải thích cách bật lại tăng tốc phần cứng.
 
 ---
@@ -1365,3 +1515,27 @@ Các mục dưới đây đã được kiểm bằng ba cách:
 28. **Shiki 4.4.3** (kiểm ở GĐ 2): `createHighlighter({ themes: [themeObject], langs: ['javascript'] })` nhận thẳng một theme
     TextMate dạng object; `codeToHtml(…, { transformers: [{ line(node, n) { node.properties['data-line'] = n; } }] })` gắn số
     dòng vào từng `<span class="line">`. Chạy lúc build (và trong Vitest), trình duyệt không tải Shiki.
+29. **Compute trên WebGL2 có HAI bản của mỗi bộ đệm** (tìm ra ở review GĐ 2, e2e): transform feedback đọc một bản, ghi bản kia, rồi
+    đổi vai sau mỗi lần chạy; kernel có `count` nhỏ hơn sức chứa chỉ ghi `[0, count)`. Kernel khởi tạo phải chạy HAI lần trên WebGL2,
+    nếu không, tăng `count` lúc chạy thì phần tử mới đọc từ bản chưa từng được ghi (cả đám xuất phát ở gốc tọa độ).
+30. **Tweakpane 4 `pane.refresh()` phát sự kiện `change`** cho những giá trị khác với trên màn hình (review GĐ 2, jsdom): đọc lại
+    trạng thái thật bằng `refresh()` thì phải chặn bằng một cờ, kẻo nó bị tính là người xem vừa đổi núm.
+31. **Gỡ MỌI mesh đang dùng một cặp material + geometry thì three gỡ luôn pipeline** (`usedTimes` về 0; review GĐ 2): lần dùng sau
+    phải biên dịch lại. Thứ bật/tắt được (như "Tắt instancing") thì giữ một bộ mesh tạo một lần, bật/tắt chỉ hiện/giấu.
+32. **jsdom không giữ `scrollTop` và không có layout** (review GĐ 2): test cuộn thì gắn setter giả cho `scrollTop` để ghi lại giá trị.
+33. **`fogNode` nằm trong cache key của MỌI render object** (đọc mã nguồn r186, GĐ 3): `NodeManager.getCacheKey(scene, lightsNode)`
+    đẩy `fogNode.getCacheKey()` vào khóa, và khóa của một node là băm cấu trúc đồ thị của nó. Đổi đồ thị của sương (thêm một octave
+    khai triển) là mọi material biên dịch lại. Số thay đổi lúc chạy phải là uniform bên trong đồ thị cố định.
+34. **Sương áp lên đầu ra của MỌI NodeMaterial có `fog = true`, kể cả Sprite** (đọc mã nguồn r186, GĐ 3): `NodeMaterial.setupOutput`
+    thay đầu ra bằng `fogNode`, tức `mix(output.rgb, màu sương, hệ số)`, SAU khi emissive đã cộng vào ánh sáng. Hạt vẽ bằng
+    `AdditiveBlending` mà để `fog = true` thì mỗi hạt cộng thêm một đĩa màu sương: phải đặt `fog = false` và tự nhân `(1 − hệ số)`.
+35. **Shadow map tĩnh** (đọc mã nguồn r186, GĐ 3): `ShadowNode.updateBefore` vẽ khi `shadow.needsUpdate || shadow.autoUpdate`, tối đa
+    một lần cho mỗi camera mỗi `frameId`, rồi đặt `needsUpdate = false`; không vẽ trong lúc biên dịch trước (`_isPreCompiling`).
+    `renderShadow` gọi `shadowMap.setSize(mapSize)` và `shadow.updateMatrices(light)` mỗi lần vẽ. Vì vậy với `autoUpdate = false`,
+    đổi cỡ map, bias hay hướng đèn thì phải đặt `needsUpdate = true` thì mới có hiệu lực.
+36. **`BloomNode` đọc `resolutionScale` mỗi khung** (đọc mã nguồn r186, GĐ 3): `updateBefore` gọi `setSize(kích thước, …)` với
+    `_resolutionScale` hiện tại, và `RenderTarget.setSize` chỉ cấp phát lại khi kích thước đổi. `setResolutionScale` lúc chạy
+    không biên dịch lại.
+37. **Vòng lặp thật và thuộc tính instance động trong TSL** (đọc mã nguồn r186, GĐ 3): `Loop`, `Break`, `Continue` có trong
+    `three/tsl` (`LoopNode.js`); `instancedDynamicBufferAttribute(attr)` là thuộc tính instance với `DynamicDrawUsage`. Bản dựng
+    thử của GĐ 3 kiểm lại cả ba mục 35–37 bằng code chạy thật, và bổ sung mục mới vào đây.
