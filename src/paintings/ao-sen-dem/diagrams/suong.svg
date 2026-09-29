@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 170" role="img" aria-labelledby="dg-su-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-su-title">Sương: mỗi điểm ảnh tự pha màu sương theo khoảng cách tới mắt. Sát mặt nước sương đặc, lên cao mỏng dần theo hàm mũ; noise nhiều tầng làm sương loang từng mảng. Bông sen càng xa càng chìm vào sương.</title>
+  <defs>
+    <linearGradient id="dg-su-mu" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#C9C6BD" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#C9C6BD" stop-opacity="0"/>
+    </linearGradient>
+    <marker id="dg-su-mui" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#F2D48A"/>
+    </marker>
+  </defs>
+  <!-- sương: đặc sát mặt nước, mỏng dần lên cao -->
+  <rect x="10" y="58" width="330" height="52" fill="url(#dg-su-mu)"/>
+  <path d="M10 110 H350" stroke="#C9C6BD" stroke-width="2"/>
+  <text x="14" y="128" fill="#C9C6BD">mặt nước</text>
+  <!-- mắt (camera) -->
+  <g fill="none" stroke="#EDE3CF" stroke-width="1.6">
+    <rect x="18" y="62" width="26" height="18" rx="3"/>
+    <path d="M44 68 L52 64 V78 L44 74"/>
+  </g>
+  <text x="31" y="56" fill="#EDE3CF" text-anchor="middle">mắt</text>
+  <!-- tia tới hai bông sen: gần thì rõ, xa thì chìm trong sương -->
+  <path d="M54 74 L150 92" stroke="#F2D48A" stroke-width="1.6" fill="none" marker-end="url(#dg-su-mui)"/>
+  <circle cx="158" cy="94" r="6" fill="#EDE3CF"/>
+  <path d="M54 74 L290 98" stroke="#F2D48A" stroke-width="1.2" stroke-dasharray="4 4" fill="none" marker-end="url(#dg-su-mui)"/>
+  <circle cx="298" cy="99" r="6" fill="#EDE3CF" fill-opacity="0.3"/>
+  <text x="158" y="80" fill="#EDE3CF" text-anchor="middle">gần: rõ</text>
+  <text x="298" y="84" fill="#8A8580" text-anchor="middle">xa: chìm</text>
+  <!-- độ cao -->
+  <path d="M344 108 V30" stroke="#8A8580" stroke-width="1.2" marker-end="url(#dg-su-mui)"/>
+  <text x="336" y="28" fill="#8A8580" text-anchor="end">cao: sương mỏng</text>
+  <text x="180" y="150" fill="#D4A94A" text-anchor="middle">hệ số = 1 − e^(−xa × mật độ × e^(−cao × độ mỏng) × noise)</text>
+</svg>

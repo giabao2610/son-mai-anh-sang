@@ -8,7 +8,7 @@ import {
   Object3D,
   PointLight,
 } from 'three/webgpu';
-import { color, mix, uniform, uv, vec3 } from 'three/tsl';
+import { color, cos, mix, oneMinus, uniform, uv, vec3 } from 'three/tsl';
 import { moonPhase } from '../../../lib/astro/moon.js';
 import { createMoon } from '../parts/anh-trang-moon.js';
 import { paintCot } from '../parts/anh-trang-paint.js';
@@ -82,6 +82,9 @@ export function createLayer(ctx, shared) {
 
   const moon = createMoon(ctx, w, ctx.knob('moonPhase')); // @knob moonPhase
   const paint = paintCot(ctx, cot, w, shared.moon.dir);
+  // Độ sáng của trăng cho các lớp sau (quầng trăng, sương sáng về phía trăng, phản chiếu giả): trọng số × phần mặt trăng
+  // được chiếu, (1 − cos pha) / 2: rằm là 1, trăng mới là 0.
+  shared.anhTrang = { glow: w.mul(oneMinus(cos(ctx.knob('moonPhase'))).mul(0.5)) };
 
   // Ánh trăng bạc-ngà: DirectionalLight chiếu từ phía trăng. Cường độ là uniform bên trong
   // node đèn, nên đổi mỗi khung theo trọng số mà không biên dịch lại.

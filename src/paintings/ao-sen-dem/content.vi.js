@@ -2,6 +2,7 @@
 import phuBong from '../../engine/stock/phu-bong/content.vi.js';
 import cotDiagram from './diagrams/cot.svg?raw';
 import anhTrangDiagram from './diagrams/anh-trang.svg?raw';
+import suongDiagram from './diagrams/suong.svg?raw';
 import matNuocDiagram from './diagrams/mat-nuoc.svg?raw';
 import vangLaDiagram from './diagrams/vang-la.svg?raw';
 
@@ -103,6 +104,48 @@ export default {
         },
       },
       readouts: { shadowMap: 'Cỡ shadow map' },
+    },
+
+    suong: {
+      understand:
+        'Lớp này vẽ bầu trời và làn sương. Trời là một quả cầu lớn nhìn từ bên trong: màu mỗi điểm tính từ hướng '
+        + 'nhìn, chàm ở đỉnh, đen then ở chân trời; sao là những ô ngẫu nhiên (hash) được chọn cho sáng lên, không '
+        + 'cần tấm ảnh nào. Sương thì không phải một vật: mọi bề mặt tự pha màu sương theo khoảng cách tới mắt. Càng '
+        + 'xa và càng sát mặt nước thì càng đặc (hàm mũ theo độ cao), còn noise nhiều tầng (fbm) cho sương loang từng '
+        + 'mảng và trôi theo gió. Mỗi tầng noise (octave) thêm chi tiết nhỏ nhưng tốn thêm phép tính ở mọi điểm ảnh. '
+        + 'Vuốt trên mặt nước để sương xoáy.',
+      diagram: suongDiagram,
+      learned: [
+        'Sương là phép pha màu theo khoảng cách: 1 − e^(−khoảng cách × mật độ).',
+        'fbm: cộng nhiều tầng noise, tầng sau nhỏ gấp đôi và nhạt đi một nửa.',
+        'Bầu trời vẽ bằng công thức theo hướng nhìn, không cần ảnh.',
+      ],
+      readMore: [
+        { title: 'Inigo Quilez · Better Fog', url: 'https://iquilezles.org/articles/fog/' },
+        { title: 'The Book of Shaders · Fractal Brownian Motion', url: 'https://thebookofshaders.com/13/' },
+      ],
+      knobs: {
+        density: 'Mật độ sương',
+        heightFalloff: 'Sương mỏng dần theo độ cao',
+        noiseScale: 'Cỡ mảng sương (nhỏ là mảng to)',
+        octaves: 'Số tầng noise (octave)',
+        windStrength: 'Sức gió',
+        starDensity: 'Mật độ sao',
+        haloSize: 'Cỡ quầng trăng',
+      },
+      experiments: {
+        rawNoise: {
+          label: 'Xem noise thô',
+          explain: 'Mọi bề mặt hiện thẳng giá trị noise của sương dạng ảnh xám: sáng là chỗ sương đặc. Trời, trăng '
+            + 'và đom đóm không nhận sương nên vẫn như cũ.',
+        },
+        oneOctave: {
+          label: 'Chỉ 1 octave',
+          explain: 'Sương còn một tầng noise: mảng to, mềm, mất chi tiết. Hai cột đo ms lúc tắt và lúc bật. Máy yếu '
+            + 'thấy bớt octave là nhẹ đi; máy mạnh thì cột ms khung có thể bằng nhau vì trình duyệt khóa ở nhịp màn hình.',
+        },
+      },
+      readouts: { octaves: 'Số octave đang chạy' },
     },
 
     'mat-nuoc': {
