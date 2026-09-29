@@ -57,7 +57,9 @@ describe('createCpuFlock', () => {
     expect(flock.sprite.count).toBe(300);
   });
 
-  it('mỗi bước: số hữu hạn, đàn ở trong đĩa bán kính 40 và trong khoảng cao [0,3; 4], kể cả khi tay đẩy mạnh', () => {
+  // Hai test dưới chạy vòng JS thật (2.000 con × 180–240 bước, ~1,4 s trên Mac): máy bận hay máy CI yếu có thể
+  // vượt hạn 5 s mặc định của Vitest, nên nới hạn cho riêng chúng.
+  it('mỗi bước: số hữu hạn, đàn ở trong đĩa bán kính 40 và trong khoảng cao [0,3; 4], kể cả khi tay đẩy mạnh', { timeout: 20_000 }, () => {
     const { flock, attract } = setupFlock();
     attract.strength.value = -1.5;
     for (let f = 0; f < 240; f++) flock.step(1 / 60, f / 60);
@@ -71,7 +73,7 @@ describe('createCpuFlock', () => {
     }
   });
 
-  it('giữ tay (lực > 0) thì đàn quanh tay dồn lại gần hơn', () => {
+  it('giữ tay (lực > 0) thì đàn quanh tay dồn lại gần hơn', { timeout: 20_000 }, () => {
     const { flock, attract } = setupFlock();
     const near = () => {
       const a = cells(flock);
