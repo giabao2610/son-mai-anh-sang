@@ -1,10 +1,11 @@
-/* styles/shell.css — vỏ trang dùng chung cho mọi bức: poster, tên, thơ, con dấu, huy hiệu, ghi chú tầng tĩnh */
+/* styles/shell.css — vỏ trang dùng chung cho mọi bức: poster, tên, thơ, con dấu, huy hiệu, ghi chú tầng tĩnh (+ Sổ tay) */
 
 /* Màu lấy từ bảng sơn mài (tokens.css được unit test giữ khớp với engine/palette.js).
    Font tự host: mỗi file <weight>.css chứa đủ các subset kèm unicode-range, nên trình duyệt
    chỉ tải latin + latin-ext + vietnamese. KHÔNG import vietnamese-*.css lẻ: chúng thiếu unicode-range
    và thiếu phần Latin cơ bản. */
 @import './tokens.css';
+@import './notebook.css';
 @import '@fontsource/cormorant-garamond/500.css';
 @import '@fontsource/cormorant-garamond/500-italic.css';
 @import '@fontsource/be-vietnam-pro/400.css';
