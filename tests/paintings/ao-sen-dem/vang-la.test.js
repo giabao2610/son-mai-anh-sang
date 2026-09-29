@@ -17,12 +17,16 @@ describe('l5-vang-la', () => {
     expect(vangLa.knobs.find((k) => k.id === 'count').max).toEqual({ webgpu: 200000, webgl2: 20000 });
   });
 
-  it('kernel khởi tạo chạy MỘT lần lúc dựng, trên CẢ bộ đệm (trần của tầng); mỗi update chạy kernel bước', () => {
+  it('kernel khởi tạo chạy lúc dựng trên CẢ bộ đệm (trần của tầng); WebGL2 chạy hai lần; mỗi update chạy kernel bước', () => {
     const { ctx, layers } = build();
     const calls = ctx.renderer.compute.mock.calls;
     expect(calls).toHaveLength(1);
     expect([calls[0][0].isComputeNode, calls[0][0].count]).toEqual([true, 200000]);
-    expect(build({ tier: 'webgl2' }).ctx.renderer.compute.mock.calls[0][0].count).toBe(20000);
+    // WebGL2: transform feedback giữ HAI bản của mỗi bộ đệm (đọc/ghi, đổi vai sau mỗi lần chạy): khởi tạo cả hai,
+    // để tăng count lúc chạy thì con mới không xuất phát cùng một chỗ (0, 0, 0) từ bản chưa từng được ghi.
+    const gl = build({ tier: 'webgl2' }).ctx.renderer.compute.mock.calls;
+    expect(gl.map(([node]) => node.count)).toEqual([20000, 20000]);
+    expect(gl[1][0]).toBe(gl[0][0]);
     layers['vang-la'].update(1 / 60, 1 / 60);
     layers['vang-la'].update(1 / 60, 2 / 60);
     expect(calls).toHaveLength(3);

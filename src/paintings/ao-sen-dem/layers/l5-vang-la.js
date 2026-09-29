@@ -71,6 +71,10 @@ export function createLayer(ctx, shared) {
     velSeed.element(i).assign(vec4(0, 0, 0, hash(i.add(4))));
   })().compute(capacity); // khởi tạo CẢ bộ đệm: tăng count lúc chạy thì con mới đã có chỗ đứng
   ctx.renderer.compute(init);
+  // WebGL2 chạy compute bằng transform feedback: mỗi bộ đệm có HAI bản (một để đọc, một để ghi, đổi vai sau mỗi lần
+  // chạy), và kernel bước chỉ ghi [0, count). Chạy init lần nữa để bản kia cũng đầy: nếu không, tăng count lúc chạy
+  // thì con mới đọc từ bản chưa từng được ghi, cả đám cùng xuất phát ở (0, 0, 0) và chồng lên nhau thành một đốm.
+  if (ctx.tier === 'webgl2') ctx.renderer.compute(init);
 
   // Kernel bước (mỗi khung): mỗi con chỉ đọc và ghi ĐÚNG ô của mình — trên WebGL2,
   // element(i) luôn trả ô của chính luồng đang chạy, nên không đọc được hàng xóm.

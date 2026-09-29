@@ -189,7 +189,16 @@ describe('l1-cot · Phá (GĐ 2)', () => {
       expect(group.children[0].material).toBe(leaves.material);
       expect(ctx.scene.children).toContain(group);
       expect(leaves.visible).toBe(false);
+      // Renderer giữ một RenderObject (kèm bộ đệm uniform) cho mỗi Mesh ở mỗi pass, và chỉ gỡ khi object bắn
+      // 'dispose': tắt thí nghiệm mà không dispose Mesh rời là rò bộ nhớ sau mỗi lần bật/tắt.
+      const meshes = [...group.children];
+      const disposed = new Set();
+      for (const mesh of meshes) mesh.addEventListener('dispose', () => disposed.add(mesh));
+      let sharedDisposed = 0;
+      for (const owner of [leaves.geometry, leaves.material]) owner.addEventListener('dispose', () => { sharedDisposed += 1; });
       experiment(layers.cot, 'noInstancing').toggle(false);
+      expect(disposed.size).toBe(meshes.length);
+      expect(sharedDisposed).toBe(0); // hình và material dùng chung với lá instanced: không dispose
       expect(layers.cot.objects).toHaveLength(6);
       expect(ctx.scene.children).not.toContain(group);
       expect(leaves.visible).toBe(true);

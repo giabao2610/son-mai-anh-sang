@@ -27,9 +27,13 @@ export function looseLeaves(scene, leaves, max) {
   return group;
 }
 
-/** Gỡ Group của looseLeaves và hiện lại lá instanced. Hình và material dùng chung nên không dispose. */
+/**
+ * Gỡ Group của looseLeaves và hiện lại lá instanced. Hình và material dùng chung nên không dispose, nhưng từng Mesh
+ * thì phải: renderer giữ một RenderObject (kèm bộ đệm uniform) cho mỗi Mesh ở mỗi pass, chỉ gỡ khi Mesh bắn 'dispose'.
+ */
 export function tightenLeaves(scene, leaves, group) {
   scene.remove(group);
+  for (const mesh of group.children) mesh.dispose();
   group.clear();
   leaves.visible = true;
 }
