@@ -45,7 +45,7 @@ export function makeSky(ctx, { moonDir, moonLight, hour, fogColor, density, star
     // Dải màu theo poster: đen then ở chân trời, chàm ở đỉnh. Chạng vạng (18h–19h30) và gần sáng (28h30–29h30)
     // chân trời ấm lên màu nâu cánh gián. Giờ là uniform của bức: thanh giờ (GĐ 4) chỉ việc đổi nó.
     const dusk = oneMinus(smoothstep(18, 19.5, hour)).add(smoothstep(28.5, 29.5, hour));
-    const base = mix(color(hex.denThen), color(hex.cham), smoothstep(0, 0.6, e))
+    const base = mix(color(hex.denThen), color(hex.cham).mul(2), smoothstep(0, 0.6, e))
       .add(color(hex.canhGian).mul(dusk.mul(0.6)).mul(oneMinus(smoothstep(0, 0.25, e))));
 
     // Sao: chia hướng nhìn thành lưới ô 3D. Mỗi ô một số ngẫu nhiên cố định (mx_cell_noise_float = hash của ô);

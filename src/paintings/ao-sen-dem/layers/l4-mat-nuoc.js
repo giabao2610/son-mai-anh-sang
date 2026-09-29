@@ -116,7 +116,8 @@ export function createLayer(ctx, shared) {
 
   // Có chiếu sáng: ở trọng số 0 đĩa là đất sét dưới đèn xưởng như mọi hình khác (luật 3).
   const material = new MeshStandardNodeMaterial({ roughness: 0.9, metalness: 0 });
-  material.colorNode = mix(mix(color(hex.datSet), color(hex.denThen), w), vec3(0), showHeight);
+  // Nước sâu: đen then ngả nâu cánh gián như đáy poster (lượt màu GĐ 3); trọng số 0 là đất sét.
+  material.colorNode = mix(mix(color(hex.datSet), mix(color(hex.denThen), color(hex.canhGian), 0.5), w), vec3(0), showHeight);
   material.roughnessNode = mix(float(0.9), float(0.06), w);
   material.normalNode = transformNormalToView(mix(vec3(0, 1, 0), normal, w)); // đĩa đặt ở gốc: local = world
   // Ảnh phản chiếu cộng vào như ánh sáng tự phát (không bị đèn làm tối)...

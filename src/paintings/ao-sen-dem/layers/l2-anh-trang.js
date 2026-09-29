@@ -35,7 +35,7 @@ export const knobs = [
 ];
 
 const MOONLIGHT = 3; // cường độ ánh trăng ở trọng số 1
-const SKY_FILL = 7; // trời chàm hắt xuống, nước đen hắt lên
+const SKY_FILL = 4; // trời chàm hắt xuống, nước đen hắt lên
 const CANDLE = { distance: 14, position: [-5, 0.08, 13] };
 
 /**

@@ -7,7 +7,7 @@ import { createSkyDome, makeSky } from '../parts/suong-troi.js';
 export const id = 'suong';
 
 export const knobs = [
-  { id: 'density', min: 0, max: 0.12, step: 0.001, value: 0.012 },
+  { id: 'density', min: 0, max: 0.12, step: 0.001, value: 0.008 },
   { id: 'heightFalloff', min: 0.05, max: 2, step: 0.01, value: 1 },
   { id: 'noiseScale', min: 0.01, max: 0.4, step: 0.005, value: 0.07 },
   // Số tầng noise là UNIFORM (không phải rebuild): fbm chạy vòng lặp thật trong shader nên đổi số tầng không biên dịch lại.

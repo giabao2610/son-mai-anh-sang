@@ -33,7 +33,7 @@ const SWIRL = { radius: 9, settle: 0.6 }; // xoáy: bán kính ảnh hưởng (�
  */
 export function makeFogColor(ctx, { moonDir, moonLight }) {
   const hex = ctx.palette.hex;
-  const base = mix(color(hex.cham), color(hex.bacLa), 0.25).mul(0.25);
+  const base = mix(color(hex.cham), color(hex.bacLa), 0.25).mul(0.2);
   const glow = color(hex.vangLaSang).mul(0.12).mul(moonLight);
   // saturate trước pow: pow của số âm là NaN trên GPU thật.
   return Fn(([dir]) => base.add(glow.mul(pow(saturate(dot(dir, moonDir)), 16))));

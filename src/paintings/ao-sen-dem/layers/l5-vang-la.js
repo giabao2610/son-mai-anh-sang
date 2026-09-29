@@ -33,7 +33,7 @@ const COUNT_FLOOR = 100; // sprite có count > 1 nằm trong cache key của thr
 
 export const knobs = [
   { id: 'size', min: 0.02, max: 0.5, step: 0.005, value: 0.12 },
-  { id: 'glow', min: 0, max: 10, step: 0.1, value: 3 },
+  { id: 'glow', min: 0, max: 10, step: 0.1, value: 1.8 },
   { id: 'attraction', min: 0, max: 3, step: 0.01, value: 1 },
   { id: 'flowScale', min: 0.02, max: 0.6, step: 0.01, value: 0.12 },
   { id: 'speed', min: 0, max: 3, step: 0.05, value: 1 },
