@@ -97,14 +97,17 @@ export function createTuner({ budgetMs, ...options }) {
   let calmRun = 0; // số cửa sổ liền nhau đúng nhịp bị khóa (lúc đang bị khóa)
   let lastUp = null; // { index, windowNo } của lần nâng gần nhất
   const locked = new Set();
+  const cappedLocks = new Set(); // nấc khóa trong lúc bị khóa nhịp: hết khóa thì quên, cắm sạc luôn trả lại được
 
   const clear = () => {
     gaps = [];
     total = 0;
   };
-  /** Hạ lại đúng nấc vừa nâng, ngay trong vài cửa sổ: khóa nấc ấy (chống dao động). */
+  /** Hạ lại đúng nấc vừa nâng, ngay trong vài cửa sổ: khóa nấc ấy (chống dao động). Trả true nếu vừa khóa. */
   const lockIfBounced = (applied) => {
-    if (lastUp && lastUp.index === applied && windowNo - lastUp.windowNo <= o.lockWithin) locked.add(applied);
+    const bounced = lastUp !== null && lastUp.index === applied && windowNo - lastUp.windowNo <= o.lockWithin;
+    if (bounced) locked.add(applied);
+    return bounced;
   };
 
   /**
@@ -115,7 +118,7 @@ export function createTuner({ budgetMs, ...options }) {
     if (beyondRun >= o.downAfter && applied < steps) {
       beyondRun = 0;
       calmRun = 0;
-      lockIfBounced(applied);
+      if (lockIfBounced(applied)) cappedLocks.add(applied);
       return 'down';
     }
     if (!guarding && calmRun >= o.upAfter && applied > 0 && !locked.has(applied - 1)) {
@@ -139,6 +142,9 @@ export function createTuner({ budgetMs, ...options }) {
       capped = false; // hết khóa (cắm sạc, tắt tiết kiệm pin; màn 59,94 Hz hay rớt lẻ một khung vẫn tính): chạy lại
       beyondRun = 0;
       calmRun = 0;
+      overRun = 0; // các cửa sổ lúc bị khóa là nhịp của trình duyệt, không phải máy quá tải: đếm lại từ đầu
+      for (const index of cappedLocks) locked.delete(index);
+      cappedLocks.clear();
     }
     if (overRun >= o.downAfter) {
       overRun = 0;

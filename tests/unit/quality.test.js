@@ -219,6 +219,11 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
     expect(kinds(heavy.actions)).toEqual(['down', 'up', 'down']);
     expect(tuner.state().locked).toEqual([0]);
     expect(ladder.applied).toBe(1);
+    // Cắm sạc, núm đã trả về: hết khóa nhịp thì quên các nấc khóa trong lúc bị khóa, trả lại được như trước.
+    const unplugged = run(tuner, { seconds: 20, gapFor: () => DESKTOP, ladder, from: heavy.end });
+    expect(kinds(unplugged.actions)).toEqual(['up']);
+    expect(ladder.applied).toBe(0);
+    expect(tuner.state()).toMatchObject({ capped: false, locked: [] });
   });
 
   it('mốc "lúc bắt đầu hạ" không dùng lại mốc cũ: hạ ở 25 ms rồi nâng về hết; sau đó Sổ tay mở hạ từ 50 ms còn 38 ms → đóng Sổ tay vẫn giữ nấc', () => {

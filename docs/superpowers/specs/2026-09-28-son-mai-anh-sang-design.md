@@ -1071,7 +1071,8 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
    ≤ 1,05 × ngân sách (cùng dung sai với "dư vừa", nên màn 59,94 Hz hay một khung rớt lẻ vẫn thoát được), hoặc nhanh hơn nhịp
    bị khóa ÷ 1,25. Còn khóa mà chậm hẳn hơn nhịp bị khóa (× 1,25, 2 cửa sổ liền: người xem kéo 200.000 đom đóm) là quá tải
    thật: vẫn hạ, kể cả khi Sổ tay mở, để về lại nhịp bị khóa rồi dừng. Về lại đúng nhịp bị khóa 5 cửa sổ liền (người xem trả
-   núm về) thì trả dần các nấc ấy, như luật "dư" (Sổ tay mở thì chờ; trả mà quá tải lại ngay thì khóa nấc ấy).
+   núm về) thì trả dần các nấc ấy, như luật "dư" (Sổ tay mở thì chờ; trả mà quá tải lại ngay thì khóa nấc ấy, nhưng chỉ tới
+   khi hết khóa nhịp: cắm sạc thì mọi nấc luôn trả lại được).
 3. **Sổ tay cố ý làm chậm** (tắt instancing, nhiều đom đóm, CPU vs GPU): hạ nấc vì chậm vừa phải thì số đo sai, bài học hỏng;
    nhưng để máy bị ép quá sức thì trái mục tiêu hợp nhiều phần cứng. Vì vậy khi thanh lớp mở, bộ điều chỉnh chuyển sang chế độ
    **canh**: chậm vừa phải thì để yên, chỉ hạ khi quá tải NẶNG (trung bình > 2,2 × ngân sách trong 2 cửa sổ), không bao giờ nâng.
