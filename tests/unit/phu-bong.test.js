@@ -93,6 +93,21 @@ describe('engine/stock/phu-bong/layer.js', () => {
     layer.dispose();
   });
 
+  it("nấc 'bloom': chia đôi độ phân giải của bloom rồi trả lại; số đo đọc theo; áp được cả trước khi dựng pipeline", () => {
+    const { glow, layer } = buildOnce(makeCtx({ bloom: 0.5 }));
+    const [step] = layer.degrade;
+    const scale = () => layer.readouts.find((r) => r.id === 'bloomScale').get();
+    expect(step.id).toBe('bloom');
+    step.apply();
+    expect([glow.node.getResolutionScale(), scale()]).toEqual([0.25, 0.25]);
+    step.revert();
+    expect([glow.node.getResolutionScale(), scale()]).toEqual([0.5, 0.5]);
+    const early = phuBong.createLayer(makeCtx({ bloom: 0.25 }));
+    early.degrade[0].apply();
+    expect(early.readouts[0].get()).toBe(0.125);
+    layer.dispose();
+  });
+
   it('dispose gỡ bloom; gọi hai lần (hoặc trước build) vẫn an toàn', () => {
     expect(() => {
       const fresh = phuBong.createLayer(makeCtx());

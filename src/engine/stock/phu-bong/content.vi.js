@@ -41,6 +41,7 @@ export default {
             + 'đọng trên ống kính. Vì vậy bloom cần chọn lọc.',
         },
       },
+      readouts: { bloomScale: 'Độ phân giải bloom (so với màn hình)' },
     },
   },
 };

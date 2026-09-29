@@ -22,6 +22,13 @@ export const knobs = [
  */
 export function createLayer(ctx) {
   let glow = null;
+  // BloomNode mặc định chạy ở nửa độ phân giải (0.5); mức 'vừa'/'thấp' của bức có thể hạ xuống 0.25.
+  // Nấc 'bloom' của bộ điều chỉnh chia đôi tiếp. BloomNode đọc số này mỗi khung: không biên dịch lại.
+  let scale = ctx.budget.bloom ?? 0.5;
+  const setScale = (v) => {
+    scale = v;
+    glow?.setResolutionScale(v);
+  };
   // Thí nghiệm "Bloom cả khung": 0 = chỉ ảnh emissive tỏa (chọn lọc), 1 = cả ảnh màu tỏa.
   const whole = uniform(0).setName('phu_bong_whole');
 
@@ -36,8 +43,7 @@ export function createLayer(ctx) {
           ctx.knob('bloomRadius'), // @knob bloomRadius
           ctx.knob('bloomThreshold'), // @knob bloomThreshold
         );
-        // BloomNode mặc định chạy ở nửa độ phân giải (0.5); mức 'vừa'/'thấp' của bức có thể hạ xuống 0.25.
-        glow.setResolutionScale(ctx.budget.bloom ?? 0.5);
+        glow.setResolutionScale(scale);
         const exposure = ctx.knob('exposure');
         const tone = ctx.knob('toneMapping');
 
@@ -66,6 +72,9 @@ export function createLayer(ctx) {
         },
       },
     ],
+    readouts: [{ id: 'bloomScale', get: () => scale }],
+    // Nấc của bộ điều chỉnh (spec §10): ảnh bloom còn một nửa mỗi chiều, tức một phần tư số điểm ảnh phải làm nhòe.
+    degrade: [{ id: 'bloom', apply: () => setScale(scale * 0.5), revert: () => setScale(scale * 2) }],
     dispose() {
       glow?.dispose();
       glow = null;
