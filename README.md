@@ -21,7 +21,7 @@ Các bức sau sẽ dùng chung kỹ thuật và chung một "xưởng".
 
 ## Sổ tay: mài từng lớp
 
-Sau lần chạm đầu tiên, trang mời *"Bức tranh này có 5 lớp — mài thử?"*. Bấm vào là vào **chế độ mài**:
+Sau lần chạm đầu tiên (hoặc phím đầu tiên, với người dùng bàn phím), trang mời *"Bức tranh này có 5 lớp — mài thử?"*. Bấm vào là vào **chế độ mài**:
 
 - Mọi lớp trừ Cốt mờ dần về 0, bức trở về đất sét xám. Nút **"Phủ lớp tiếp theo"** sơn lại từng lớp một và mở
   **Sổ tay** của lớp vừa phủ. Trên **thanh lớp** có thể bật/tắt tự do từng lớp (Cốt thì không). Đóng thanh lớp là về lại
