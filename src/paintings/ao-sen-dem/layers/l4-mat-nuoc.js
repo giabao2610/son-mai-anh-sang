@@ -19,11 +19,12 @@ import {
   reflector,
   saturate,
   transformNormalToView,
+  uniform,
   vec2,
   vec3,
   vec4,
 } from 'three/tsl';
-import { makeRippleHeight } from '../shared.js';
+import { POND_RADIUS, makeRippleHeight } from '../shared.js';
 
 export const id = 'mat-nuoc';
 export const knobs = [
@@ -33,9 +34,10 @@ export const knobs = [
   { id: 'wavelength', min: 0.3, max: 4, step: 0.05, value: 1.4 },
   { id: 'distortion', min: 0, max: 0.15, step: 0.001, value: 0.04 },
   { id: 'fresnelPower', min: 1, max: 10, step: 0.1, value: 5 },
+  // Độ phân giải ảnh phản chiếu so với màn hình (cao 0.5 / vừa 0.35). Reflector đọc số này mỗi khung.
+  { id: 'reflectionResolution', via: 'js', min: 0.1, max: 1, step: 0.05, value: (env) => env.budget.reflection ?? (env.level === 'cao' ? 0.5 : 0.35) },
 ];
 
-const WATER_RADIUS = 60; // đĩa nước thuộc lớp này; ở trọng số 0 nó là đất sét
 const F0 = 0.03; // phản xạ khi nhìn thẳng xuống (Schlick): nước và sơn bóng đều khoảng 2–4%
 const BOB = 0.6; // lá nhô lên bằng 60% độ cao sóng
 const GLINT = 0.8; // phần phản chiếu sáng hơn mức này mới vào kênh emissive (bloom)
@@ -71,7 +73,8 @@ export function createLayer(ctx, shared) {
   })();
 
   // Reflector: mỗi khung render lại cả cảnh từ camera lật qua mặt nước, vào texture nhỏ hơn màn hình.
-  const refl = reflector({ resolutionScale: ctx.budget.reflection ?? (ctx.level === 'cao' ? 0.5 : 0.35) });
+  let scale = ctx.knobValue('reflectionResolution');
+  const refl = reflector({ resolutionScale: scale });
   // Pháp tuyến của gương là +Z cục bộ của target: xoay −π/2 để +Z chỉ lên trời. Reflector đọc
   // target.matrixWorld mà KHÔNG tự cập nhật: target phải nằm trong scene, nếu không ta có gương dựng đứng.
   refl.target.rotateX(-Math.PI / 2);
@@ -79,24 +82,31 @@ export function createLayer(ctx, shared) {
   // Sóng làm lệch chỗ đọc ảnh phản chiếu: vòng gợn đi qua là bóng trăng bị xẻ đôi.
   refl.uvNode = refl.uvNode.add(normal.xz.mul(ctx.knob('distortion'))); // @knob distortion
 
+  // Hai công tắc của tab Phá (uniform, bật/tắt không biên dịch lại).
+  const fresnelOn = uniform(1).setName('mat_nuoc_fresnelOn'); // "Tắt fresnel": 0 → soi như gương phẳng
+  const showHeight = uniform(0).setName('mat_nuoc_showHeight'); // "Xem heightfield": 1 → mặt nước là ảnh xám của h(xz)
+
   // Schlick fresnel: nhìn càng xiên (về chân trời) nước càng soi rõ; nhìn thẳng xuống thì thấy nước sâu.
   const view = normalize(cameraPosition.sub(positionWorld));
-  const fresnel = float(F0).add(oneMinus(saturate(dot(normal, view))).pow(ctx.knob('fresnelPower')).mul(1 - F0)); // @knob fresnelPower
-  const mirror = refl.rgb.mul(fresnel).mul(w);
+  const schlick = float(F0).add(oneMinus(saturate(dot(normal, view))).pow(ctx.knob('fresnelPower')).mul(1 - F0)); // @knob fresnelPower
+  const fresnel = mix(float(1), schlick, fresnelOn);
+  const mirror = refl.rgb.mul(fresnel).mul(w).mul(oneMinus(showHeight));
+  // Độ cao gợn sóng (khoảng ±0.5) đổi thành xám quanh 0.5: sáng là đỉnh sóng, tối là đáy sóng.
+  const height = vec3(ripple(positionWorld.xz).mul(2).add(0.5)).mul(showHeight);
 
   // Có chiếu sáng: ở trọng số 0 đĩa là đất sét dưới đèn xưởng như mọi hình khác (luật 3).
   const material = new MeshStandardNodeMaterial({ roughness: 0.9, metalness: 0 });
-  material.colorNode = mix(color(hex.datSet), color(hex.denThen), w);
+  material.colorNode = mix(mix(color(hex.datSet), color(hex.denThen), w), vec3(0), showHeight);
   material.roughnessNode = mix(float(0.9), float(0.06), w);
   material.normalNode = transformNormalToView(mix(vec3(0, 1, 0), normal, w)); // đĩa đặt ở gốc: local = world
   // Ảnh phản chiếu cộng vào như ánh sáng tự phát (không bị đèn làm tối)...
-  material.emissiveNode = mirror;
+  material.emissiveNode = mirror.add(height);
   // ...nhưng kênh MRT 'emissive' của nước CHỈ nhận phần sáng vượt GLINT: bóng trăng và bóng đom đóm
   // tỏa nhẹ, còn cả mặt nước thì không. mrtNode chỉ an toàn vì reflector tự ẩn chính mặt nước khi
   // chụp: material có mrtNode mà vẽ vào target KHÔNG có MRT sẽ hỏng shader (Phụ lục A).
   material.mrtNode = mrt({ emissive: vec4(max(mirror.sub(GLINT), 0), 1) });
 
-  const geometry = new CircleGeometry(WATER_RADIUS, 96).rotateX(-Math.PI / 2);
+  const geometry = new CircleGeometry(POND_RADIUS, 96).rotateX(-Math.PI / 2); // đĩa nước thuộc lớp này
   const water = new Mesh(geometry, material);
   ctx.scene.add(water);
 
@@ -104,9 +114,29 @@ export function createLayer(ctx, shared) {
   const center = attribute('instanceCenter', 'vec2');
   shared.cot.leafMaterial.positionNode = positionLocal.add(vec3(0, ripple(center).mul(BOB).mul(w), 0));
 
+  let lowRes = false; // thí nghiệm "Độ phân giải 0.1" đang bật
   let disposed = false;
   return {
     objects: [water],
+    onKnob: {
+      reflectionResolution: (v) => { // @knob reflectionResolution
+        scale = v;
+        if (!lowRes) refl.reflector.resolutionScale = v; // reflector đọc số này ngay ở khung sau
+      },
+    },
+    experiments: [
+      {
+        // Ảnh phản chiếu chỉ còn 1/10 độ phân giải màn hình: bóng trăng vỡ thành khối, nhưng rẻ hơn nhiều.
+        id: 'lowRes',
+        toggle(on) {
+          lowRes = on;
+          refl.reflector.resolutionScale = on ? 0.1 : scale;
+        },
+      },
+      { id: 'noFresnel', toggle: (on) => { fresnelOn.value = on ? 0 : 1; } },
+      { id: 'heightfield', toggle: (on) => { showHeight.value = on ? 1 : 0; } },
+    ],
+    readouts: [{ id: 'reflectionScale', get: () => refl.reflector.resolutionScale }],
     dispose() {
       if (disposed) return;
       disposed = true;

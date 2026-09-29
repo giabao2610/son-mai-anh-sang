@@ -3,7 +3,7 @@ import { Plane, Vector3, Vector4 } from 'three/webgpu';
 import { Fn, Loop, exp, float, length, pow2, sin, step, uniform, uniformArray } from 'three/tsl';
 import { hourOfNight, tonight } from '../../lib/astro/moon.js';
 
-export const POND_RADIUS = 60; // bằng bán kính đĩa nước của lớp 4: chạm ngoài đĩa thì không gợn
+export const POND_RADIUS = 60; // bán kính mặt nước: đĩa nước của lớp 4 dùng đúng số này; chạm ngoài đĩa thì không gợn
 export const RIPPLE_SLOTS = 8;
 const NIGHT = { start: 18, end: 29.5, fallback: 21 }; // thang giờ của Bức 1: 18:00 → 05:30 sáng hôm sau
 const FLY_HEIGHT = 1.2; // điểm hút đom đóm nằm trên mặt nước một chút
@@ -106,7 +106,8 @@ export function setup(ctx) {
         holding = false;
         return;
       }
-      if (!onPond) return;
+      // Chỉ chạm và giữ mới dời điểm hút; vuốt thì không (vuốt để dành cho sương, GĐ 3).
+      if (!onPond || !['tap', 'hold-start', 'hold-move'].includes(g.kind)) return;
       attract.point.value.set(hit.x, FLY_HEIGHT, hit.z);
       if (g.kind === 'tap') {
         ripples.add(hit.x, hit.z, ctx.u.time.value, rippleAmp);

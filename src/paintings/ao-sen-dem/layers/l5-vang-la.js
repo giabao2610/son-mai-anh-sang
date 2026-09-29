@@ -24,10 +24,17 @@ import {
 } from 'three/tsl';
 
 export const id = 'vang-la';
+
+const COUNT = { cao: 3000, vua: 1500, thap: 600 }; // số con mặc định theo mức (spec §6)
+/** Trần theo tầng: WebGPU compute chạy hàng trăm nghìn con; WebGL2 (transform feedback) thì ít hơn nhiều. */
+const COUNT_MAX = { webgpu: 200000, webgl2: 20000 };
+
 export const knobs = [
   { id: 'size', min: 0.02, max: 0.5, step: 0.005, value: 0.12 },
   { id: 'glow', min: 0, max: 10, step: 0.1, value: 3 },
   { id: 'attraction', min: 0, max: 3, step: 0.01, value: 1 },
+  // min 100: sprite có count > 1 nằm trong cache key của three; về 0 hay 1 là phải biên dịch lại.
+  { id: 'count', via: 'js', min: 100, max: COUNT_MAX, step: 100, value: (env) => env.budget.fireflies ?? COUNT[env.level] },
 ];
 
 const RADIUS = 40; // đom đóm lượn trong đĩa bán kính này
@@ -40,15 +47,18 @@ const MAX_SPEED = 6; // bung ra nhanh cỡ nào cũng không văng khỏi ao
  * @param {object} shared  shared.attract (setup của bức): điểm hút và lực hút theo cử chỉ
  */
 export function createLayer(ctx, shared) {
-  const count = ctx.budget.fireflies ?? { cao: 3000, vua: 1500, thap: 600 }[ctx.level];
+  const count = ctx.knobValue('count');
+  // Cấp phát theo TRẦN của tầng một lần (200k con × 2 ô vec4 = 6,4 MB trên WebGPU): lúc chạy, núm count chỉ đổi
+  // số con được tính và được vẽ, không tạo bộ đệm mới, nên kéo núm không khựng.
+  const capacity = COUNT_MAX[ctx.tier];
   const w = ctx.weight(id);
   const t = ctx.u.time; // đồng hồ của xưởng: ?freeze cho ra đúng cùng một đàn đom đóm
   const dt = ctx.u.delta;
 
   // Hai bộ đệm nằm trên GPU, mỗi con một ô vec4. Mỗi kernel chỉ đụng 2 bộ đệm:
   // WebGL2 chạy compute bằng transform feedback và chỉ cho tối đa 4 bộ đệm mỗi kernel.
-  const posPhase = instancedArray(count, 'vec4'); // xyz = vị trí, w = pha nhấp nháy [0, 1)
-  const velSeed = instancedArray(count, 'vec4'); // xyz = vận tốc, w = hạt giống riêng [0, 1)
+  const posPhase = instancedArray(capacity, 'vec4'); // xyz = vị trí, w = pha nhấp nháy [0, 1)
+  const velSeed = instancedArray(capacity, 'vec4'); // xyz = vận tốc, w = hạt giống riêng [0, 1)
 
   // Kernel khởi tạo: mỗi luồng GPU lo MỘT con. hash(instanceIndex) là ngẫu nhiên tất định,
   // √u cho mật độ đều theo diện tích đĩa. Chạy một lần ngay lúc dựng lớp.
@@ -59,7 +69,7 @@ export function createLayer(ctx, shared) {
     const y = mix(LOW, HIGH, hash(i.add(2)));
     posPhase.element(i).assign(vec4(cos(a).mul(r), y, sin(a).mul(r), hash(i.add(3))));
     velSeed.element(i).assign(vec4(0, 0, 0, hash(i.add(4))));
-  })().compute(count);
+  })().compute(capacity); // khởi tạo CẢ bộ đệm: tăng count lúc chạy thì con mới đã có chỗ đứng
   ctx.renderer.compute(init);
 
   // Kernel bước (mỗi khung): mỗi con chỉ đọc và ghi ĐÚNG ô của mình — trên WebGL2,
@@ -120,6 +130,13 @@ export function createLayer(ctx, shared) {
     objects: [sprite],
     update() {
       ctx.renderer.compute(step); // bước đọc ctx.u.delta / ctx.u.time: xưởng đã cập nhật trước khi gọi
+    },
+    onKnob: {
+      // Chỉ đổi SỐ: WebGPU tính lại số nhóm dispatch, WebGL2 vẽ ít/nhiều đỉnh hơn. Không biên dịch lại.
+      count: (v) => { // @knob count
+        step.count = v;
+        sprite.count = v;
+      },
     },
     dispose() {
       if (disposed) return;

@@ -91,6 +91,15 @@ describe('setup(ctx)', () => {
     expect(s.shared.attract.strength.value).toBeLessThan(0);
   });
 
+  it('vuốt trên mặt nước: không dời điểm hút, không tạo gợn (vuốt để dành cho sương, GĐ 3)', () => {
+    const s = setup(makeEngineCtx(meta));
+    const before = s.shared.attract.point.value.toArray();
+    s.onGesture({ kind: 'swipe', ray: down(5, 5), velocity: { x: 1, y: 0 } });
+    expect(s.shared.attract.point.value.toArray()).toEqual(before);
+    expect(s.shared.ripples.slots.every((v) => v.w === 0)).toBe(true);
+    expect(s.shared.attract.strength.value).toBe(0);
+  });
+
   it('chạm ngoài ao hoặc tia không cắt mặt nước thì bỏ qua', () => {
     const s = setup(makeEngineCtx(meta));
     s.onGesture({ kind: 'tap', ray: down(100, 0) });

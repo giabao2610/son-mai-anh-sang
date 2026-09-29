@@ -9,9 +9,42 @@ import { buildPainting } from '../../helpers/fake-ctx.js';
 const build = (options) => buildPainting(painting, meta, { until: 'mat-nuoc', ...options });
 
 describe('l4-mat-nuoc', () => {
-  it('núm tĩnh: 4 núm gợn sóng + distortion + fresnelPower', () => {
+  it('núm tĩnh: 4 núm gợn sóng + distortion + fresnelPower (uniform) + reflectionResolution (js)', () => {
     expect(matNuoc.id).toBe('mat-nuoc');
-    expect(matNuoc.knobs.map((k) => k.id)).toEqual(['amplitude', 'speed', 'decay', 'wavelength', 'distortion', 'fresnelPower']);
+    expect(matNuoc.knobs.map((k) => [k.id, k.via ?? 'uniform'])).toEqual([
+      ['amplitude', 'uniform'], ['speed', 'uniform'], ['decay', 'uniform'], ['wavelength', 'uniform'],
+      ['distortion', 'uniform'], ['fresnelPower', 'uniform'], ['reflectionResolution', 'js'],
+    ]);
+  });
+
+  it('độ phân giải phản chiếu: mặc định theo mức (cao 0.5, vừa 0.35); núm đổi ngay; "Độ phân giải 0.1" rồi trả lại', () => {
+    const scale = (layer) => layer.readouts.find((r) => r.id === 'reflectionScale').get();
+    expect(scale(build({ level: 'vua' }).layers['mat-nuoc'])).toBe(0.35);
+    const { layers, knobs } = build();
+    const water = layers['mat-nuoc'];
+    expect(scale(water)).toBe(0.5);
+    knobs['mat-nuoc'].set('reflectionResolution', 0.8);
+    expect(scale(water)).toBe(0.8);
+    const low = water.experiments.find((e) => e.id === 'lowRes');
+    low.toggle(true);
+    expect(scale(water)).toBe(0.1);
+    knobs['mat-nuoc'].set('reflectionResolution', 0.6); // đang bật thí nghiệm: nhớ ý người xem, chưa áp
+    expect(scale(water)).toBe(0.1);
+    low.toggle(false);
+    expect(scale(water)).toBe(0.6);
+  });
+
+  it('thí nghiệm "Tắt fresnel" và "Xem heightfield" chỉ đổi uniform (material giữ nguyên node)', () => {
+    const { layers } = build();
+    const water = layers['mat-nuoc'];
+    const [mesh] = water.objects;
+    const nodes = ['colorNode', 'emissiveNode', 'mrtNode'].map((k) => mesh.material[k]);
+    for (const id of ['noFresnel', 'heightfield']) {
+      const exp = water.experiments.find((e) => e.id === id);
+      exp.toggle(true);
+      exp.toggle(false);
+    }
+    expect(['colorNode', 'emissiveNode', 'mrtNode'].map((k) => mesh.material[k])).toEqual(nodes);
   });
 
   it('đĩa nước nằm ngang bán kính 60; material CÓ chiếu sáng (luật 3: trọng số 0 là đất sét dưới đèn)', () => {
