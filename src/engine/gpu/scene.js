@@ -49,16 +49,21 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
   // Vòng lặp đã dừng ở khung N của ?freeze=N: thay đổi từ Sổ tay hay __sma thì vẽ lại đúng khung đó (không tiến đồng hồ).
   // Vẽ lại ở nhịp requestAnimationFrame KẾ TIẾP, gộp mọi thay đổi trong cùng nhịp làm một: scene pass và reflector
   // của three chỉ vẽ lại cảnh một lần mỗi frameId, mà frameId chỉ tăng ở mỗi nhịp rAF của renderer. Vẽ lại hai lần
-  // trong cùng một nhịp thì lần sau dùng lại ảnh cảnh cũ.
+  // trong cùng một nhịp thì lần sau dùng lại ảnh cảnh cũ. Vẽ hỏng thì Promise hỏng theo (không treo mãi):
+  // Sổ tay báo lỗi và mở khóa nút, __sma.setWeight trả lỗi cho người gọi.
   let frozen = false;
   let pending = null;
   const redraw = () => {
     if (!frozen || disposer.closed) return Promise.resolve();
-    pending ??= new Promise((resolve) => {
+    pending ??= new Promise((resolve, reject) => {
       win.requestAnimationFrame(() => {
         pending = null;
-        if (!disposer.closed) pipeline.render();
-        resolve();
+        try {
+          if (!disposer.closed) pipeline.render();
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
       });
     });
     return pending;

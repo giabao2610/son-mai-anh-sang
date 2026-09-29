@@ -114,6 +114,21 @@ describe('buildScene', () => {
     expect(scene.studio.weight('to-mau').value).toBe(0.5);
   });
 
+  it('vẽ lại khung đứng yên mà render ném lỗi: Promise hỏng (không treo mãi), lần sau vẽ lại được', async () => {
+    const { stage, scene, flush, renders } = build();
+    scene.freeze();
+    stage.renderer.render.mockImplementationOnce(() => {
+      throw new Error('GPU hỏng');
+    });
+    const a = scene.studio.setWeight('to-mau', 0);
+    flush();
+    await expect(a).rejects.toThrow('GPU hỏng');
+    const b = scene.studio.setWeight('to-mau', 1);
+    flush();
+    await expect(b).resolves.toBeUndefined();
+    expect(renders()).toBe(2);
+  });
+
   it('giảm chuyển động: bật/tắt lớp trên thanh lớp là ngay, không mờ dần', () => {
     const { scene } = build({ reducedMotion: true });
     scene.studio.setWeight('to-mau', 0, { tween: true });

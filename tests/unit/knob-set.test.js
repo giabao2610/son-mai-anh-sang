@@ -126,6 +126,21 @@ describe('createKnobs', () => {
     expect(k.values()).toEqual({ count: 500, octaves: 5 });
   });
 
+  it('onKnob ném lỗi (ngay, hoặc Promise hỏng) thì giữ giá trị cũ: snapshot không mang giá trị cảnh chưa từng áp', async () => {
+    const k = createKnobs('vang-la', [{ id: 'count', via: 'js', value: 100 }, { id: 'octaves', via: 'rebuild', value: 3 }], env);
+    k.bind({
+      count: () => {
+        throw new Error('hỏng');
+      },
+      octaves: async () => {
+        throw new Error('dựng lại hỏng');
+      },
+    });
+    expect(() => k.set('count', 200)).toThrow('hỏng');
+    await expect(k.set('octaves', 5)).rejects.toThrow('dựng lại hỏng');
+    expect(k.values()).toEqual({ count: 100, octaves: 3 });
+  });
+
   it("bind() ném lỗi nếu một núm 'js'/'rebuild' chưa có hàm onKnob", () => {
     const k = createKnobs('vang-la', [{ id: 'count', via: 'js', value: 100 }], env);
     expect(() => k.bind({})).toThrow(`Lớp "vang-la": núm 'js' "count" chưa có hàm onKnob.count`);

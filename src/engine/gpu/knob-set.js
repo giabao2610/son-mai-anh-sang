@@ -136,12 +136,22 @@ export function createKnobs(layerId, knobs, env) {
     set(id, raw) {
       const knob = spec(id);
       const value = normalizeKnob(layerId, knob, raw, env.tier);
-      values[id] = value;
       if (viaOf(knob) === 'uniform') {
         assignUniform(uniforms[id], knob, value);
+        values[id] = value;
         return undefined;
       }
-      return handlers[id](value);
+      // Chỉ ghi giá trị khi lớp đã áp xong: onKnob ném lỗi thì snapshot() không mang một giá trị cảnh chưa từng có
+      // (nếu không, "Dựng lại cảnh" sẽ restore đúng giá trị hỏng đó).
+      const result = handlers[id](value);
+      if (typeof result?.then !== 'function') {
+        values[id] = value;
+        return result;
+      }
+      return result.then((done) => {
+        values[id] = value;
+        return done;
+      });
     },
     /** Bản sao giá trị hiện tại của mọi núm: { knobId: value }. */
     values: () => ({ ...values }),

@@ -131,7 +131,8 @@ export function createStudio({ meta, layers, weights, tier, redraw = () => {}, t
     },
     /**
      * Áp lại một snapshot: trọng số đặt ngay; núm nào khác giá trị hiện tại thì set (chờ lần lượt, vì núm
-     * 'rebuild' có thể dựng lại hình). Id lạ (lớp hay núm không còn) thì bỏ qua kèm cảnh báo, không làm hỏng cảnh.
+     * 'rebuild' có thể dựng lại hình). Id lạ (lớp hay núm không còn) hay núm áp không được thì bỏ qua kèm cảnh báo:
+     * "Dựng lại cảnh" gọi hàm này, và một núm hỏng không được kéo cả cảnh về tầng tĩnh (spec §9).
      */
     async restore({ weights: w = {}, knobs = {} } = {}) {
       try {
@@ -147,7 +148,12 @@ export function createStudio({ meta, layers, weights, tier, redraw = () => {}, t
             console.warn(`restore: bỏ qua núm lạ "${key}"`);
             continue;
           }
-          if (built.knobs.get(knobId) !== v) await built.knobs.set(knobId, v);
+          if (built.knobs.get(knobId) === v) continue;
+          try {
+            await built.knobs.set(knobId, v);
+          } catch (err) {
+            console.warn(`restore: núm "${key}" áp không được, giữ giá trị cũ:`, err);
+          }
         }
       } finally {
         await redraw();

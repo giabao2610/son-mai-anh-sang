@@ -122,6 +122,33 @@ describe('createStudio', () => {
     warn.mockRestore();
   });
 
+  it('núm hay thí nghiệm hỏng: Promise hỏng (Sổ tay báo), giá trị và trạng thái giữ nguyên, vẫn vẽ lại', async () => {
+    const { studio, layers, redraw } = setup();
+    layers[0].layer.onKnob.count.mockRejectedValueOnce(new Error('dựng lại hỏng'));
+    await expect(studio.setKnob('cot', 'count', 300)).rejects.toThrow('dựng lại hỏng');
+    expect(studio.knobs('cot').count).toBe(100);
+    layers[1].layer.experiments[0].toggle.mockImplementationOnce(() => {
+      throw new Error('thí nghiệm hỏng');
+    });
+    await expect(studio.toggleExperiment('lop-hai', 'pha', true)).rejects.toThrow('thí nghiệm hỏng');
+    expect(studio.experiment('lop-hai', 'pha')).toBe(false);
+    expect(redraw).toHaveBeenCalledTimes(2);
+  });
+
+  it('restore: núm áp không được thì cảnh báo rồi áp tiếp các núm sau (dựng lại cảnh không vì thế mà hỏng)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { studio, layers, redraw } = setup();
+    layers[0].layer.onKnob.count.mockRejectedValueOnce(new Error('dựng lại hỏng'));
+    await studio.restore({ knobs: { 'cot.count': 300, 'cot.openness': 'abc', 'lop-hai.tone': 'none' } });
+    expect(studio.knobs('cot')).toEqual({ openness: 0.5, count: 100 });
+    expect(layers[1].knobs.knob('tone').value).toBe(0);
+    expect(warn.mock.calls.map((c) => c[0])).toEqual([
+      'restore: núm "cot.count" áp không được, giữ giá trị cũ:', 'restore: núm "cot.openness" áp không được, giữ giá trị cũ:',
+    ]);
+    expect(redraw).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
   it('restore(snapshot()) của một bàn thợ khác cho lại đúng trạng thái', async () => {
     const a = setup().studio;
     await a.setWeight('lop-hai', 0);
