@@ -107,12 +107,12 @@ Số gzip do `npm run build` (Vite 8) in ra, đo ngày 2026-09-29 (giai đoạn 
 |---|---:|---:|
 | `assets/ao-sen-dem-*.css` | 32.23 kB | 12.19 kB |
 | `assets/ao-sen-dem-*.js` (chunk vào) | 17.74 kB | 8.48 kB |
-| `assets/run-*.js` | 38.96 kB | 12.51 kB |
+| `assets/run-*.js` | 38.99 kB | 12.52 kB |
 | `assets/workshop-*.js` (thanh lớp + Sổ tay) | 10.98 kB | 4.46 kB |
 | `assets/painting-*.js` | 28.84 kB | 11.04 kB |
 | `assets/content.vi-*.js` (chữ + sơ đồ của Sổ tay) | 22.79 kB | 6.97 kB |
 | `assets/three-*.js` | 897.51 kB | 245.49 kB |
-| **Tổng đường 3D** (chunk vào + run + workshop + painting + content + three) | | **288.95 kB** |
+| **Tổng đường 3D** (chunk vào + run + workshop + painting + content + three) | | **288.96 kB** |
 | `assets/knobs-*.js` (Tweakpane, chỉ tải khi mở tab Chỉnh lần đầu) | 149.22 kB | 30.91 kB |
 | 11 chunk `?code` (code đã tô màu của từng file lớp, tải theo lớp) | | 2.1–6.0 kB mỗi file |
 | `assets/Inspector-*.js` (chỉ tải khi có `?debug`) | 172.83 kB | 38.68 kB |
