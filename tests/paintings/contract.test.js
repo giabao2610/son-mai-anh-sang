@@ -1,8 +1,9 @@
-// tests/paintings/contract.test.js — hợp đồng của mọi bức trong registry: meta, thứ tự lớp, marker, chữ, runtime.
+// tests/paintings/contract.test.js — hợp đồng của mọi bức (registry + tranh mẫu _mau): meta, thứ tự lớp, marker, chữ, runtime.
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { paintings } from '../../src/paintings/registry.js';
+import mau from '../../src/paintings/_mau/meta.js';
 import { mergePalette } from '../../src/engine/palette.js';
 import { hasCode } from '../../src/ui/code-view.js';
 import { buildPainting } from '../helpers/fake-ctx.js';
@@ -13,8 +14,8 @@ const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const MARKER = /\/\/\s*@knob\s+([A-Za-z0-9_]+)/g;
 const MAX_WORDS = 150;
 
-/** Bức đã deploy (registry). Task 15 thêm tranh mẫu _mau vào đây. */
-const ROWS = paintings.map((p) => ({ ...p, deployed: true }));
+/** Bức đã deploy (registry) và tranh mẫu. Tranh mẫu không có trang HTML và không bị kiểm HTML (spec §12). */
+const ROWS = [...paintings.map((p) => ({ ...p, deployed: true })), { meta: mau, page: null, lang: 'vi', deployed: false }];
 // Nạp trước cửa vào của mọi bức (top-level await): danh sách ngôn ngữ của content phải có trước khi khai báo test.
 const ALL = await Promise.all(ROWS.map(async (row) => {
   const { default: entry } = await import(`../../src/paintings/${row.meta.slug}/index.js`);
@@ -182,5 +183,16 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
         expect([...svgColors(text.diagram)].filter((c) => !palette.has(c)), `màu lạ trong sơ đồ của "${id}"`).toEqual([]);
       }
     });
+  });
+});
+
+describe('tranh mẫu _mau', () => {
+  it('không nằm trong registry (không deploy) nhưng test hợp đồng vẫn kiểm nó', () => {
+    expect(paintings.map((p) => p.meta.slug)).not.toContain('_mau');
+    expect(ALL.map((p) => p.meta.slug)).toContain('_mau');
+  });
+
+  it('không bức nào trong registry bắt đầu bằng "_" (thư mục "_" là không deploy)', () => {
+    expect(paintings.filter((p) => p.meta.slug.startsWith('_'))).toEqual([]);
   });
 });
