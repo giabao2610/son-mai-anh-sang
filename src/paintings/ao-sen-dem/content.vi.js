@@ -198,27 +198,40 @@ export default {
     'vang-la': {
       understand:
         'Đom đóm ở đây không do CPU tính. Vị trí và vận tốc của từng con nằm trong hai bộ đệm trên GPU; mỗi '
-        + 'khung, một compute shader chạy song song hàng nghìn luồng, mỗi luồng lo đúng một con: lượn theo nhịp '
-        + 'riêng, xoáy chậm quanh ao, bị tay người xem hút lại hay đẩy ra. Rồi MỘT Sprite vẽ cả đàn, đọc vị trí '
-        + 'thẳng từ bộ đệm mà không đi qua CPU. Đom đóm chỉ phát sáng (emissive), cộng dồn màu lên nhau '
-        + '(additive), và nhấp nháy theo sin của đồng hồ cảnh. Phần phát sáng đi vào bloom của lớp Phủ bóng, '
-        + 'nên chúng tỏa vàng lá.',
+        + 'khung, một compute shader chạy song song hàng nghìn luồng, mỗi luồng lo đúng một con: trôi theo dòng '
+        + 'curl noise (một trường xoáy không dồn về chỗ nào), bị tay người xem hút lại hay đẩy ra. Rồi MỘT Sprite '
+        + 'vẽ cả đàn, đọc vị trí thẳng từ bộ đệm mà không đi qua CPU. Đom đóm chỉ phát sáng (emissive), cộng dồn '
+        + 'màu lên nhau (additive), nhấp nháy theo đồng hồ cảnh, và mờ đi trong sương. Phần phát sáng đi vào '
+        + 'bloom của lớp Phủ bóng, nên chúng tỏa vàng lá.',
       diagram: vangLaDiagram,
       learned: [
         'Compute shader: GPU chạy cùng một hàm trên hàng nghìn phần tử cùng lúc.',
         'Dữ liệu ở lại trên GPU: bộ đệm vừa được tính vừa được vẽ.',
+        'Curl noise: lấy curl của một trường noise để có dòng chảy không phân kỳ.',
         'Additive blending: ánh sáng cộng dồn, không che nhau.',
       ],
       readMore: [
         { title: 'Ví dụ three.js: hạt tính bằng compute (WebGPU)', url: 'https://threejs.org/examples/#webgpu_compute_particles' },
         { title: 'WebGPU Fundamentals · Compute shader', url: 'https://webgpufundamentals.org/webgpu/lessons/webgpu-compute-shaders.html' },
+        { title: 'Bridson · Curl-noise cho mô phỏng dòng chảy (SIGGRAPH 2007)', url: 'https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph2007-curlnoise.pdf' },
       ],
       knobs: {
         size: 'Cỡ đom đóm',
         glow: 'Độ sáng',
         attraction: 'Lực hút của tay',
+        flowScale: 'Cỡ dòng xoáy (nhỏ là xoáy to)',
+        speed: 'Tốc độ trôi',
+        blinkRate: 'Nhịp nháy',
         count: 'Số con',
       },
+      experiments: {
+        noAdditive: {
+          label: 'Tắt additive',
+          explain: 'Bỏ phép cộng dồn ánh sáng: con vẽ sau che con vẽ trước, bất kể xa gần, và con đang tắt thành đốm '
+            + 'tối. Hạt phát sáng cần additive vì ánh sáng không che nhau.',
+        },
+      },
+      readouts: { count: 'Số con đang vẽ' },
     },
 
     // Lớp dùng chung: chữ viết trung tính cho mọi bức. Muốn ví dụ riêng của ao sen thì ghi đè bằng spread ở đây.
