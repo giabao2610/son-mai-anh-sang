@@ -61,7 +61,7 @@ describe('showStatic', () => {
     expect(sma).toMatchObject({ state: 'static', reason: 'flag', error: null });
     expect(document.body.dataset.state).toBe('static');
     expect(page.badge.dataset.backend).toBe('static');
-    expect(page.note.hidden).toBe(true);
+    expect(page.note.childNodes).toHaveLength(0);
     expect(page.seal.textContent).toBe('18 tháng Tám · Bính Ngọ');
   });
 

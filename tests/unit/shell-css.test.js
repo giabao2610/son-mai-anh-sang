@@ -1,4 +1,4 @@
-// tests/unit/shell-css.test.js — CSS của vỏ trang: nhấn giữ trên canvas là cử chỉ của bức, không phải chọn chữ (iOS).
+// tests/unit/shell-css.test.js — CSS của vỏ trang: nhấn giữ trên canvas là cử chỉ của bức (iOS); vùng aria-live không bao giờ bị ẩn.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 
@@ -19,5 +19,16 @@ describe('shell.css · canvas của sân khấu', () => {
     expect(canvas).toMatch(/(^|[;\s])user-select: none/);
     expect(canvas).toMatch(/-webkit-user-select: none/);
     expect(canvas).toMatch(/-webkit-touch-callout: none/);
+  });
+});
+
+describe('shell.css · vùng aria-live', () => {
+  it('khi trống chỉ thu khung (không viền, không nền), không display: none hay visibility: hidden', () => {
+    for (const sel of ['[data-badge-note]:empty', '[data-static]:empty', '.hint:empty']) {
+      const d = declarations(sel);
+      expect(d, sel).toMatch(/padding: 0/);
+      expect(d, sel).toMatch(/border: 0/);
+      expect(d, sel).not.toMatch(/display: none|visibility: hidden/);
+    }
   });
 });

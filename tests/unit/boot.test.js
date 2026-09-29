@@ -55,7 +55,7 @@ describe('boot', () => {
     expect(win.__sma).toMatchObject({ state: 'static', tier: 'static', reason: 'flag' });
     expect(doc.body.dataset.state).toBe('static');
     expect(page.badge.dataset.backend).toBe('static');
-    expect(page.note.hidden).toBe(true);
+    expect(page.note.childNodes).toHaveLength(0); // ô live luôn có mặt, chỉ để trống
   });
 
   it('(b2) đọc window ném lỗi (trình duyệt lạ, extension chặn) → vẫn về tầng tĩnh, không ném ra ngoài', async () => {
@@ -117,7 +117,8 @@ describe('boot', () => {
           shell.setState('live');
           shell.showBadge({ tier: 'webgl2', level: 'vua' });
           shell.showHint('Chạm vào đây');
-          shell.invite();
+          shell.invite(() => {});
+          shell.showLost(() => {});
           resolve(handle);
         };
       });
@@ -133,7 +134,8 @@ describe('boot', () => {
     expect(win.__sma.state).toBe('static');
     expect(page.poster.hidden).toBe(false);
     expect(page.badge.dataset.backend).toBe('static');
-    expect(page.hint.hidden).toBe(true); // gợi ý đến muộn cũng bị chặn
+    expect(page.hint.textContent).toBe(''); // gợi ý, lời mời, "Dựng lại cảnh" đến muộn đều bị chặn
+    expect(page.note.textContent).not.toContain(t.lost.rebuild);
   });
 
   it('(f) onFail sau khi đã live → tầng tĩnh với đúng lý do đó', async () => {

@@ -127,6 +127,19 @@ header h1 {
 }
 
 [data-badge]:hover { border-color: var(--vang-la); }
+
+/* Ba vùng aria-live ([data-badge-note], [data-static], [data-hint]) không bao giờ bị ẩn bằng hidden hay display: none:
+   trình đọc màn hình chỉ đọc chữ điền vào một vùng live ĐÃ có mặt. Khi trống thì thu hết khung (không viền, không nền). */
+[data-badge-note]:empty,
+[data-static]:empty,
+.hint:empty {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 [data-badge][data-backend='static'] { color: var(--bac-la); border-color: color-mix(in srgb, var(--bac-la) 45%, transparent); }
 
 [data-badge-note] {
@@ -262,7 +275,19 @@ header h1 {
   letter-spacing: 0.02em;
   animation: hint-in 1.2s ease-out both;
 }
-.hint[data-kind='invite'] { color: var(--nga); }
+.hint[data-kind='invite'] { color: var(--nga); pointer-events: auto; }
+/* Lời mời là một nút: bấm để vào chế độ mài. Giữ dáng một dòng thơ, gạch chân vàng lá. */
+.hint button {
+  padding: 4px 2px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--vang-la);
+  cursor: pointer;
+}
+.hint button:hover { color: var(--vang-la-sang); }
+.hint button:focus-visible { outline: 2px solid var(--vang-la-sang); outline-offset: 3px; }
 @keyframes hint-in { from { opacity: 0; transform: translateY(6px); } }
 @media (prefers-reduced-motion: reduce) { .hint { animation: none; } }
 
