@@ -61,7 +61,7 @@ export default {
     {
       id: 'mat-nuoc',
       name: 'Mặt nước',
-      files: ['paintings/ao-sen-dem/layers/l4-mat-nuoc.js'],
+      files: ['paintings/ao-sen-dem/layers/l4-mat-nuoc.js', 'paintings/ao-sen-dem/parts/mat-nuoc-gia.js'],
       poem: {
         lines: ['Vầng trăng ai xẻ làm đôi', 'Nửa in gối chiếc, nửa soi dặm trường'],
         source: 'Truyện Kiều',
