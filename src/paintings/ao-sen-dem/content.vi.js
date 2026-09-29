@@ -225,6 +225,11 @@ export default {
         count: 'Số con',
       },
       experiments: {
+        cpu: {
+          label: 'CPU vs GPU',
+          explain: 'Cùng luật bay, nhưng tính bằng JS: một vòng lặp đi qua từng con (tối đa 5.000), rồi chép cả mảng vị '
+            + 'trí lên GPU mỗi khung. Nhìn cột ms CPU: phần việc mà compute shader làm song song trên GPU.',
+        },
         noAdditive: {
           label: 'Tắt additive',
           explain: 'Bỏ phép cộng dồn ánh sáng: con vẽ sau che con vẽ trước, bất kể xa gần, và con đang tắt thành đốm '

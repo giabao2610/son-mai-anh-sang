@@ -1,4 +1,4 @@
-// paintings/ao-sen-dem/layers/l5-vang-la.js — Lớp 5 · Vàng lá: đom đóm tính trên GPU (compute), trôi theo curl noise, tụ quanh tay, tắt trong sương.
+// paintings/ao-sen-dem/layers/l5-vang-la.js — Lớp 5 · Vàng lá: đom đóm tính trên GPU (compute; bản CPU để so), trôi theo curl noise, tụ quanh tay.
 import {
   Fn,
   clamp,
@@ -19,6 +19,7 @@ import {
 } from 'three/tsl';
 import { curl } from '../../../lib/tsl/noise.js';
 import { FLOCK, createFireflySprite, setAdditive } from '../parts/vang-la-dan.js';
+import { CPU_MAX, createCpuFlock } from '../parts/vang-la-cpu.js';
 
 export const id = 'vang-la';
 
@@ -109,22 +110,35 @@ export function createLayer(ctx, shared) {
   // (thành vertex attribute, không cần storage buffer ở vertex stage).
   const sprite = createFireflySprite(ctx, { cell: posPhase.toAttribute(), w, fogFactor: shared.suong.fogFactor, count: wanted });
   ctx.scene.add(sprite);
+  const objects = [sprite]; // mảng SỐNG: đàn CPU thêm vào khi được dựng
+
+  // "CPU vs GPU": đàn CPU (parts/vang-la-cpu.js) dựng lần đầu bật thí nghiệm, rồi giữ lại; bật/tắt chỉ đổi đàn nào
+  // được tính và đàn nào hiện. Cũng là đường lùi nếu compute trên máy thật hỏng (bật tay, spec §16).
+  let cpu = null;
+  let onCpu = false;
+  let additive = true;
+  const show = () => {
+    const on = w.value > 0; // trọng số 0: không vẽ (visible không nằm trong cache key, không biên dịch lại)
+    sprite.visible = on && !onCpu;
+    if (cpu) cpu.sprite.visible = on && onCpu;
+  };
 
   /** Số con được tính và được vẽ = min(núm, trần). Chỉ đổi SỐ: không tạo bộ đệm, không biên dịch lại. */
   const applyCount = () => {
     const n = Math.min(wanted, cap);
     step.count = n; // WebGPU tính lại số nhóm dispatch, WebGL2 vẽ ít/nhiều đỉnh hơn
     sprite.count = n;
+    cpu?.setCount(n);
   };
   let before = Infinity; // trần trước khi áp nấc (bộ điều chỉnh gỡ nấc thì trả đúng số này)
   let disposed = false;
   return {
-    objects: [sprite],
-    update() {
-      // Trọng số 0: đom đóm tắt hẳn, nên không tính (bỏ compute) và không vẽ (visible không nằm trong cache key).
-      const on = w.value > 0;
-      sprite.visible = on;
-      if (on) ctx.renderer.compute(step); // bước đọc ctx.u.delta / ctx.u.time: xưởng đã cập nhật trước khi gọi
+    objects,
+    update(dt, t) {
+      show();
+      if (w.value <= 0) return; // tắt hẳn: không tính gì
+      if (onCpu) cpu.step(dt, t);
+      else ctx.renderer.compute(step); // bước đọc ctx.u.delta / ctx.u.time: xưởng đã cập nhật trước khi gọi
     },
     onKnob: {
       count: (v) => { // @knob count
@@ -132,8 +146,32 @@ export function createLayer(ctx, shared) {
         applyCount();
       },
     },
-    experiments: [{ id: 'noAdditive', toggle: (on) => setAdditive(sprite, !on) }],
-    readouts: [{ id: 'count', get: () => sprite.count }],
+    experiments: [
+      {
+        id: 'cpu',
+        kind: 'compare', // bàn thợ đo ms khung và ms CPU lúc tắt (GPU) và lúc bật (CPU)
+        toggle(on) {
+          if (on && !cpu) {
+            const uniforms = { flowScale: ctx.knob('flowScale'), speed: ctx.knob('speed'), attraction: ctx.knob('attraction') };
+            cpu = createCpuFlock(ctx, { w, fogFactor: shared.suong.fogFactor, attract: shared.attract, knobs: uniforms, count: Math.min(wanted, cap) });
+            if (!additive) setAdditive(cpu.sprite, false);
+            ctx.scene.add(cpu.sprite);
+            objects.push(cpu.sprite);
+          }
+          onCpu = on;
+          show();
+        },
+      },
+      {
+        id: 'noAdditive',
+        toggle(on) {
+          additive = !on;
+          setAdditive(sprite, additive);
+          if (cpu) setAdditive(cpu.sprite, additive);
+        },
+      },
+    ],
+    readouts: [{ id: 'count', get: () => (onCpu ? cpu.sprite.count : sprite.count) }],
     // Nấc của bộ điều chỉnh: trần số con = nửa số mặc định của mức (không dưới 100).
     degrade: [
       {
@@ -152,8 +190,9 @@ export function createLayer(ctx, shared) {
     dispose() {
       if (disposed) return;
       disposed = true;
-      ctx.scene.remove(sprite);
+      ctx.scene.remove(...objects);
       sprite.material.dispose();
+      cpu?.dispose();
       init.dispose(); // gỡ pipeline compute; bộ đệm storage được giải phóng cùng renderer
       step.dispose();
     },

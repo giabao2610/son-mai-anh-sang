@@ -102,16 +102,41 @@ describe('l5-vang-la', () => {
   });
 
   it('"Tắt additive": blending thường rồi trả lại, báo cần biên dịch lại một lần', () => {
-    const [layer] = [build().layers['vang-la']];
+    const layer = build().layers['vang-la'];
     const [sprite] = layer.objects;
-    const [exp] = layer.experiments;
-    expect(exp.id).toBe('noAdditive');
+    const exp = layer.experiments.find((e) => e.id === 'noAdditive');
     const version = sprite.material.version;
     exp.toggle(true);
     expect(sprite.material.blending).toBe(NormalBlending);
     expect(sprite.material.version).toBeGreaterThan(version);
     exp.toggle(false);
     expect(sprite.material.blending).toBe(AdditiveBlending);
+  });
+
+  it('"CPU vs GPU" (compare): lần bật đầu dựng đàn CPU (một Sprite thứ hai, giữ lại); bật thì JS tính thay compute, tối đa 5.000 con', () => {
+    const { ctx, layers, knobs } = build();
+    const layer = layers['vang-la'];
+    const exp = layer.experiments.find((e) => e.id === 'cpu');
+    expect(exp.kind).toBe('compare');
+    const count = () => layer.readouts.find((r) => r.id === 'count').get();
+    const children = ctx.scene.children.length;
+    exp.toggle(true);
+    expect(ctx.scene.children).toHaveLength(children + 1);
+    const [gpuSprite, cpuSprite] = layer.objects;
+    expect([gpuSprite.visible, cpuSprite.visible]).toEqual([false, true]);
+    const computes = ctx.renderer.compute.mock.calls.length;
+    layer.update(1 / 60, 1 / 60);
+    expect(ctx.renderer.compute.mock.calls).toHaveLength(computes); // CPU tính: không gọi compute
+    knobs['vang-la'].set('count', 50000);
+    expect(count()).toBe(5000);
+    exp.toggle(false);
+    expect([gpuSprite.visible, cpuSprite.visible, count()]).toEqual([true, false, 50000]);
+    layer.update(1 / 60, 2 / 60);
+    expect(ctx.renderer.compute.mock.calls).toHaveLength(computes + 1);
+    exp.toggle(true); // bật lại: dùng lại đàn CPU cũ, không dựng thêm
+    expect(ctx.scene.children).toHaveLength(children + 1);
+    layer.dispose();
+    expect(ctx.scene.children).toHaveLength(children - 1);
   });
 
   it('dispose gỡ sprite (2 lần vẫn an toàn)', () => {

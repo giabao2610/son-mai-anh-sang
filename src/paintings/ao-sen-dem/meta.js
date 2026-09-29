@@ -71,7 +71,11 @@ export default {
     {
       id: 'vang-la',
       name: 'Vàng lá',
-      files: ['paintings/ao-sen-dem/layers/l5-vang-la.js', 'paintings/ao-sen-dem/parts/vang-la-dan.js'],
+      files: [
+        'paintings/ao-sen-dem/layers/l5-vang-la.js',
+        'paintings/ao-sen-dem/parts/vang-la-dan.js',
+        'paintings/ao-sen-dem/parts/vang-la-cpu.js',
+      ],
     },
     phuBong,
   ],
