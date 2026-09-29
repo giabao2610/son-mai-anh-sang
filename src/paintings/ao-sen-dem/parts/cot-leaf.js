@@ -1,10 +1,11 @@
-// paintings/ao-sen-dem/parts/cot-leaf.js — của lớp Cốt: hình một chiếc lá sen và cách rải lá theo hạt giống, chừa lối trăng.
-import { BufferGeometry, Float32BufferAttribute } from 'three/webgpu';
+// paintings/ao-sen-dem/parts/cot-leaf.js — của lớp Cốt: hình một chiếc lá sen, cách rải lá theo hạt giống (chừa lối trăng), ghi lá vào InstancedMesh.
+import { BufferGeometry, Float32BufferAttribute, Object3D } from 'three/webgpu';
 import { randRange } from '../../../lib/random.js';
 
-export const POND_RADIUS = 50; // lá chỉ mọc trong bán kính này (mặt nước của lớp 4 rộng 60)
-// "Lối trăng": hình nêm có đỉnh ở chỗ camera mặc định (painting.js, z ≈ 32), mở về phía xa.
+export const LEAF_RADIUS = 50; // lá chỉ mọc trong bán kính này (mặt nước rộng POND_RADIUS = 60, shared.js)
+// "Lối trăng": hình nêm có đỉnh ở chỗ camera mặc định (painting.js, z ≈ 32), mở về phía trăng.
 const MOON_PATH = { apexZ: 32, halfAngle: 0.12 };
+const SIZE = { min: 0.5, max: 1.2 }; // cỡ lá; sizeVariance = 0 thì mọi lá cùng cỡ giữa khoảng này
 
 /**
  * Hình học MỘT chiếc lá (bán kính 1): đĩa có khe hình nêm, lõm lòng chảo, mép lượn sóng.
@@ -44,9 +45,12 @@ export function makeLeafGeometry({ segments = 18, rings = 3, notch = 0.35, cup =
   return geometry;
 }
 
-/** Điểm (x, z) có nằm trong "lối trăng" không (để bóng trăng phản chiếu không bị lá che). */
-export function inMoonPath(x, z) {
-  return Math.abs(Math.atan2(x, MOON_PATH.apexZ - z)) < MOON_PATH.halfAngle;
+/**
+ * Điểm (x, z) có nằm trong "lối trăng" không: hình nêm từ camera về phía trăng, để bóng trăng trên nước không bị lá che.
+ * `azimuth` là phương vị của trăng nhìn từ camera (0 = thẳng trước mặt, âm = lệch trái), shared.moon.dir cho ra.
+ */
+export function inMoonPath(x, z, azimuth = 0) {
+  return Math.abs(Math.atan2(x, MOON_PATH.apexZ - z) - azimuth) < MOON_PATH.halfAngle;
 }
 
 /** Một điểm đều theo DIỆN TÍCH trong đĩa: r = R·√u (lấy u thẳng thì tâm đĩa dày hơn mép). */
@@ -59,22 +63,27 @@ export function randomInDisc(rng, radius) {
 /**
  * Rải lá: vài cụm dày, nước trống giữa các cụm, chừa lối trăng; lá không chồng quá nhiều lên nhau.
  * Cùng rng (cùng hạt giống) thì cùng kết quả. Có trần số lần thử nên luôn dừng (ao đầy thì trả ít lá hơn).
+ * Cụm lá được bốc TRƯỚC mọi lá, nên đổi số lá không làm các cụm (và hoa mọc theo cụm) đổi chỗ.
+ * @param {number} count
+ * @param {() => number} rng
+ * @param {{ azimuth?: number, sizeVariance?: number }} [options]  sizeVariance 0 → mọi lá cùng cỡ, 1 → cỡ ngẫu nhiên đủ khoảng
  * @returns {{ leaves: object[], clumps: { x: number, z: number, r: number }[] }}
  */
-export function placeLeaves(count, rng) {
+export function placeLeaves(count, rng, { azimuth = 0, sizeVariance = 1 } = {}) {
   const clumps = [];
   while (clumps.length < 16) {
-    const c = randomInDisc(rng, POND_RADIUS);
-    if (!inMoonPath(c.x, c.z)) clumps.push({ ...c, r: randRange(rng, 4, 9) });
+    const c = randomInDisc(rng, LEAF_RADIUS);
+    if (!inMoonPath(c.x, c.z, azimuth)) clumps.push({ ...c, r: randRange(rng, 4, 9) });
   }
+  const mid = (SIZE.min + SIZE.max) / 2;
   const cell = 2.2; // lưới băm để chỉ so với lá ở 9 ô lân cận
   const grid = new Map();
   const key = (ix, iz) => `${ix},${iz}`;
   const leaves = [];
   for (let tries = 0; leaves.length < count && tries < count * 60; tries++) {
-    const { x, z } = randomInDisc(rng, POND_RADIUS);
-    const scale = randRange(rng, 0.5, 1.2);
-    if (inMoonPath(x, z)) continue;
+    const { x, z } = randomInDisc(rng, LEAF_RADIUS);
+    const scale = mid + (randRange(rng, SIZE.min, SIZE.max) - mid) * sizeVariance;
+    if (inMoonPath(x, z, azimuth)) continue;
     let density = 0.04; // nền thưa để thỉnh thoảng có lá lẻ giữa nước
     for (const c of clumps) density = Math.max(density, Math.exp(-((x - c.x) ** 2 + (z - c.z) ** 2) / (c.r * c.r)));
     if (rng() > density) continue;
@@ -104,4 +113,26 @@ export function placeLeaves(count, rng) {
     grid.get(k).push(leaf);
   }
   return { leaves, clumps };
+}
+
+/**
+ * Ghi lá vào InstancedMesh đã cấp phát sẵn (sức chứa ≥ list.length): ma trận instance và `count`.
+ * cup > 1 kéo cao chiều y: lá lõm sâu như cái phễu. Không tạo mesh mới, nên không phải biên dịch lại shader.
+ * Nếu geometry có thuộc tính 'instanceCenter' (lớp Mặt nước đọc để cả chiếc lá nhấp nhô) thì ghi luôn tâm (x, z).
+ */
+export function fillLeaves(mesh, list, cup = 1) {
+  const dummy = new Object3D();
+  const centers = mesh.geometry.getAttribute('instanceCenter');
+  list.forEach((leaf, i) => {
+    dummy.position.set(leaf.x, leaf.y, leaf.z);
+    dummy.rotation.set(leaf.tiltX, leaf.yaw, leaf.tiltZ);
+    dummy.scale.set(leaf.scale, leaf.scale * cup, leaf.scale);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+    centers?.setXY(i, leaf.x, leaf.z);
+  });
+  mesh.count = list.length;
+  mesh.instanceMatrix.needsUpdate = true;
+  if (centers) centers.needsUpdate = true;
+  mesh.computeBoundingSphere(); // khung bao theo vị trí mới, để frustum culling không cắt nhầm
 }
