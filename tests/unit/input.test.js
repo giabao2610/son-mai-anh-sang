@@ -129,11 +129,15 @@ describe('createInput', () => {
     key('Shift');
     key('Tab', { repeat: true });
     expect(first).not.toHaveBeenCalled();
-    key('Tab', { shiftKey: true }); // Shift+Tab vẫn là đi lùi giữa các ô: tính
+    // Safari mặc định chỉ đưa Tab qua ô nhập liệu; muốn tới nút và liên kết thì bấm Option+Tab: phải tính.
+    key('Tab', { altKey: true });
     expect(first).toHaveBeenCalledTimes(1);
+    input.onFirst(first);
+    key('Tab', { shiftKey: true }); // Shift+Tab (đi lùi giữa các ô) cũng tính
+    expect(first).toHaveBeenCalledTimes(2);
     key('Tab');
     canvas.dispatchEvent(pointer('pointerdown', 1, 1));
-    expect(first).toHaveBeenCalledTimes(1);
+    expect(first).toHaveBeenCalledTimes(2);
     const later = vi.fn();
     input.onFirst(later);
     input.dispose();

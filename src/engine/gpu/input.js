@@ -102,8 +102,10 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
   // Người chỉ dùng bàn phím không chạm được canvas: phím đầu tiên (thường là Tab) cũng là lần tương tác đầu,
   // để lời mời mài lớp (một nút) hiện ra và đi tới được bằng Tab. Bỏ qua phím tắt (Cmd/Ctrl/Alt + …), phím bổ trợ
   // đứng một mình và phím giữ lặp: đó là việc của hệ điều hành hay trình duyệt, không phải người xem đang dùng trang.
+  // Riêng Option+Tab thì tính: Safari mặc định chỉ đưa Tab qua ô nhập liệu, muốn tới nút phải bấm Option+Tab.
   const onKey = (e) => {
-    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || MODIFIER_KEYS.includes(e.key)) return;
+    const shortcut = e.ctrlKey || e.metaKey || (e.altKey && e.key !== 'Tab');
+    if (e.repeat || shortcut || MODIFIER_KEYS.includes(e.key)) return;
     fireFirst();
   };
   win.addEventListener('keydown', onKey);
