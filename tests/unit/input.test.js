@@ -116,18 +116,28 @@ describe('createInput', () => {
     expect(first).toHaveBeenCalledTimes(1);
   });
 
-  it('onFirst: người chỉ dùng bàn phím (không chạm được canvas) → phím đầu tiên cũng tính, một lần; dispose gỡ listener', () => {
+  it('onFirst: người chỉ dùng bàn phím → phím đầu tiên cũng tính, một lần; phím tắt, phím bổ trợ thì không; dispose gỡ', () => {
     const first = vi.fn();
     input.onFirst(first);
-    win.dispatchEvent(new Event('keydown'));
+    const key = (k, extra = {}) => win.dispatchEvent(Object.assign(new Event('keydown'), { key: k, ...extra }));
+    // Phím tắt của hệ điều hành hay trình duyệt (Cmd+Tab, Cmd+Opt+I, Ctrl+R…) và phím bổ trợ đứng một mình: không phải
+    // người xem đang dùng trang, nên gợi ý "Chạm vào…" của người dùng chuột phải còn nguyên.
+    key('Meta');
+    key('Tab', { metaKey: true });
+    key('i', { altKey: true, metaKey: true });
+    key('r', { ctrlKey: true });
+    key('Shift');
+    key('Tab', { repeat: true });
+    expect(first).not.toHaveBeenCalled();
+    key('Tab', { shiftKey: true }); // Shift+Tab vẫn là đi lùi giữa các ô: tính
     expect(first).toHaveBeenCalledTimes(1);
-    win.dispatchEvent(new Event('keydown'));
+    key('Tab');
     canvas.dispatchEvent(pointer('pointerdown', 1, 1));
     expect(first).toHaveBeenCalledTimes(1);
     const later = vi.fn();
     input.onFirst(later);
     input.dispose();
-    win.dispatchEvent(new Event('keydown'));
+    key('Tab');
     expect(later).not.toHaveBeenCalled();
   });
 

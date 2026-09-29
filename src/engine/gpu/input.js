@@ -2,6 +2,9 @@
 import { Raycaster, Vector2 } from 'three/webgpu';
 import { GESTURE, createGestureTracker } from './gesture.js';
 
+/** Phím bổ trợ: nhấn riêng chúng (thường là mở đầu một phím tắt) không phải là dùng trang. */
+const MODIFIER_KEYS = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Fn', 'OS'];
+
 /**
  * Nghe pointer events trên canvas, phân loại bằng gesture.js, rồi xếp cử chỉ vào HÀNG ĐỢI.
  * run.js lấy hàng đợi ra ở đầu mỗi khung (drain), nên cử chỉ được xử lý TRONG khung:
@@ -97,8 +100,13 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
   win.addEventListener('blur', onCancel);
   win.document?.addEventListener('visibilitychange', onHidden);
   // Người chỉ dùng bàn phím không chạm được canvas: phím đầu tiên (thường là Tab) cũng là lần tương tác đầu,
-  // để lời mời mài lớp (một nút) hiện ra và đi tới được bằng Tab.
-  win.addEventListener('keydown', fireFirst);
+  // để lời mời mài lớp (một nút) hiện ra và đi tới được bằng Tab. Bỏ qua phím tắt (Cmd/Ctrl/Alt + …), phím bổ trợ
+  // đứng một mình và phím giữ lặp: đó là việc của hệ điều hành hay trình duyệt, không phải người xem đang dùng trang.
+  const onKey = (e) => {
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || MODIFIER_KEYS.includes(e.key)) return;
+    fireFirst();
+  };
+  win.addEventListener('keydown', onKey);
 
   return {
     /** Lấy hết cử chỉ đang chờ (hàng đợi rỗng sau lần gọi). */
@@ -110,7 +118,7 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
       clearHold();
       for (const [type, fn] of listeners) canvas.removeEventListener(type, fn, { capture: true });
       win.removeEventListener('blur', onCancel);
-      win.removeEventListener('keydown', fireFirst);
+      win.removeEventListener('keydown', onKey);
       win.document?.removeEventListener('visibilitychange', onHidden);
       // Chỉ trả lại camera nếu chính input.js đã khóa nó (đang giữ tay lúc gỡ); ai khác khóa thì để yên.
       if (controls && holdingCamera) controls.enabled = true;
