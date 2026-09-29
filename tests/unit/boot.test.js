@@ -55,7 +55,9 @@ describe('boot', () => {
     expect(win.__sma).toMatchObject({ state: 'static', tier: 'static', reason: 'flag' });
     expect(doc.body.dataset.state).toBe('static');
     expect(page.badge.dataset.backend).toBe('static');
-    expect(page.note.childNodes).toHaveLength(0); // ô live luôn có mặt, chỉ để trống
+    // Không có lời giải thích (người xem tự chọn ?static); chỉ có nút mở Sổ tay chỉ đọc.
+    expect(page.note.querySelector('p')).toBeNull();
+    expect(page.note.querySelector('button').textContent).toBe(t.notebook.openStatic(1));
   });
 
   it('(b2) đọc window ném lỗi (trình duyệt lạ, extension chặn) → vẫn về tầng tĩnh, không ném ra ngoài', async () => {
@@ -73,7 +75,7 @@ describe('boot', () => {
     await boot(entry, { t, win, doc, loadRun });
     expect(loadRun).not.toHaveBeenCalled();
     expect(win.__sma).toMatchObject({ state: 'static', tier: 'static', reason: 'no-gpu' });
-    expect(page.note.textContent).toBe(t.static.noGpu);
+    expect(page.note.querySelector('p').textContent).toBe(t.static.noGpu);
   });
 
   it('(c) ?webgl&force3d trên SwiftShader → webgl2; run nhận đủ { tier, flags, now, lang, t, sma, onFail }', async () => {
