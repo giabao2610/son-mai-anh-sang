@@ -124,8 +124,11 @@ describe('chế độ mài', () => {
     const studio = fakeStudio();
     const onClose = vi.fn();
     const { workshop, rail, notebook } = mount(studio, { onClose });
+    expect(workshop.isOpen).toBe(false);
     workshop.open({ grind: true });
+    expect(workshop.isOpen).toBe(true);
     rail.querySelector('.rail-close').click();
+    expect(workshop.isOpen).toBe(false);
     expect(rail.hidden).toBe(true);
     expect(notebook.hidden).toBe(true);
     expect(studio.calls.slice(-2)).toEqual([['setWeight', 'hai', 1, { tween: true }], ['setWeight', 'ba', 1, { tween: true }]]);
@@ -200,6 +203,49 @@ describe('Sổ tay', () => {
     expect(notebook.querySelector('[data-line="2"]').classList.contains('is-lit')).toBe(true);
     await opts.onChange('size', 0.8);
     expect(studio.setKnob).toHaveBeenCalledWith('cot', 'size', 0.8);
+    workshop.dispose();
+  });
+
+  it('Chỉnh: Tweakpane tải hỏng → báo lỗi thay vì "Đang tải…" mãi; mở lại tab thì tải lại', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    loadKnobs.mockRejectedValueOnce(new Error('Failed to fetch dynamically imported module: knobs-abc.js'));
+    const { workshop, notebook } = mount(fakeStudio());
+    workshop.open({ grind: true });
+    const box = notebook.querySelector('[data-knobs]');
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(box.dataset.state).toBe('error'));
+    expect(box.textContent).toBe(t.notebook.knobsFailed);
+    notebook.querySelector('[data-tab="hieu"]').click();
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(box.dataset.state).toBe('ready'));
+    expect(loadKnobs).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
+    workshop.dispose();
+  });
+
+  it('núm hay thí nghiệm áp không được: Sổ tay báo một dòng; núm và nút về trạng thái THẬT của bàn thợ', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const studio = fakeStudio();
+    studio.setKnob.mockRejectedValueOnce(new Error('núm hỏng'));
+    studio.toggleExperiment.mockRejectedValueOnce(new Error('thí nghiệm hỏng'));
+    const { workshop, rail, notebook } = mount(studio);
+    workshop.open({ grind: true });
+    const status = notebook.querySelector('.nb-busy');
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(knobsModule.mountKnobs).toHaveBeenCalledTimes(1));
+    const pane = knobsModule.mountKnobs.mock.results[0].value;
+    await pane.opts.onChange('size', 0.8);
+    expect(pane.refresh).toHaveBeenCalledWith({ size: 0.5 });
+    expect(status.textContent).toBe(t.notebook.changeFailed);
+    rail.querySelector('[data-layer="hai"] .rail-name').click();
+    notebook.querySelector('[data-tab="pha"]').click();
+    const button = notebook.querySelector('[data-experiment="pha"]');
+    button.click();
+    await vi.waitFor(() => expect(button.disabled).toBe(false));
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    expect(status.textContent).toBe(t.notebook.changeFailed);
+    expect(warn).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
     workshop.dispose();
   });
 

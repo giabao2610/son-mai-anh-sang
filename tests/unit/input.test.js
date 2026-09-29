@@ -116,6 +116,21 @@ describe('createInput', () => {
     expect(first).toHaveBeenCalledTimes(1);
   });
 
+  it('onFirst: người chỉ dùng bàn phím (không chạm được canvas) → phím đầu tiên cũng tính, một lần; dispose gỡ listener', () => {
+    const first = vi.fn();
+    input.onFirst(first);
+    win.dispatchEvent(new Event('keydown'));
+    expect(first).toHaveBeenCalledTimes(1);
+    win.dispatchEvent(new Event('keydown'));
+    canvas.dispatchEvent(pointer('pointerdown', 1, 1));
+    expect(first).toHaveBeenCalledTimes(1);
+    const later = vi.fn();
+    input.onFirst(later);
+    input.dispose();
+    win.dispatchEvent(new Event('keydown'));
+    expect(later).not.toHaveBeenCalled();
+  });
+
   it('nhấn giữ trên điện thoại không mở menu ngữ cảnh', () => {
     const menu = new Event('contextmenu', { cancelable: true });
     canvas.dispatchEvent(menu);

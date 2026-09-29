@@ -172,6 +172,12 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       await page.goto(urlOf(htmlPage, query));
       const settled = await waitForSettled(page);
       expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+      // Mở rồi đóng thanh lớp: lời mời quay lại. Lúc mất GPU poster xóa lời mời; dựng lại xong phải mời lại.
+      const box = await page.locator('[data-stage] canvas').boundingBox();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.8);
+      await page.locator('[data-hint] button').click();
+      await page.locator('[data-rail] .rail-close').click();
+      await expect(page.locator('[data-hint] button')).toBeVisible();
       const second = meta.layers[1].id;
       await page.evaluate((id) => window.__sma.setWeight(id, 0), second); // trạng thái để restore() đem về
       const lose = () => page.evaluate(() => {
@@ -189,6 +195,7 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       await expect(page.locator('[data-stage] canvas')).toHaveCount(1); // renderer và canvas MỚI
       const weights = await page.evaluate(() => window.__sma.layers());
       expect(weights.find((l) => l.id === second).weight, 'restore(snapshot) phải đem trọng số cũ về').toBe(0);
+      await expect(page.locator('[data-hint] button'), 'thanh lớp đang đóng thì dựng lại xong phải mời lại').toBeVisible();
       await lose();
       await page.waitForFunction(() => window.__sma.state === 'static');
       sma = await readSma(page);

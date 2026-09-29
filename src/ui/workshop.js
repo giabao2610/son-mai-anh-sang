@@ -98,6 +98,10 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
       if (interactive && !frame) loop();
     },
     close,
+    /** Thanh lớp đang mở không. Dựng lại cảnh xong mà thanh lớp đang đóng thì run.js mời lại (poster đã xóa lời mời). */
+    get isOpen() {
+      return !rail.el.hidden;
+    },
     /** Sổ tay đang mở lớp nào (null nếu đóng): test và e2e đọc. */
     get layer() {
       return notebook.layer;

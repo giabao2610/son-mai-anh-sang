@@ -174,7 +174,15 @@ body:is([data-state='lost'], [data-state='loading'], [data-state='compiling'], [
 .nb-poem cite { font-style: normal; }
 .nb-diagram { margin: 16px 0 0; }
 .nb-diagram svg { display: block; width: 100%; height: auto; }
-.nb-busy { min-height: 1.5em; margin: 6px 0 0; font-size: 12px; color: var(--vang-la-sang); }
+/* Dòng trạng thái ở đáy Sổ tay (vùng aria-live, thấy ở mọi tab). Trống thì thu lại, không ẩn bằng display: none. */
+.nb-busy {
+  margin: 0;
+  padding: 8px 20px 12px;
+  font-size: 12px;
+  color: var(--vang-la-sang);
+  border-top: 1px solid color-mix(in srgb, var(--vang-la) 25%, transparent);
+}
+.nb-busy:empty { padding: 0; border: 0; }
 
 /* ── Núm (Tweakpane): đổi biến CSS của nó sang bảng sơn mài ─────────────────────────── */
 .nb-knobs {

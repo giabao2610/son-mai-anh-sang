@@ -53,10 +53,15 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     },
   };
   // fail() chạy MỘT lần: gỡ mọi thứ theo thứ tự ngược, rồi báo boot về tầng tĩnh với lý do.
+  // Gỡ có ném lỗi thì vẫn phải về tầng tĩnh: canvas có thể đã bị gỡ, trang không bao giờ được trống.
   const fail = (reason, error) => {
     if (failed) return;
     failed = true;
-    handle.dispose();
+    try {
+      handle.dispose();
+    } catch (err) {
+      console.error('Gỡ cảnh bị lỗi (vẫn về tranh tĩnh):', err);
+    }
     onFail(reason, error);
   };
   // Sau mỗi await, trang có thể đã về tầng tĩnh: do fail(), hoặc do boot hết hạn 10 s (showStatic đặt
@@ -158,6 +163,8 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     // Gợi ý của bức ("Chạm vào…") chỉ lúc mở trang; lần chạm đầu tiên đổi thành lời mời mài lớp.
     if (!snapshot && content?.hint) shell.showHint(content.hint);
     if (!workshop) scene.input.onFirst(() => shell.invite(openWorkshop));
+    // Dựng lại cảnh xong mà thanh lớp đang đóng: poster lúc mất GPU đã xóa lời mời, nên mời lại ngay.
+    else if (!workshop.isOpen) shell.invite(openWorkshop);
 
     // Công cụ ?debug tải SAU khi live (không tính vào hạn 10 s); hỏng thì null, cảnh vẫn chạy.
     openDebug(flags.debug, stage.renderer, win.document).then((tool) => {

@@ -59,8 +59,9 @@ export function experimentList(doc, { experiments, text, t, isOn, onToggle }) {
       button.setAttribute('aria-busy', 'true');
       try {
         await onToggle(id, on);
-        button.setAttribute('aria-pressed', String(on));
       } finally {
+        // Đọc lại trạng thái THẬT (áp hỏng thì thí nghiệm vẫn như cũ), không tin vào ý định của cú bấm.
+        button.setAttribute('aria-pressed', String(isOn(id)));
         button.disabled = false;
         button.removeAttribute('aria-busy');
       }

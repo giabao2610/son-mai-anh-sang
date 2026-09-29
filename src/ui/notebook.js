@@ -30,12 +30,15 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
     role: 'tabpanel', id: `nb-panel-${id}`, 'aria-labelledby': `nb-tab-${id}`, 'data-panel': id, tabindex: '0',
   })]));
   const knobsBox = h(doc, 'div', { class: 'nb-knobs', 'data-knobs': '' });
-  const busy = h(doc, 'p', { class: 'nb-busy', 'aria-live': 'polite' }); // "đang dựng…" khi núm 'rebuild' đang chạy
-  panels.chinh.append(knobsBox, busy, h(doc, 'h3', { text: t.notebook.code }), code.el);
+  panels.chinh.append(knobsBox, h(doc, 'h3', { text: t.notebook.code }), code.el);
+  // Dòng trạng thái ở đáy Sổ tay, thấy được ở mọi tab: "đang dựng…" khi núm hay thí nghiệm đang áp, hoặc báo áp hỏng.
+  // Là vùng aria-live nên luôn có mặt, trống khi không có gì để nói (CSS thu lại khi :empty).
+  const busy = h(doc, 'p', { class: 'nb-busy', 'aria-live': 'polite' });
   const el = h(doc, 'section', { class: 'notebook', 'data-notebook': '', 'aria-labelledby': 'notebook-title', hidden: true },
     h(doc, 'header', { class: 'nb-head' }, h(doc, 'div', {}, no, title), close),
     h(doc, 'div', { class: 'nb-tabs', role: 'tablist', 'aria-label': t.notebook.label }, tabs),
-    Object.values(panels));
+    Object.values(panels),
+    busy);
 
   let layerId = null;
   let tab = 'hieu';
@@ -48,17 +51,22 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
   const layerOf = (id) => meta.layers.find((l) => l.id === id);
   const specOf = (id) => studio()?.layers().find((l) => l.id === id) ?? null;
 
-  /** Chờ một thay đổi (núm, thí nghiệm) xong; trong lúc chờ hiện "đang dựng…". Lỗi thì ghi log, Sổ tay vẫn chạy. */
+  /**
+   * Chờ một thay đổi (núm, thí nghiệm) xong; trong lúc chờ hiện "đang dựng…". Áp không được thì ghi log và báo một
+   * dòng trong Sổ tay (spec §9); cảnh vẫn chạy, và nơi gọi đọc lại trạng thái THẬT từ bàn thợ để núm, nút không nói dối.
+   */
   const track = async (change) => {
     pending += 1;
     busy.textContent = t.notebook.building;
+    let failed = false;
     try {
       await change();
     } catch (err) {
+      failed = true;
       console.warn('Sổ tay: thay đổi không áp được:', err);
     } finally {
       pending -= 1;
-      if (pending === 0) busy.textContent = '';
+      if (pending === 0) busy.textContent = failed ? t.notebook.changeFailed : '';
     }
   };
 
@@ -68,7 +76,7 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
     paneFor = null;
   };
 
-  /** Ô núm: chữ (hoặc trống) kèm data-state = 'loading' | 'ready' | 'empty' | 'static' cho CSS và e2e đọc. */
+  /** Ô núm: chữ (hoặc trống) kèm data-state = 'loading' | 'ready' | 'empty' | 'static' | 'error' cho CSS và e2e đọc. */
   const knobsState = (state, text = '') => {
     knobsBox.dataset.state = state;
     knobsBox.textContent = text;
@@ -90,19 +98,27 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
       return;
     }
     knobsState('loading', t.notebook.loading);
-    const { mountKnobs } = await loadKnobs();
-    if (paneFor !== id) return; // người xem đã chuyển lớp trong lúc tải Tweakpane
-    knobsState('ready');
-    pane = mountKnobs(knobsBox, {
-      knobs: spec.knobs,
-      values: studio().knobs(id),
-      labels: content?.layers?.[id]?.knobs,
-      onChange: (knobId, value) => track(async () => {
-        await studio()?.setKnob(id, knobId, value);
-        pane?.refresh(studio()?.knobs(id) ?? {}); // lớp có thể đã kẹp giá trị
-      }),
-      onHover: (knobId) => code.light(knobId),
-    });
+    try {
+      const { mountKnobs } = await loadKnobs();
+      if (paneFor !== id) return; // người xem đã chuyển lớp trong lúc tải Tweakpane
+      knobsState('ready');
+      pane = mountKnobs(knobsBox, {
+        knobs: spec.knobs,
+        values: studio().knobs(id),
+        labels: content?.layers?.[id]?.knobs,
+        // Xong (hay hỏng) thì đọc lại giá trị thật: lớp có thể đã kẹp giá trị, hoặc áp hỏng và giữ giá trị cũ.
+        onChange: (knobId, value) => track(() => studio()?.setKnob(id, knobId, value)).then(() => {
+          if (paneFor === id) pane?.refresh(studio()?.knobs(id) ?? {});
+        }),
+        onHover: (knobId) => code.light(knobId),
+      });
+    } catch (err) {
+      // Chunk Tweakpane tải hỏng (mạng, hay trang vừa deploy): báo thay vì "Đang tải…" mãi; mở lại tab thì thử lại.
+      console.warn('Sổ tay: không dựng được núm:', err);
+      if (paneFor !== id) return;
+      paneFor = null;
+      knobsState('error', t.notebook.knobsFailed);
+    }
   };
 
   const tick = () => {
@@ -119,16 +135,16 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
 
   /** Trang Phá: thí nghiệm của lớp + số đo (của lớp, rồi của xưởng). Tầng tĩnh: chỉ lời giải thích. */
   const renderBreak = () => {
-    const s = studio();
-    const spec = specOf(layerId);
-    const text = content?.layers?.[layerId];
-    const experiments = spec?.experiments ?? Object.keys(text?.experiments ?? {}).map((id) => ({ id }));
+    const id = layerId; // giữ lớp của trang này: người xem có thể đổi lớp trong lúc một thí nghiệm đang áp
+    const spec = specOf(id);
+    const text = content?.layers?.[id];
+    const experiments = spec?.experiments ?? Object.keys(text?.experiments ?? {}).map((expId) => ({ id: expId }));
     const list = experimentList(doc, {
       experiments,
       text,
       t,
-      isOn: (id) => (s ? s.experiment(layerId, id) : false),
-      onToggle: s ? (id, on) => track(() => studio()?.toggleExperiment(layerId, id, on)) : null,
+      isOn: (expId) => Boolean(studio()?.experiment(id, expId)),
+      onToggle: studio() ? (expId, on) => track(() => studio()?.toggleExperiment(id, expId, on)) : null,
     });
     readouts = null;
     if (!spec) {

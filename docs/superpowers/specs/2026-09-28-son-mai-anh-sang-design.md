@@ -151,6 +151,8 @@ Ao Sen Đêm là **Bức 1**. Đèn kéo quân, Đông Hồ, Cung Quế về sau
    - Kéo để xoay camera trong giới hạn do bức khai báo (`CameraSpec`).
 3. **Lời mời (GĐ 1):** sau lần tương tác đầu tiên, hiện nhẹ *"Bức tranh này có {n} lớp — mài thử?"*, với `n = meta.layers.length`.
    Từ GĐ 2 lời mời là **một nút**: bấm thì vào chế độ mài. Đóng thanh lớp thì lời mời quay lại, để mở lại lúc nào cũng được.
+   "Lần tương tác đầu tiên" là chạm canvas, hoặc phím đầu tiên (người chỉ dùng bàn phím không chạm được canvas). Dựng lại
+   cảnh sau khi mất GPU mà thanh lớp đang đóng thì lời mời hiện lại ngay (poster lúc mất GPU đã xóa nó).
 4. **Chế độ mài có hướng dẫn (GĐ 2):**
    - Mọi lớp trừ Cốt mờ dần về 0 (tween 0,8 giây theo đồng hồ của cảnh); bức trở về **đất sét xám**. Sổ tay mở trang Cốt.
    - Nút *"Phủ lớp tiếp theo · {tên}"* sơn lại lớp đầu tiên (sau Cốt) đang hướng về 0, rồi mở Sổ tay của lớp vừa phủ
@@ -918,7 +920,10 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
 | Mất context/device (`renderer.onDeviceLost`) | GĐ 0–1: tầng tĩnh (`device-lost`). GĐ 2: lần đầu hiện poster và nút "Dựng lại cảnh"; bấm thì tạo **renderer và canvas mới** (WebGPURenderer không tự khôi phục được) rồi `restore(snapshot)`; lần 2 thì tầng tĩnh |
 | `dispose()` của một lớp ném lỗi | Ghi log, vẫn gỡ tiếp phần còn lại |
 | (GĐ 2) Công cụ `?debug` tải hỏng, hay `update()` của nó ném lỗi | Cảnh báo, tắt công cụ; cảnh vẫn chạy (không tính là khung lỗi, không tính vào hạn 10 giây) |
-| (GĐ 2) Núm hay thí nghiệm áp không được (onKnob ném lỗi) | Ghi log trong Sổ tay; cảnh vẫn chạy |
+| (GĐ 2) Núm hay thí nghiệm áp không được (onKnob ném lỗi) | Ghi log, báo một dòng ở đáy Sổ tay; núm và nút đọc lại trạng thái thật (giá trị hỏng không vào snapshot); cảnh vẫn chạy. `restore` bỏ qua núm hỏng, nên "Dựng lại cảnh" không vì thế mà về tĩnh |
+| (GĐ 2) Chunk Tweakpane (tab Chỉnh) tải hỏng | Ô núm báo lỗi thay cho "Đang tải…"; mở lại tab thì tải lại |
+| (GĐ 2) Chunk Sổ tay chỉ đọc (tầng tĩnh) tải hỏng | Ghi chú thành lời nhắc tải lại, như lý do `chunk-load` |
+| (GĐ 2) Vẽ lại khung đứng yên (`?freeze`) ném lỗi | Promise của thay đổi hỏng theo (không treo); Sổ tay báo, `__sma.setWeight` trả lỗi |
 
 ## 10. Hiệu năng và chất lượng
 

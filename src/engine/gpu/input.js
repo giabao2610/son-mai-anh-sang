@@ -14,7 +14,7 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
   const tracker = createGestureTracker();
   const raycaster = new Raycaster();
   const queue = [];
-  let first = null; // hàm gọi một lần ở lần chạm đầu tiên (shell hiện lời mời)
+  let first = null; // hàm gọi một lần ở lần tương tác đầu tiên: chạm canvas, hay phím đầu tiên (shell hiện lời mời)
   let holdTimer = null;
   let holdingCamera = false; // input.js đã khóa camera (đang giữ tay): chỉ khi đó mới được trả camera lại
 
@@ -49,10 +49,13 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
   const point = (e) => ({ id: e.pointerId ?? 1, x: e.clientX, y: e.clientY, t: win.performance.now(), primary: e.isPrimary });
   const clearHold = () => win.clearTimeout(holdTimer);
 
-  const onDown = (e) => {
-    if (e.button > 0) return; // chỉ nút chính của chuột; chạm và bút luôn là 0
+  const fireFirst = () => {
     first?.();
     first = null;
+  };
+  const onDown = (e) => {
+    if (e.button > 0) return; // chỉ nút chính của chuột; chạm và bút luôn là 0
+    fireFirst();
     emit(tracker.down(point(e)));
     clearHold();
     holdTimer = win.setTimeout(() => emit(tracker.poll(win.performance.now())), GESTURE.holdMs);
@@ -93,6 +96,9 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
   };
   win.addEventListener('blur', onCancel);
   win.document?.addEventListener('visibilitychange', onHidden);
+  // Người chỉ dùng bàn phím không chạm được canvas: phím đầu tiên (thường là Tab) cũng là lần tương tác đầu,
+  // để lời mời mài lớp (một nút) hiện ra và đi tới được bằng Tab.
+  win.addEventListener('keydown', fireFirst);
 
   return {
     /** Lấy hết cử chỉ đang chờ (hàng đợi rỗng sau lần gọi). */
@@ -104,6 +110,7 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
       clearHold();
       for (const [type, fn] of listeners) canvas.removeEventListener(type, fn, { capture: true });
       win.removeEventListener('blur', onCancel);
+      win.removeEventListener('keydown', fireFirst);
       win.document?.removeEventListener('visibilitychange', onHidden);
       // Chỉ trả lại camera nếu chính input.js đã khóa nó (đang giữ tay lúc gỡ); ai khác khóa thì để yên.
       if (controls && holdingCamera) controls.enabled = true;
