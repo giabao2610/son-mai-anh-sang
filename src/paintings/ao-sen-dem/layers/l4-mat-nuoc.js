@@ -147,14 +147,9 @@ export function createLayer(ctx, shared) {
       },
     },
     experiments: [
-      {
-        // Ảnh phản chiếu chỉ còn 1/10 độ phân giải màn hình: bóng trăng vỡ thành khối, nhưng rẻ hơn nhiều.
-        id: 'lowRes',
-        toggle(on) {
-          lowRes = on;
-          applyScale();
-        },
-      },
+      // Ảnh phản chiếu chỉ còn 1/10 độ phân giải màn hình: bóng trăng vỡ thành khối, nhưng rẻ hơn nhiều.
+      // Phản chiếu giả (mức thấp) không có ảnh nào để hạ: không đưa ra nút bấm mà ảnh không đổi.
+      ...(refl ? [{ id: 'lowRes', toggle: (on) => { lowRes = on; applyScale(); } }] : []),
       { id: 'noFresnel', toggle: (on) => { fresnelOn.value = on ? 0 : 1; } },
       { id: 'heightfield', toggle: (on) => { showHeight.value = on ? 1 : 0; } },
     ],

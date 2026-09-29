@@ -96,13 +96,16 @@ describe('l4-mat-nuoc', () => {
     expect(scale(water)).toBe(0.15);
   });
 
-  it('mức thấp (budget.reflection = 0): phản chiếu GIẢ, không có reflector, không nấc; thí nghiệm vẫn bật/tắt được', () => {
+  it('mức thấp (budget.reflection = 0): phản chiếu GIẢ, không có reflector, không nấc, không có "Độ phân giải 0.1"', () => {
     const { ctx, layers } = build({ level: 'thap', budget: { reflection: 0 } });
     const water = layers['mat-nuoc'];
     const [mesh] = water.objects;
     expect(ctx.scene.children.filter((o) => o.type === 'Object3D' && o !== mesh)).toHaveLength(1); // chỉ target của đèn trăng
     expect(water.readouts[0].get()).toBe(0);
     expect(water.degrade).toEqual([]);
+    // Không có ảnh phản chiếu thì không có gì để hạ độ phân giải: nút bấm mà ảnh không đổi là dạy sai.
+    expect(water.experiments.map((e) => e.id)).toEqual(['noFresnel', 'heightfield']);
+    expect(build({ level: 'cao' }).layers['mat-nuoc'].experiments.map((e) => e.id)).toEqual(['lowRes', 'noFresnel', 'heightfield']);
     for (const key of ['colorNode', 'normalNode', 'emissiveNode', 'mrtNode']) expect(mesh.material[key], key).toBeTruthy();
     for (const exp of water.experiments) {
       exp.toggle(true);

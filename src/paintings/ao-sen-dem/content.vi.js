@@ -142,7 +142,8 @@ export default {
         oneOctave: {
           label: 'Chỉ 1 octave',
           explain: 'Sương còn một tầng noise: mảng to, mềm, mất chi tiết. Hai cột đo ms lúc tắt và lúc bật. Máy yếu '
-            + 'thấy bớt octave là nhẹ đi; máy mạnh thì cột ms khung có thể bằng nhau vì trình duyệt khóa ở nhịp màn hình.',
+            + 'thấy bớt octave là nhẹ đi; máy mạnh thì cột ms khung có thể bằng nhau vì trình duyệt khóa ở nhịp màn hình. '
+            + 'Ở mức thấp sương vốn chỉ có 1 octave: kéo núm "Số tầng noise" lên rồi hãy so.',
         },
       },
       readouts: { octaves: 'Số octave đang chạy' },
@@ -151,7 +152,8 @@ export default {
     'mat-nuoc': {
       understand:
         'Mặt nước là một đĩa phẳng, nhưng soi được trăng, hoa và trời. Mỗi khung, reflector vẽ lại toàn cảnh từ '
-        + 'một camera lật ngược qua mặt nước, vào một ảnh nhỏ hơn màn hình, rồi dán ảnh ấy lên đĩa. Chạm vào '
+        + 'một camera lật ngược qua mặt nước, vào một ảnh nhỏ hơn màn hình, rồi dán ảnh ấy lên đĩa. Máy yếu (mức '
+        + 'thấp) không có reflector, nên hai núm phản chiếu không đổi gì: nước lấy màu trời theo hướng phản xạ. Chạm vào '
         + 'nước là thêm một vòng gợn vào bộ đệm tám vòng; một hàm TSL tính độ cao gợn tại mỗi điểm, và pháp '
         + 'tuyến lấy từ độ dốc của hàm ấy. Pháp tuyến lệch thì chỗ đọc ảnh phản chiếu lệch theo: vòng gợn đi '
         + 'qua là bóng trăng bị xẻ đôi. Fresnel quyết định soi bao nhiêu: nhìn xiên về chân trời thì nước như '
