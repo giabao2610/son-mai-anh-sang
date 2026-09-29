@@ -124,15 +124,19 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
     }
   };
 
-  const tick = () => {
+  /** Số đo của tab Phá. `announce = false`: chưa đụng dòng "lớp đang tắt" (lần gọi cùng nhịp với lúc tab hiện). */
+  const tick = (announce = true) => {
     const s = studio();
     if (!s || !readouts) return;
     const values = { ...s.stats() };
     for (const r of s.readouts(layerId)) values[`lop:${r.id}`] = r.value;
     readouts.update(values);
     for (const [expId, bars] of compares) bars.update(s.compare(layerId, expId));
+    if (!announce) return;
     // Lớp ở trọng số 0 (chế độ mài): thí nghiệm của nó không làm gì thấy được, số đo so sánh cũng vô nghĩa.
-    off.textContent = s.weight(layerId).target < 0.5 ? t.notebook.layerOff : '';
+    // Vùng aria-live: chỉ ghi khi chữ đổi, vì ghi lại cùng một câu thì vài trình đọc màn hình đọc lại.
+    const text = s.weight(layerId).target < 0.5 ? t.notebook.layerOff : '';
+    if (off.textContent !== text) off.textContent = text;
   };
   const stopTimer = () => {
     clearInterval(timer);
@@ -184,8 +188,10 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
     if (id === 'chinh') mountPane();
     stopTimer();
     if (id === 'pha' && readouts) {
-      tick();
-      timer = setInterval(tick, READOUT_MS);
+      // Tab vừa hiện: dòng nhắc để trống, nhịp đo sau mới điền (điền cùng nhịp với lúc bỏ hidden thì VoiceOver bỏ qua).
+      off.textContent = '';
+      tick(false);
+      timer = setInterval(() => tick(), READOUT_MS);
     }
   };
 

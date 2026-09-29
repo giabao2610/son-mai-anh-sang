@@ -273,7 +273,7 @@ describe('Sổ tay', () => {
     workshop.dispose();
   });
 
-  it('Phá: lớp đang tắt (chế độ mài) thì nhắc bật lớp lên; phủ lớp rồi thì dòng nhắc trống', () => {
+  it('Phá: lớp đang tắt (chế độ mài) thì nhắc bật lớp lên, điền ở nhịp sau lúc tab hiện (cùng nhịp thì VoiceOver bỏ qua)', () => {
     vi.useFakeTimers();
     const studio = fakeStudio();
     const { workshop, rail, notebook } = mount(studio);
@@ -281,10 +281,33 @@ describe('Sổ tay', () => {
     rail.querySelector('[data-layer="hai"] .rail-name').click();
     notebook.querySelector('[data-tab="pha"]').click();
     const hint = notebook.querySelector('.nb-off');
+    expect(hint.textContent).toBe('');
+    vi.advanceTimersByTime(300);
     expect(hint.textContent).toBe(t.notebook.layerOff);
-    studio.setWeight('hai', 1);
+    rail.querySelector('[data-layer="ba"] .rail-name').click(); // sang một lớp khác cũng đang tắt, vẫn ở tab Phá
+    expect(hint.textContent).toBe('');
+    vi.advanceTimersByTime(300);
+    expect(hint.textContent).toBe(t.notebook.layerOff);
+    studio.setWeight('ba', 1); // phủ lớp rồi thì dòng nhắc trống
     vi.advanceTimersByTime(300);
     expect(hint.textContent).toBe('');
+    workshop.dispose();
+  });
+
+  it('Phá: dòng nhắc "lớp đang tắt" không bị ghi lại mỗi 250 ms khi chữ không đổi (trình đọc màn hình có thể đọc lại)', () => {
+    vi.useFakeTimers();
+    const { workshop, rail, notebook } = mount(fakeStudio());
+    workshop.open({ grind: true });
+    rail.querySelector('[data-layer="hai"] .rail-name').click();
+    notebook.querySelector('[data-tab="pha"]').click();
+    vi.advanceTimersByTime(300);
+    const hint = notebook.querySelector('.nb-off');
+    expect(hint.textContent).toBe(t.notebook.layerOff);
+    const seen = new MutationObserver(() => {});
+    seen.observe(hint, { childList: true, characterData: true, subtree: true });
+    vi.advanceTimersByTime(1000);
+    expect(seen.takeRecords()).toHaveLength(0);
+    seen.disconnect();
     workshop.dispose();
   });
 
