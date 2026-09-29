@@ -1,0 +1,135 @@
+// tests/unit/knob-set.test.js — bộ núm của một lớp: uniform có tên hợp lệ, kiểu giá trị, kẹp theo tầng, onKnob.
+import { describe, it, expect, vi } from 'vitest';
+import { uniformName, knobValue, knobMax, normalizeKnob, createKnobs } from '../../src/engine/gpu/knob-set.js';
+
+// Tên uniform đi thẳng vào WGSL/GLSL: phải là định danh hợp lệ.
+const VALID_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const env = { tier: 'webgl2', level: 'vua', budget: { bloom: 0.25 }, now: new Date('2026-09-28T14:00:00Z'), mobile: false };
+
+describe('uniformName', () => {
+  it('đổi "-" thành "_"', () => {
+    expect(uniformName('mat-nuoc', 'fresnelPower')).toBe('mat_nuoc_fresnelPower');
+    expect(uniformName('phu-bong', 'bloomStrength')).toBe('phu_bong_bloomStrength');
+  });
+});
+
+describe('knobValue / knobMax', () => {
+  it('value là hàm thì được gọi với env', () => {
+    const value = vi.fn((e) => (e.level === 'vua' ? 800 : 1200));
+    expect(knobValue({ id: 'leafCount', value }, env)).toBe(800);
+    expect(value).toHaveBeenCalledWith(env);
+    expect(knobValue({ id: 'size', value: 0.5 }, env)).toBe(0.5);
+  });
+
+  it('max theo tầng hoặc một số', () => {
+    expect(knobMax({ id: 'count', max: { webgpu: 200000, webgl2: 20000 } }, 'webgl2')).toBe(20000);
+    expect(knobMax({ id: 'count', max: { webgpu: 200000, webgl2: 20000 } }, 'webgpu')).toBe(200000);
+    expect(knobMax({ id: 'size', max: 0.5 }, 'webgpu')).toBe(0.5);
+    expect(knobMax({ id: 'size' }, 'webgpu')).toBeUndefined();
+  });
+});
+
+describe('normalizeKnob', () => {
+  it('số: kẹp trong [min, trần của tầng]; chuỗi số cũng nhận; không phải số thì ném lỗi', () => {
+    const count = { id: 'count', min: 100, max: { webgpu: 200000, webgl2: 20000 } };
+    expect(normalizeKnob('vang-la', count, 50000, 'webgl2')).toBe(20000);
+    expect(normalizeKnob('vang-la', count, 50000, 'webgpu')).toBe(50000);
+    expect(normalizeKnob('vang-la', count, 3, 'webgpu')).toBe(100);
+    expect(normalizeKnob('vang-la', count, '1500', 'webgpu')).toBe(1500);
+    expect(() => normalizeKnob('vang-la', count, 'nhiều', 'webgpu')).toThrow('Núm "vang-la.count": "nhiều" không phải số');
+  });
+
+  it("bool → true/false; color → '#rrggbb' chữ thường; select phải có trong options", () => {
+    expect(normalizeKnob('cot', { id: 'wireframe', kind: 'bool' }, 1, 'webgpu')).toBe(true);
+    expect(normalizeKnob('cot', { id: 'wireframe', kind: 'bool' }, 0, 'webgpu')).toBe(false);
+    expect(normalizeKnob('x', { id: 'c', kind: 'color' }, '#F2D48A', 'webgpu')).toBe('#f2d48a');
+    expect(() => normalizeKnob('x', { id: 'c', kind: 'color' }, 'vàng', 'webgpu')).toThrow('màu phải có dạng #rrggbb');
+    const tone = { id: 'tone', kind: 'select', options: ['none', 'agx'] };
+    expect(normalizeKnob('phu-bong', tone, 'agx', 'webgpu')).toBe('agx');
+    expect(() => normalizeKnob('phu-bong', tone, 'aces', 'webgpu')).toThrow('Núm "phu-bong.tone": "aces" không có trong options');
+    expect(() => normalizeKnob('phu-bong', { id: 'x', kind: 'vector' }, 1, 'webgpu')).toThrow('Núm "phu-bong.x" có kind lạ: "vector"');
+  });
+});
+
+describe('createKnobs', () => {
+  const knobs = [
+    { id: 'distortion', min: 0, max: 0.1, step: 0.001, value: 0.02 },
+    { id: 'fresnelPower', value: (e) => (e.tier === 'webgl2' ? 3 : 5) },
+    { id: 'toneMapping', kind: 'select', options: ['none', 'agx', 'aces'], value: 'agx' },
+    { id: 'rimColor', kind: 'color', value: '#F2D48A' },
+    { id: 'wireframe', kind: 'bool', value: true },
+    { id: 'count', via: 'js', value: 100 },
+    { id: 'octaves', via: 'rebuild', value: 3 },
+  ];
+
+  it("chỉ núm 'uniform' có uniform; mọi tên đều hợp lệ", () => {
+    for (const layerId of ['mat-nuoc', 'phu-bong']) {
+      const k = createKnobs(layerId, knobs, env);
+      expect(Object.keys(k.uniforms)).toEqual(['distortion', 'fresnelPower', 'toneMapping', 'rimColor', 'wireframe']);
+      for (const [id, u] of Object.entries(k.uniforms)) {
+        expect(u.isUniformNode).toBe(true);
+        expect(u.name).toBe(uniformName(layerId, id));
+        expect(u.name).toMatch(VALID_NAME);
+        expect(k.knob(id)).toBe(u);
+      }
+    }
+  });
+
+  it('giá trị mặc định: value là hàm thì nhận env; select giữ CHỈ SỐ; color là THREE.Color; bool thành 1/0', () => {
+    const k = createKnobs('phu-bong', knobs, env);
+    expect(k.knob('distortion').value).toBe(0.02);
+    expect(k.knob('fresnelPower').value).toBe(3);
+    expect(createKnobs('phu-bong', knobs, { ...env, tier: 'webgpu' }).knob('fresnelPower').value).toBe(5);
+    expect(k.knob('toneMapping').value).toBe(1);
+    expect(k.knob('rimColor').value.isColor).toBe(true);
+    expect(k.knob('rimColor').value.getHexString()).toBe('f2d48a');
+    expect(k.knob('wireframe').value).toBe(1);
+    expect(k.values()).toEqual({
+      distortion: 0.02, fresnelPower: 3, toneMapping: 'agx', rimColor: '#f2d48a', wireframe: true, count: 100, octaves: 3,
+    });
+  });
+
+  it("knob() của núm 'js'/'rebuild' hoặc id lạ thì ném lỗi; khai báo trùng id thì ném lỗi", () => {
+    const k = createKnobs('mat-nuoc', knobs, env);
+    expect(() => k.knob('count')).toThrow('Lớp "mat-nuoc" không có núm uniform "count"');
+    expect(() => k.knob('constructor')).toThrow('không có núm uniform "constructor"');
+    expect(() => k.get('constructor')).toThrow('Lớp "mat-nuoc" không có núm "constructor"');
+    expect(() => createKnobs('x', [{ id: 'a', value: 1 }, { id: 'a', value: 2 }], env)).toThrow('khai báo núm "a" hai lần');
+  });
+
+  it('set() núm uniform: đổi .value của CÙNG uniform (không tạo node mới), đúng kiểu, kẹp theo min/max', () => {
+    const k = createKnobs('phu-bong', knobs, env);
+    const u = k.knob('distortion');
+    expect(k.set('distortion', 0.5)).toBeUndefined();
+    expect(k.knob('distortion')).toBe(u);
+    expect(u.value).toBe(0.1);
+    expect(k.get('distortion')).toBe(0.1);
+    k.set('toneMapping', 'aces');
+    expect(k.knob('toneMapping').value).toBe(2);
+    const color = k.knob('rimColor').value;
+    k.set('rimColor', '#B3261E');
+    expect(k.knob('rimColor').value).toBe(color);
+    expect(color.getHexString()).toBe('b3261e');
+    k.set('wireframe', false);
+    expect(k.knob('wireframe').value).toBe(0);
+    expect(k.values()).toMatchObject({ distortion: 0.1, toneMapping: 'aces', rimColor: '#b3261e', wireframe: false });
+  });
+
+  it("set() núm 'js'/'rebuild': gọi onKnob với giá trị đã chuẩn hóa và trả về thứ nó trả (Promise khi dựng lại)", async () => {
+    const k = createKnobs('vang-la', [{ id: 'count', via: 'js', min: 10, max: 500, value: 100 }, { id: 'octaves', via: 'rebuild', value: 3 }], env);
+    const count = vi.fn();
+    const octaves = vi.fn(async () => 'xong');
+    k.bind({ count, octaves });
+    expect(k.set('count', 9999)).toBeUndefined();
+    expect(count).toHaveBeenCalledWith(500);
+    await expect(k.set('octaves', 5)).resolves.toBe('xong');
+    expect(k.values()).toEqual({ count: 500, octaves: 5 });
+  });
+
+  it("bind() ném lỗi nếu một núm 'js'/'rebuild' chưa có hàm onKnob", () => {
+    const k = createKnobs('vang-la', [{ id: 'count', via: 'js', value: 100 }], env);
+    expect(() => k.bind({})).toThrow(`Lớp "vang-la": núm 'js' "count" chưa có hàm onKnob.count`);
+    expect(() => k.bind(undefined)).toThrow('chưa có hàm onKnob.count');
+    expect(() => createKnobs('cot', [{ id: 'openness', value: 1 }], env).bind(undefined)).not.toThrow();
+  });
+});

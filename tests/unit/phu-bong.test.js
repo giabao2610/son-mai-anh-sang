@@ -4,7 +4,7 @@ import { Scene, PerspectiveCamera } from 'three/webgpu';
 import { pass, uniform } from 'three/tsl';
 import * as phuBong from '../../src/engine/stock/phu-bong/layer.js';
 import phuBongMeta from '../../src/engine/stock/phu-bong/meta.js';
-import { createKnobs } from '../../src/engine/gpu/layers.js';
+import { createKnobs } from '../../src/engine/gpu/knob-set.js';
 
 // Bọc bloom() thật để xem lớp gọi nó với tham số nào (vẫn dựng BloomNode thật).
 const created = vi.hoisted(() => []);

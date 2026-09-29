@@ -1,49 +1,65 @@
-// tests/helpers/fake-ctx.js — dựng một bức trong Node (không GPU) giống run.js: EngineCtx giả, setup(), rồi các lớp theo thứ tự.
+// tests/helpers/fake-ctx.js — dựng một bức trong Node (không GPU) giống run.js: sân khấu giả, createCtx, setup(), rồi các lớp theo thứ tự.
 import { vi } from 'vitest';
-import { Color, PerspectiveCamera, Scene, Vector2 } from 'three/webgpu';
+import { PerspectiveCamera, Scene, Vector2 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
-import { mergePalette } from '../../src/engine/palette.js';
-import { buildLayers, createWeights } from '../../src/engine/gpu/layers.js';
+import { buildLayers, createCtx } from '../../src/engine/gpu/layers.js';
 
 /** "Bây giờ" mặc định của test: 21:00 giờ Việt Nam, ngày 18 tháng Tám năm Bính Ngọ. */
 export const NOW = new Date('2026-09-28T21:00:00+07:00');
 
 /**
- * EngineCtx giả, cùng hình dạng với ctx của run.js. Scene, camera, uniform là đồ thật của three
- * (dựng được node graph trong Node); renderer chỉ ghi lời gọi compute và giữ cờ shadowMap.
+ * Renderer giả: một Proxy không vẽ gì. Hàm nào được đọc lần đầu (compute, render…) thành một vi.fn
+ * và được giữ lại, nên test đọc được `renderer.compute.mock.calls`. Giữ sẵn vài thuộc tính mà lớp đọc/ghi.
+ * 'then' trả undefined để Proxy không bị coi là Promise khi đi qua await.
+ */
+export function fakeRenderer() {
+  const target = { shadowMap: { enabled: false }, info: { render: { drawCalls: 0, triangles: 0 } } };
+  return new Proxy(target, {
+    get(t, prop) {
+      if (prop in t) return t[prop];
+      if (typeof prop === 'symbol' || prop === 'then' || prop === 'toJSON') return undefined;
+      t[prop] = vi.fn();
+      return t[prop];
+    },
+  });
+}
+
+/**
+ * EngineCtx giả, dựng bằng CHÍNH createCtx của xưởng. Scene, camera, uniform là đồ thật của three
+ * (dựng được node graph trong Node); renderer là fakeRenderer(). `ctx.weights` và `ctx.env` chỉ test dùng:
+ * chúng không liệt kê được (non-enumerable), nên ctx mà lớp nhận qua `{ ...ctx }` không có hai thứ này.
  * @param {object} meta  PaintingMeta
  */
-export function makeEngineCtx(meta, { level = 'cao', budget = {}, now = NOW, reducedMotion = false, tier = 'webgpu' } = {}) {
-  const hex = mergePalette(meta.palette);
-  const weights = createWeights(meta.layers);
-  return {
-    tier,
-    level,
-    budget,
-    mobile: false,
-    reducedMotion,
-    now,
-    renderer: { compute: vi.fn(), shadowMap: { enabled: false } },
+export function makeEngineCtx(meta, { level = 'cao', budget = {}, now = NOW, reducedMotion = false, tier = 'webgpu', mobile = false } = {}) {
+  const stage = {
+    backend: tier,
+    renderer: fakeRenderer(),
     scene: new Scene(),
     camera: new PerspectiveCamera(40, 1.6, 0.1, 500),
-    palette: { hex, color: (token) => new Color(hex[token]) },
     u: { time: uniform(0), delta: uniform(1 / 60), resolution: uniform(new Vector2(640, 400)), pointer: uniform(new Vector2()) },
-    weight: weights.weight,
-    weights, // chỉ test dùng: đặt trọng số bằng weights.set(id, v)
-    debug: false,
   };
+  const { ctx, weights, env } = createCtx({ meta, stage, level, budget, mobile, reducedMotion, now });
+  Object.defineProperty(ctx, 'weights', { value: weights, enumerable: false });
+  Object.defineProperty(ctx, 'env', { value: env, enumerable: false });
+  return ctx;
 }
 
 /**
  * Dựng bức như run.js: setup(ctx) rồi buildLayers (cùng hàm của xưởng). `until` = id lớp cuối cần dựng.
- * @returns {{ ctx: object, setup: object | undefined, shared: object, layers: Record<string, object> }}
+ * @returns {{ ctx: object, setup: object | undefined, shared: object, built: object[], layers: Record<string, object>, knobs: Record<string, object> }}
  */
 export function buildPainting(painting, meta, { until, ...options } = {}) {
   const ctx = makeEngineCtx(meta, options);
   const setup = painting.setup?.(ctx);
   const shared = setup?.shared ?? {};
   const end = until ? painting.layers.findIndex((m) => m.id === until) + 1 : painting.layers.length;
-  const env = { tier: ctx.tier, level: ctx.level, budget: ctx.budget, now: ctx.now, mobile: ctx.mobile };
-  const built = buildLayers(painting.layers.slice(0, end), ctx, shared, env);
-  return { ctx, setup, shared, layers: Object.fromEntries(built.map((b) => [b.id, b.layer])) };
+  const built = buildLayers(painting.layers.slice(0, end), ctx, shared, ctx.env);
+  return {
+    ctx,
+    setup,
+    shared,
+    built,
+    layers: Object.fromEntries(built.map((b) => [b.id, b.layer])),
+    knobs: Object.fromEntries(built.map((b) => [b.id, b.knobs])),
+  };
 }

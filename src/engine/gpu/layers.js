@@ -1,21 +1,23 @@
-// engine/gpu/layers.js — trọng số từng lớp, uniform của núm dựng từ khai báo tĩnh, và dựng các lớp theo thứ tự.
+// engine/gpu/layers.js — trọng số từng lớp (có tween), ctx của một lần dựng, và dựng các lớp theo thứ tự.
 import { Color } from 'three/webgpu';
 import { uniform, vec3 } from 'three/tsl';
+import { mergePalette } from '../palette.js';
+import { createKnobs } from './knob-set.js';
 
-/**
- * Tên uniform của một núm. setName() đưa tên này THẲNG vào mã WGSL/GLSL sinh ra,
- * nên không được có '-': ('phu-bong', 'exposure') → 'phu_bong_exposure'.
- * @param {string} layerId
- * @param {string} knobId
- */
-export function uniformName(layerId, knobId) {
-  return `${layerId.replaceAll('-', '_')}_${knobId}`;
-}
+/** Mặc định của một lần tween trọng số (giây). Đủ chậm để thấy lớp "phủ" lên, đủ nhanh để không phải chờ. */
+export const TWEEN_SECONDS = 0.8;
+
+const clamp01 = (v) => Math.min(Math.max(v, 0), 1);
+// smoothstep: bắt đầu và kết thúc êm, không giật ở hai đầu.
+const ease = (s) => s * s * (3 - 2 * s);
 
 /**
  * Trọng số 0 → 1 của từng lớp (luật 2): mỗi lớp MỘT uniform float.
  * Bật/tắt lớp chỉ đổi `.value` của uniform, nên shader KHÔNG biên dịch lại.
  * Riêng 'cot' luôn là 1 và không tắt được (luật 1).
+ *
+ * Tween chạy theo `dt` của đồng hồ xưởng (step mỗi khung), không theo đồng hồ tường: với ?freeze
+ * mỗi khung là đúng 1/60 s, nên tween cũng tất định.
  * @param {{ id: string }[]} layerMetas  meta.layers của bức, đúng thứ tự phủ
  * @param {number} [initial]             trọng số ban đầu của các lớp khác Cốt
  */
@@ -24,6 +26,7 @@ export function createWeights(layerMetas, initial = 1) {
   for (const { id } of layerMetas) {
     byId.set(id, uniform(id === 'cot' ? 1 : initial).setName(`w_${id.replaceAll('-', '_')}`));
   }
+  const tweens = new Map(); // id → { from, to, t, duration }
 
   const weight = (id) => {
     const u = byId.get(id);
@@ -33,73 +36,83 @@ export function createWeights(layerMetas, initial = 1) {
 
   return {
     weight,
+    ids: [...byId.keys()],
+    /** Đặt NGAY (bỏ tween đang chạy): e2e, restore(), và test dùng. */
     set(id, v) {
       const u = weight(id);
       if (id === 'cot') return;
-      u.value = Math.min(Math.max(v, 0), 1);
+      tweens.delete(id);
+      u.value = clamp01(v);
     },
-    ids: [...byId.keys()],
+    /** Chuyển dần tới v trong `duration` giây; duration ≤ 0 thì đặt ngay. */
+    tween(id, v, duration = TWEEN_SECONDS) {
+      const u = weight(id);
+      if (id === 'cot') return;
+      if (duration <= 0) {
+        tweens.delete(id);
+        u.value = clamp01(v);
+        return;
+      }
+      tweens.set(id, { from: u.value, to: clamp01(v), t: 0, duration });
+    },
+    /** Giá trị lớp đang hướng tới: đích của tween đang chạy, hoặc giá trị hiện tại. */
+    target(id) {
+      const u = weight(id);
+      return tweens.get(id)?.to ?? u.value;
+    },
+    /** Mỗi khung: tiến mọi tween thêm dt giây. Trả true nếu còn tween đang chạy. */
+    step(dt) {
+      for (const [id, tw] of tweens) {
+        tw.t = Math.min(tw.t + dt, tw.duration);
+        byId.get(id).value = tw.from + (tw.to - tw.from) * ease(tw.t / tw.duration);
+        if (tw.t >= tw.duration) tweens.delete(id);
+      }
+      return tweens.size > 0;
+    },
   };
 }
 
 /**
- * Giá trị mặc định của núm. `value` có thể là hàm của env (tầng, mức, đêm nay…).
- * @param {{ value: any }} knob
- * @param {{ tier: string, level: string, budget: Record<string, number>, now: Date, mobile: boolean }} env
+ * EngineCtx của MỘT lần dựng (spec §8.4), cùng trọng số và env của núm. run.js và bộ dựng bức trong test
+ * (tests/helpers/fake-ctx.js) cùng gọi hàm này, nên test dựng bức đúng như trình duyệt.
+ * @param {object} p
+ * @param {import('../contracts/painting.js').PaintingMeta} p.meta
+ * @param {{ backend: 'webgpu'|'webgl2', renderer: any, scene: any, camera: any, u: object }} p.stage
+ * @param {'cao'|'vua'|'thap'} p.level
+ * @param {Record<string, number>} p.budget
+ * @param {boolean} p.mobile
+ * @param {boolean} p.reducedMotion
+ * @param {Date} p.now
+ * @param {boolean} [p.debug]
  */
-export function knobValue(knob, env) {
-  return typeof knob.value === 'function' ? knob.value(env) : knob.value;
-}
-
-/**
- * Trần của núm theo tầng: `max` là một số, hoặc `{ webgpu, webgl2 }`.
- * @param {{ max?: number | { webgpu: number, webgl2: number } }} knob
- * @param {'webgpu' | 'webgl2'} tier
- */
-export function knobMax(knob, tier) {
-  return knob.max !== null && typeof knob.max === 'object' ? knob.max[tier] : knob.max;
-}
-
-/** Đổi giá trị JS của một núm thành uniform. 'select' giữ CHỈ SỐ lựa chọn, 'color' giữ THREE.Color. */
-function knobUniform(layerId, knob, value) {
-  const kind = knob.kind ?? 'number';
-  if (kind === 'number' || kind === 'bool') return uniform(Number(value));
-  if (kind === 'select') {
-    const index = (knob.options ?? []).indexOf(value);
-    if (index < 0) throw new Error(`Núm "${layerId}.${knob.id}": "${value}" không có trong options`);
-    return uniform(index);
-  }
-  if (kind === 'color') return uniform(new Color(value));
-  throw new Error(`Núm "${layerId}.${knob.id}" có kind lạ: "${kind}"`);
-}
-
-/**
- * Uniform cho mọi núm 'uniform' của MỘT lớp, dựng từ khai báo tĩnh `export const knobs`.
- * Xưởng tạo uniform, lớp chỉ đọc qua ctx.knob(id). Kéo núm = đổi `.value`, không biên dịch lại.
- * Núm 'js' / 'rebuild' không có uniform: lớp xử lý chúng qua onKnob (GĐ 2).
- * @param {string} layerId
- * @param {object[]} knobs
- * @param {object} env
- */
-export function createKnobs(layerId, knobs, env) {
-  const uniforms = {};
-  for (const knob of knobs) {
-    if ((knob.via ?? 'uniform') !== 'uniform') continue;
-    uniforms[knob.id] = knobUniform(layerId, knob, knobValue(knob, env)).setName(uniformName(layerId, knob.id));
-  }
-  return {
-    knob(id) {
-      // Object.hasOwn: để knob('constructor') cũng báo lỗi thay vì trả hàm của Object.
-      if (!Object.hasOwn(uniforms, id)) throw new Error(`Lớp "${layerId}" không có núm uniform "${id}"`);
-      return uniforms[id];
-    },
-    uniforms,
+export function createCtx({ meta, stage, level, budget, mobile, reducedMotion, now, debug = false }) {
+  const hex = mergePalette(meta.palette);
+  const weights = createWeights(meta.layers);
+  /** @type {import('../contracts/runtime.js').EngineCtx} */
+  const ctx = {
+    tier: stage.backend,
+    level,
+    budget,
+    mobile,
+    reducedMotion,
+    now,
+    renderer: stage.renderer,
+    scene: stage.scene,
+    camera: stage.camera,
+    palette: { hex, color: (token) => new Color(hex[token]) },
+    u: stage.u,
+    weight: (id) => weights.weight(id),
+    debug,
   };
+  /** @type {import('../contracts/runtime.js').KnobEnv} */
+  const env = { tier: ctx.tier, level, budget, now, mobile };
+  return { ctx, weights, env };
 }
 
 /**
- * Dựng các lớp theo ĐÚNG thứ tự của painting.layers. Mỗi lớp nhận ctx cộng knob() của riêng nó,
- * và CÙNG một object shared (lớp trước ghi shared.<id>, lớp sau đọc).
+ * Dựng các lớp theo ĐÚNG thứ tự của painting.layers. Mỗi lớp nhận ctx cộng knob()/knobValue() của riêng nó,
+ * và CÙNG một object shared (lớp trước ghi shared.<id>, lớp sau đọc). Ngay sau createLayer, onKnob
+ * của lớp được nối vào bộ núm: núm 'js'/'rebuild' nào thiếu hàm xử lý thì báo lỗi ngay lúc dựng.
  * Nếu một lớp ném lỗi: gỡ các lớp đã dựng theo thứ tự ngược rồi ném lại lỗi gốc,
  * để run.js về tầng tĩnh mà không để sót object nào trong scene.
  * @returns {{ id: string, module: object, layer: object, knobs: ReturnType<typeof createKnobs> }[]}
@@ -109,8 +122,10 @@ export function buildLayers(modules, ctx, shared, env) {
   try {
     for (const module of modules) {
       const knobs = createKnobs(module.id, module.knobs ?? [], env);
-      const layer = module.createLayer({ ...ctx, knob: knobs.knob }, shared);
+      // knob(id): uniform của núm 'uniform'; knobValue(id): giá trị ban đầu của MỌI núm (kể cả 'js'/'rebuild').
+      const layer = module.createLayer({ ...ctx, knob: knobs.knob, knobValue: knobs.get }, shared);
       built.push({ id: module.id, module, layer, knobs });
+      knobs.bind(layer.onKnob);
     }
   } catch (err) {
     for (const { id, layer } of [...built].reverse()) {

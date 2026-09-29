@@ -5,7 +5,7 @@ import * as painting from '../../../src/paintings/ao-sen-dem/painting.js';
 import * as anhTrang from '../../../src/paintings/ao-sen-dem/layers/l2-anh-trang.js';
 import { MOON } from '../../../src/paintings/ao-sen-dem/parts/anh-trang-moon.js';
 import { moonPhase } from '../../../src/lib/astro/moon.js';
-import { knobValue } from '../../../src/engine/gpu/layers.js';
+import { knobValue } from '../../../src/engine/gpu/knob-set.js';
 import { NOW, buildPainting } from '../../helpers/fake-ctx.js';
 
 const build = (options) => buildPainting(painting, meta, { until: 'anh-trang', ...options });
