@@ -1,5 +1,6 @@
+// tests/unit/quality.test.js — chọn mức, ngân sách của bức, và bộ điều chỉnh có trễ chạy trên chuỗi khung giả.
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_LEVELS, LEVELS, budgetFor, isMobile, pickLevel } from '../../src/engine/quality.js';
+import { DEFAULT_LEVELS, FRAME_BUDGET_MS, LEVELS, budgetFor, createTuner, isMobile, pickLevel } from '../../src/engine/quality.js';
 
 const UA = {
   android: 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36',
@@ -67,5 +68,135 @@ describe('budgetFor', () => {
 
   it('mức lạ thì ném lỗi', () => {
     expect(() => budgetFor('sieu')).toThrow('sieu');
+  });
+});
+
+const DESKTOP = FRAME_BUDGET_MS.desktop;
+
+/**
+ * Cho bộ điều chỉnh "chạy" `seconds` giây. Khoảng giữa hai khung lấy từ gapFor(số nấc đang áp, i): như máy thật,
+ * hạ nấc thì khung nhanh lên. Thang giả có `steps` nấc; 'down' / 'up' / 'reset' đổi `applied` như ladder.js.
+ * Trả mọi quyết định kèm thời điểm (giây).
+ */
+function run(tuner, { seconds, gapFor, ladder, from = 0 }) {
+  const actions = [];
+  let t = from;
+  for (let i = 0; t < from + seconds * 1000; i++) {
+    t += gapFor(ladder.applied, i);
+    const action = tuner.sample(t, ladder);
+    if (!action) continue;
+    actions.push({ at: +(t / 1000).toFixed(2), action });
+    if (action === 'down') ladder.applied += 1;
+    else if (action === 'up') ladder.applied -= 1;
+    else ladder.applied = 0;
+  }
+  return { actions, end: t };
+}
+const kinds = (actions) => actions.map((a) => a.action);
+
+describe('createTuner (bộ điều chỉnh có trễ)', () => {
+  it('ngân sách: 60 khung/giây trên máy tính, 45 trên điện thoại', () => {
+    expect(FRAME_BUDGET_MS.desktop).toBeCloseTo(16.667, 3);
+    expect(FRAME_BUDGET_MS.mobile).toBeCloseTo(22.222, 3);
+  });
+
+  it('60 fps đều: không làm gì; không bao giờ nâng quá mức ban đầu (chưa hạ nấc nào)', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    expect(run(tuner, { seconds: 60, gapFor: () => DESKTOP, ladder: { applied: 0, steps: 4 } }).actions).toEqual([]);
+    const fast = createTuner({ budgetMs: DESKTOP });
+    expect(run(fast, { seconds: 60, gapFor: () => 1000 / 120, ladder: { applied: 0, steps: 4 } }).actions).toEqual([]);
+  });
+
+  it('40 fps: 2 giây khởi động + 2 cửa sổ quá tải thì hạ; đủ nhanh thì thử nâng MỘT lần, chậm lại thì hạ và khóa', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 0, steps: 4 };
+    // Máy giả: mỗi nấc bớt 4,5 ms; 2 nấc là về 16 ms (đủ 60 fps, không rớt khung nên trông như còn dư).
+    const { actions } = run(tuner, { seconds: 60, gapFor: (k) => Math.max(25 - k * 4.5, 16), ladder });
+    expect(kinds(actions)).toEqual(['down', 'down', 'up', 'down']);
+    expect(actions[0].at).toBeGreaterThanOrEqual(5.9);
+    expect(actions[0].at).toBeLessThan(6.2);
+    expect(ladder.applied).toBe(2);
+    expect(tuner.state().locked).toEqual([1]);
+  });
+
+  it('màn 60 Hz không rớt khung thì nâng lại sau 5 cửa sổ (0,7 × ngân sách không bao giờ tới được ở 60 Hz)', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 2, steps: 4 };
+    const { actions } = run(tuner, { seconds: 24, gapFor: () => DESKTOP, ladder });
+    expect(kinds(actions)).toEqual(['up', 'up']);
+    expect(actions[0].at).toBeGreaterThanOrEqual(11.9);
+    expect(actions[0].at).toBeLessThan(12.2);
+  });
+
+  it('có rớt khung (mỗi cửa sổ một khung 33 ms) thì không nâng, dù trung bình vẫn gần 16,7 ms', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 1, steps: 4 };
+    const { actions } = run(tuner, { seconds: 40, gapFor: (k, i) => (i % 100 === 50 ? 2 * DESKTOP : DESKTOP), ladder });
+    expect(actions).toEqual([]);
+  });
+
+  it('nâng một nấc rồi phải hạ lại ngay đúng nấc đó: khóa, không nâng nấc ấy nữa (không dao động)', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 1, steps: 4 };
+    // Máy giả chỉ chạy nổi 60 fps khi đã hạ 1 nấc.
+    const { actions } = run(tuner, { seconds: 90, gapFor: (k) => (k >= 1 ? DESKTOP : 25), ladder });
+    expect(kinds(actions)).toEqual(['up', 'down']);
+    expect(tuner.state().locked).toEqual([0]);
+    expect(ladder.applied).toBe(1);
+  });
+
+  it('khóa nhịp 30 fps (tiết kiệm pin): hạ hết thang, không nhanh hơn → trả lại hết, thôi hạ; hết khóa thì chạy lại', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 0, steps: 3 };
+    let gap = 1000 / 30;
+    const first = run(tuner, { seconds: 60, gapFor: () => gap, ladder });
+    expect(kinds(first.actions)).toEqual(['down', 'down', 'down', 'reset']);
+    expect(ladder.applied).toBe(0);
+    expect(tuner.state().capped).toBe(true);
+    // Cắm sạc: về 60 fps, hết khóa (không còn nấc nào để nâng). Rồi máy thật sự chậm (40 fps): lại hạ được.
+    gap = DESKTOP;
+    expect(run(tuner, { seconds: 10, gapFor: () => gap, ladder, from: first.end }).actions).toEqual([]);
+    expect(tuner.state().capped).toBe(false);
+    const again = run(tuner, { seconds: 6, gapFor: () => 25, ladder, from: first.end + 10_000 });
+    expect(kinds(again.actions)).toEqual(['down']);
+  });
+
+  it('khoảng giữa hai khung > 250 ms (tab ẩn, debugger) thì bỏ cả cửa sổ đang đo', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    // 40 fps nhưng cứ 1,5 giây lại có một khoảng 400 ms: không cửa sổ nào đo xong, nên không quyết gì.
+    const { actions } = run(tuner, { seconds: 40, gapFor: (k, i) => (i % 60 === 59 ? 400 : 25), ladder: { applied: 0, steps: 4 } });
+    expect(actions).toEqual([]);
+  });
+
+  it('canh (Sổ tay mở): chậm vừa phải thì để yên (số đo trung thực), quá tải nặng thì vẫn hạ, không bao giờ nâng', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 1, steps: 4 };
+    tuner.guard(true);
+    expect(tuner.state().guarding).toBe(true);
+    const slow = run(tuner, { seconds: 20, gapFor: () => 25, ladder }); // 40 fps: người xem đang thử, để yên
+    expect(slow.actions).toEqual([]);
+    const idle = run(tuner, { seconds: 20, gapFor: () => DESKTOP, ladder, from: slow.end }); // dư mà không nâng
+    expect(idle.actions).toEqual([]);
+    const heavy = run(tuner, { seconds: 7, gapFor: () => 50, ladder, from: idle.end }); // 20 fps: máy bị ép quá sức
+    expect(kinds(heavy.actions)).toEqual(['down']);
+    tuner.guard(false);
+    const normal = run(tuner, { seconds: 7, gapFor: () => 25, ladder, from: heavy.end });
+    expect(kinds(normal.actions)).toEqual(['down']);
+    expect(normal.actions[0].at - heavy.end / 1000).toBeGreaterThanOrEqual(5.9); // đổi chế độ: khởi động lại
+  });
+
+  it('điện thoại 45 fps (ngân sách 22,2 ms): không quá tải, cũng không dư (có rớt khung) → để yên', () => {
+    const tuner = createTuner({ budgetMs: FRAME_BUDGET_MS.mobile });
+    const pattern = [1000 / 60, 1000 / 60, 1000 / 30]; // trung bình 22,2 ms
+    const { actions } = run(tuner, { seconds: 60, gapFor: (k, i) => pattern[i % 3], ladder: { applied: 1, steps: 4 } });
+    expect(actions).toEqual([]);
+  });
+
+  it('màn 120 Hz dư nhiều (< 0,7 × ngân sách): nâng lần lượt từng nấc', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 2, steps: 4 };
+    const { actions } = run(tuner, { seconds: 30, gapFor: () => 1000 / 120, ladder });
+    expect(kinds(actions)).toEqual(['up', 'up']);
+    expect(ladder.applied).toBe(0);
   });
 });
