@@ -92,6 +92,7 @@ Ao Sen Đêm là **Bức 1**. Đèn kéo quân, Đông Hồ, Cung Quế về sau
 - Repo **public** trên GitHub cá nhân, deploy bằng GitHub Pages.
 - **(Bản 2)** Muốn về sau **dễ phát triển thêm** (§0).
 - **(Bản 2)** Muốn viết xong kế hoạch là **thực thi luôn** cho tới khi ra sản phẩm.
+- **(GĐ 3)** Muốn sản phẩm **hợp với nhiều loại phần cứng**, không ép phần cứng quá sức (các biện pháp ở §10).
 
 ### Giả định (bạn đã xem và không phản đối)
 - Project nằm ở `~/Documents/Projects/son-mai-anh-sang`.
@@ -338,6 +339,7 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
   Công tắc là uniform, không biên dịch lại. Vòm trời, trăng, đom đóm không có sương nên vẫn như cũ.
 - (GĐ 3) **Số đo:** `octaves` (số octave đang chạy = min(núm, trần)).
 - (GĐ 3) **Nấc `chi-tiet`:** trần số octave về 1.
+- (GĐ 3) **Trần núm theo mức** (§10): ở mức thấp, `octaves` kéo tối đa 3.
 - (GĐ 3) **Thơ của lớp:** *"Đêm qua ra đứng bờ ao / Trông cá cá lặn, trông sao sao mờ"* (ca dao).
 
 ### Lớp 4 · Mặt nước: phản chiếu và gợn sóng (`layers/l4-mat-nuoc.js`)
@@ -367,6 +369,7 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
     thí nghiệm "Độ phân giải 0.1" không làm gì; số đo `reflectionScale` là 0. Không có sen, lá hay đom đóm trong nước: đó là cái giá.
 - (GĐ 3) Ánh lóe trong kênh `emissive` (`mrtNode`) nhân `(1 − shared.suong.fogFactor)`: bóng trăng ở xa trong sương không bloom xuyên sương.
 - (GĐ 3) **Nấc `phan-chieu`:** trần độ phân giải phản chiếu nhân 0,5 (tối thiểu 0,15); hiệu lực = min(núm, trần). Mức thấp không có nấc này.
+- (GĐ 3) **Trần núm theo mức** (§10): `reflectionResolution` tối đa 1 ở mức cao, 0,6 ở mức khác (vẽ cả cảnh lần hai ở độ phân giải đầy đủ là quá sức máy yếu).
 - **Núm:** `amplitude`, `speed`, `decay`, `wavelength`, `distortion`, `fresnelPower` (uniform), `reflectionResolution` (js, 0.1–1).
 - **Phá:** *"Độ phân giải 0.1"* (`lowRes`, phản chiếu vỡ hạt), *"Tắt fresnel"* (`noFresnel`), *"Xem heightfield"* (`heightfield`: ảnh xám của độ cao gợn). Hai thí nghiệm sau là uniform bên trong node, không biên dịch lại. Số đo: `reflectionScale`.
 
@@ -409,6 +412,8 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
   Normal + `needsUpdate`, biên dịch lại một lần như "Normal phẳng"; con đang tắt thành đốm tối, con vẽ sau đè con vẽ trước).
 - (GĐ 3) **Số đo:** `count` (số con đang vẽ = min(núm, trần); ở chế độ CPU còn kẹp ở 5.000).
 - (GĐ 3) **Nấc `dom-dom`:** trần số con = nửa số mặc định của mức (tối thiểu 100).
+- (GĐ 3) **Trần núm theo mức** (§10): `count` tối đa = min(trần của tầng, trần của mức): cao 200.000, vừa 50.000, thấp 10.000;
+  WebGL2 không quá 20.000. Bộ đệm cấp phát theo đúng trần đó.
 - (GĐ 3) **Đường lùi:** biến thể CPU hiện chỉ bật tay qua thí nghiệm. Tự phát hiện compute WebGL2 hỏng trên máy thật để sau (§16).
 
 ### Lớp 6 · Phủ bóng: hậu kỳ (lớp dùng chung `src/engine/stock/phu-bong/`)
@@ -741,7 +746,8 @@ son-mai-anh-sang/
  * @property {'uniform'|'js'|'rebuild'} [via]   [0] mặc định 'uniform'; 'js'/'rebuild' xử lý ở Layer.onKnob [2]
  * @property {number|string|boolean|((env: KnobEnv) => any)} value   mặc định; hàm khi phụ thuộc mức/tầng/đêm nay
  * @property {number} [min]
- * @property {number | { webgpu: number, webgl2: number }} [max]   trần theo tầng
+ * @property {number | { webgpu: number, webgl2: number } | ((env: KnobEnv) => number)} [max]   trần theo tầng;
+ *                                 [3] hoặc hàm của env (như value): trần theo mức, núm không kéo được máy yếu quá sức
  * @property {number} [step]
  * @property {string[]} [options]  kind 'select': id các lựa chọn; uniform giữ chỉ số
  */
@@ -840,7 +846,7 @@ son-mai-anh-sang/
  * layers() · weight(id) → { value, target } · setWeight(id, v, { tween }) · knobs(layerId) · setKnob(layerId, knobId, v)
  * experiment(layerId, id) · toggleExperiment(layerId, id, on) · readouts(layerId) · stats() · snapshot() · restore(s)
  * [3] stats() thêm cpuMs · compare(layerId, id) → { off, on }, mỗi bên { ms, cpuMs } hoặc null khi chưa đo
- * [3] quality() → { level, steps: string[], paused, capped } · degrade() / upgrade() → Promise<boolean> (hạ/nâng tay MỘT nấc;
+ * [3] quality() → { level, steps: string[], guarding, capped } · degrade() / upgrade() → Promise<boolean> (hạ/nâng tay MỘT nấc;
  *     false khi không còn nấc) · onQuality(cb) báo mỗi lần nấc đổi (run.js vẽ lại huy hiệu)
  * Mọi hàm đổi trạng thái trả Promise, xong khi khung đã được vẽ lại (khi ?freeze đã dừng vòng lặp).
  * @typedef {Object} Studio */
@@ -886,7 +892,8 @@ Gỡ: disposer.closeAll() theo thứ tự NGƯỢC (loop → UI → tools → pi
 ```
 
 **(GĐ 3) Bộ điều chỉnh trong vòng lặp:** mỗi khung, `quality.sample(thời điểm rAF)` có thể trả lời "hạ một nấc" hay "nâng một nấc";
-`ladder.js` áp nấc đó rồi mới vẽ. Bộ điều chỉnh tạm dừng khi thanh lớp mở (run.js báo), tắt hẳn khi có `?freeze` (ảnh phải
+`ladder.js` áp nấc đó rồi mới vẽ. Khi thanh lớp mở, bộ điều chỉnh chuyển sang chế độ canh (run.js báo: chỉ hạ khi quá tải nặng),
+tắt hẳn khi có `?freeze` (ảnh phải
 tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (nấc là trạng thái của máy, không nằm trong snapshot).
 
 ### 8.6 Mỗi mối quan tâm chung nằm ở đâu
@@ -976,7 +983,7 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
 - Mỗi lần về tầng tĩnh, `reason` được ghi một trong các giá trị `'flag' | 'no-gpu' | 'chunk-load' | 'timeout' | 'frame-errors' | 'gpu-error' | 'device-lost' | 'error'`.
 - GĐ 2 thêm `layers()`, `setWeight(id, v)`, `snapshot()` và `restore()` qua `sma.expose()`, khi cảnh đã live. `expose()` trả hàm gỡ đúng các hàm đó (dựng lại cảnh thì gắn hàm mới). `setWeight` đặt ngay (không tween) và trả Promise xong khi khung đã được vẽ lại.
 - GĐ 2 thêm trạng thái `'lost'` (mất GPU lần đầu, đang chờ "Dựng lại cảnh"): e2e chờ `live`/`static` nên không coi `lost` là ổn định.
-- GĐ 3 thêm `quality()` (mức, các nấc đang hạ, đang tạm dừng hay không, có đang coi là bị khóa nhịp không), `degrade()` và
+- GĐ 3 thêm `quality()` (mức, các nấc đang hạ, đang canh hay không, có đang coi là bị khóa nhịp không), `degrade()` và
   `upgrade()` (hạ/nâng tay một nấc; Promise xong khi khung đã vẽ lại, trả `false` khi không còn nấc), và `stats()` (draw call,
   tam giác, ms mỗi khung, ms CPU của khung vừa vẽ). Cả bốn đi qua bàn thợ, như các hàm của GĐ 2.
 
@@ -1048,8 +1055,20 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
 2. **Trình duyệt khóa ở 30 fps** (Energy Saver của Chrome khi chạy pin, Low Power Mode của iPhone): hạ nấc nào cũng không nhanh hơn.
    Vì vậy khi đã hạ hết thang (từ lúc chưa hạ nấc nào) mà trung bình vẫn không nhanh hơn 10% so với lúc bắt đầu hạ, thì đó là nhịp
    bị khóa, không phải GPU yếu: trả lại mọi nấc và thôi hạ ("bị khóa nhịp"). Hết khóa khi trung bình về dưới ngân sách.
-3. **Sổ tay cố ý làm chậm** (tắt instancing, 200k đom đóm, CPU vs GPU): hạ nấc giữa bài học thì số đo sai và bài học hỏng.
-   Vì vậy bộ điều chỉnh tạm dừng khi thanh lớp mở, giữ nguyên các nấc đang có, và chạy lại (cửa sổ mới) khi thanh lớp đóng.
+3. **Sổ tay cố ý làm chậm** (tắt instancing, nhiều đom đóm, CPU vs GPU): hạ nấc vì chậm vừa phải thì số đo sai, bài học hỏng;
+   nhưng để máy bị ép quá sức thì trái mục tiêu hợp nhiều phần cứng. Vì vậy khi thanh lớp mở, bộ điều chỉnh chuyển sang chế độ
+   **canh**: chậm vừa phải thì để yên, chỉ hạ khi quá tải NẶNG (trung bình > 2,2 × ngân sách trong 2 cửa sổ), không bao giờ nâng.
+   Đóng thanh lớp thì về như thường (cửa sổ mới, có khởi động).
+
+**(GĐ 3) Không ép phần cứng quá sức** (Bao, GĐ 3: sản phẩm phải hợp nhiều loại máy):
+- **Trần 60 khung/giây** (`engine/gpu/clock.js#createFrameCap`, run.js): màn 90/120/144 Hz không bắt GPU vẽ gấp đôi. Mốc "đã vẽ"
+  tiến đều từng bước 1/60 s nên màn 90 Hz vẽ xen kẽ, trung bình vẫn 60; màn 60 Hz và máy chậm không bỏ khung nào. `?freeze`
+  vẫn tất định (đồng hồ đếm khung đã vẽ).
+- **Trần núm theo mức:** `Knob.max` có thể là hàm của env (hợp đồng thêm dạng tùy chọn, §8.4), như `value`. Bức 1 đặt trần theo
+  mức cho ba núm nặng nhất: số đom đóm, độ phân giải phản chiếu, số octave của sương (§6).
+- **Bộ điều chỉnh canh cả khi Sổ tay mở** (bẫy 3 ở trên), và **thí nghiệm có trần**: "CPU vs GPU" tối đa 5.000 con, "Tắt instancing"
+  tối đa 1.200/600/300 Mesh theo mức (GĐ 2).
+- **Mặc định nhẹ theo mức** (bảng trên): phản chiếu giả và không bóng ở mức thấp, octave sương 3/2/1, bóng tĩnh ở mọi mức.
 
 **(GĐ 3) Chi tiết:**
 - Khoảng giữa hai khung dài hơn 250 ms (tab bị ẩn, dừng ở debugger, biên dịch) thì bỏ cả cửa sổ đang đo. 2 giây đầu sau khi live
@@ -1144,7 +1163,11 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
 - **`quality` (GĐ 0):** bảng `pickLevel`, `isMobile`, `budgetFor`. **GĐ 3:** độ trễ không dao động qua lại, đúng thứ tự `ladder`, không nâng vượt mức ban đầu.
   - (GĐ 3) Bộ điều chỉnh chạy trên chuỗi thời điểm khung giả: 60 fps đều thì không làm gì; 40 fps thì hạ sau đúng 2 cửa sổ; màn
     60 Hz không rớt khung thì nâng lại sau 5 cửa sổ; nâng rồi phải hạ ngay thì khóa; khóa nhịp 30 fps thì hạ hết rồi trả lại hết
-    và thôi hạ; khoảng > 250 ms bỏ cửa sổ; tạm dừng không làm gì; 2 giây khởi động bị bỏ.
+    và thôi hạ; khoảng > 250 ms bỏ cửa sổ; chế độ canh để yên khi chậm vừa phải nhưng vẫn hạ khi quá tải nặng, không nâng;
+    2 giây khởi động bị bỏ.
+  - (GĐ 3) Trần 60 khung/giây (`createFrameCap`): màn 60 Hz dao động nhẹ và máy chậm không bỏ khung; màn 90/120/144 Hz vẽ
+    khoảng 60 khung mỗi giây; tab hiện lại sau lâu thì vẽ ngay, không vẽ dồn.
+- (GĐ 3) **`knob-set`:** `max` là hàm của env (trần theo mức) kẹp giá trị như `max` thường.
 - (GĐ 3) **`ladder`:** `'dpr'` nở đúng số nấc theo DPR thật (DPR 1 thì không có); mục không có lớp nào đưa ra thì bỏ qua; apply/revert
   theo kiểu ngăn xếp; `degrade()` hết nấc thì trả `false`.
 - (GĐ 3) **`studio`:** `compare()` tách số đo theo trạng thái của thí nghiệm, bỏ 0,25 s đầu sau mỗi lần đổi; `stats().cpuMs`.
@@ -1302,7 +1325,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | **0 · Nền móng** | Xem danh sách ngay dưới bảng | URL công khai chạy Ao Sen Đêm v0 trên cả 2 backend; `?static` hoạt động; unit, luật và hợp đồng đều qua; cổng e2e qua trong CI |
 | **1 · Ao sen đầu tiên ✨** | Lớp 1, 2, 4 hoàn chỉnh (gợn sóng xẻ trăng); đom đóm bản đơn giản; `setup`/`shared.js` (giờ mặc định điều khiển trăng); `input.js` + cử chỉ + tia + `ctx.u.pointer`; `CameraSpec.breathe`; `lib/tsl/noise.js`; `content.vi.js` (gợi ý) + lời mời; `ui/moon-svg.js` + `[data-moon]`; `?debug` Inspector và `?debug=stats` (`gpu/debug.js`); e2e `ao-sen-dem.spec.js` | "Phép màu" hiện rõ trên laptop và điện thoại; đã deploy |
 | **2 · Sổ tay** | Hoàn thiện `contracts/runtime.js`; núm `js`/`rebuild` + `onKnob`; thanh lớp, chế độ mài; Sổ tay 3 tab; Tweakpane (import động); code sống; nhãn chuyển sang content; tween trọng số; `snapshot`/`restore` + "Dựng lại cảnh"; `sma.expose()`; Phủ bóng chọn tone bằng `If` + đủ núm; tranh mẫu `_mau`; contract test đầy đủ; Phá cho lớp 1/2/4; e2e `setWeight` và Sổ tay | Bật/tắt lớp không khựng; test marker và hợp đồng qua |
-| **3 · Sương + Vàng lá GPU** | Lớp 3 hoàn chỉnh; lớp 5 compute + biến thể CPU; `degrade`, `quality.js` của bức và `ladder`; bộ điều chỉnh chất lượng chạy thật. Kèm theo (chốt khi lập kế hoạch GĐ 3): vuốt → sương xoáy; curl noise; thí nghiệm `compare` + ms CPU; `?level`; huy hiệu "hạ {n} nấc"; `__sma.quality/degrade/upgrade/stats`; mục hoãn của GĐ 2 (phản chiếu giả ở mức thấp, bóng tĩnh + khung bóng ôm sát, bỏ compute khi `w5 = 0`, đo draw call); Phụ lục A.29+; lượt màu cả bức so với poster | Điện thoại từ 45fps trở lên; mức cao ≤ 45 draw call; đã deploy |
+| **3 · Sương + Vàng lá GPU** | Lớp 3 hoàn chỉnh; lớp 5 compute + biến thể CPU; `degrade`, `quality.js` của bức và `ladder`; bộ điều chỉnh chất lượng chạy thật. Kèm theo (chốt khi lập kế hoạch GĐ 3): trần 60 khung/giây, trần núm theo mức, bộ điều chỉnh canh cả khi Sổ tay mở; vuốt → sương xoáy; curl noise; thí nghiệm `compare` + ms CPU; `?level`; huy hiệu "hạ {n} nấc"; `__sma.quality/degrade/upgrade/stats`; mục hoãn của GĐ 2 (phản chiếu giả ở mức thấp, bóng tĩnh + khung bóng ôm sát, bỏ compute khi `w5 = 0`, đo draw call); Phụ lục A.29+; lượt màu cả bức so với poster | Điện thoại từ 45fps trở lên; mức cao ≤ 45 draw call; đã deploy |
 | **4 · Phủ bóng + Kính mài** | Phủ bóng hoàn chỉnh (chặng `display`: LUT từ bảng màu, grain, vignette, FXAA; `tap`); `Tool` + Kính mài + Lột lớp dựng từ `views()`; `Dial` + `ui/dials.js` + thanh giờ; `?poster` + poster thật + og (`scripts/poster.js`); e2e "mài về cốt"; kiểm tra a11y; README gồm mục "Thêm một bức tranh mới" | Mọi e2e qua; đã deploy; README đầy đủ |
 | 5 · *(tùy chọn)* | Thả hoa đăng mang một dòng thơ; link "công thức" (`#r=`); "Từng sợi"; "Xem bản dịch" (WGSL/GLSL); tiếng đàn bầu tổng hợp (chỉ khi người xem bật); trăng làm thanh tiến độ | tùy |
 | 6 · *(mở rộng)* | Bức mới theo luật 7: Đèn kéo quân (shadow map vs gobo `atan(y, x)`), Đông Hồ (hạt compute), Cung Quế (SDF raymarch) | tùy |
@@ -1423,7 +1446,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 - **Phạm vi phình to.** Chưa đạt ngân sách FPS thì không thêm lớp; giai đoạn nào xong cũng phải deploy; giai đoạn 5 và 6 là tùy chọn.
 - **(GĐ 3) Bộ điều chỉnh đoán sai.** Nhịp rAF không phải thời gian GPU: nó bị khóa theo màn hình và theo chế độ tiết kiệm pin.
   - Luật "dư" tính cả trường hợp không rớt khung; nâng rồi phải hạ ngay thì khóa nấc; hạ hết mà không nhanh hơn thì trả lại hết (§10).
-  - Logic nằm trong một hàm thuần, test bằng chuỗi khung giả cho từng tình huống; tạm dừng khi Sổ tay mở; tắt khi `?freeze`.
+  - Logic nằm trong một hàm thuần, test bằng chuỗi khung giả cho từng tình huống; chỉ canh quá tải nặng khi Sổ tay mở; tắt khi `?freeze`.
   - Huy hiệu và `__sma.quality()` cho thấy máy đang hạ gì, nên người xem và Bao biết khi nó hạ.
 - **Máy của Bao đang tắt WebGL và dùng Node 20.** Kiểm tra `chrome://gpu`; cài Node 24 bằng fnm (§13). Tầng C giải thích cách bật lại tăng tốc phần cứng.
 
