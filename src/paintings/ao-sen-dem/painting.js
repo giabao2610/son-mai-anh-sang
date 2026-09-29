@@ -1,4 +1,4 @@
-// paintings/ao-sen-dem/painting.js — phần nặng của Bức 1: chồng lớp (cùng thứ tự với meta.layers) và camera.
+// paintings/ao-sen-dem/painting.js — phần nặng của Bức 1: chồng lớp (cùng thứ tự với meta.layers), camera, bảng chất lượng.
 import * as cot from './layers/l1-cot.js';
 import * as anhTrang from './layers/l2-anh-trang.js';
 import * as suong from './layers/l3-suong.js';
@@ -14,6 +14,9 @@ export const layers = [cot, anhTrang, suong, matNuoc, vangLa, phuBong];
 
 /** setup() chạy TRƯỚC mọi createLayer: giờ, hướng trăng, gợn sóng, xoáy sương, cử chỉ (shared.js). */
 export { setup } from './shared.js';
+
+/** Số theo mức (cao / vừa / thấp) và thứ tự hạ nấc của bộ điều chỉnh (quality.js). */
+export { quality } from './quality.js';
 
 /**
  * Dữ liệu thuần; xưởng dựng PerspectiveCamera + OrbitControls có giới hạn từ đây.

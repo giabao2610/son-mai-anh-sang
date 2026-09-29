@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 import { PerspectiveCamera, Scene, Vector2 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
 import { buildLayers, createCtx } from '../../src/engine/gpu/layers.js';
+import { budgetFor } from '../../src/engine/quality.js';
 
 /** "Bây giờ" mặc định của test: 21:00 giờ Việt Nam, ngày 18 tháng Tám năm Bính Ngọ. */
 export const NOW = new Date('2026-09-28T21:00:00+07:00');
@@ -45,11 +46,12 @@ export function makeEngineCtx(meta, { level = 'cao', budget = {}, now = NOW, red
 }
 
 /**
- * Dựng bức như run.js: setup(ctx) rồi buildLayers (cùng hàm của xưởng). `until` = id lớp cuối cần dựng.
+ * Dựng bức như run.js: ngân sách của mức (budgetFor, ghép bảng của bức), setup(ctx) rồi buildLayers (cùng hàm của xưởng).
+ * `until` = id lớp cuối cần dựng; `budget` ghi đè vài số của mức.
  * @returns {{ ctx: object, setup: object | undefined, shared: object, built: object[], layers: Record<string, object>, knobs: Record<string, object> }}
  */
-export function buildPainting(painting, meta, { until, ...options } = {}) {
-  const ctx = makeEngineCtx(meta, options);
+export function buildPainting(painting, meta, { until, budget = {}, ...options } = {}) {
+  const ctx = makeEngineCtx(meta, { ...options, budget: { ...budgetFor(options.level ?? 'cao', painting.quality), ...budget } });
   const setup = painting.setup?.(ctx);
   const shared = setup?.shared ?? {};
   const end = until ? painting.layers.findIndex((m) => m.id === until) + 1 : painting.layers.length;

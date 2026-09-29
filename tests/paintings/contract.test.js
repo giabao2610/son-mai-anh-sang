@@ -138,6 +138,27 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
     });
   });
 
+  it('quality (nếu có): đủ ba mức; ladder chỉ gồm dpr và nấc có thật của các lớp (ở mức cao); nấc gỡ ra thì số đo như cũ', async () => {
+    const { painting } = await loadPainting();
+    if (!painting.quality) return;
+    expect(Object.keys(painting.quality.levels).sort(), 'quality.levels phải có cao, vua, thap').toEqual(['cao', 'thap', 'vua']);
+    const { ladder } = painting.quality;
+    expect(new Set(ladder).size, `ladder có mục trùng: ${ladder.join(', ')}`).toBe(ladder.length);
+    const { built } = buildPainting(painting, meta, { level: 'cao' });
+    for (const entry of ladder.filter((e) => e !== 'dpr')) {
+      const dot = entry.indexOf('.');
+      const b = built.find((x) => x.id === entry.slice(0, dot));
+      expect(b, `ladder "${entry}": bức không có lớp "${entry.slice(0, dot)}"`).toBeTruthy();
+      const step = b.layer.degrade?.find((s) => s.id === entry.slice(dot + 1));
+      expect(step, `ladder "${entry}": lớp không đưa nấc này ở mức cao`).toBeTruthy();
+      const read = () => (b.layer.readouts ?? []).map((r) => r.get());
+      const before = read();
+      step.apply();
+      step.revert();
+      expect(read(), `nấc "${entry}" gỡ ra thì số đo phải về như cũ`).toEqual(before);
+    }
+  });
+
   describe('chữ (content) theo từng ngôn ngữ', () => {
     const palette = new Set(Object.values(mergePalette(meta.palette)).map((h) => h.toUpperCase()));
 
