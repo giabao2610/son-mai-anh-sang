@@ -186,10 +186,39 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
       expect(tuner.state().capped).toBe(true);
       tuner.guard(guarding);
       // Người xem kéo 200.000 đom đóm: khung 50 ms (20 fps). Hạ một nấc là về lại nhịp bị khóa 33 ms: dừng ở đó.
-      const heavy = run(tuner, { seconds: 20, gapFor: (k) => (k === 0 ? 50 : 1000 / 30), ladder, from: locked.end });
+      // (Phản ứng đầu tiên; trả lại nấc sau đó do hai test dưới giữ.)
+      const heavy = run(tuner, { seconds: 12, gapFor: (k) => (k === 0 ? 50 : 1000 / 30), ladder, from: locked.end });
       expect(kinds(heavy.actions), `canh: ${guarding}`).toEqual(['down']);
       expect(tuner.state().capped).toBe(true);
     }
+  });
+
+  it('đang "bị khóa nhịp": hạ vì quá tải thật, người xem trả núm về thì trả lại nấc (vẫn khóa); Sổ tay còn mở thì chờ', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 0, steps: 3 };
+    const locked = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, ladder });
+    expect(tuner.state().capped).toBe(true);
+    tuner.guard(true);
+    const heavy = run(tuner, { seconds: 8, gapFor: (k) => (k === 0 ? 100 : 1000 / 30), ladder, from: locked.end });
+    expect(kinds(heavy.actions)).toEqual(['down']);
+    // Người xem trả số đom đóm về: nấc vừa hạ không còn cần nữa.
+    const open = run(tuner, { seconds: 20, gapFor: () => 1000 / 30, ladder, from: heavy.end });
+    expect(open.actions).toEqual([]);
+    tuner.guard(false);
+    const closed = run(tuner, { seconds: 20, gapFor: () => 1000 / 30, ladder, from: open.end });
+    expect(kinds(closed.actions)).toEqual(['up']);
+    expect(ladder.applied).toBe(0);
+    expect(tuner.state().capped).toBe(true);
+  });
+
+  it('đang "bị khóa nhịp": trả lại nấc mà quá tải lại ngay thì hạ lại và khóa nấc ấy (không dao động)', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 0, steps: 3 };
+    const locked = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, ladder });
+    const heavy = run(tuner, { seconds: 60, gapFor: (k) => (k === 0 ? 100 : 1000 / 30), ladder, from: locked.end });
+    expect(kinds(heavy.actions)).toEqual(['down', 'up', 'down']);
+    expect(tuner.state().locked).toEqual([0]);
+    expect(ladder.applied).toBe(1);
   });
 
   it('mốc "lúc bắt đầu hạ" không dùng lại mốc cũ: hạ ở 25 ms rồi nâng về hết; sau đó Sổ tay mở hạ từ 50 ms còn 38 ms → đóng Sổ tay vẫn giữ nấc', () => {

@@ -72,7 +72,8 @@ export function budgetFor(level, qualitySpec) {
  * 2. Hạ hết thang mà không nhanh hơn lúc bắt đầu hạ thì nhịp đang bị khóa: trả lại hết ('reset') rồi thôi hạ.
  *    Mốc "lúc bắt đầu hạ" ghi ở nấc đầu tiên (cả khi đang canh) và bỏ khi đã nâng về hết.
  *    Hết khóa khi nhịp nhanh hẳn lên (≤ 1,05 × ngân sách như "dư vừa", hay nhanh hơn nhịp bị khóa ÷ 1,25). Còn khóa
- *    mà chậm hẳn hơn nhịp bị khóa (× 1,25, 2 cửa sổ liền) thì là quá tải thật: vẫn hạ, để về lại nhịp ấy.
+ *    mà chậm hẳn hơn nhịp bị khóa (× 1,25, 2 cửa sổ liền) thì là quá tải thật: vẫn hạ, để về lại nhịp ấy; về lại
+ *    đúng nhịp bị khóa 5 cửa sổ liền (người xem trả núm về) thì trả dần các nấc đó, Sổ tay mở thì chờ.
  * 3. guard(true) khi Sổ tay mở: người xem cố ý làm chậm để học (tắt instancing, nhiều đom đóm), nên chậm vừa phải
  *    thì để yên cho số đo trung thực; nhưng quá tải NẶNG (> ngân sách × 2,2) thì vẫn hạ, để máy không bị ép quá sức.
  *    Lúc canh không bao giờ nâng.
@@ -93,6 +94,7 @@ export function createTuner({ budgetMs, ...options }) {
   let capped = false; // nhịp đang bị khóa: không hạ nữa, trừ khi chậm hẳn hơn nhịp bị khóa
   let capAvg = null; // trung bình lúc nhận ra nhịp bị khóa
   let beyondRun = 0; // số cửa sổ liền nhau chậm hẳn hơn nhịp bị khóa
+  let calmRun = 0; // số cửa sổ liền nhau đúng nhịp bị khóa (lúc đang bị khóa)
   let lastUp = null; // { index, windowNo } của lần nâng gần nhất
   const locked = new Set();
 
@@ -100,6 +102,29 @@ export function createTuner({ budgetMs, ...options }) {
     gaps = [];
     total = 0;
   };
+  /** Hạ lại đúng nấc vừa nâng, ngay trong vài cửa sổ: khóa nấc ấy (chống dao động). */
+  const lockIfBounced = (applied) => {
+    if (lastUp && lastUp.index === applied && windowNo - lastUp.windowNo <= o.lockWithin) locked.add(applied);
+  };
+
+  /**
+   * Còn bị khóa nhịp. Chậm hẳn hơn nhịp bị khóa (người xem kéo núm nặng) là quá tải thật: hạ để về lại nhịp ấy.
+   * Về lại đúng nhịp bị khóa đủ lâu (người xem trả núm về): trả dần các nấc đã hạ lúc khóa; Sổ tay mở thì chờ.
+   */
+  function whileCapped(applied, steps) {
+    if (beyondRun >= o.downAfter && applied < steps) {
+      beyondRun = 0;
+      calmRun = 0;
+      lockIfBounced(applied);
+      return 'down';
+    }
+    if (!guarding && calmRun >= o.upAfter && applied > 0 && !locked.has(applied - 1)) {
+      calmRun = 0;
+      lastUp = { index: applied - 1, windowNo };
+      return 'up';
+    }
+    return null;
+  }
 
   /** Quyết định ở cuối mỗi cửa sổ. */
   function decide(avg, drops, applied, steps) {
@@ -109,28 +134,25 @@ export function createTuner({ budgetMs, ...options }) {
     spareRun = spare ? spareRun + 1 : 0;
     if (capped) {
       beyondRun = avg > capAvg * o.beyond ? beyondRun + 1 : 0;
-      if (avg <= budgetMs * o.near || avg < capAvg / o.beyond) {
-        capped = false; // hết khóa (cắm sạc, tắt tiết kiệm pin; màn 59,94 Hz hay rớt lẻ một khung vẫn tính): chạy lại
-        beyondRun = 0;
-      } else {
-        // Còn khóa mà chậm hẳn hơn nhịp bị khóa (người xem kéo núm nặng): quá tải thật, hạ để về lại nhịp ấy.
-        if (beyondRun < o.downAfter || applied >= steps) return null;
-        beyondRun = 0;
-        return 'down';
-      }
+      calmRun = avg <= capAvg * o.near ? calmRun + 1 : 0;
+      if (avg > budgetMs * o.near && avg >= capAvg / o.beyond) return whileCapped(applied, steps);
+      capped = false; // hết khóa (cắm sạc, tắt tiết kiệm pin; màn 59,94 Hz hay rớt lẻ một khung vẫn tính): chạy lại
+      beyondRun = 0;
+      calmRun = 0;
     }
     if (overRun >= o.downAfter) {
       overRun = 0;
       spareRun = 0;
       if (applied < steps) {
         if (applied === 0) descentStart = avg; // mốc của lần hạ này, ghi cả khi đang canh (Sổ tay mở)
-        if (lastUp && lastUp.index === applied && windowNo - lastUp.windowNo <= o.lockWithin) locked.add(applied);
+        lockIfBounced(applied);
         return 'down';
       }
       if (!guarding && descentStart !== null && avg >= descentStart * o.gain) {
         capped = true;
         capAvg = avg;
         beyondRun = 0;
+        calmRun = 0;
         descentStart = null;
         return 'reset';
       }
@@ -182,6 +204,8 @@ export function createTuner({ budgetMs, ...options }) {
       last = null;
       overRun = 0;
       spareRun = 0;
+      beyondRun = 0;
+      calmRun = 0;
       clear();
     },
     /** @returns {{ guarding: boolean, capped: boolean, locked: number[] }} */

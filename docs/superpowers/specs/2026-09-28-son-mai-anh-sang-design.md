@@ -372,8 +372,9 @@ ngả nâu cánh gián như đáy poster. Mọi số là giá trị mặc địn
 - **Mức thấp:** "phản chiếu giả" bằng màu trời cộng vệt trăng tính theo công thức, không render cảnh lần thứ hai.
   - (GĐ 3) Mức thấp (`budget.reflection === 0`) không tạo reflector. Phản chiếu giả = `shared.suong.sky(hướng phản xạ)` cộng đĩa trăng
     phản xạ: `pow(saturate(dot(hướng phản xạ, hướng trăng)), độ gắt)` nhân màu trăng và trọng số của lớp Ánh trăng. Pháp tuyến gợn và
-    noise làm đĩa trăng vỡ thành lối trăng lấp lánh, đúng cách lối trăng thật hình thành. Ở mức này, núm `reflectionResolution` và
-    thí nghiệm "Độ phân giải 0.1" không làm gì; số đo `reflectionScale` là 0. Không có sen, lá hay đom đóm trong nước: đó là cái giá.
+    noise làm đĩa trăng vỡ thành lối trăng lấp lánh, đúng cách lối trăng thật hình thành. Ở mức này không có thí nghiệm "Độ phân
+    giải 0.1" (không có ảnh nào để hạ; review GĐ 3); hai núm `distortion` và `reflectionResolution` không làm gì, tab Hiểu nói rõ
+    điều đó; số đo `reflectionScale` là 0. Không có sen, lá hay đom đóm trong nước: đó là cái giá.
 - (GĐ 3) Ánh lóe trong kênh `emissive` (`mrtNode`) nhân `(1 − shared.suong.fogFactor)`: bóng trăng ở xa trong sương không bloom xuyên sương.
 - (GĐ 3) **Nấc `phan-chieu`:** trần độ phân giải phản chiếu nhân 0,5 (tối thiểu 0,15); hiệu lực = min(núm, trần). Mức thấp không có nấc này.
 - (GĐ 3) **Trần núm theo mức** (§10): `reflectionResolution` tối đa 1 ở mức cao, 0,6 ở mức khác (vẽ cả cảnh lần hai ở độ phân giải đầy đủ là quá sức máy yếu).
@@ -1069,7 +1070,8 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
    bị khóa, không phải GPU yếu: trả lại mọi nấc và thôi hạ ("bị khóa nhịp"). Hết khóa khi nhịp nhanh hẳn lên: trung bình
    ≤ 1,05 × ngân sách (cùng dung sai với "dư vừa", nên màn 59,94 Hz hay một khung rớt lẻ vẫn thoát được), hoặc nhanh hơn nhịp
    bị khóa ÷ 1,25. Còn khóa mà chậm hẳn hơn nhịp bị khóa (× 1,25, 2 cửa sổ liền: người xem kéo 200.000 đom đóm) là quá tải
-   thật: vẫn hạ, kể cả khi Sổ tay mở, để về lại nhịp bị khóa rồi dừng.
+   thật: vẫn hạ, kể cả khi Sổ tay mở, để về lại nhịp bị khóa rồi dừng. Về lại đúng nhịp bị khóa 5 cửa sổ liền (người xem trả
+   núm về) thì trả dần các nấc ấy, như luật "dư" (Sổ tay mở thì chờ; trả mà quá tải lại ngay thì khóa nấc ấy).
 3. **Sổ tay cố ý làm chậm** (tắt instancing, nhiều đom đóm, CPU vs GPU): hạ nấc vì chậm vừa phải thì số đo sai, bài học hỏng;
    nhưng để máy bị ép quá sức thì trái mục tiêu hợp nhiều phần cứng. Vì vậy khi thanh lớp mở, bộ điều chỉnh chuyển sang chế độ
    **canh**: chậm vừa phải thì để yên, chỉ hạ khi quá tải NẶNG (trung bình > 2,2 × ngân sách trong 2 cửa sổ), không bao giờ nâng.
