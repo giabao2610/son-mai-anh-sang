@@ -45,6 +45,7 @@ export default {
         'paintings/ao-sen-dem/layers/l2-anh-trang.js',
         'paintings/ao-sen-dem/parts/anh-trang-moon.js',
         'paintings/ao-sen-dem/parts/anh-trang-paint.js',
+        'paintings/ao-sen-dem/parts/anh-trang-shadow.js',
       ],
     },
     {

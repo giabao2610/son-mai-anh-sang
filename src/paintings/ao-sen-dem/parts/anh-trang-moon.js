@@ -34,6 +34,7 @@ export function createMoon(ctx, w, phase) {
   const light = tint.mul(albedo).mul(lit.mul(MOON.glow).add(0.02)); // 0.02: ánh đất mờ trên phần tối
 
   const material = new MeshStandardNodeMaterial({ roughness: 1, metalness: 0 });
+  material.fog = false; // trăng ở rất xa mà vẫn phải rõ: sương của lớp Sương không phủ lên nó (quầng trăng vẽ trên trời)
   material.colorNode = mix(color(hex.datSet), vec3(0), w);
   material.emissiveNode = light.mul(w);
   const moon = new Mesh(new SphereGeometry(MOON.radius, 48, 24), material);

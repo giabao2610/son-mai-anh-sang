@@ -12,10 +12,12 @@ import { color, mix, uniform, uv, vec3 } from 'three/tsl';
 import { moonPhase } from '../../../lib/astro/moon.js';
 import { createMoon } from '../parts/anh-trang-moon.js';
 import { paintCot } from '../parts/anh-trang-paint.js';
+import { LIGHT_DISTANCE, createShadowWatch } from '../parts/anh-trang-shadow.js';
 
 export const id = 'anh-trang';
 
 const SHADOW = { cao: 1024, vua: 512, thap: 0 }; // cỡ shadow map theo mức; 0 = tắt bóng
+const SHADOW_FLOOR = 256; // nấc 'bong' chia đôi cỡ map nhưng không xuống dưới số này
 const BIAS = { bias: -0.0005, normal: 0.03 };
 
 export const knobs = [
@@ -88,20 +90,41 @@ export function createLayer(ctx, shared) {
 
   // MỘT shadow map, bật một lần lúc dựng theo mức (cao 1024 / vừa 512 / thấp tắt).
   // castShadow, receiveShadow, shadowMap.enabled nằm trong cache key: không bao giờ đổi lúc chạy.
-  // Cỡ map và bias thì đổi được: ShadowNode đọc chúng mỗi khung (setSize, reference), không biên dịch lại.
+  // Bias đổi được bất cứ lúc nào (ShadowNode đọc bằng reference() khi tra bóng). Shadow map thì TĨNH (GĐ 3): chỉ vẽ lại
+  // khi hướng trăng, độ nở hoa hay bố cục của Cốt đổi, hoặc khi cỡ map đổi (ShadowNode gọi setSize lúc vẽ lại).
   const shadowOn = (ctx.budget.shadow ?? SHADOW[ctx.level]) > 0;
   let bias = ctx.knobValue('shadowBias');
   let acne = false; // thí nghiệm "Bias = 0" đang bật
+  let size = ctx.knobValue('shadowMapSize'); // ý người xem (núm)
+  let cap = Infinity; // trần của máy (nấc 'bong' của bộ điều chỉnh); hiệu lực = min(núm, trần)
+  const applySize = () => {
+    const s = Math.min(size, cap);
+    moonlight.shadow.mapSize.set(s, s);
+    moonlight.shadow.needsUpdate = true;
+  };
+  let before = Infinity; // trần trước khi áp nấc (bộ điều chỉnh gỡ nấc thì trả đúng số này)
+  const halveShadow = {
+    id: 'bong',
+    apply() {
+      before = cap;
+      cap = Math.max(SHADOW_FLOOR, Math.min(size, cap) / 2);
+      applySize();
+    },
+    revert() {
+      cap = before;
+      applySize();
+    },
+  };
+  let watch = null;
   if (shadowOn) {
-    const size = ctx.knobValue('shadowMapSize');
     ctx.renderer.shadowMap.enabled = true;
     moonlight.castShadow = true;
-    moonlight.shadow.mapSize.set(size, size);
-    Object.assign(moonlight.shadow.camera, { left: -55, right: 55, top: 55, bottom: -55, near: 1, far: 320 });
+    applySize();
     moonlight.shadow.bias = bias;
     moonlight.shadow.normalBias = BIAS.normal;
     for (const o of cot.casters) o.castShadow = true;
     for (const o of cot.receivers) o.receiveShadow = true;
+    watch = createShadowWatch({ shadow: moonlight.shadow, dir: shared.moon.dir, cot });
   }
 
   const lantern = createLantern(ctx, cot, w);
@@ -116,7 +139,8 @@ export function createLayer(ctx, shared) {
       const k = w.value;
       const dir = shared.moon.dir.value;
       moon.update(dir);
-      moonlight.position.copy(dir).multiplyScalar(150);
+      moonlight.position.copy(dir).multiplyScalar(LIGHT_DISTANCE);
+      watch?.check(); // có gì đổi thì khớp lại khung bóng và vẽ lại shadow map MỘT lần
       moonlight.intensity = MOONLIGHT * k;
       fill.intensity = SKY_FILL * k;
       // Đèn xưởng lui dần khi trăng lên: ở trọng số 1 chỉ còn ánh sáng của bức.
@@ -127,7 +151,10 @@ export function createLayer(ctx, shared) {
     },
     onKnob: {
       candleIntensity: (v) => { candleIntensity = v; }, // @knob candleIntensity
-      shadowMapSize: (v) => moonlight.shadow.mapSize.set(v, v), // @knob shadowMapSize
+      shadowMapSize: (v) => { // @knob shadowMapSize
+        size = v;
+        applySize();
+      },
       shadowBias: (v) => { // @knob shadowBias
         bias = v;
         if (!acne) moonlight.shadow.bias = v;
@@ -147,6 +174,8 @@ export function createLayer(ctx, shared) {
       { id: 'redCandle', toggle: (on) => { lantern.swap.value = on ? 1 : 0; } },
     ],
     readouts: [{ id: 'shadowMap', get: () => (shadowOn ? moonlight.shadow.mapSize.x : 0), unit: 'px' }],
+    // Nấc của bộ điều chỉnh: chia đôi cỡ shadow map (không dưới 256). Mức thấp tắt bóng nên không có nấc này.
+    degrade: shadowOn ? [halveShadow] : [],
     dispose() {
       if (disposed) return;
       disposed = true;
