@@ -5,7 +5,7 @@ import { GESTURE, createGestureTracker } from './gesture.js';
 /**
  * Nghe pointer events trên canvas, phân loại bằng gesture.js, rồi xếp cử chỉ vào HÀNG ĐỢI.
  * run.js lấy hàng đợi ra ở đầu mỗi khung (drain), nên cử chỉ được xử lý TRONG khung:
- * có lưới bắt lỗi của khung, và thời điểm của gợn sóng khớp đồng hồ (kể cả ?freeze).
+ * có lưới bắt lỗi của khung, và thứ bức ghi lại theo cử chỉ (lúc bắt đầu, vị trí) khớp đồng hồ (kể cả ?freeze).
  * @param {{ canvas: any, camera: any, controls?: any, pointer: any, win?: any }} opts
  *   pointer: uniform vec2 (ctx.u.pointer), NDC của con trỏ, cho shader nào cần.
  * @returns {{ drain: () => object[], onFirst: (fn: () => void) => void, dispose: () => void }}
@@ -16,6 +16,7 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
   const queue = [];
   let first = null; // hàm gọi một lần ở lần chạm đầu tiên (shell hiện lời mời)
   let holdTimer = null;
+  let holdingCamera = false; // input.js đã khóa camera (đang giữ tay): chỉ khi đó mới được trả camera lại
 
   const ndcOf = (x, y) => {
     const r = canvas.getBoundingClientRect();
@@ -33,8 +34,14 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
         g.velocity = { x: (e.velocity.x / r.width) * 2, y: -(e.velocity.y / r.height) * 2 }; // NDC mỗi giây
       }
       // Đang giữ tay thì camera đứng yên: ngón tay thuộc về bức (OrbitControls bỏ qua khi enabled = false).
-      if (controls && e.kind === 'hold-start') controls.enabled = false;
-      if (controls && e.kind === 'hold-end') controls.enabled = true;
+      if (controls && e.kind === 'hold-start') {
+        controls.enabled = false;
+        holdingCamera = true;
+      }
+      if (controls && e.kind === 'hold-end' && holdingCamera) {
+        controls.enabled = true;
+        holdingCamera = false;
+      }
       queue.push(g);
     }
   };
@@ -58,6 +65,7 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
     emit(tracker.move(p));
   };
   const onUp = (e) => {
+    if (e.button > 0) return; // nhả nút phụ (chuột phải) không kết thúc cái giữ của nút chính
     clearHold();
     emit(tracker.up(point(e)));
   };
@@ -78,8 +86,13 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
   // Pha capture: chạy TRƯỚC OrbitControls (gắn listener lúc dựng camera, trước input.js). Nhờ vậy khi ngón thứ hai
   // chạm xuống giữa lúc giữ, camera đã được thả kịp để OrbitControls nhận ngón đó (chụm zoom), thay vì bỏ qua nó.
   for (const [type, fn] of listeners) canvas.addEventListener(type, fn, { capture: true });
-  // Rời trang giữa lúc giữ (chuyển tab, có cuộc gọi) thì không bao giờ có pointerup: coi như thả tay.
+  // Rời trang giữa lúc giữ (chuyển tab, có cuộc gọi, khóa máy) thì không bao giờ có pointerup: coi như thả tay.
+  // Điện thoại chuyển app thường chỉ ẩn trang (visibilitychange), không có blur.
+  const onHidden = () => {
+    if (win.document?.hidden) onCancel();
+  };
   win.addEventListener('blur', onCancel);
+  win.document?.addEventListener('visibilitychange', onHidden);
 
   return {
     /** Lấy hết cử chỉ đang chờ (hàng đợi rỗng sau lần gọi). */
@@ -91,7 +104,10 @@ export function createInput({ canvas, camera, controls = null, pointer, win = wi
       clearHold();
       for (const [type, fn] of listeners) canvas.removeEventListener(type, fn, { capture: true });
       win.removeEventListener('blur', onCancel);
-      if (controls) controls.enabled = true;
+      win.document?.removeEventListener('visibilitychange', onHidden);
+      // Chỉ trả lại camera nếu chính input.js đã khóa nó (đang giữ tay lúc gỡ); ai khác khóa thì để yên.
+      if (controls && holdingCamera) controls.enabled = true;
+      holdingCamera = false;
       queue.length = 0;
     },
   };

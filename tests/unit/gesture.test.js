@@ -24,6 +24,16 @@ describe('createGestureTracker', () => {
     expect(g.up(p(40, 60, 700))).toEqual([{ kind: 'hold-end', x: 40, y: 60 }]);
   });
 
+  it('thả tay sau holdMs mà chưa kịp poll (máy bận): vẫn là một lần giữ, không phải chạm', () => {
+    const g = createGestureTracker();
+    g.down(p(10, 10, 0));
+    expect(g.up(p(12, 10, GESTURE.holdMs + 50))).toEqual([
+      { kind: 'hold-start', x: 10, y: 10 },
+      { kind: 'hold-end', x: 12, y: 10 },
+    ]);
+    expect(g.state).toBe('idle');
+  });
+
   it('kéo (lệch quá tapPx) là của camera: không phát cử chỉ nào, cũng không thành giữ', () => {
     const g = createGestureTracker();
     g.down(p(0, 0, 0));
