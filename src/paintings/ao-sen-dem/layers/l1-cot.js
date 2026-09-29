@@ -12,7 +12,7 @@ import { mulberry32, randRange } from '../../../lib/random.js';
 import { fillLeaves, makeLeafGeometry, placeLeaves } from '../parts/cot-leaf.js';
 import { BUDS, FLOWERS, fillCores, fillPetals, makeCores, makePetalGeometry, makePetals, placeFlowers } from '../parts/cot-flower.js';
 import { fillReeds, fillStems, makeReeds, makeStems } from '../parts/cot-reeds.js';
-import { LOOSE_MAX, looseLeaves, tightenLeaves, vertexCount } from '../parts/cot-lab.js';
+import { LOOSE_MAX, createLooseLeaves, vertexCount } from '../parts/cot-lab.js';
 
 export const id = 'cot';
 
@@ -100,15 +100,15 @@ export function createLayer(ctx, shared) {
   hemi.position.set(-1, 2, 0.5); // trời hơi lệch trái: một bên lòng lá sáng hơn bên kia, đọc ra hình lõm
 
   const objects = [leaves, standingLeaves, petals, cores, stems, reeds]; // mảng SỐNG: thí nghiệm thêm/bớt tại chỗ
-  let loose = null; // Group các Mesh rời khi bật "Tắt instancing"
-  const loosen = () => {
-    loose = looseLeaves(ctx.scene, leaves, LOOSE_MAX[ctx.level]);
-    objects.push(loose);
-  };
-  const tighten = () => {
-    tightenLeaves(ctx.scene, leaves, loose);
-    objects.splice(objects.indexOf(loose), 1);
-    loose = null;
+  let loose = null; // các Mesh rời của "Tắt instancing": tạo lần đầu bật, giữ tới khi gỡ lớp (bật/tắt chỉ hiện/giấu)
+  let looseOn = false;
+  const setLoose = (on) => {
+    if (on) loose ??= createLooseLeaves(ctx.scene, leaves, LOOSE_MAX[ctx.level]);
+    if (!loose || on === looseOn) return;
+    looseOn = on;
+    loose.show(on);
+    if (on) objects.push(loose.group);
+    else objects.splice(objects.indexOf(loose.group), 1);
   };
   /** Ghi bố cục theo núm vào các InstancedMesh sẵn có (vài ms), không biên dịch lại shader. */
   const apply = () => {
@@ -119,10 +119,7 @@ export function createLayer(ctx, shared) {
     fillCores(cores, pond.flowers);
     fillStems(stems, [...pond.flowers, ...pond.buds, ...pond.standing]);
     fillReeds(reeds, mulberry32(SEED + params.seed * 7919 + 3));
-    if (loose) {
-      tighten();
-      loosen();
-    }
+    if (looseOn) loose.sync();
   };
   const rebuild = (key) => (v) => {
     params[key] = v;
@@ -163,13 +160,7 @@ export function createLayer(ctx, shared) {
       wireframe: (v) => setAll('wireframe', v), // @knob wireframe
     },
     experiments: [
-      {
-        id: 'noInstancing',
-        toggle(on) {
-          if (on && !loose) loosen();
-          if (!on && loose) tighten();
-        },
-      },
+      { id: 'noInstancing', toggle: (on) => setLoose(on) },
       { id: 'flatNormals', toggle: (on) => setAll('flatShading', on) },
     ],
     readouts: [
@@ -179,7 +170,8 @@ export function createLayer(ctx, shared) {
     dispose() {
       if (disposed) return;
       disposed = true;
-      if (loose) tighten();
+      setLoose(false); // rút Group khỏi objects: vòng dưới gỡ hình và material, mà Group thì không có
+      loose?.dispose();
       ctx.scene.remove(...objects, hemi);
       for (const o of objects) {
         o.dispose();

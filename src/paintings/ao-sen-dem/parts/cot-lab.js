@@ -6,36 +6,50 @@ export const LOOSE_MAX = { cao: 1200, vua: 600, thap: 300 };
 
 /**
  * "Tắt instancing": vẽ lá nổi bằng từng Mesh riêng, cùng hình và cùng material, nên mỗi lá thành MỘT draw call
- * (instancing gom cả nghìn lá vào một). Giấu InstancedMesh, thêm một Group vào scene và trả Group đó.
+ * (instancing gom cả nghìn lá vào một). Các Mesh rời được tạo MỘT lần (tới trần của mức) và giữ tới khi gỡ lớp;
+ * bật/tắt chỉ hiện/giấu Group. Tạo mới mỗi lần bật thì renderer phải dựng lại shader và pipeline (khựng), còn bỏ đi
+ * mà không dispose thì rò RenderObject (mỗi Mesh một cái ở mỗi pass, chỉ gỡ khi Mesh bắn 'dispose').
  * receiveShadow chép từ lá instanced: nó nằm trong cache key của material, lệch là phải biên dịch thêm.
  * @param {import('three/webgpu').Scene} scene
  * @param {import('three/webgpu').InstancedMesh} leaves
  * @param {number} max
  */
-export function looseLeaves(scene, leaves, max) {
+export function createLooseLeaves(scene, leaves, max) {
   const group = new Group();
-  const n = Math.min(leaves.count, max);
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < max; i++) {
     const mesh = new Mesh(leaves.geometry, leaves.material);
-    leaves.getMatrixAt(i, mesh.matrix);
     mesh.matrixAutoUpdate = false; // ma trận chép sẵn từ instance, không tính lại từ position/rotation/scale
     mesh.receiveShadow = leaves.receiveShadow;
     group.add(mesh);
   }
-  leaves.visible = false;
+  group.visible = false;
   scene.add(group);
-  return group;
-}
 
-/**
- * Gỡ Group của looseLeaves và hiện lại lá instanced. Hình và material dùng chung nên không dispose, nhưng từng Mesh
- * thì phải: renderer giữ một RenderObject (kèm bộ đệm uniform) cho mỗi Mesh ở mỗi pass, chỉ gỡ khi Mesh bắn 'dispose'.
- */
-export function tightenLeaves(scene, leaves, group) {
-  scene.remove(group);
-  for (const mesh of group.children) mesh.dispose();
-  group.clear();
-  leaves.visible = true;
+  /** Chép ma trận của lá instanced sang các Mesh rời: đủ số lá hiện có (tới trần), phần dư giấu đi. */
+  const sync = () => {
+    const n = Math.min(leaves.count, max);
+    group.children.forEach((mesh, i) => {
+      mesh.visible = i < n;
+      if (i < n) leaves.getMatrixAt(i, mesh.matrix);
+    });
+  };
+  return {
+    group,
+    sync,
+    /** Bật: hiện các Mesh rời (ma trận mới nhất), giấu InstancedMesh. Tắt: ngược lại. */
+    show(on) {
+      if (on) sync();
+      group.visible = on;
+      leaves.visible = !on;
+    },
+    /** Gỡ lớp: dispose từng Mesh rời. Hình và material dùng chung với lá instanced nên lớp tự gỡ chúng. */
+    dispose() {
+      scene.remove(group);
+      for (const mesh of group.children) mesh.dispose();
+      group.clear();
+      leaves.visible = true;
+    },
+  };
 }
 
 /**

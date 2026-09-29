@@ -185,34 +185,48 @@ describe('l1-cot · Phá (GĐ 2)', () => {
       experiment(layers.cot, 'noInstancing').toggle(true); // bật hai lần vẫn chỉ một Group
       const group = layers.cot.objects.at(-1);
       expect(group.isGroup).toBe(true);
-      expect(group.children).toHaveLength(Math.min(leaves.count, LOOSE_MAX[level]));
+      expect(group.children.filter((m) => m.visible)).toHaveLength(Math.min(leaves.count, LOOSE_MAX[level]));
       expect(group.children[0].material).toBe(leaves.material);
       expect(ctx.scene.children).toContain(group);
-      expect(leaves.visible).toBe(false);
-      // Renderer giữ một RenderObject (kèm bộ đệm uniform) cho mỗi Mesh ở mỗi pass, và chỉ gỡ khi object bắn
-      // 'dispose': tắt thí nghiệm mà không dispose Mesh rời là rò bộ nhớ sau mỗi lần bật/tắt.
-      const meshes = [...group.children];
-      const disposed = new Set();
-      for (const mesh of meshes) mesh.addEventListener('dispose', () => disposed.add(mesh));
-      let sharedDisposed = 0;
-      for (const owner of [leaves.geometry, leaves.material]) owner.addEventListener('dispose', () => { sharedDisposed += 1; });
+      expect([group.visible, leaves.visible]).toEqual([true, false]);
       experiment(layers.cot, 'noInstancing').toggle(false);
-      expect(disposed.size).toBe(meshes.length);
-      expect(sharedDisposed).toBe(0); // hình và material dùng chung với lá instanced: không dispose
       expect(layers.cot.objects).toHaveLength(6);
-      expect(ctx.scene.children).not.toContain(group);
-      expect(leaves.visible).toBe(true);
+      expect([group.visible, leaves.visible]).toEqual([false, true]);
     }
   });
 
-  it('"Tắt instancing" đang bật mà đổi số lá: dựng lại các Mesh rời theo số lá mới; dispose gỡ cả chúng', () => {
-    const { ctx, layers, knobs } = build({ level: 'thap' });
+  it('"Tắt instancing" giữ các Mesh rời qua mỗi lần bật/tắt (không dựng lại shader, không rò); gỡ lớp thì dispose chúng', () => {
+    const { ctx, layers } = build({ level: 'thap' });
+    const [leaves] = layers.cot.objects;
+    const toggle = (on) => experiment(layers.cot, 'noInstancing').toggle(on);
+    toggle(true);
+    const group = layers.cot.objects.at(-1);
+    const meshes = [...group.children];
+    toggle(false);
+    toggle(true);
+    // Cùng những Mesh đó: Mesh mới là RenderObject mới, và dispose hết Mesh cũ thì renderer nhả luôn pipeline của
+    // chúng, nên lần bật sau phải dựng lại shader (khựng). Giữ nguyên bộ Mesh thì chỉ việc hiện/giấu.
+    expect(layers.cot.objects.at(-1)).toBe(group);
+    expect(group.children).toEqual(meshes);
+    const disposed = new Set();
+    for (const mesh of meshes) mesh.addEventListener('dispose', () => disposed.add(mesh));
+    layers.cot.dispose();
+    expect(disposed.size).toBe(meshes.length); // renderer giữ RenderObject của Mesh tới khi nó bắn 'dispose'
+    expect(ctx.scene.children).toHaveLength(0);
+    expect(leaves.parent).toBeNull();
+  });
+
+  it('"Tắt instancing" đang bật mà đổi số lá: các Mesh rời chép lại ma trận theo số lá mới', () => {
+    const { layers, knobs } = build({ level: 'thap' });
     experiment(layers.cot, 'noInstancing').toggle(true);
     knobs.cot.set('leafCount', 100);
+    const [leaves] = layers.cot.objects;
     const group = layers.cot.objects.at(-1);
-    expect(group.children).toHaveLength(layers.cot.objects[0].count);
-    layers.cot.dispose();
-    expect(ctx.scene.children).toHaveLength(0);
+    const shown = group.children.filter((m) => m.visible);
+    expect(shown).toHaveLength(leaves.count);
+    const m = new Matrix4();
+    leaves.getMatrixAt(leaves.count - 1, m);
+    expect(shown.at(-1).matrix.equals(m)).toBe(true);
   });
 
   it('"Normal phẳng": flatShading trên mọi material của Cốt', () => {
