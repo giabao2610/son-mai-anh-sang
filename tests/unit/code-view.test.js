@@ -55,12 +55,14 @@ describe('createCodeView', () => {
     const code = createCodeView(document, { t, load });
     await code.show(['a/parts/p.js']);
     const view = code.el.querySelector('.code-view');
-    const line = view.querySelector('[data-line="7"]');
+    const line = view.querySelector('[data-line="4"]'); // dòng ĐẦU TIÊN của núm glow (4 và 7): khung cuộn tới nó
     Object.defineProperty(line, 'offsetTop', { value: 300 });
     Object.defineProperty(view, 'clientHeight', { value: 120 });
+    let scrolled = null; // jsdom không có layout, không giữ scrollTop: bắt giá trị được ghi vào
+    Object.defineProperty(view, 'scrollTop', { get: () => scrolled ?? 0, set: (v) => { scrolled = v; } });
     code.light('glow');
     expect(spy).not.toHaveBeenCalled();
-    expect(view.scrollTop).toBeGreaterThanOrEqual(0);
+    expect(scrolled).toBe(260); // dòng sáng ở 1/3 trên của khung: 300 - 120 / 3
     delete Element.prototype.scrollIntoView;
   });
 
