@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createClock } from '../../src/engine/gpu/clock.js';
+import { MAX_FPS, createClock, createFrameCap } from '../../src/engine/gpu/clock.js';
 
 describe('createClock — chế độ freeze (tất định)', () => {
   it('khung 1 có t = 1/60; dt luôn 1/60; ms bị bỏ qua', () => {
@@ -63,5 +63,41 @@ describe('createClock — đồng hồ thật', () => {
     expect(clock.tick(1000)).toEqual({ t: 0, dt: 0 });
     expect(clock.tick(1010).dt).toBeCloseTo(0.01, 12);
     expect(clock.frames).toBe(3);
+  });
+});
+
+describe('createFrameCap — tối đa 60 khung/giây', () => {
+  /** Chạy bộ chặn trong `seconds` giây ở nhịp màn hình `hz` (có dao động `jitter` ms); trả số khung được vẽ. */
+  const drawn = (hz, { seconds = 10, jitter = 0 } = {}) => {
+    const cap = createFrameCap();
+    let n = 0;
+    for (let i = 0; i < hz * seconds; i++) {
+      const wobble = jitter * Math.sin(i * 1.7);
+      if (cap.ready((i * 1000) / hz + wobble)) n += 1;
+    }
+    return n / seconds;
+  };
+
+  it('màn 60 Hz (kể cả dao động ±1 ms) và máy chậm: không bỏ khung nào', () => {
+    expect(MAX_FPS).toBe(60);
+    expect(drawn(60, { jitter: 1 })).toBe(60);
+    expect(drawn(45)).toBe(45);
+    expect(drawn(30)).toBe(30);
+  });
+
+  it('màn 90, 120, 144 Hz: vẽ khoảng 60 khung mỗi giây', () => {
+    for (const hz of [90, 120, 144]) {
+      expect(drawn(hz), `${hz} Hz`).toBeGreaterThanOrEqual(59);
+      expect(drawn(hz), `${hz} Hz`).toBeLessThanOrEqual(61);
+    }
+  });
+
+  it('tab vừa hiện lại sau lâu: vẽ ngay rồi đi tiếp, không vẽ dồn; ms không phải số thì vẽ', () => {
+    const cap = createFrameCap();
+    expect(cap.ready(0)).toBe(true);
+    expect(cap.ready(5000)).toBe(true);
+    expect(cap.ready(5008)).toBe(false);
+    expect(cap.ready(5017)).toBe(true);
+    expect(cap.ready(undefined)).toBe(true);
   });
 });

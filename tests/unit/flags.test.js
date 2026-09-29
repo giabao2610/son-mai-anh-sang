@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parseAt, readFlags } from '../../src/engine/flags.js';
+import { LEVELS } from '../../src/engine/quality.js';
 
 // 21:00 ngày 28/09/2026 giờ Việt Nam = 14:00 UTC.
 const VN_21H = '2026-09-28T14:00:00.000Z';
@@ -9,7 +10,7 @@ afterEach(() => vi.restoreAllMocks());
 describe('readFlags: cờ bật/tắt', () => {
   it('không có cờ nào thì mọi thứ tắt', () => {
     expect(readFlags('')).toEqual({
-      static: false, webgl: false, force3d: false, debug: false, at: null, freeze: false, poster: false,
+      static: false, webgl: false, force3d: false, debug: false, at: null, freeze: false, poster: false, level: null,
     });
   });
 
@@ -41,6 +42,24 @@ describe('readFlags: cờ bật/tắt', () => {
     expect(readFlags('?freeze=1.5').freeze).toBe(true);
     expect(readFlags('?freeze=0').freeze).toBe(false);
     expect(readFlags('?webgl').freeze).toBe(false);
+  });
+});
+
+describe('?level: ép mức chất lượng', () => {
+  it('đúng tên một mức thì nhận; sai hay thiếu thì null', () => {
+    for (const level of LEVELS) expect(readFlags(`?level=${level}`).level).toBe(level);
+    expect(readFlags('?level=sieu').level).toBeNull();
+    expect(readFlags('?level').level).toBeNull();
+    expect(readFlags('?webgl').level).toBeNull();
+  });
+
+  it('có ?debug thì cảnh báo khi ?level sai; không có ?debug thì im lặng', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    readFlags('?level=sieu');
+    expect(warn).not.toHaveBeenCalled();
+    readFlags('?debug&level=sieu');
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('?level');
   });
 });
 

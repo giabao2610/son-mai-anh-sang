@@ -1,9 +1,54 @@
-// engine/gpu/scene.js — dựng MỘT cảnh trên một sân khấu: ctx → setup → lớp → pipeline → input → bàn thợ; và hàm vẽ một khung.
-import { isMobile, pickLevel, budgetFor } from '../quality.js';
+// engine/gpu/scene.js — dựng MỘT cảnh trên một sân khấu: ctx → setup → lớp → pipeline → thang nấc → input → bàn thợ; và hàm vẽ một khung.
+import { FRAME_BUDGET_MS, budgetFor, createTuner, isMobile, pickLevel } from '../quality.js';
 import { createCtx, buildLayers, ensureEmissive } from './layers.js';
 import { createPipeline } from './pipeline.js';
+import { createLadder } from './ladder.js';
 import { createStudio } from './studio.js';
 import { createInput } from './input.js';
+
+/**
+ * Bộ điều chỉnh của một cảnh: bộ quyết định (tuner, hàm thuần) + thang nấc (ladder, chạm GPU).
+ * tuner = null khi ?freeze: ảnh phải tất định, chỉ hạ/nâng tay (__sma) được.
+ */
+function createQuality({ level, ladder, tuner }) {
+  const listeners = new Set();
+  let guarding = false;
+  const state = () => ({ level, steps: ladder.ids(), guarding, capped: tuner?.state().capped ?? false });
+  const changed = () => {
+    for (const cb of listeners) cb(state());
+  };
+  const act = (action) => {
+    let done = true;
+    if (action === 'down') done = ladder.down();
+    else if (action === 'up') done = ladder.up();
+    else ladder.reset();
+    if (done) changed();
+    return done;
+  };
+  return {
+    state,
+    degrade: () => act('down'),
+    upgrade: () => act('up'),
+    /** Mỗi khung, trước khi vẽ: bộ quyết định nói hạ / nâng / trả lại hết thì áp ngay. */
+    sample(ms) {
+      const action = tuner?.sample(ms, ladder);
+      if (action) act(action);
+    },
+    /**
+     * Thanh lớp mở: người xem cố ý làm chậm để học (tắt instancing, nhiều đom đóm), nên bộ điều chỉnh chỉ CANH:
+     * chậm vừa phải thì để yên cho số đo trung thực, quá tải nặng thì vẫn hạ để máy không bị ép quá sức.
+     */
+    guard(on) {
+      guarding = on;
+      tuner?.guard(on);
+      changed();
+    },
+    onChange(cb) {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+  };
+}
 
 /**
  * run.js gọi hàm này một lần khi mở trang, và thêm một lần nữa nếu người xem bấm "Dựng lại cảnh" sau khi mất GPU.
@@ -15,7 +60,7 @@ import { createInput } from './input.js';
  * @param {ReturnType<import('./disposer.js').createDisposer>} p.disposer
  * @param {import('../contracts/runtime.js').Painting} p.painting
  * @param {import('../contracts/painting.js').PaintingMeta} p.meta
- * @param {{ debug?: any }} p.flags
+ * @param {{ debug?: any, freeze?: boolean | number, level?: 'cao'|'vua'|'thap'|null }} p.flags
  * @param {Date} p.now
  * @param {boolean} p.reducedMotion
  * @param {Window} p.win
@@ -23,8 +68,8 @@ import { createInput } from './input.js';
 export function buildScene({ stage, disposer, painting, meta, flags, now, reducedMotion, win }) {
   stage.useCamera(painting.camera);
   const mobile = isMobile(win.navigator);
-  // Mức chọn theo backend THẬT (three có thể đã lùi WebGPU → WebGL2).
-  const level = pickLevel({ tier: stage.backend, mobile });
+  // Mức chọn theo backend THẬT (three có thể đã lùi WebGPU → WebGL2); ?level ép một mức khác (xem mức thấp trên máy tính).
+  const level = flags.level ?? pickLevel({ tier: stage.backend, mobile });
   const budget = budgetFor(level, painting.quality);
   stage.setDpr(budget.dpr);
 
@@ -41,6 +86,10 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
   });
   const pipeline = createPipeline({ renderer: stage.renderer, scene: stage.scene, camera: stage.camera, layers, weight: ctx.weight });
   disposer.add(() => pipeline.dispose());
+  // Thang nấc dựng SAU pipeline: nấc của lớp dùng chung (bloom) chạm vào node mà pipeline vừa dựng.
+  const ladder = createLadder({ ladder: painting.quality?.ladder, layers, stage, dpr: budget.dpr });
+  const tuner = flags.freeze ? null : createTuner({ budgetMs: mobile ? FRAME_BUDGET_MS.mobile : FRAME_BUDGET_MS.desktop });
+  const quality = createQuality({ level, ladder, tuner });
 
   // Con trỏ → cử chỉ (hàng đợi, xử lý đầu mỗi khung). Kéo là của camera; công cụ học (GĐ 4) nhận trước bức.
   const input = createInput({ canvas: stage.renderer.domElement, camera: stage.camera, controls: stage.controls, pointer: stage.u.pointer, win });
@@ -75,16 +124,20 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     env, // trần của núm theo tầng và theo mức (knob-set.js#knobMax)
     tweenSeconds: reducedMotion ? 0 : undefined, // giảm chuyển động: lớp bật/tắt ngay, không mờ dần
     redraw,
+    quality,
   });
 
   return {
     level,
     studio,
     input,
+    quality,
     /** Biên dịch trước với đúng render target + MRT của pass, trong lúc poster còn hiện. */
     compile: () => pipeline.compile(),
-    /** Một khung: đồng hồ → cử chỉ → setup.update → layer.update → tween trọng số → camera → render → số đo. */
+    /** Một khung: nấc → đồng hồ → cử chỉ → setup.update → layer.update → tween trọng số → camera → render → số đo. */
     step(ms) {
+      const start = win.performance.now();
+      quality.sample(ms ?? start);
       const { t, dt } = stage.tick(ms);
       for (const g of input.drain()) setup?.onGesture?.(g);
       setup?.update?.(dt, t);
@@ -93,7 +146,8 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
       stage.breathe(t);
       stage.controls?.update();
       pipeline.render();
-      studio.measure(stage.renderer.info, win.performance.now());
+      const end = win.performance.now();
+      studio.measure(stage.renderer.info, end, end - start); // ms CPU: luồng chính bận bao lâu cho khung này
     },
     /** run.js gọi khi vòng lặp dừng ở khung N của ?freeze=N. */
     freeze() {
