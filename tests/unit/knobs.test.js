@@ -66,6 +66,15 @@ describe('mountKnobs', () => {
     pane.dispose();
   });
 
+  it('refresh() chỉ đọc lại giá trị, không phải người xem đổi núm: không gọi onChange (kể cả khi giá trị khác)', () => {
+    const { onChange, pane } = mount();
+    // Tweakpane phát 'change' khi refresh() thấy giá trị khác. Núm áp hỏng thì Sổ tay refresh về giá trị cũ: nếu coi
+    // đó là một lần sửa, lớp sẽ dựng lại thêm một lần và dòng báo lỗi bị xóa ngay trước khi kịp hiện.
+    pane.refresh({ size: 0.25, count: 400, tone: 'none', rim: '#000000', wire: true });
+    expect(onChange).not.toHaveBeenCalled();
+    pane.dispose();
+  });
+
   it("núm 'rebuild': onChange ngay khi đổi xong (checkbox là một lần thả tay)", () => {
     const { blade, onChange, pane } = mount();
     const box = blade('wire').querySelector('input[type="checkbox"]');

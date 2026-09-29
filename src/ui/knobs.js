@@ -33,6 +33,9 @@ export const appliesNow = (knob, last) => knob.via !== 'rebuild' || last;
 export function mountKnobs(container, { knobs, values, labels = {}, onChange, onHover = () => {} }) {
   const pane = new Pane({ container });
   const params = { ...values };
+  // refresh() chép giá trị từ bàn thợ vào, và Tweakpane phát 'change' cho mỗi giá trị khác đi: đó không phải người
+  // xem đổi núm. Coi là một lần sửa thì lớp dựng lại thêm lần nữa, và dòng báo "áp không được" bị xóa ngay.
+  let syncing = false;
 
   for (const knob of knobs) {
     const text = labels[knob.id];
@@ -48,6 +51,7 @@ export function mountKnobs(container, { knobs, values, labels = {}, onChange, on
     if (knob.kind === 'color') opts.view = 'color';
     const binding = pane.addBinding(params, knob.id, opts);
     binding.on('change', (ev) => {
+      if (syncing) return;
       onHover(knob.id);
       if (appliesNow(knob, ev.last)) onChange(knob.id, ev.value);
     });
@@ -63,7 +67,12 @@ export function mountKnobs(container, { knobs, values, labels = {}, onChange, on
     /** Đọc lại giá trị từ bàn thợ (sau restore, hay sau khi lớp tự kẹp giá trị). */
     refresh(next) {
       Object.assign(params, next);
-      pane.refresh();
+      syncing = true;
+      try {
+        pane.refresh();
+      } finally {
+        syncing = false;
+      }
     },
     dispose() {
       pane.dispose();
