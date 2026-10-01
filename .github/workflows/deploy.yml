@@ -51,6 +51,8 @@ jobs:
         with:
           name: e2e-results
           path: e2e/.results/
+          # e2e/.results là thư mục ẩn: upload-artifact (từ v4.4) mặc định bỏ file ẩn, nên trước đây không lượt nào có artifact.
+          include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
 
@@ -95,6 +97,7 @@ jobs:
         with:
           name: e2e-results-webgpu
           path: e2e/.results/
+          include-hidden-files: true # thư mục ẩn, như ở job build
           if-no-files-found: ignore
           retention-days: 7
 
