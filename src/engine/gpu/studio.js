@@ -2,6 +2,7 @@
 import { knobMax } from './knob-set.js';
 import { TWEEN_SECONDS } from './layers.js';
 import { createMeter } from './meter.js';
+import { createDialSet } from './dial-set.js';
 
 /** Cảnh không có hộp đồ nghề (test): không có công cụ nào. */
 const NO_TOOLS = Object.freeze({
@@ -36,10 +37,12 @@ const NO_QUALITY = Object.freeze({
  * @param {{ state: () => object, degrade: () => boolean, upgrade: () => boolean, onChange: (cb: Function) => Function }} [p.quality]
  *   bộ điều chỉnh của cảnh (scene.js): mức, nấc đang hạ, hạ/nâng tay một nấc
  * @param {{ list: () => { id: string, on: boolean }[], set: (id: string | null) => void }} [p.toolbox]  công cụ học (toolbox.js)
+ * @param {ReturnType<typeof createDialSet>} [p.dials]   núm của cả bức (dial-set.js)
  * @returns {ReturnType<typeof createMeter> & object}  measure() và gpu() của bộ đo: scene.js đưa số vào mỗi khung
  */
 export function createStudio({
   meta, layers, weights, env, redraw = () => {}, tweenSeconds = TWEEN_SECONDS, quality = NO_QUALITY, toolbox = NO_TOOLS,
+  dials = createDialSet(),
 }) {
   const byId = new Map(layers.map((b) => [b.id, b]));
   const names = new Map(meta.layers.map((l) => [l.id, l.name]));
@@ -173,24 +176,34 @@ export function createStudio({
       return settle(() => toolbox.set(id));
     },
 
+    /** Núm của cả bức (GĐ 4): [{ id, min, max, step, value, text, note }] (text cũng là aria-valuetext của thanh trượt). */
+    dials: () => dials.list(),
+    /** Đổi một Dial (kẹp theo min/max/step); xong khi khung đã vẽ lại. */
+    setDial(id, v) {
+      return settle(() => dials.set(id, v));
+    },
+
     /**
-     * Trạng thái tác phẩm dạng JSON (spec §16): { weights: { id: số }, knobs: { 'layerId.knobId': giá trị } }.
-     * Trọng số lấy ĐÍCH của tween: snapshot giữa lúc đang phủ vẫn ra đúng ý người xem.
+     * Trạng thái tác phẩm dạng JSON (spec §16): { weights: { id: số }, knobs: { 'layerId.knobId': giá trị } }, và (GĐ 4)
+     * dials: { dialId: số } khi bức có Dial. Trọng số lấy ĐÍCH của tween: snapshot giữa lúc đang phủ vẫn ra đúng ý người xem.
      */
     snapshot() {
       const knobs = {};
       for (const { id, knobs: set } of layers) {
         for (const [knobId, value] of Object.entries(set.values())) knobs[`${id}.${knobId}`] = value;
       }
-      return { weights: Object.fromEntries(weights.ids.map((id) => [id, weights.target(id)])), knobs };
+      const snap = { weights: Object.fromEntries(weights.ids.map((id) => [id, weights.target(id)])), knobs };
+      if (dials.size > 0) snap.dials = dials.snapshot();
+      return snap;
     },
     /**
      * Áp lại một snapshot: trọng số đặt ngay; núm nào khác giá trị hiện tại thì set (chờ lần lượt, vì núm
      * 'rebuild' có thể dựng lại hình). Id lạ (lớp hay núm không còn) hay núm áp không được thì bỏ qua kèm cảnh báo:
      * "Dựng lại cảnh" gọi hàm này, và một núm hỏng không được kéo cả cảnh về tầng tĩnh (spec §9).
      */
-    async restore({ weights: w = {}, knobs = {} } = {}) {
+    async restore({ weights: w = {}, knobs = {}, dials: dialValues = {} } = {}) {
       try {
+        dials.restore(dialValues);
         for (const [id, v] of Object.entries(w)) {
           if (byId.has(id)) weights.set(id, v);
           else console.warn(`restore: bỏ qua trọng số của lớp lạ "${id}"`);

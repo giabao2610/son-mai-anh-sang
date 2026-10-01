@@ -13,6 +13,13 @@ import vangLaDiagram from './diagrams/vang-la.svg?raw';
  */
 export default {
   hint: 'Chạm vào mặt nước',
+  // Thanh giờ (Dial 'gio' của shared.js). Ghi chú 'daytime' chỉ hiện khi đang là ban ngày và thanh chưa bị kéo đi.
+  dials: {
+    gio: {
+      label: 'Giờ',
+      notes: { daytime: 'Bây giờ đang là ban ngày, nên ao sen mượn 21:00 tối nay. Kéo thanh để xem các giờ khác của đêm.' },
+    },
+  },
   layers: {
     cot: {
       understand:

@@ -8,6 +8,7 @@ import { createLadder } from './ladder.js';
 import { createStudio } from './studio.js';
 import { createInput } from './input.js';
 import { createToolbox } from './toolbox.js';
+import { createDialSet } from './dial-set.js';
 
 /**
  * Bộ điều chỉnh của một cảnh: bộ quyết định (tuner, hàm thuần) + thang nấc (ladder, chạm GPU) + bộ đo GPU (gpu-timer).
@@ -179,6 +180,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     redraw,
     quality,
     toolbox,
+    dials: createDialSet(setup?.dials ?? []), // núm của cả bức (Bức 1: thanh giờ)
   });
 
   return {

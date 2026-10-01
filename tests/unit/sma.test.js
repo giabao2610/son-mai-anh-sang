@@ -55,7 +55,7 @@ describe('studioApi (GĐ 4): các hàm của bàn thợ mà __sma lộ ra', () =
     let studio = null;
     const api = studioApi(() => studio);
     expect([api.layers(), api.snapshot(), api.quality(), api.stats(), api.setWeight('x', 0)]).toEqual([[], null, null, null, undefined]);
-    expect([api.tools(), api.setTool('kinh')]).toEqual([[], undefined]);
+    expect([api.tools(), api.setTool('kinh'), api.dials(), api.setDial('gio', 27)]).toEqual([[], undefined, [], undefined]);
     studio = {
       layers: () => [{ id: 'cot', name: 'Cốt', knobs: [] }],
       weight: () => ({ value: 1, target: 1 }),

@@ -10,7 +10,7 @@
  * @property {object} [shared]          object dùng chung trong bức (thiếu thì xưởng tạo {}) → tham số thứ 2 của createLayer
  * @property {Dial[]} [dials]           [4] núm của CẢ BỨC (Bức 1: 'gio'); xưởng vẽ thanh trượt
  * @property {(g: Gesture) => void} [onGesture]   cử chỉ mà không công cụ nào dùng
- * @property {(dt: number, t: number) => void} [update]   mỗi khung, TRƯỚC các lớp
+ * @property {(dt: number, t: number) => void} [update]   mỗi khung, TRƯỚC các lớp. [4] update(0, t) như Layer.update
  * @property {() => void} [dispose]     gọi 2 lần vẫn an toàn
  */
 /** Dữ liệu thuần; xưởng dựng PerspectiveCamera + OrbitControls có giới hạn.
@@ -100,7 +100,7 @@
  * @property {number} min
  * @property {number} max
  * @property {number} step
- * @property {(v: number) => string} [format]   29.5 → '05:30'
+ * @property {(v: number) => string} [format]   29.5 → '05:30'; [4] cũng là aria-valuetext của thanh trượt
  * @property {() => string | null} [note]        khóa ghi chú trong content.dials[id].notes ('daytime')
  */
 /** @typedef {Object} Gesture   [1] xưởng giữ 'drag' để xoay camera
@@ -153,8 +153,9 @@
  */
 /** @typedef {EngineCtx & LayerCtxExtra} LayerCtx   [0] */
 
-/** Trạng thái tác phẩm dạng JSON (spec §16): trọng số và núm khác mặc định; GĐ 4 thêm dials.
- * @typedef {{ weights: Record<string, number>, knobs: Record<string, any> }} Snapshot   [2] khóa núm là 'layerId.knobId'
+/** Trạng thái tác phẩm dạng JSON (spec §16): trọng số và núm; [4] dials: { dialId: số } (bức không có Dial thì bỏ trống).
+ * @typedef {{ weights: Record<string, number>, knobs: Record<string, any>, dials?: Record<string, number> }} Snapshot
+ *   [2] khóa núm là 'layerId.knobId'
  */
 /** Một bên của thí nghiệm 'compare' [3]: trung bình trượt. [4] gpuMs: null khi máy không đo được thời gian GPU.
  * @typedef {{ ms: number, cpuMs: number, gpuMs: number | null }} CompareSide */
@@ -182,6 +183,9 @@
  * @property {(cb: (q: object) => void) => () => void} onQuality   [3] báo mỗi lần nấc đổi; trả hàm bỏ nghe
  * @property {() => { id: string, on: boolean }[]} tools   [4] công cụ học, theo thứ tự engine/tools/index.js
  * @property {(id: string | null) => Promise<void>} setTool   [4] bật một công cụ (tắt các cái khác), null tắt hết
+ * @property {() => { id: string, min: number, max: number, step: number, value: number, text: string, note: string | null }[]} dials
+ *   [4] núm của cả bức: text là chữ của format (cũng là aria-valuetext), note là khóa ghi chú
+ * @property {(id: string, v: number) => Promise<void>} setDial   [4] kẹp theo min/max/step
  */
 
 export {};

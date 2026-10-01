@@ -9,7 +9,7 @@
  * `snapshot()`, `restore(s)`. Mở DevTools gõ `__sma.setWeight('<id lớp>', 0)` là mài được một lớp.
  * GĐ 3 thêm `quality()` (mức, nấc đang hạ), `degrade()` / `upgrade()` (hạ/nâng tay một nấc) và `stats()`
  * (draw call, tam giác, ms mỗi khung, ms CPU). GĐ 4: `stats().gpuMs`, `quality().gpu`, `quality().locked`, `tools()` và
- * `setTool(id | null)` (bật một công cụ học, hay tắt hết).
+ * `setTool(id | null)` (bật một công cụ học, hay tắt hết), `dials()` và `setDial(id, v)` (núm của cả bức, ví dụ giờ).
  *
  * Ngoài hàm, chỉ giữ DỮ LIỆU thuần (chuỗi, số, null), nên `JSON.stringify(window.__sma)` đọc được ngay.
  * @param {Window | Record<string, any>} win
@@ -67,5 +67,7 @@ export function studioApi(getStudio) {
     stats: () => s()?.stats() ?? null,
     tools: () => s()?.tools() ?? [],
     setTool: (id) => s()?.setTool(id),
+    dials: () => s()?.dials() ?? [],
+    setDial: (id, v) => s()?.setDial(id, v),
   };
 }

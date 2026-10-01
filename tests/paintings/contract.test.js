@@ -6,7 +6,7 @@ import { paintings } from '../../src/paintings/registry.js';
 import mau from '../../src/paintings/_mau/meta.js';
 import { mergePalette } from '../../src/engine/palette.js';
 import { hasCode } from '../../src/ui/code-view.js';
-import { buildPainting } from '../helpers/fake-ctx.js';
+import { NOW, buildPainting } from '../helpers/fake-ctx.js';
 import { svgColors } from '../helpers/svg.js';
 
 const SRC = resolve(import.meta.dirname, '../../src');
@@ -160,6 +160,35 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
       step.apply();
       step.revert();
       expect(read(), `nấc "${entry}" gỡ ra thì số đo phải về như cũ`).toEqual(before);
+    }
+  });
+
+  it('Dial (nếu có): id kebab-case, không trùng; min < max; format ra chuỗi; có nhãn; mọi khóa note() trả ra đều có chữ', async () => {
+    const { painting } = await loadPainting();
+    // Ban đêm và ban ngày: note() có thể khác nhau (Bức 1 ghi chú 'daytime' khi mượn giờ).
+    for (const now of [NOW, new Date('2026-09-28T12:00:00+07:00')]) {
+      const { setup } = buildPainting(painting, meta, { now });
+      const dials = setup?.dials ?? [];
+      const ids = dials.map((d) => d.id);
+      expect(new Set(ids).size, `Dial trùng id: ${ids.join(', ')}`).toBe(ids.length);
+      for (const dial of dials) {
+        expect(dial.id, `id Dial "${dial.id}"`).toMatch(KEBAB);
+        expect(dial.min, `Dial "${dial.id}": min < max`).toBeLessThan(dial.max);
+        expect(dial.uniform?.isNode, `Dial "${dial.id}" thiếu uniform`).toBe(true);
+        if (dial.format) for (const v of [dial.min, dial.max]) expect(typeof dial.format(v), `format(${v})`).toBe('string');
+        for (const lang of langs) {
+          const { default: content } = await entry.content[lang]();
+          const text = content.dials?.[dial.id];
+          expect(text?.label, `${lang}: thiếu content.dials["${dial.id}"].label`).toBeTruthy();
+          for (const v of [dial.uniform.value, dial.min, dial.max]) {
+            const before = dial.uniform.value;
+            dial.uniform.value = v;
+            const key = dial.note?.() ?? null;
+            dial.uniform.value = before;
+            if (key !== null) expect(text.notes?.[key], `${lang}: thiếu chữ ghi chú "${dial.id}.${key}"`).toBeTruthy();
+          }
+        }
+      }
     }
   });
 

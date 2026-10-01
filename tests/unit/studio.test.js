@@ -2,12 +2,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import { buildLayers, createWeights } from '../../src/engine/gpu/layers.js';
 import { createStudio } from '../../src/engine/gpu/studio.js';
+import { createDialSet } from '../../src/engine/gpu/dial-set.js';
+import { uniform } from 'three/tsl';
 
 const env = { tier: 'webgl2', level: 'vua', budget: {}, now: new Date('2026-09-28T14:00:00Z'), mobile: false };
 const meta = { layers: [{ id: 'cot', name: 'Cốt' }, { id: 'lop-hai', name: 'Lớp hai' }] };
 
 /** Hai lớp giả: Cốt có núm uniform + núm rebuild; lớp hai có thí nghiệm (một kiểu compare) và số đo. */
-function setup({ tier = 'webgl2', quality, toolbox } = {}) {
+function setup({ tier = 'webgl2', quality, toolbox, dials } = {}) {
   const log = [];
   const cot = {
     id: 'cot',
@@ -35,7 +37,7 @@ function setup({ tier = 'webgl2', quality, toolbox } = {}) {
   const weights = createWeights(meta.layers);
   const layers = buildLayers([cot, two], {}, {}, { ...env, tier });
   const redraw = vi.fn();
-  const studio = createStudio({ meta, layers, weights, env: { ...env, tier }, redraw, tweenSeconds: 0.5, quality, toolbox });
+  const studio = createStudio({ meta, layers, weights, env: { ...env, tier }, redraw, tweenSeconds: 0.5, quality, toolbox, dials });
   return { studio, weights, layers, redraw, log };
 }
 
@@ -193,6 +195,23 @@ describe('createStudio', () => {
     expect(bare.tools()).toEqual([]);
     await expect(bare.setTool('kinh')).rejects.toThrow('Không có công cụ "kinh"');
     await expect(bare.setTool(null)).resolves.toBeUndefined();
+  });
+
+  it('Dial (GĐ 4): dials() đọc, setDial() kẹp rồi vẽ lại; snapshot có dials (bức không có Dial thì không có khóa này); restore đem về', async () => {
+    const hour = uniform(21);
+    const dials = createDialSet([{ id: 'gio', uniform: hour, min: 18, max: 29.5, step: 0.25, format: (v) => `${v}h` }]);
+    const { studio, redraw } = setup({ dials });
+    expect(studio.dials()).toEqual([{ id: 'gio', min: 18, max: 29.5, step: 0.25, value: 21, text: '21h', note: null }]);
+    await studio.setDial('gio', 40);
+    expect(hour.value).toBe(29.5);
+    expect(redraw).toHaveBeenCalledTimes(1);
+    const snap = studio.snapshot();
+    expect(snap.dials).toEqual({ gio: 29.5 });
+    hour.value = 18;
+    await studio.restore(snap);
+    expect(hour.value).toBe(29.5);
+    expect(setup().studio.snapshot()).not.toHaveProperty('dials');
+    await expect(setup().studio.setDial('gio', 20)).rejects.toThrow('Bức không có Dial "gio"');
   });
 
   it('snapshot → JSON gọn: trọng số lấy ĐÍCH của tween, núm theo địa chỉ "layerId.knobId"', () => {
