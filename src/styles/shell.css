@@ -43,15 +43,14 @@ body {
 ::selection { background: var(--vang-la); color: var(--den-then); }
 
 /* ── Lớp 0: poster ─────────────────────────────────────────────────────────────────────── */
-/* Ảnh tĩnh phủ kín màn hình. object-fit: cover cắt bớt mép thay vì bóp méo ảnh;
-   object-position lệch phải để điện thoại dọc vẫn thấy trăng. */
+/* Ảnh tĩnh phủ kín màn hình. object-fit: cover cắt bớt mép thay vì bóp méo ảnh. Từ GĐ 4 poster được chụp từ chính camera
+   của cảnh (scripts/poster.js): cắt ở GIỮA như canvas cắt khung hình, nên lúc hòa dần poster → cảnh không bị lệch khung. */
 img[data-poster] {
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 62% 50%;
 }
 
 /* ── Lớp 1: sân khấu 3D ───────────────────────────────────────────────────────────────── */

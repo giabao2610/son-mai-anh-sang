@@ -1,6 +1,6 @@
 // tests/paintings/contract.test.js — hợp đồng của mọi bức (registry + tranh mẫu _mau): meta, thứ tự lớp, marker, chữ, runtime.
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { paintings } from '../../src/paintings/registry.js';
 import mau from '../../src/paintings/_mau/meta.js';
@@ -8,6 +8,8 @@ import { mergePalette } from '../../src/engine/palette.js';
 import { hasCode } from '../../src/ui/code-view.js';
 import { NOW, buildPainting } from '../helpers/fake-ctx.js';
 import { svgColors } from '../helpers/svg.js';
+import { jpegSize, webpSize } from '../helpers/image.js';
+import { parseAt } from '../../src/engine/flags.js';
 import { pass } from 'three/tsl';
 import { buildFinalNode, makeMRT } from '../../src/engine/gpu/pipeline.js';
 
@@ -73,6 +75,26 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
         // Tranh mẫu không deploy nên cố ý nằm ngoài glob của ui/code-view.js.
         if (row.deployed) expect(hasCode(file), `src/${file} nằm ngoài glob ?code của ui/code-view.js`).toBe(true);
       }
+    }
+  });
+
+  it('poster (GĐ 4): capture đọc được (at theo ?at, freeze nguyên dương); file WebP đúng cỡ và ≤ 150 KB; og 1200×630, ≤ 200 KB', () => {
+    const { capture } = meta.poster;
+    if (capture) {
+      expect(parseAt(capture.at), `poster.capture.at "${capture.at}" không đọc được như ?at`).not.toBeNull();
+      expect(Number.isInteger(capture.freeze) && capture.freeze > 0, 'poster.capture.freeze phải là số nguyên dương').toBe(true);
+    }
+    if (!row.deployed) return; // tranh mẫu không có file trong public/
+    const PUBLIC = resolve(SRC, '../public');
+    if (meta.poster.src.endsWith('.webp')) {
+      const file = readFileSync(PUBLIC + meta.poster.src);
+      expect(webpSize(file), 'cỡ poster phải đúng meta.poster').toEqual({ width: meta.poster.width, height: meta.poster.height });
+      expect(file.length, 'poster ≤ 150 KB').toBeLessThanOrEqual(150 * 1024);
+    }
+    if (meta.og) {
+      expect(existsSync(resolve(PUBLIC, meta.og)), `thiếu public/${meta.og}`).toBe(true);
+      expect(jpegSize(readFileSync(resolve(PUBLIC, meta.og)))).toEqual({ width: 1200, height: 630 });
+      expect(statSync(resolve(PUBLIC, meta.og)).size, 'og ≤ 200 KB').toBeLessThanOrEqual(200 * 1024);
     }
   });
 

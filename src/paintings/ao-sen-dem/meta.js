@@ -20,11 +20,16 @@ export default {
     source: 'Ca dao',
   },
   poster: {
-    src: '/paintings/ao-sen-dem/poster.svg',
+    src: '/paintings/ao-sen-dem/poster.webp',
     width: 1600,
     height: 1000,
     alt: 'Tranh sơn mài ao sen đêm: trăng soi mặt nước đen, lá sen và những đốm vàng lá.',
+    // scripts/poster.js chụp poster từ chính cảnh (GĐ 4): đêm 16 tháng Chín, trăng tròn, 21:00; khung 300 (5 giây) để
+    // đom đóm kịp tản đều. Muốn đổi thời điểm thì sửa dòng này rồi chạy lại script (cần GPU thật).
+    capture: { at: '2026-10-25T21:00', freeze: 300 },
   },
+  // Ảnh chia sẻ lên mạng xã hội (og:image), 1200×630, JPEG: cắt phần giữa của poster.
+  og: 'paintings/ao-sen-dem/og.jpg',
   // THỨ TỰ PHỦ: lớp đầu luôn là Cốt; lớp cuối là Phủ bóng dùng chung của xưởng.
   layers: [
     {

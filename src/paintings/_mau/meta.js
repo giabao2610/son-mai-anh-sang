@@ -15,8 +15,15 @@ export default {
     lines: ['Ai ơi bưng bát cơm đầy', 'Dẻo thơm một hạt đắng cay muôn phần'],
     source: 'Ca dao',
   },
-  // Bức thật đặt poster ở public/paintings/<slug>/ (hoặc chạy scripts/poster.js ở GĐ 4).
-  poster: { src: '/paintings/_mau/poster.svg', width: 1600, height: 1000, alt: 'Tranh mẫu: một nút thắt đất sét trên bệ.' },
+  // Bức thật đặt poster ở public/paintings/<slug>/: chạy `node scripts/poster.js <slug>` (GPU thật) để chụp poster.webp
+  // và og.jpg từ chính cảnh, theo `capture` (thời điểm ?at và khung ?freeze). Tranh mẫu không deploy nên không có file ảnh.
+  poster: {
+    src: '/paintings/_mau/poster.webp',
+    width: 1600,
+    height: 1000,
+    alt: 'Tranh mẫu: một nút thắt đất sét trên bệ.',
+    capture: { at: '2026-09-28T21:00', freeze: 120 },
+  },
   // THỨ TỰ PHỦ: lớp đầu luôn là Cốt. Bức thật thường kết thúc bằng lớp dùng chung Phủ bóng (engine/stock/phu-bong).
   layers: [
     { id: 'cot', name: 'Cốt', files: ['paintings/_mau/layers/l1-cot.js'] },
