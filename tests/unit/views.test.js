@@ -54,6 +54,32 @@ describe('createViews', () => {
     expect(() => views.node('khong-co')).toThrow('Không có view "khong-co"');
   });
 
+  it('require("normal") còn đang biên dịch: Normal chưa báo sẵn sàng, lần gọi thứ hai chờ cùng lần biên dịch đó (không đổi view sớm)', async () => {
+    const { views, compile, scenePass } = setup();
+    let done;
+    compile.mockImplementationOnce(() => new Promise((resolve) => { done = resolve; }));
+    const setMRT = vi.spyOn(scenePass, 'setMRT');
+    const ready = () => views.list().find((v) => v.id === 'normal').ready;
+    let settled = 0;
+    const calls = [views.require('normal'), views.require('normal')].map((p) => p.then(() => { settled += 1; }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect([ready(), settled]).toEqual([false, 0]);
+    done();
+    await Promise.all(calls);
+    expect([ready(), settled, setMRT.mock.calls.length, compile.mock.calls.length]).toEqual([true, 2, 1, 1]);
+  });
+
+  it('biên dịch Normal hỏng: require ném lỗi và Normal vẫn chưa sẵn sàng; gọi lại thì biên dịch lại, MRT không đổi lần nữa', async () => {
+    const { views, compile, scenePass } = setup();
+    compile.mockRejectedValueOnce(new Error('pipeline hỏng'));
+    const setMRT = vi.spyOn(scenePass, 'setMRT');
+    const ready = () => views.list().find((v) => v.id === 'normal').ready;
+    await expect(views.require('normal')).rejects.toThrow('pipeline hỏng');
+    expect(ready()).toBe(false);
+    await views.require('normal');
+    expect([ready(), setMRT.mock.calls.length, compile.mock.calls.length]).toEqual([true, 1, 2]);
+  });
+
   it('setOverlays: ảnh cuối → overlay theo thứ tự → vec4(rgb, 1); pipeline dựng lại đồ thị', () => {
     const { views, final, renderPipeline } = setup();
     const a = marker();

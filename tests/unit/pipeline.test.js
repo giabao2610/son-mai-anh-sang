@@ -172,10 +172,9 @@ describe('createPipeline (dựng đồ thị, không cần GPU)', () => {
     p.views.setOverlays([{ id: 'kinh', fn: overlay }]);
     const setMRT = vi.spyOn(p.scenePass, 'setMRT');
     const first = p.views.require('normal');
-    const second = p.views.require('normal');
-    await second;
+    const second = p.views.require('normal'); // lần hai chờ cùng lần biên dịch, không xong trước nó
     done();
-    await first;
+    await Promise.all([first, second]);
     expect([setMRT.mock.calls.length, p.scenePass.compileAsync.mock.calls.length, overlay.mock.calls.length]).toEqual([1, 1, 2]);
     p.dispose();
   });

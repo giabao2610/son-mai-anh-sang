@@ -27,6 +27,8 @@ const DEPTH_CURVE = 8;
  */
 export function createViews({ scenePass, renderPipeline, mrtFor, final, taps, compile }) {
   let normal = false; // MRT đã có kênh normal chưa
+  let normalReady = false; // đã biên dịch xong biến thể có normal: list() chỉ báo Normal sẵn sàng từ lúc này
+  let compiling = null; // lần biên dịch đang chạy: mọi lần require('normal') trong lúc đó cùng chờ nó
   let overlays = []; // [{ id, fn }] của các công cụ, theo thứ tự ghép
 
   const tapOf = new Map(taps.map((tap) => [`${tap.layerId}:${tap.tapId}`, tap]));
@@ -70,7 +72,7 @@ export function createViews({ scenePass, renderPipeline, mrtFor, final, taps, co
       { id: 'final', ready: true },
       ...[...taps].reverse().map(({ layerId, tapId }) => ({ id: `${layerId}:${tapId}`, ready: true, layerId, tapId })),
       { id: 'emissive', ready: true },
-      { id: 'normal', ready: normal },
+      { id: 'normal', ready: normalReady },
       { id: 'depth', ready: true },
     ],
     node,
@@ -82,13 +84,24 @@ export function createViews({ scenePass, renderPipeline, mrtFor, final, taps, co
     /**
      * Bảo đảm một view sẵn sàng. Chỉ Normal cần việc: thêm kênh normal vào MRT của scene pass (MRT nằm trong cache key
      * của material, nên mọi material biên dịch lại MỘT lần), ghép lại overlay trên chuỗi post cũ, rồi biên dịch trước.
+     * Gọi lại trong lúc đang biên dịch thì chờ cùng lần đó. Biên dịch hỏng thì MRT giữ nguyên (render target đã có texture
+     * thứ ba, gỡ kênh ra là vỡ: Phụ lục A.44), Normal chưa sẵn sàng, và lần gọi sau biên dịch lại.
      */
-    async require(id) {
-      if (id !== 'normal' || normal) return;
-      scenePass.setMRT(mrtFor({ normal: true }));
-      normal = true;
-      compose();
-      await compile();
+    require(id) {
+      if (id !== 'normal' || normalReady) return Promise.resolve();
+      if (!normal) {
+        scenePass.setMRT(mrtFor({ normal: true }));
+        normal = true;
+        compose();
+      }
+      compiling ??= compile()
+        .then(() => {
+          normalReady = true;
+        })
+        .finally(() => {
+          compiling = null;
+        });
+      return compiling;
     },
   };
 }
