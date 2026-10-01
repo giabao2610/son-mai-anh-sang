@@ -2000,3 +2000,12 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     lại (năm lần `setWeight`, mỗi lần một lần vẽ) thì khung chậm: một cú vuốt 3 bước bị giãn từ khoảng 140 ms lên hơn 500 ms, thành
     cú kéo. E2e sương xoáy vì vậy gộp các `setWeight` vào một nhịp, rồi đợi 4 khung trước khi vuốt. `gesture.js` đo bằng
     `performance.now()` lúc xử lý sự kiện; trên máy thật, nhịp khung do bộ điều chỉnh giữ, nên độ giãn chỉ chừng một khung.
+    Lượt CI đầu của `main` sau khi merge GĐ 4 cho thấy thêm hai điều. Mỗi sự kiện chuột của Playwright phải đợi một nhịp khung mới
+    tới trang, nên cú vuốt 5 sự kiện đã mất 200–250 ms trên máy Mac rảnh; máy CI chậm hơn là quá 300 ms. Còn cú kéo chậm có bước
+    đầu 6 px (dưới `tapPx` 8) thì còn ở "chờ": bước kế tới trễ quá 350 ms là thành "giữ", và `input.js` tắt camera giữa chừng. E2e
+    giờ cho cú kéo bước đầu 12 px, cú vuốt chỉ một bước; test đo thời lượng nét ngay trong trang và vuốt lại (tối đa ba lần) khi
+    môi trường quá chậm.
+52. **`color('#hex')` của TSL là màu tuyến tính** (unit test và đo pixel, sửa sau GĐ 4): chuỗi hex đi qua `Color.setStyle`, và
+    `ColorManagement` đổi nó từ sRGB sang không gian làm việc (tuyến tính). Màu trộn ở không gian hiển thị (overlay của công cụ, sau
+    `renderOutput`) phải là số sRGB: `new Color('#D4A94A').convertLinearToSRGB()`. Viền Kính mài của GĐ 4 dùng thẳng
+    `color('#D4A94A')`, nên hiện màu cam đất (168, 101, 17) thay vì vàng lá.
