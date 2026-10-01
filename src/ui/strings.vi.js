@@ -1,4 +1,4 @@
-// ui/strings.vi.js — Chữ tiếng Việt của xưởng: tầng, tầng tĩnh, lời mời, thanh lớp, Sổ tay, mất GPU, tháng/can/chi, con dấu.
+// ui/strings.vi.js — Chữ tiếng Việt của xưởng: tầng, tầng tĩnh, lời mời, thanh lớp, công cụ học, Sổ tay, mất GPU, tháng/can/chi, con dấu.
 //
 // Quy ước: file này KHÔNG import gì và không file nào trong src/ import nó. Chỉ trang HTML import rồi
 // truyền `t` vào boot(); engine/ và ui/ nhận `t` qua tham số. Thêm ngôn ngữ = thêm strings.<lang>.js cùng bộ khóa.
@@ -80,6 +80,24 @@ const t = {
     next: (name) => `Phủ lớp tiếp theo · ${name}`,
     close: 'Đóng thanh lớp, xem lại bức tranh',
   },
+  /** Công cụ học (GĐ 4): tên trên nút "Đồ nghề" của thanh lớp, và chữ trên thanh điều khiển của từng công cụ. */
+  tools: {
+    'kinh-mai': {
+      name: 'Kính mài',
+      shapeLabel: 'Hình kính',
+      shapes: { tron: 'Tròn', gat: 'Gạt' },
+      viewLabel: 'Soi qua kính',
+      handle: 'Vạch gạt: bên trái là ảnh đang soi, bên phải là ảnh cuối',
+    },
+    'lot-lop': {
+      name: 'Lột lớp',
+      label: 'Lột dần ảnh',
+    },
+  },
+  /** Các view của xưởng mà công cụ nhìn được; tap của lớp lấy nhãn ở content của lớp. */
+  views: { final: 'Ảnh cuối', emissive: 'Chỉ emissive', normal: 'Normal', depth: 'Depth' },
+  /** Dòng trạng thái (aria-live) trên thanh công cụ: view Normal phải biên dịch lại một lần. */
+  toolStatus: { grinding: 'đang mài…', failed: 'Không mài được view này; vẫn giữ view cũ.' },
   /** Sổ tay của một lớp: ba tab Hiểu / Chỉnh / Phá. */
   notebook: {
     label: 'Sổ tay',

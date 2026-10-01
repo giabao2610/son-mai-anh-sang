@@ -6,6 +6,7 @@
    và thiếu phần Latin cơ bản. */
 @import './tokens.css';
 @import './notebook.css';
+@import './tools.css';
 @import '@fontsource/cormorant-garamond/500.css';
 @import '@fontsource/cormorant-garamond/500-italic.css';
 @import '@fontsource/be-vietnam-pro/400.css';

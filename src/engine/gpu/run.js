@@ -7,6 +7,7 @@ import { createDisposer } from './disposer.js';
 import { buildScene } from './scene.js';
 import { createFailCounter, createBurstCounter } from './guards.js';
 import { openDebug } from './debug.js';
+import { tools } from '../tools/index.js';
 import { createFrameCap } from './clock.js';
 import { mountWorkshop } from '../../ui/workshop.js';
 
@@ -117,7 +118,7 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
       console.error(`Lỗi GPU ${info?.type ?? ''}: ${info?.message ?? ''}`);
       if (gpuErrors.hit(win.performance.now())) fail('gpu-error', new Error(info?.message ?? 'Lỗi GPU'));
     });
-    const scene = buildScene({ stage, disposer: d, painting, meta, flags, now, reducedMotion, win });
+    const scene = buildScene({ stage, disposer: d, painting, meta, flags, now, reducedMotion, win, tools, t, content });
     sma.set({ backend: stage.backend, level: scene.level });
     if (snapshot) await scene.studio.restore(snapshot);
 
