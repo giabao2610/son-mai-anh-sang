@@ -51,6 +51,8 @@ jobs:
         with:
           name: e2e-results
           path: e2e/.results/
+          # e2e/.results là thư mục ẩn: upload-artifact (từ v4.4) mặc định bỏ file ẩn, nên trước đây không lượt nào có artifact.
+          include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
 
@@ -62,10 +64,12 @@ jobs:
 
   # WebGPU trên SwiftShader (Chromium đầy đủ): KHÔNG chặn, chạy song song với build. GĐ 3 để bước này chung job build với
   # trần 15 phút, và ở PR #3 nó chạy mất 14,9 phút; tách ra job riêng thì hỏng hay treo cũng không kéo build theo.
+  # Trần 40 phút: riêng e2e đã mất khoảng 18,5 phút, còn bước cài Chromium kèm thư viện hệ thống lúc 19 giây, lúc gần 7 phút
+  # (PR #5 bị hủy ở trần 25 phút dù mọi test đã chạy đều qua).
   e2e-webgpu:
     runs-on: ubuntu-latest
     continue-on-error: true
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -93,6 +97,7 @@ jobs:
         with:
           name: e2e-results-webgpu
           path: e2e/.results/
+          include-hidden-files: true # thư mục ẩn, như ở job build
           if-no-files-found: ignore
           retention-days: 7
 

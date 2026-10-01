@@ -120,6 +120,8 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   khi `requireView` đổi MRT. Đổi chế độ (hình, view, vạch gạt) = đổi uniform; chọn view bằng `If` trong `Fn` (`tools/pick.js`).
 - Tap (`post.build/display({ tap })`) là biểu thức THUẦN (texture của pass, texture của bloom, uniform), không phải biến
   `.toVar()` trong Fn: overlay tính lại nó ở lượt vẽ cuối, sau FXAA. Nhãn ở `content.layers[id].taps` (test hợp đồng giữ).
+- Màu hằng trong overlay là số sRGB, vì overlay trộn với ảnh cuối đã ở không gian hiển thị. `color('#hex')` của three tự đổi sang
+  tuyến tính (ra màu đậm và ngả cam), nên viết `new Color('#hex').convertLinearToSRGB()` (spec Phụ lục A.52).
 - Cử chỉ `'hover'` (chuột di mà không bấm) chỉ tới công cụ, bức không bao giờ nhận; `g.pointer` là `'mouse'|'touch'|'pen'`.
 - `update(0, t)`: xưởng vẽ lại khung đứng yên của `?freeze` (thanh giờ, núm) bằng `setup.update(0, t)` rồi `layer.update(0, t)`.
   Lớp đồng bộ theo uniform (hướng trăng, bóng) nhưng KHÔNG tiến mô phỏng: không compute, không bước hạt CPU.
