@@ -79,6 +79,8 @@ const t = {
     toggle: (name) => `Bật hoặc tắt lớp ${name}`,
     next: (name) => `Phủ lớp tiếp theo · ${name}`,
     close: 'Đóng thanh lớp, xem lại bức tranh',
+    /** Mục dưới danh sách lớp (GĐ 4): công cụ học và thanh trượt của bức (Dial). */
+    tools: 'Đồ nghề',
   },
   /** Công cụ học (GĐ 4): tên trên nút "Đồ nghề" của thanh lớp, và chữ trên thanh điều khiển của từng công cụ. */
   tools: {

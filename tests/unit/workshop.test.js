@@ -51,6 +51,10 @@ function fakeStudio() {
     experiment: (layerId, id) => on.has(`${layerId}.${id}`),
     toggleExperiment: vi.fn(async (layerId, id, value) => (value ? on.add(`${layerId}.${id}`) : on.delete(`${layerId}.${id}`))),
     readouts: () => [{ id: 'dinh', value: 1234, unit: '' }],
+    tools: () => [{ id: 'kinh-mai', on: false }],
+    setTool: vi.fn(async () => {}),
+    dials: () => [],
+    setDial: vi.fn(async () => {}),
     gpuMs: 4.56,
     stats() {
       return { drawCalls: 21, triangles: 90000, ms: 16.66, cpuMs: 3.21, gpuMs: this.gpuMs };
@@ -114,6 +118,16 @@ describe('chế độ mài', () => {
     workshop.dispose();
   });
 
+  it('Đồ nghề (GĐ 4): nằm trong thanh lớp, ngay dưới danh sách lớp, trước nút "Phủ lớp tiếp theo"', () => {
+    const { workshop, rail } = mount(fakeStudio());
+    workshop.open();
+    const section = rail.querySelector('.rail-tools');
+    expect(section.previousElementSibling.tagName).toBe('OL');
+    expect(section.nextElementSibling.classList.contains('rail-next')).toBe(true);
+    expect(section.querySelector('[data-tool="kinh-mai"]').textContent).toBe(t.tools['kinh-mai'].name);
+    workshop.dispose();
+  });
+
   it('công tắc bật/tắt tự do (tween); Cốt không có công tắc; vạch trọng số theo giá trị', () => {
     const studio = fakeStudio();
     const { workshop, rail } = mount(studio);
@@ -141,6 +155,7 @@ describe('chế độ mài', () => {
     expect(rail.hidden).toBe(true);
     expect(notebook.hidden).toBe(true);
     expect(studio.calls.slice(-2)).toEqual([['setWeight', 'hai', 1, { tween: true }], ['setWeight', 'ba', 1, { tween: true }]]);
+    expect(studio.setTool).toHaveBeenCalledWith(null); // đóng thanh lớp thì công cụ học tắt, tranh về ảnh cuối
     expect(onClose).toHaveBeenCalledTimes(1);
     workshop.dispose();
     expect(document.querySelector('[data-rail]')).toBeNull();
@@ -357,10 +372,11 @@ describe('Sổ tay', () => {
     workshop.dispose();
   });
 
-  it('tầng tĩnh (studio() = null): không công tắc, không nút tiếp theo, Chỉnh không tải Tweakpane, Phá chỉ đọc', () => {
+  it('tầng tĩnh (studio() = null): không công tắc, không Đồ nghề, không nút tiếp theo, Chỉnh không tải Tweakpane, Phá chỉ đọc', () => {
     const { workshop, rail, notebook } = mount(null);
     workshop.open({ grind: true });
     expect(rail.querySelector('[role="switch"]')).toBeNull();
+    expect(rail.querySelector('.rail-tools')).toBeNull();
     expect(rail.querySelector('.rail-next').hidden).toBe(true);
     notebook.querySelector('[data-tab="chinh"]').click();
     expect(notebook.querySelector('[data-knobs]').textContent).toBe(t.notebook.knobsStatic);
