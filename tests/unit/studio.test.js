@@ -7,7 +7,7 @@ const env = { tier: 'webgl2', level: 'vua', budget: {}, now: new Date('2026-09-2
 const meta = { layers: [{ id: 'cot', name: 'Cốt' }, { id: 'lop-hai', name: 'Lớp hai' }] };
 
 /** Hai lớp giả: Cốt có núm uniform + núm rebuild; lớp hai có thí nghiệm (một kiểu compare) và số đo. */
-function setup({ tier = 'webgl2', quality } = {}) {
+function setup({ tier = 'webgl2', quality, toolbox } = {}) {
   const log = [];
   const cot = {
     id: 'cot',
@@ -35,7 +35,7 @@ function setup({ tier = 'webgl2', quality } = {}) {
   const weights = createWeights(meta.layers);
   const layers = buildLayers([cot, two], {}, {}, { ...env, tier });
   const redraw = vi.fn();
-  const studio = createStudio({ meta, layers, weights, env: { ...env, tier }, redraw, tweenSeconds: 0.5, quality });
+  const studio = createStudio({ meta, layers, weights, env: { ...env, tier }, redraw, tweenSeconds: 0.5, quality, toolbox });
   return { studio, weights, layers, redraw, log };
 }
 
@@ -178,6 +178,21 @@ describe('createStudio', () => {
     const bare = setup().studio;
     expect(bare.quality()).toEqual({ level: null, steps: [], guarding: false, capped: false, gpu: false, locked: [] });
     expect(await bare.degrade()).toBe(false);
+  });
+
+  it('công cụ học (GĐ 4): tools() đọc hộp đồ nghề; setTool() bật/tắt rồi vẽ lại; không có hộp đồ nghề thì không có công cụ', async () => {
+    let on = null;
+    const toolbox = { list: () => [{ id: 'kinh', on: on === 'kinh' }], set: vi.fn((id) => { on = id; }) };
+    const { studio, redraw } = setup({ toolbox });
+    await studio.setTool('kinh');
+    expect(studio.tools()).toEqual([{ id: 'kinh', on: true }]);
+    await studio.setTool(null);
+    expect(toolbox.set.mock.calls).toEqual([['kinh'], [null]]);
+    expect(redraw).toHaveBeenCalledTimes(2);
+    const bare = setup().studio;
+    expect(bare.tools()).toEqual([]);
+    await expect(bare.setTool('kinh')).rejects.toThrow('Không có công cụ "kinh"');
+    await expect(bare.setTool(null)).resolves.toBeUndefined();
   });
 
   it('snapshot → JSON gọn: trọng số lấy ĐÍCH của tween, núm theo địa chỉ "layerId.knobId"', () => {

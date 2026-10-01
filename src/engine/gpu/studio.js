@@ -3,6 +3,13 @@ import { knobMax } from './knob-set.js';
 import { TWEEN_SECONDS } from './layers.js';
 import { createMeter } from './meter.js';
 
+/** Cảnh không có hộp đồ nghề (test): không có công cụ nào. */
+const NO_TOOLS = Object.freeze({
+  list: () => [],
+  set: (id) => {
+    if (id !== null) throw new Error(`Không có công cụ "${id}"`);
+  },
+});
 /** Cảnh không có bộ điều chỉnh (test, bức cũ): nấc không có gì để hạ. */
 const NO_QUALITY = Object.freeze({
   state: () => ({ level: null, steps: [], guarding: false, capped: false, gpu: false, locked: [] }),
@@ -28,9 +35,12 @@ const NO_QUALITY = Object.freeze({
  * @param {number} [p.tweenSeconds]                    0 khi người xem xin giảm chuyển động
  * @param {{ state: () => object, degrade: () => boolean, upgrade: () => boolean, onChange: (cb: Function) => Function }} [p.quality]
  *   bộ điều chỉnh của cảnh (scene.js): mức, nấc đang hạ, hạ/nâng tay một nấc
+ * @param {{ list: () => { id: string, on: boolean }[], set: (id: string | null) => void }} [p.toolbox]  công cụ học (toolbox.js)
  * @returns {ReturnType<typeof createMeter> & object}  measure() và gpu() của bộ đo: scene.js đưa số vào mỗi khung
  */
-export function createStudio({ meta, layers, weights, env, redraw = () => {}, tweenSeconds = TWEEN_SECONDS, quality = NO_QUALITY }) {
+export function createStudio({
+  meta, layers, weights, env, redraw = () => {}, tweenSeconds = TWEEN_SECONDS, quality = NO_QUALITY, toolbox = NO_TOOLS,
+}) {
   const byId = new Map(layers.map((b) => [b.id, b]));
   const names = new Map(meta.layers.map((l) => [l.id, l.name]));
   const experimentsOn = new Set(); // 'layerId.expId' đang bật
@@ -155,6 +165,13 @@ export function createStudio({ meta, layers, weights, env, redraw = () => {}, tw
     },
     /** Báo mỗi lần nấc đổi (run.js vẽ lại huy hiệu). Trả hàm bỏ nghe. */
     onQuality: (cb) => quality.onChange(cb),
+
+    /** Công cụ học (GĐ 4): [{ id, on }] theo thứ tự tools/index.js (nút "Đồ nghề" của thanh lớp). */
+    tools: () => toolbox.list(),
+    /** Bật một công cụ (tắt cái đang bật), hay null để tắt hết; xong khi khung đã vẽ lại. */
+    setTool(id) {
+      return settle(() => toolbox.set(id));
+    },
 
     /**
      * Trạng thái tác phẩm dạng JSON (spec §16): { weights: { id: số }, knobs: { 'layerId.knobId': giá trị } }.

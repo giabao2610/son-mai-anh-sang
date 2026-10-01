@@ -7,6 +7,7 @@ import { createPipeline } from './pipeline.js';
 import { createLadder } from './ladder.js';
 import { createStudio } from './studio.js';
 import { createInput } from './input.js';
+import { createToolbox } from './toolbox.js';
 
 /**
  * Bộ điều chỉnh của một cảnh: bộ quyết định (tuner, hàm thuần) + thang nấc (ladder, chạm GPU) + bộ đo GPU (gpu-timer).
@@ -85,8 +86,11 @@ function createQuality({ level, ladder, tuner, timer }) {
  * @param {Date} p.now
  * @param {boolean} p.reducedMotion
  * @param {Window} p.win
+ * @param {import('../contracts/runtime.js').Tool[]} [p.tools]   công cụ học (engine/tools/index.js)
+ * @param {Record<string, any>} [p.t]        chữ giao diện (nhãn view của công cụ)
+ * @param {object | null} [p.content]        chữ của bức (nhãn tap của lớp)
  */
-export function buildScene({ stage, disposer, painting, meta, flags, now, reducedMotion, win }) {
+export function buildScene({ stage, disposer, painting, meta, flags, now, reducedMotion, win, tools = [], t = {}, content = null }) {
   stage.useCamera(painting.camera);
   const mobile = isMobile(win.navigator);
   // Mức chọn theo backend THẬT (three có thể đã lùi WebGPU → WebGL2); ?level ép một mức khác (xem mức thấp trên máy tính).
@@ -121,10 +125,6 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
   disposer.add(() => timer.dispose());
   const quality = createQuality({ level, ladder, tuner, timer });
 
-  // Con trỏ → cử chỉ (hàng đợi, xử lý đầu mỗi khung). Kéo là của camera; công cụ học (GĐ 4) nhận trước bức.
-  const input = createInput({ canvas: stage.renderer.domElement, camera: stage.camera, controls: stage.controls, pointer: stage.u.pointer, win });
-  disposer.add(() => input.dispose());
-
   // Vòng lặp đã dừng ở khung N của ?freeze=N: thay đổi từ Sổ tay hay __sma thì vẽ lại đúng khung đó (không tiến đồng hồ).
   // Vẽ lại ở nhịp requestAnimationFrame KẾ TIẾP, gộp mọi thay đổi trong cùng nhịp làm một: scene pass và reflector
   // của three chỉ vẽ lại cảnh một lần mỗi frameId, mà frameId chỉ tăng ở mỗi nhịp rAF của renderer. Vẽ lại hai lần
@@ -138,7 +138,10 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
       win.requestAnimationFrame(() => {
         pending = null;
         try {
-          if (!disposer.closed) pipeline.render();
+          if (!disposer.closed) {
+            route(); // cử chỉ tới lúc đứng yên (rê Kính mài) cũng có tác dụng
+            pipeline.render();
+          }
           resolve();
         } catch (err) {
           reject(err);
@@ -147,6 +150,26 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     });
     return pending;
   };
+
+  // Công cụ học (GĐ 4): gắn vào pipeline, overlay ghép MỘT lần; mỗi lúc một công cụ (toolbox.js).
+  const toolbox = createToolbox({ tools, views: pipeline.views, doc: win.document, t, content, redraw });
+  disposer.add(() => toolbox.dispose());
+
+  // Con trỏ → cử chỉ (hàng đợi, xử lý đầu mỗi khung). Kéo là của camera; công cụ học nhận trước bức.
+  // Khung đứng yên: cử chỉ tới thì vẽ lại cho nó có tác dụng. Rê chuột chỉ công cụ nhận, nên chỉ vẽ lại khi có công cụ bật.
+  const input = createInput({
+    canvas: stage.renderer.domElement, camera: stage.camera, controls: stage.controls, pointer: stage.u.pointer, win,
+    onQueue: (kind) => frozen && (kind !== 'hover' || toolbox.list().some((x) => x.on)) && redraw(),
+  });
+  disposer.add(() => input.dispose());
+  /** Cử chỉ tới công cụ đang bật trước; công cụ không dùng thì tới bức. 'hover' không bao giờ tới bức. */
+  const route = () => {
+    for (const g of input.drain()) {
+      if (toolbox.gesture(g) || g.kind === 'hover') continue;
+      setup?.onGesture?.(g);
+    }
+  };
+
   const studio = createStudio({
     meta,
     layers,
@@ -155,6 +178,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     tweenSeconds: reducedMotion ? 0 : undefined, // giảm chuyển động: lớp bật/tắt ngay, không mờ dần
     redraw,
     quality,
+    toolbox,
   });
 
   return {
@@ -169,7 +193,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
       const start = win.performance.now();
       quality.sample(ms ?? start);
       const { t, dt } = stage.tick(ms);
-      for (const g of input.drain()) setup?.onGesture?.(g);
+      route();
       setup?.update?.(dt, t);
       for (const { layer } of layers) layer.update?.(dt, t);
       weights.step(dt);

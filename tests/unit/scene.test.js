@@ -1,5 +1,6 @@
 // tests/unit/scene.test.js — dựng một cảnh trên sân khấu giả (không GPU): mức theo backend thật, vòng một khung, vẽ lại khi ?freeze.
 import { describe, it, expect, vi } from 'vitest';
+import { JSDOM } from 'jsdom';
 import { BoxGeometry, Mesh, MeshStandardNodeMaterial, NoToneMapping, PerspectiveCamera, SRGBColorSpace, Scene, Vector2 } from 'three/webgpu';
 import { color, mix, uniform, vec3 } from 'three/tsl';
 import { buildScene } from '../../src/engine/gpu/scene.js';
@@ -72,11 +73,15 @@ function fakeWin() {
   return { win, frames, flush: () => frames.splice(0).forEach((cb) => cb(16)) };
 }
 
-function build({ backend = 'webgpu', reducedMotion = false, flags = {} } = {}) {
+function build({ backend = 'webgpu', reducedMotion = false, flags = {}, setup, tools = [] } = {}) {
   const stage = fakeStage(backend);
   const disposer = createDisposer();
   const { win, frames, flush } = fakeWin();
-  const scene = buildScene({ stage, disposer, painting, meta, flags, now: new Date('2026-09-28T14:00:00Z'), reducedMotion, win });
+  if (tools.length > 0) win.document = new JSDOM('').window.document; // thanh công cụ là DOM thật
+  const scene = buildScene({
+    stage, disposer, painting: setup ? { ...painting, setup } : painting, meta, flags,
+    now: new Date('2026-09-28T14:00:00Z'), reducedMotion, win, tools,
+  });
   const renders = () => stage.renderer.render.mock.calls.length;
   return { stage, disposer, scene, frames, flush, renders };
 }
@@ -219,6 +224,65 @@ describe('buildScene', () => {
     expect(await up).toBe(true);
     expect(stage.setDpr).toHaveBeenLastCalledWith(2);
     expect(renders()).toBe(402);
+  });
+
+  it("cử chỉ (GĐ 4): công cụ đang bật nhận trước, dùng rồi thì bức không nhận; 'hover' không bao giờ tới bức", async () => {
+    const onGesture = vi.fn();
+    const seen = [];
+    const lens = {
+      id: 'kinh',
+      mount: () => ({ onGesture: (g) => { seen.push(g.kind); return g.kind === 'tap'; }, dispose() {} }),
+    };
+    const { stage, scene } = build({ setup: () => ({ onGesture }), tools: [lens] });
+    const canvas = stage.renderer.domElement;
+    const event = (type, extra) => Object.assign(new Event(type), { clientX: 320, clientY: 200, pointerId: 1, button: 0, ...extra });
+    const tap = () => {
+      canvas.dispatchEvent(event('pointerdown', { pointerType: 'mouse' }));
+      canvas.dispatchEvent(event('pointerup', { pointerType: 'mouse' }));
+    };
+    canvas.dispatchEvent(event('pointermove', { pointerType: 'mouse', buttons: 0 }));
+    tap();
+    scene.step(1000);
+    expect(onGesture.mock.calls.map(([g]) => g.kind)).toEqual(['tap']); // chưa bật công cụ: bức nhận chạm, không nhận hover
+    await scene.studio.setTool('kinh');
+    expect(scene.studio.tools()).toEqual([{ id: 'kinh', on: true }]);
+    canvas.dispatchEvent(event('pointermove', { pointerType: 'mouse', buttons: 0 }));
+    tap();
+    scene.step(1016);
+    expect(seen).toEqual(['hover', 'tap']);
+    expect(onGesture).toHaveBeenCalledTimes(1);
+  });
+
+  it('đứng yên ở ?freeze, chưa bật công cụ nào: rê chuột không vẽ lại (chỉ công cụ nhận hover); chạm thì vẽ lại cho bức', async () => {
+    const onGesture = vi.fn();
+    const { stage, scene, frames, flush } = build({ setup: () => ({ onGesture }), tools: [{ id: 'kinh', mount: () => ({ dispose() {} }) }] });
+    scene.freeze();
+    const canvas = stage.renderer.domElement;
+    const event = (type, extra) => Object.assign(new Event(type), { clientX: 320, clientY: 200, pointerId: 1, button: 0, ...extra });
+    canvas.dispatchEvent(event('pointermove', { pointerType: 'mouse', buttons: 0 }));
+    expect(frames).toHaveLength(0);
+    canvas.dispatchEvent(event('pointerdown', { pointerType: 'mouse' }));
+    canvas.dispatchEvent(event('pointerup', { pointerType: 'mouse' }));
+    expect(frames).toHaveLength(1);
+    flush();
+    expect(onGesture.mock.calls.map(([g]) => g.kind)).toEqual(['tap']);
+  });
+
+  it('đứng yên ở ?freeze: cử chỉ tới thì vẽ lại ở nhịp rAF kế tiếp, và công cụ nhận cử chỉ đó (rê Kính mài)', async () => {
+    const seen = [];
+    const lens = { id: 'kinh', mount: () => ({ onGesture: (g) => seen.push(g.kind) > 0, dispose() {} }) };
+    const { stage, scene, frames, flush, renders } = build({ tools: [lens] });
+    scene.freeze();
+    const on = scene.studio.setTool('kinh'); // vẽ lại ở nhịp rAF sau khi công cụ đã bật (sau một microtask)
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flush();
+    await on;
+    const before = renders();
+    stage.renderer.domElement.dispatchEvent(Object.assign(new Event('pointermove'), { clientX: 10, clientY: 10, pointerType: 'mouse', buttons: 0 }));
+    expect(frames).toHaveLength(1);
+    flush();
+    expect(seen).toEqual(['hover']);
+    expect(renders()).toBe(before + 1);
   });
 
   it('ms CPU của khung đi vào số đo của bàn thợ', () => {
