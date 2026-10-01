@@ -5,9 +5,11 @@ import { vec4 } from 'three/tsl';
 import * as kinhMai from '../../src/engine/tools/kinh-mai.js';
 import t from '../../src/ui/strings.vi.js';
 
-/** ToolApi giả: bốn view (normal chưa sẵn sàng tới khi requireView), ô DOM thật, redraw ghi lại. */
-function fakeApi({ requireFails = false } = {}) {
+/** ToolApi giả: bốn view (normal chưa sẵn sàng tới khi requireView), ô DOM thật, redraw ghi lại.
+ *  hold: requireView chờ tới khi gọi finish() (mài Normal lâu, như trên máy yếu). */
+function fakeApi({ requireFails = false, hold = false } = {}) {
   let normalReady = false;
+  let release = null;
   const el = document.createElement('div');
   document.body.append(el);
   return {
@@ -20,10 +22,12 @@ function fakeApi({ requireFails = false } = {}) {
       { id: 'normal', label: 'Normal', ready: normalReady },
     ],
     requireView: vi.fn(async () => {
+      if (hold) await new Promise((resolve) => { release = resolve; });
       if (requireFails) throw new Error('biên dịch hỏng');
       normalReady = true;
     }),
     redraw: vi.fn(async () => {}),
+    finish: () => release?.(),
   };
 }
 const gesture = (kind, pointer, x = 0.5, y = -0.5) => ({ kind, pointer, ndc: { x, y } });
@@ -105,5 +109,33 @@ describe('Kính mài', () => {
     expect(broken.el.querySelector('.tool-status').textContent).toBe(t.toolStatus.failed);
     expect(broken.el.querySelector('[data-view="phu-bong:truoc-tone"]').getAttribute('aria-pressed')).toBe('true');
     warn.mockRestore();
+  });
+
+  it('Normal còn đang mài mà chọn view khác, hay tắt kính: lần chọn cũ về muộn không đè lên lần sau (lần chọn sau cùng thắng)', async () => {
+    const pressed = (api) => [...api.el.querySelectorAll('[data-view]')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.view);
+    // Đổi ý trong lúc chờ: chọn Emissive (sẵn sàng) thì Emissive hiện ngay, và vẫn là Emissive khi Normal mài xong.
+    const api = fakeApi({ hold: true });
+    kinhMai.mount(api).activate(true);
+    const status = api.el.querySelector('.tool-status');
+    api.el.querySelector('[data-view="normal"]').click();
+    await flush();
+    expect(status.textContent).toBe(t.toolStatus.grinding);
+    api.el.querySelector('[data-view="emissive"]').click();
+    await flush();
+    expect([pressed(api), status.textContent]).toEqual([['emissive'], '']);
+    api.finish();
+    await flush();
+    expect([pressed(api), status.textContent]).toEqual([['emissive'], '']);
+    // Tắt kính trong lúc chờ: bật lại vẫn là view cũ, không còn "đang mài…".
+    const off = fakeApi({ hold: true });
+    const lens = kinhMai.mount(off);
+    lens.activate(true);
+    off.el.querySelector('[data-view="normal"]').click();
+    await flush();
+    lens.activate(false);
+    off.finish();
+    await flush();
+    lens.activate(true);
+    expect([pressed(off), off.el.querySelector('.tool-status').textContent]).toEqual([['phu-bong:truoc-tone'], '']);
   });
 });

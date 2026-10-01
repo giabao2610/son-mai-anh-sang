@@ -5,8 +5,10 @@ import { vec4 } from 'three/tsl';
 import * as lotLop from '../../src/engine/tools/lot-lop.js';
 import t from '../../src/ui/strings.vi.js';
 
-function fakeApi({ requireFails = false } = {}) {
+/** ToolApi giả: sáu view (normal chưa sẵn sàng tới khi requireView). hold: requireView chờ tới khi gọi finish(). */
+function fakeApi({ requireFails = false, hold = false } = {}) {
   let normalReady = false;
+  let release = null;
   const el = document.createElement('div');
   document.body.append(el);
   return {
@@ -21,10 +23,12 @@ function fakeApi({ requireFails = false } = {}) {
       { id: 'depth', label: 'Depth', ready: true },
     ],
     requireView: vi.fn(async () => {
+      if (hold) await new Promise((resolve) => { release = resolve; });
       if (requireFails) throw new Error('biên dịch hỏng');
       normalReady = true;
     }),
     redraw: vi.fn(async () => {}),
+    finish: () => release?.(),
   };
 }
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -94,5 +98,33 @@ describe('Lột lớp', () => {
     await flush();
     tool.activate(false);
     expect([range.value, range.getAttribute('aria-valuetext')]).toEqual(['5', 'Ảnh cuối']);
+  });
+
+  it('Normal còn đang mài mà kéo sang nấc khác, hay tắt công cụ: lần cũ về muộn không đè lên (nấc sau cùng thắng; tắt là ở yên ảnh cuối)', async () => {
+    // Kéo qua Normal tới Depth trong lúc chờ: Depth hiện ngay, và vẫn là Depth khi Normal mài xong.
+    const api = fakeApi({ hold: true });
+    lotLop.mount(api).activate(true);
+    const range = api.el.querySelector('input[type="range"]');
+    const status = api.el.querySelector('.tool-status');
+    slide(range, 1);
+    await flush();
+    expect(status.textContent).toBe(t.toolStatus.grinding);
+    slide(range, 0);
+    await flush();
+    expect([range.getAttribute('aria-valuetext'), status.textContent]).toEqual(['Depth', '']);
+    api.finish();
+    await flush();
+    expect([range.getAttribute('aria-valuetext'), status.textContent]).toEqual(['Depth', '']);
+    // Tắt công cụ trong lúc chờ: tranh không bị phủ Normal khi Normal mài xong (thanh công cụ đã ẩn, nút Đồ nghề đã tắt).
+    const off = fakeApi({ hold: true });
+    const tool = lotLop.mount(off);
+    tool.activate(true);
+    const r2 = off.el.querySelector('input[type="range"]');
+    slide(r2, 1);
+    await flush();
+    tool.activate(false);
+    off.finish();
+    await flush();
+    expect([r2.value, r2.getAttribute('aria-valuetext'), off.el.querySelector('.tool-status').textContent]).toEqual(['5', 'Ảnh cuối', '']);
   });
 });

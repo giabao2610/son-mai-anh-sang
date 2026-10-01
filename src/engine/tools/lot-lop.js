@@ -30,6 +30,7 @@ export function mount(api) {
   const ids = views.slice(1).map((v) => v.id);
   const peel = uniform(0).setName('peel_view');
   let at = 0; // view đang hiện (chỉ số trong views)
+  let request = 0; // số của lần kéo mới nhất: lần cũ còn chờ mài Normal mà về muộn thì không đè lên lần sau
 
   const range = h(doc, 'input', {
     type: 'range', id: 'lot-lop-range', min: '0', max: String(last), step: '1', value: String(last),
@@ -45,20 +46,26 @@ export function mount(api) {
     range.setAttribute('aria-valuetext', views[at].label);
     shown.textContent = views[at].label;
   };
-  /** Hiện view thứ k. View chưa sẵn sàng (Normal) thì mài trước; hỏng thì báo và quay về view cũ. */
+  /**
+   * Hiện view thứ k. View chưa sẵn sàng (Normal) thì mài trước; hỏng thì báo và quay về view cũ. Trong lúc chờ mài, người
+   * xem kéo sang nấc khác hay tắt công cụ thì lần này hết hiệu lực: không phủ Normal lên tranh khi thanh công cụ đã ẩn.
+   */
   const show = async (k) => {
+    const mine = ++request;
     if (!api.views()[k].ready) {
       status.textContent = t.toolStatus.grinding;
       try {
         await api.requireView(views[k].id);
       } catch (err) {
         console.warn(`Lột lớp: không mài được view "${views[k].id}":`, err);
+        if (mine !== request) return;
         status.textContent = t.toolStatus.failed;
         sync();
         return;
       }
-      status.textContent = '';
+      if (mine !== request) return;
     }
+    status.textContent = '';
     at = k;
     peel.value = k;
     sync();
@@ -71,6 +78,8 @@ export function mount(api) {
     overlay: (final, view) => peelNode(final, view, { ids, peel }),
     /** Bật hay tắt đều bắt đầu lại từ ảnh cuối: tắt thì không còn gì phủ lên tranh. */
     activate() {
+      request += 1; // lần kéo còn chờ mài (nếu có) hết hiệu lực
+      status.textContent = '';
       at = 0;
       peel.value = 0;
       sync();

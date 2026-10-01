@@ -63,6 +63,7 @@ export function mount(api) {
   };
   let chosen = 0; // chỉ số (trong ids) của view đang soi; giữ lại qua các lần tắt/bật
   let on = false;
+  let request = 0; // số của lần chọn mới nhất: lần chọn cũ còn chờ mài Normal mà về muộn thì không đè lên lần sau
 
   const status = h(doc, 'p', { class: 'tool-status', 'aria-live': 'polite' });
   const shapeButtons = SHAPES.map((shape, i) => h(doc, 'button', {
@@ -100,19 +101,24 @@ export function mount(api) {
     sync();
     return api.redraw();
   };
-  /** Chọn view. View chưa sẵn sàng (Normal) thì mài trước: "đang mài…", rồi mới đổi; hỏng thì báo và giữ view cũ. */
+  /**
+   * Chọn view. View chưa sẵn sàng (Normal) thì mài trước: "đang mài…", rồi mới đổi; hỏng thì báo và giữ view cũ.
+   * Mài Normal mất vài giây trên máy yếu: trong lúc chờ, người xem chọn view khác hay tắt kính thì lần chọn này hết hiệu lực.
+   */
   const choose = async (i) => {
+    const mine = ++request;
     if (!api.views().find((v) => v.id === ids[i])?.ready) {
       status.textContent = t.toolStatus.grinding;
       try {
         await api.requireView(ids[i]);
       } catch (err) {
         console.warn(`Kính mài: không mài được view "${ids[i]}":`, err);
-        status.textContent = t.toolStatus.failed;
+        if (mine === request) status.textContent = t.toolStatus.failed;
         return;
       }
-      status.textContent = '';
+      if (mine !== request) return;
     }
+    status.textContent = '';
     chosen = i;
     if (on) u.mode.value = i + 1;
     sync();
@@ -152,6 +158,8 @@ export function mount(api) {
     },
     activate(value) {
       on = value;
+      request += 1; // lần chọn còn chờ mài (nếu có) hết hiệu lực
+      status.textContent = '';
       u.mode.value = on ? chosen + 1 : 0;
       sync();
     },
