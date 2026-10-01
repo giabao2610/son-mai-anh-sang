@@ -51,8 +51,17 @@ function fakeStudio() {
     experiment: (layerId, id) => on.has(`${layerId}.${id}`),
     toggleExperiment: vi.fn(async (layerId, id, value) => (value ? on.add(`${layerId}.${id}`) : on.delete(`${layerId}.${id}`))),
     readouts: () => [{ id: 'dinh', value: 1234, unit: '' }],
-    stats: () => ({ drawCalls: 21, triangles: 90000, ms: 16.66, cpuMs: 3.21 }),
-    compare: (layerId, id) => (id === 'so' ? { off: { ms: 16.7, cpuMs: 2 }, on: { ms: 33.4, cpuMs: 9.5 } } : { off: null, on: null }),
+    tools: () => [{ id: 'kinh-mai', on: false }],
+    setTool: vi.fn(async () => {}),
+    dials: () => [],
+    setDial: vi.fn(async () => {}),
+    gpuMs: 4.56,
+    stats() {
+      return { drawCalls: 21, triangles: 90000, ms: 16.66, cpuMs: 3.21, gpuMs: this.gpuMs };
+    },
+    compare: (layerId, id) => (id === 'so'
+      ? { off: { ms: 16.7, cpuMs: 2, gpuMs: 4 }, on: { ms: 33.4, cpuMs: 9.5, gpuMs: null } }
+      : { off: null, on: null }),
   };
 }
 
@@ -109,6 +118,16 @@ describe('chế độ mài', () => {
     workshop.dispose();
   });
 
+  it('Đồ nghề (GĐ 4): nằm trong thanh lớp, ngay dưới danh sách lớp, trước nút "Phủ lớp tiếp theo"', () => {
+    const { workshop, rail } = mount(fakeStudio());
+    workshop.open();
+    const section = rail.querySelector('.rail-tools');
+    expect(section.previousElementSibling.tagName).toBe('OL');
+    expect(section.nextElementSibling.classList.contains('rail-next')).toBe(true);
+    expect(section.querySelector('[data-tool="kinh-mai"]').textContent).toBe(t.tools['kinh-mai'].name);
+    workshop.dispose();
+  });
+
   it('công tắc bật/tắt tự do (tween); Cốt không có công tắc; vạch trọng số theo giá trị', () => {
     const studio = fakeStudio();
     const { workshop, rail } = mount(studio);
@@ -136,6 +155,7 @@ describe('chế độ mài', () => {
     expect(rail.hidden).toBe(true);
     expect(notebook.hidden).toBe(true);
     expect(studio.calls.slice(-2)).toEqual([['setWeight', 'hai', 1, { tween: true }], ['setWeight', 'ba', 1, { tween: true }]]);
+    expect(studio.setTool).toHaveBeenCalledWith(null); // đóng thanh lớp thì công cụ học tắt, tranh về ảnh cuối
     expect(onClose).toHaveBeenCalledTimes(1);
     workshop.dispose();
     expect(document.querySelector('[data-rail]')).toBeNull();
@@ -270,6 +290,27 @@ describe('Sổ tay', () => {
     expect(read('drawCalls')).toBe('21');
     expect(read('ms')).toBe('16,7');
     expect(read('cpuMs')).toBe('3,2');
+    expect(read('gpuMs')).toBe('4,6');
+    expect(notebook.querySelector('.nb-gpu-missing').hidden).toBe(true);
+    workshop.dispose();
+  });
+
+  it('Phá: máy không đo được ms GPU thì dòng đó ghi "—", kèm một câu giải thích (GĐ 4)', () => {
+    vi.useFakeTimers();
+    const studio = fakeStudio();
+    studio.gpuMs = null;
+    const { workshop, rail, notebook } = mount(studio);
+    workshop.open();
+    rail.querySelector('[data-layer="hai"] .rail-name').click();
+    notebook.querySelector('[data-tab="pha"]').click();
+    expect(notebook.querySelector('[data-readout="gpuMs"]').textContent).toBe('—');
+    const note = notebook.querySelector('.nb-gpu-missing');
+    expect(note.hidden).toBe(false);
+    expect(note.textContent).toBe(t.notebook.gpuMissing);
+    studio.gpuMs = 3; // mẫu GPU đầu tiên về muộn: số hiện ra, câu giải thích ẩn đi
+    vi.advanceTimersByTime(300);
+    expect(notebook.querySelector('[data-readout="gpuMs"]').textContent).toBe('3');
+    expect(note.hidden).toBe(true);
     workshop.dispose();
   });
 
@@ -321,18 +362,21 @@ describe('Sổ tay', () => {
     expect(bars).toHaveLength(1);
     expect(bars[0].previousElementSibling.dataset.experiment).toBe('so');
     const row = (side) => bars[0].querySelector(`[data-side="${side}"]`);
-    expect(row('off').textContent).toBe(`${t.notebook.compare.off}khung 16,7 ms · CPU 2 ms`);
+    expect(row('off').textContent).toBe(`${t.notebook.compare.off}khung 16,7 ms · CPU 2 ms · GPU 4 ms`);
+    // Bên "Bật" chưa có mẫu GPU (hay máy không đo được): không bịa số GPU.
     expect(row('on').querySelector('.nb-compare-value').textContent).toBe('khung 33,4 ms · CPU 9,5 ms');
-    const [frame, cpu] = row('off').querySelectorAll('.nb-bars i');
-    expect([frame.style.width, cpu.style.width]).toEqual(['50%', `${(2 / 9.5) * 100}%`]);
+    const [frame, cpu, gpu] = row('off').querySelectorAll('.nb-bars i');
+    expect([frame.style.width, cpu.style.width, gpu.style.width]).toEqual(['50%', `${(2 / 9.5) * 100}%`, '100%']);
+    expect(row('on').querySelectorAll('.nb-bars i')[2].style.width).toBe('0%');
     expect(row('on').querySelector('.nb-bars').getAttribute('aria-hidden')).toBe('true');
     workshop.dispose();
   });
 
-  it('tầng tĩnh (studio() = null): không công tắc, không nút tiếp theo, Chỉnh không tải Tweakpane, Phá chỉ đọc', () => {
+  it('tầng tĩnh (studio() = null): không công tắc, không Đồ nghề, không nút tiếp theo, Chỉnh không tải Tweakpane, Phá chỉ đọc', () => {
     const { workshop, rail, notebook } = mount(null);
     workshop.open({ grind: true });
     expect(rail.querySelector('[role="switch"]')).toBeNull();
+    expect(rail.querySelector('.rail-tools')).toBeNull();
     expect(rail.querySelector('.rail-next').hidden).toBe(true);
     notebook.querySelector('[data-tab="chinh"]').click();
     expect(notebook.querySelector('[data-knobs]').textContent).toBe(t.notebook.knobsStatic);

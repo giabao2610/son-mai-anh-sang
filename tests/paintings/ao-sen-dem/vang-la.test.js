@@ -79,6 +79,31 @@ describe('l5-vang-la', () => {
     expect([calls.length, sprite.visible]).toEqual([2, true]);
   });
 
+  it('vẽ lại khung đứng yên (update(0, t), GĐ 4): không chạy compute, không bước đàn CPU; sprite vẫn theo trọng số', async () => {
+    const { ctx, layers } = build();
+    const layer = layers['vang-la'];
+    const [sprite] = layer.objects;
+    const computes = () => ctx.renderer.compute.mock.calls.length;
+    const before = computes();
+    layer.update(0, 1);
+    expect(computes()).toBe(before);
+    ctx.weights.set('vang-la', 0);
+    layer.update(0, 1);
+    expect(sprite.visible).toBe(false);
+    ctx.weights.set('vang-la', 1);
+    const cpu = layer.experiments.find((e) => e.id === 'cpu');
+    await cpu.toggle(true);
+    const [, cpuSprite] = layer.objects;
+    // Đàn CPU ghi vị trí vào một thuộc tính instance (material.positionNode = cell.xyz): mỗi bước tăng version của nó.
+    const attr = cpuSprite.material.positionNode.node.value;
+    const version = attr.version;
+    layer.update(0, 1);
+    expect([attr.version, computes()]).toEqual([version, before]);
+    expect([sprite.visible, cpuSprite.visible]).toEqual([false, true]);
+    layer.update(1 / 60, 1);
+    expect(attr.version).toBeGreaterThan(version);
+  });
+
   it("nấc 'dom-dom': trần = nửa số mặc định của mức; hiệu lực = min(núm, trần); số đo đọc theo", () => {
     const { ctx, layers, knobs } = build();
     const layer = layers['vang-la'];

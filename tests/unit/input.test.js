@@ -64,6 +64,34 @@ describe('createInput', () => {
     expect(u.value.toArray()).toEqual([1, 1]);
   });
 
+  it("rê chuột không bấm → 'hover' (GĐ 4); hàng đợi chỉ giữ hover mới nhất; kéo chuột hay rê ngón tay thì không", () => {
+    const onQueue = vi.fn();
+    const own = createInput({ canvas, camera, controls, pointer: u, win, onQueue });
+    const mouse = { pointerType: 'mouse', buttons: 0 };
+    canvas.dispatchEvent(pointer('pointermove', 20, 10, mouse));
+    canvas.dispatchEvent(pointer('pointermove', 100, 50, mouse));
+    canvas.dispatchEvent(pointer('pointermove', 60, 50, { pointerType: 'mouse', buttons: 1 })); // đang bấm: kéo camera
+    canvas.dispatchEvent(pointer('pointermove', 60, 50, { pointerType: 'touch', buttons: 1 }));
+    const queued = own.drain();
+    expect(queued.map((g) => [g.kind, g.pointer, g.ndc])).toEqual([['hover', 'mouse', { x: 0, y: 0 }]]);
+    expect(queued[0].ray.origin.toArray()).toEqual([0, 5, 10]);
+    expect(onQueue.mock.calls).toEqual([['hover'], ['hover']]);
+    own.dispose();
+  });
+
+  it("mỗi cử chỉ mang loại con trỏ (g.pointer): 'touch' của ngón tay, 'pen' của bút; thiếu thì coi là 'mouse'", () => {
+    canvas.dispatchEvent(pointer('pointerdown', 100, 50, { pointerType: 'touch' }));
+    clock = 50;
+    canvas.dispatchEvent(pointer('pointerup', 100, 50, { pointerType: 'touch' }));
+    canvas.dispatchEvent(pointer('pointerdown', 100, 50, { pointerType: 'pen' }));
+    clock = GESTURE.holdMs + 100;
+    vi.advanceTimersByTime(GESTURE.holdMs);
+    canvas.dispatchEvent(pointer('pointerup', 100, 50, { pointerType: 'pen' }));
+    canvas.dispatchEvent(pointer('pointerdown', 10, 10));
+    canvas.dispatchEvent(pointer('pointerup', 10, 10));
+    expect(input.drain().map((g) => `${g.kind}:${g.pointer}`)).toEqual(['tap:touch', 'hold-start:pen', 'hold-end:pen', 'tap:mouse']);
+  });
+
   it('giữ yên holdMs → hold-start và camera đứng yên; thả → hold-end, camera chạy lại', () => {
     canvas.dispatchEvent(pointer('pointerdown', 50, 50));
     clock = GESTURE.holdMs;

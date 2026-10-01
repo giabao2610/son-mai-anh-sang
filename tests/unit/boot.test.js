@@ -140,6 +140,11 @@ describe('boot', () => {
     expect(page.note.textContent).not.toContain(t.lost.rebuild);
   });
 
+  it('?poster (GĐ 4): vỏ trang gắn body[data-poster] (CSS ẩn mọi UI trừ canvas)', async () => {
+    await boot(entry, { t, win: fakeWin({ search: '?static&poster' }), doc });
+    expect(doc.body.hasAttribute('data-poster')).toBe(true);
+  });
+
   it('(f) onFail sau khi đã live → tầng tĩnh với đúng lý do đó', async () => {
     const win = webglWin();
     let onFail;

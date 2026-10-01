@@ -1,4 +1,4 @@
-// ui/layer-rail.js — thanh lớp: tên từng lớp theo thứ tự phủ, công tắc (trừ Cốt), vạch trọng số, nút "Phủ lớp tiếp theo".
+// ui/layer-rail.js — thanh lớp: tên từng lớp theo thứ tự phủ, công tắc (trừ Cốt), vạch trọng số, Đồ nghề, nút "Phủ lớp tiếp theo".
 import { h } from './dom.js';
 
 /**
@@ -11,8 +11,9 @@ import { h } from './dom.js';
  * @param {Record<string, any>} opts.t
  * @param {boolean} opts.interactive
  * @param {{ open: (id: string) => void, toggle: (id: string, on: boolean) => void, next: () => void, close: () => void }} opts.on
+ * @param {HTMLElement | null} [opts.tools]  mục "Đồ nghề" (ui/rail-tools.js, GĐ 4), ngay dưới danh sách lớp
  */
-export function createRail(doc, { layers, t, interactive, on }) {
+export function createRail(doc, { layers, t, interactive, on, tools = null }) {
   const items = new Map();
   const list = h(doc, 'ol', {}, layers.map(({ id, name }, i) => {
     const open = h(doc, 'button', { type: 'button', class: 'rail-name', onclick: () => on.open(id) },
@@ -35,7 +36,7 @@ export function createRail(doc, { layers, t, interactive, on }) {
   }));
   const next = h(doc, 'button', { type: 'button', class: 'rail-next', hidden: true, onclick: () => on.next() });
   const close = h(doc, 'button', { type: 'button', class: 'rail-close', 'aria-label': t.rail.close, text: '×', onclick: () => on.close() });
-  const el = h(doc, 'nav', { class: 'rail', 'data-rail': '', 'aria-label': t.rail.label, hidden: true }, list, next, close);
+  const el = h(doc, 'nav', { class: 'rail', 'data-rail': '', 'aria-label': t.rail.label, hidden: true }, list, tools, next, close);
 
   return {
     el,

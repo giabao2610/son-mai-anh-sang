@@ -29,9 +29,9 @@ describe('quality.js của Bức 1', () => {
     ]);
   });
 
-  it('mức thấp: phản chiếu giả và không bóng nên không có hai nấc đó; màn DPR 1 thì không có nấc dpr', () => {
+  it('mức thấp: phản chiếu giả, không bóng, sương vốn 1 octave nên không có ba nấc đó (GĐ 4); màn DPR 1 thì không có nấc dpr', () => {
     const ladder = ladderAt('thap', 1);
     while (ladder.down());
-    expect(ladder.ids()).toEqual(['suong.chi-tiet', 'phu-bong.bloom', 'vang-la.dom-dom']);
+    expect(ladder.ids()).toEqual(['phu-bong.bloom', 'vang-la.dom-dom']);
   });
 });

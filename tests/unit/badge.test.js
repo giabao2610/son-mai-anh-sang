@@ -39,6 +39,18 @@ describe('renderBadge', () => {
     expect(el.title).toBe(t.badge.explain.webgpu);
   });
 
+  it('có nấc bị khóa chống dao động (GĐ 4): lời giải thích nói thật là nấc đó giữ tới khi tải lại trang, không hứa chi tiết trở lại', () => {
+    renderBadge(el, { tier: 'webgpu', level: 'cao', steps: 3, locked: 1 }, t);
+    expect(el.textContent).toBe('WebGPU · cao · hạ 3 nấc');
+    expect(el.dataset.locked).toBe('1');
+    expect(el.title).toBe(`${t.badge.explain.webgpu} ${t.badge.lockedExplain(3, 1)}`);
+    expect(el.title).not.toContain(t.badge.stepsExplain(3));
+    // Hết nấc đang hạ (trả lại hết khi nhịp bị khóa) thì không còn gì để nói về khóa.
+    renderBadge(el, { tier: 'webgpu', level: 'cao', steps: 0, locked: 1 }, t);
+    expect(el.title).toBe(t.badge.explain.webgpu);
+    expect(el.dataset.locked).toBe('0');
+  });
+
   it('vẽ lại thì thay hẳn chữ cũ, không cộng dồn', () => {
     renderBadge(el, { tier: 'webgpu', level: 'cao' }, t);
     expect(el.textContent).toBe('WebGPU · cao');

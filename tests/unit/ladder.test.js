@@ -61,6 +61,8 @@ describe('createLadder', () => {
     while (ladder.down());
     expect(log).toEqual(['+phu-bong.bloom', '+mat-nuoc.phan-chieu']);
     expect(ladder.ids()).toEqual(['phu-bong.bloom', 'mat-nuoc.phan-chieu']);
+    // Bộ điều chỉnh nói nấc bị khóa bằng chỉ số trong thang: đổi ra id cho __sma.quality().locked.
+    expect([ladder.idAt(1), ladder.idAt(5)]).toEqual(['mat-nuoc.phan-chieu', null]);
   });
 
   it('áp và gỡ như ngăn xếp; hết thang hay hết nấc thì trả false; reset gỡ hết theo thứ tự ngược', () => {

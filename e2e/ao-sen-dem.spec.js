@@ -1,6 +1,7 @@
-// e2e/ao-sen-dem.spec.js — tương tác riêng của Bức 1: chạm, giữ, vuốt mặt nước; chế độ mài; chất lượng (draw call, mức thấp); CPU vs GPU; trăng SVG.
+// e2e/ao-sen-dem.spec.js — tương tác riêng của Bức 1: chạm, giữ, vuốt (sương xoáy) mặt nước; thanh giờ; chế độ mài; chất lượng; CPU vs GPU; trăng SVG.
 import { test, expect } from '@playwright/test';
-import { DARK, waitForSettled, waitForFrames, canvasStats, gpuReport, collectConsole, readSma } from './helpers.js';
+import { DARK, waitForSettled, waitForFrames, canvasStats, gpuReport, collectConsole, readSma, twoFrames } from './helpers.js';
+import meta from '../src/paintings/ao-sen-dem/meta.js';
 
 const AT = 'at=2026-09-28T21:00';
 const N = 90; // số khung của mỗi lần chạy; vòng gợn kịp lan trong ~1 giây đồng hồ của cảnh
@@ -30,24 +31,18 @@ test.afterEach(async ({ page }, testInfo) => {
  * Mở cảnh ở ?freeze=N, (tùy chọn) chạm hoặc GIỮ tay trên mặt nước sau khung TAP_AFTER, chờ đủ N khung rồi đo canvas.
  * Giữ = nhấn xuống, đợi thêm HOLD_FRAMES khung (dài hơn 350 ms giữ của gesture.js), rồi mới thả.
  */
-async function run(page, testInfo, { tap = false, hold = false, swipe = false }) {
+async function run(page, testInfo, { tap = false, hold = false }) {
   const { query } = testInfo.project.metadata;
   await page.goto(`./?${query.replace(/^\?/, '')}&${AT}&freeze=${N}`);
   const settled = await waitForSettled(page, { timeout: 60_000 });
   expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
   let tappedAt = null;
-  if (tap || hold || swipe) {
+  if (tap || hold) {
     await page.waitForFunction((n) => window.__sma.frames >= n, TAP_AFTER, { timeout: 60_000 });
     const box = await page.locator('[data-stage] canvas').boundingBox();
     const [x, y] = [box.x + box.width * WATER.x, box.y + box.height * WATER.y];
     if (tap) await page.mouse.click(x, y);
-    else if (swipe) {
-      // Vuốt = kéo nhanh (dưới 300 ms) và xa (trên 40 px) rồi thả (gesture.js). Kéo cũng xoay camera một chút.
-      await page.mouse.move(x - 60, y);
-      await page.mouse.down();
-      await page.mouse.move(x + 60, y, { steps: 3 });
-      await page.mouse.up();
-    } else {
+    else {
       await page.mouse.move(x, y);
       await page.mouse.down();
       const from = (await readSma(page)).frames;
@@ -88,13 +83,53 @@ test.describe('Ao Sen Đêm · chạm mặt nước', () => {
     expect(log.errors).toEqual([]);
   });
 
-  test('vuốt trên mặt nước: cảnh vẫn chạy, không lỗi, ảnh khác lần không vuốt (cùng ?at&freeze)', async ({ page }, testInfo) => {
-    // Kéo cũng xoay camera, nên ảnh khác chưa chứng minh sương xoáy: luật xoáy có unit test (shared.test.js). Ở đây giữ
-    // đường đi thật: vuốt → shared.swirl → sương (shader có xoáy) biên dịch và vẽ được trên cả hai backend.
-    test.setTimeout(300_000);
-    const a = await run(page, testInfo, {});
-    const swiped = await run(page, testInfo, { swipe: true });
-    expect(swiped.stats.checksum, 'vuốt mà ảnh không đổi').not.toBe(a.stats.checksum);
+  /**
+   * Cảnh đứng yên ở khung 30, chỉ bật Cốt + Sương, rồi vuốt (nhanh) hoặc kéo CHẬM cùng một đường đi trên mặt nước.
+   * Đứng yên thì máy không bận vẽ, nên cú vuốt được nhận đúng nhịp (dưới 300 ms) cả trên GPU phần mềm chậm. Kéo nào cũng xoay
+   * camera (OrbitControls tự cập nhật khi rê), nên ép vẽ lại một lần rồi mới chụp: hai ảnh cùng một camera đã xoay.
+   */
+  async function stillStroke(page, testInfo, kind) {
+    const { query } = testInfo.project.metadata;
+    await page.goto(`./?${query.replace(/^\?/, '')}&${AT}&freeze=30`);
+    const settled = await waitForSettled(page, { timeout: 60_000 });
+    expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+    await waitForFrames(page, 30);
+    // Các lớp khác về 0 trong CÙNG một nhịp: một lần vẽ lại chứ không phải năm. Rồi đợi GPU vẽ xong: Chromium giao pointermove
+    // theo nhịp khung, nên GPU phần mềm còn dồn việc vẽ thì cú vuốt bị giãn quá 300 ms và thành một cú kéo.
+    const others = meta.layers.map((l) => l.id).filter((id) => !['cot', 'suong'].includes(id));
+    await page.evaluate((ids) => Promise.all(ids.map((id) => window.__sma.setWeight(id, 0))), others);
+    await twoFrames(page);
+    await twoFrames(page);
+    const box = await page.locator('[data-stage] canvas').boundingBox();
+    const [x, y] = [box.x + box.width * WATER.x, box.y + box.height * WATER.y];
+    await page.mouse.move(x - 60, y);
+    await page.mouse.down();
+    if (kind === 'swipe') await page.mouse.move(x + 60, y, { steps: 3 });
+    else {
+      for (let i = 1; i <= 20; i += 1) {
+        await page.mouse.move(x - 60 + i * 6, y);
+        await page.waitForTimeout(40); // cả cú kéo dài hơn 300 ms: không phải vuốt
+      }
+    }
+    await page.mouse.up();
+    await page.evaluate(() => window.__sma.setWeight('suong', 1)); // ép vẽ lại khung 30 (trọng số không đổi)
+    return canvasStats(page);
+  }
+
+  test('vuốt trên mặt nước làm sương xoáy (GĐ 4): chỉ Cốt + Sương, cảnh đứng yên; vuốt khác một cú kéo chậm cùng đường đi', async ({
+    page,
+  }, testInfo) => {
+    // Giảm chuyển động tắt quán tính (damping) của camera: kéo chậm và vuốt cùng đường đi thì xoay camera y hệt nhau. Chỉ cú vuốt
+    // sinh cử chỉ 'swipe' → shared.swirl → sương xoáy (ở khung đứng yên, góc xoáy lớn nhất). Hai cú kéo chậm phải cho cùng một
+    // ảnh (phép so công bằng), cú vuốt thì khác.
+    test.setTimeout(180_000);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const a = await stillStroke(page, testInfo, 'drag');
+    const b = await stillStroke(page, testInfo, 'drag');
+    expect(b.checksum, 'hai cú kéo chậm như nhau phải cho cùng một ảnh').toBe(a.checksum);
+    const swiped = await stillStroke(page, testInfo, 'swipe');
+    await page.screenshot({ path: testInfo.outputPath('suong-xoay.png') });
+    expect(swiped.checksum, 'vuốt mà sương không xoáy (ảnh giống cú kéo chậm)').not.toBe(a.checksum);
     expect(log.errors).toEqual([]);
   });
 
@@ -107,6 +142,34 @@ test.describe('Ao Sen Đêm · chạm mặt nước', () => {
     const box = await page.locator('[data-stage] canvas').boundingBox();
     await page.mouse.click(box.x + box.width * WATER.x, box.y + box.height * WATER.y);
     await expect(hint).toHaveText(/^Bức tranh này có \d+ lớp — mài thử\?$/);
+  });
+});
+
+test.describe('Ao Sen Đêm · thanh giờ (GĐ 4)', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('__sma.setDial("gio", 27) ở cùng khung thì ảnh khác (trăng, bóng, trời); về 21:00 thì đúng ảnh cũ', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const { query } = testInfo.project.metadata;
+    await page.goto(`./?${query.replace(/^\?/, '')}&${AT}&freeze=20`);
+    const settled = await waitForSettled(page, { timeout: 60_000 });
+    expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+    await waitForFrames(page, 20);
+    expect(await page.evaluate(() => window.__sma.dials())).toEqual([
+      { id: 'gio', min: 18, max: 29.5, step: 0.25, value: 21, text: '21:00', note: null },
+    ]);
+    const base = await canvasStats(page);
+    await page.evaluate(() => window.__sma.setDial('gio', 27));
+    const late = await canvasStats(page);
+    await page.screenshot({ path: testInfo.outputPath('gio-03h00.png') });
+    expect(late.checksum, 'kéo sang 03:00 mà ảnh không đổi').not.toBe(base.checksum);
+    expect((await page.evaluate(() => window.__sma.dials()))[0].text).toBe('03:00');
+    await page.evaluate(() => window.__sma.setDial('gio', 21));
+    expect((await canvasStats(page)).checksum, 'về 21:00 thì phải đúng ảnh cũ').toBe(base.checksum);
+    expect((await readSma(page)).frames, 'kéo thanh giờ không được tiến đồng hồ').toBe(20);
+    expect(log.errors).toEqual([]);
   });
 });
 

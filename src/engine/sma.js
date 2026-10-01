@@ -8,7 +8,8 @@
  * GĐ 2: khi cảnh đã live, `expose()` gắn thêm các hàm của bàn thợ: `layers()`, `setWeight(id, v)`,
  * `snapshot()`, `restore(s)`. Mở DevTools gõ `__sma.setWeight('<id lớp>', 0)` là mài được một lớp.
  * GĐ 3 thêm `quality()` (mức, nấc đang hạ), `degrade()` / `upgrade()` (hạ/nâng tay một nấc) và `stats()`
- * (draw call, tam giác, ms mỗi khung, ms CPU).
+ * (draw call, tam giác, ms mỗi khung, ms CPU). GĐ 4: `stats().gpuMs`, `quality().gpu`, `quality().locked`, `tools()` và
+ * `setTool(id | null)` (bật một công cụ học, hay tắt hết), `dials()` và `setDial(id, v)` (núm của cả bức, ví dụ giờ).
  *
  * Ngoài hàm, chỉ giữ DỮ LIỆU thuần (chuỗi, số, null), nên `JSON.stringify(window.__sma)` đọc được ngay.
  * @param {Window | Record<string, any>} win
@@ -45,4 +46,28 @@ export function createSma(win) {
   };
   win.__sma = sma;
   return sma;
+}
+
+/**
+ * Các hàm của bàn thợ mà window.__sma lộ ra (DevTools, e2e). Luôn đọc bàn thợ HIỆN TẠI qua getStudio(): "Dựng lại cảnh"
+ * thay bàn thợ mới, và lúc mất GPU thì chưa có bàn thợ nào (hàm trả null, hay không làm gì).
+ * @param {() => any} getStudio  bàn thợ của cảnh đang live (engine/gpu/studio.js), hay null
+ * @returns {Record<string, Function>}  truyền thẳng vào sma.expose()
+ */
+export function studioApi(getStudio) {
+  const s = getStudio;
+  return {
+    layers: () => s()?.layers().map(({ id, name }) => ({ id, name, weight: s().weight(id).value })) ?? [],
+    setWeight: (id, v) => s()?.setWeight(id, v),
+    snapshot: () => s()?.snapshot() ?? null,
+    restore: (snap) => s()?.restore(snap),
+    quality: () => s()?.quality() ?? null,
+    degrade: () => s()?.degrade(),
+    upgrade: () => s()?.upgrade(),
+    stats: () => s()?.stats() ?? null,
+    tools: () => s()?.tools() ?? [],
+    setTool: (id) => s()?.setTool(id),
+    dials: () => s()?.dials() ?? [],
+    setDial: (id, v) => s()?.setDial(id, v),
+  };
 }

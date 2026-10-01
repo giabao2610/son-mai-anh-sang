@@ -136,7 +136,8 @@ export function createLayer(ctx, shared) {
     objects,
     update(dt, t) {
       show();
-      if (w.value <= 0) return; // tắt hẳn: không tính gì
+      // Tắt hẳn: không tính gì. dt = 0 (xưởng vẽ lại khung đứng yên của ?freeze): đồng bộ, KHÔNG tiến đàn thêm một bước.
+      if (w.value <= 0 || dt === 0) return;
       if (onCpu) cpu.step(dt, t);
       else ctx.renderer.compute(step); // bước đọc ctx.u.delta / ctx.u.time: xưởng đã cập nhật trước khi gọi
     },

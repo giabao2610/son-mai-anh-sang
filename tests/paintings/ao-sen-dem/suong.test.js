@@ -74,6 +74,12 @@ describe('l3-suong', () => {
     expect(octaves(build({ level: 'thap', budget: { fogOctaves: 1 } }).layers.suong)).toBe(1);
   });
 
+  it("nấc 'chi-tiet' chỉ có khi mức chạy hơn 1 octave (GĐ 4): mức thấp vốn 1 octave thì không đưa nấc không tác dụng", () => {
+    expect(build({ level: 'cao' }).layers.suong.degrade.map((d) => d.id)).toEqual(['chi-tiet']);
+    expect(build({ level: 'vua' }).layers.suong.degrade.map((d) => d.id)).toEqual(['chi-tiet']);
+    expect(build({ level: 'thap' }).layers.suong.degrade).toEqual([]);
+  });
+
   it('dispose gỡ vòm trời và trả fogNode về như cũ (2 lần vẫn an toàn)', () => {
     const { ctx, layers } = build();
     const [dome] = layers.suong.objects;

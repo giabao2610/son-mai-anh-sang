@@ -57,6 +57,9 @@ export function mountKnobs(container, { knobs, values, labels = {}, onChange, on
     });
     const el = binding.element;
     el.dataset.knob = knob.id;
+    // Tweakpane ghi nhãn vào một <div>, không phải <label>: ô số cạnh thanh trượt, ô chọn, ô màu không có tên nào cho
+    // trình đọc màn hình (axe-core bắt luật 'label', GĐ 4). Gắn tên của núm vào từng ô nhập.
+    for (const input of el.querySelectorAll('input, select')) input.setAttribute('aria-label', opts.label);
     el.addEventListener('pointerenter', () => onHover(knob.id));
     el.addEventListener('focusin', () => onHover(knob.id));
     el.addEventListener('pointerleave', () => onHover(null));

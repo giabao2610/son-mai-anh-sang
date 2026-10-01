@@ -10,7 +10,7 @@
  * @property {object} [shared]          object dùng chung trong bức (thiếu thì xưởng tạo {}) → tham số thứ 2 của createLayer
  * @property {Dial[]} [dials]           [4] núm của CẢ BỨC (Bức 1: 'gio'); xưởng vẽ thanh trượt
  * @property {(g: Gesture) => void} [onGesture]   cử chỉ mà không công cụ nào dùng
- * @property {(dt: number, t: number) => void} [update]   mỗi khung, TRƯỚC các lớp
+ * @property {(dt: number, t: number) => void} [update]   mỗi khung, TRƯỚC các lớp. [4] update(0, t) như Layer.update
  * @property {() => void} [dispose]     gọi 2 lần vẫn an toàn
  */
 /** Dữ liệu thuần; xưởng dựng PerspectiveCamera + OrbitControls có giới hạn.
@@ -55,6 +55,8 @@
  * @typedef {Object} Layer
  * @property {any[]} [objects]            [0] mảng SỐNG các mesh/sprite của lớp; lớp sửa tại chỗ khi dựng lại
  * @property {(dt: number, t: number) => void} [update]   [0] lớp 5 gọi ctx.renderer.compute() ở đây
+ *                                 [4] update(0, t): xưởng vẽ lại khung đứng yên (?freeze): đồng bộ theo uniform (hướng trăng, bóng),
+ *                                 KHÔNG tiến mô phỏng (compute, hạt CPU)
  * @property {PostStage} [post]           [0] xử lý ẢNH sau scene pass
  * @property {() => void} dispose         [0] gọi 2 lần vẫn an toàn; tự gỡ object khỏi scene
  * @property {Record<string, (v: any) => void | Promise<void>>} [onKnob]   [2] cho núm 'js' | 'rebuild'. Thiếu hàm cho
@@ -100,27 +102,33 @@
  * @property {number} min
  * @property {number} max
  * @property {number} step
- * @property {(v: number) => string} [format]   29.5 → '05:30'
+ * @property {(v: number) => string} [format]   29.5 → '05:30'; [4] cũng là aria-valuetext của thanh trượt
  * @property {() => string | null} [note]        khóa ghi chú trong content.dials[id].notes ('daytime')
  */
 /** @typedef {Object} Gesture   [1] xưởng giữ 'drag' để xoay camera
- * @property {'tap'|'hold-start'|'hold-move'|'hold-end'|'swipe'} kind
+ * @property {'tap'|'hold-start'|'hold-move'|'hold-end'|'swipe'|'hover'} kind
+ *                                 [4] 'hover': chuột di mà không bấm, mỗi khung tối đa một. CHỈ công cụ nhận; bức không bao giờ
+ *                                 nhận 'hover' (onGesture của bức giữ nguyên nghĩa)
  * @property {{ x: number, y: number }} ndc
  * @property {any} ray                          THREE.Ray; bức tự giao với mặt phẳng của nó
  * @property {{ x: number, y: number }} [velocity]   chỉ có ở 'swipe'
+ * @property {'mouse'|'touch'|'pen'} [pointer]  [4] pointerType của sự kiện gốc (kính chỉ giữ chạm của ngón tay, bút)
  */
-/** Công cụ học [4]: chạy với MỌI bức. src/engine/tools/<id>.js
+/** Công cụ học [4]: chạy với MỌI bức. src/engine/tools/<id>.js; tên trên nút "Đồ nghề" ở t.tools[id].name
  * @typedef {{ id: string, mount: (api: ToolApi) => ToolInstance }} Tool */
 /** @typedef {Object} ToolApi
  * @property {() => ViewInfo[]} views              view ở không gian hiển thị, thứ tự như §7 Lột lớp
  * @property {(id: string) => Promise<void>} requireView   bảo đảm view sẵn sàng (có thể biên dịch lại MỘT lần)
- * @property {HTMLElement} el
+ * @property {HTMLElement} el                      ô của công cụ trong thanh công cụ; công cụ dựng thanh điều khiển ở đây
  * @property {Record<string, any>} t               chữ giao diện của trang (strings.<lang>.js)
+ * @property {() => Promise<void>} redraw          vẽ lại khung đứng yên (?freeze) sau khi công cụ đổi uniform
  */
 /** @typedef {{ id: string, label: string, ready: boolean }} ViewInfo */
 /** @typedef {Object} ToolInstance
- * @property {(final: any, view: (id: string) => any) => any} [overlay]  ghép MỘT LẦN sau display; đổi chế độ = đổi uniform
+ * @property {(final: any, view: (id: string) => any) => any} [overlay]  ghép sau display khi dựng pipeline; ghép LẠI khi
+ *                                 requireView đổi MRT, nên chỉ dựng node, không giữ trạng thái; đổi chế độ = đổi uniform
  * @property {(g: Gesture) => boolean} [onGesture]  true = đã dùng, không chuyển cho bức
+ * @property {(on: boolean) => void} [activate]     bật/tắt: đổi uniform, hiện/giấu thanh điều khiển
  * @property {() => void} dispose
  */
 /** Thứ xưởng đưa cho bức. Bức chỉ chạm vào thế giới qua đây và qua three.
@@ -147,9 +155,12 @@
  */
 /** @typedef {EngineCtx & LayerCtxExtra} LayerCtx   [0] */
 
-/** Trạng thái tác phẩm dạng JSON (spec §16): trọng số và núm khác mặc định; GĐ 4 thêm dials.
- * @typedef {{ weights: Record<string, number>, knobs: Record<string, any> }} Snapshot   [2] khóa núm là 'layerId.knobId'
+/** Trạng thái tác phẩm dạng JSON (spec §16): trọng số và núm; [4] dials: { dialId: số } (bức không có Dial thì bỏ trống).
+ * @typedef {{ weights: Record<string, number>, knobs: Record<string, any>, dials?: Record<string, number> }} Snapshot
+ *   [2] khóa núm là 'layerId.knobId'
  */
+/** Một bên của thí nghiệm 'compare' [3]: trung bình trượt. [4] gpuMs: null khi máy không đo được thời gian GPU.
+ * @typedef {{ ms: number, cpuMs: number, gpuMs: number | null }} CompareSide */
 /** Bàn thợ [2] (engine/gpu/studio.js): API DUY NHẤT mà Sổ tay (ui/) và __sma thấy. Không có ở tầng tĩnh.
  * @typedef {Object} Studio
  * @property {() => { id: string, name: string, knobs: object[], experiments: { id: string, kind: string }[], readouts: { id: string, unit: string }[] }[]} layers
@@ -160,16 +171,23 @@
  * @property {(layerId: string, expId: string) => boolean} experiment
  * @property {(layerId: string, expId: string, on: boolean) => Promise<void>} toggleExperiment
  * @property {(layerId: string) => { id: string, value: number | string, unit: string }[]} readouts
- * @property {() => { drawCalls: number, triangles: number, ms: number, cpuMs: number }} stats   số của khung vừa vẽ ([3] cpuMs)
+ * @property {() => { drawCalls: number, triangles: number, ms: number, cpuMs: number, gpuMs: number | null }} stats
+ *   số của khung vừa vẽ ([3] cpuMs; [4] gpuMs: null khi máy không đo được thời gian GPU)
  * @property {() => Snapshot} snapshot
  * @property {(s: Snapshot) => Promise<void>} restore
- * @property {(layerId: string, expId: string) => { off: { ms: number, cpuMs: number } | null, on: { ms: number, cpuMs: number } | null }} compare
+ * @property {(layerId: string, expId: string) => { off: CompareSide | null, on: CompareSide | null }} compare
  *   [3] số đo của một thí nghiệm 'compare' theo từng trạng thái (null: chưa đo; thí nghiệm kiểu khác thì luôn null)
- * @property {() => { level: string | null, steps: string[], guarding: boolean, capped: boolean }} quality
- *   [3] bộ điều chỉnh: mức, id các nấc đang hạ, đang canh (Sổ tay mở: chỉ hạ khi quá tải nặng), có đang coi là nhịp bị khóa
+ * @property {() => { level: string | null, steps: string[], guarding: boolean, capped: boolean, gpu: boolean, locked: string[] }} quality
+ *   [3] bộ điều chỉnh: mức, id các nấc đang hạ, đang canh (Sổ tay mở: chỉ hạ khi quá tải nặng), có đang coi là nhịp bị khóa;
+ *   [4] gpu: máy đo được ms GPU (chẩn đoán theo tải); locked: id các nấc bị khóa chống dao động (giữ tới khi tải lại trang)
  * @property {() => Promise<boolean>} degrade   [3] hạ tay MỘT nấc (DevTools, e2e); false khi hết thang
  * @property {() => Promise<boolean>} upgrade   [3] nâng tay MỘT nấc; false khi không còn nấc nào
  * @property {(cb: (q: object) => void) => () => void} onQuality   [3] báo mỗi lần nấc đổi; trả hàm bỏ nghe
+ * @property {() => { id: string, on: boolean }[]} tools   [4] công cụ học, theo thứ tự engine/tools/index.js
+ * @property {(id: string | null) => Promise<void>} setTool   [4] bật một công cụ (tắt các cái khác), null tắt hết
+ * @property {() => { id: string, min: number, max: number, step: number, value: number, text: string, note: string | null }[]} dials
+ *   [4] núm của cả bức: text là chữ của format (cũng là aria-valuetext), note là khóa ghi chú
+ * @property {(id: string, v: number) => Promise<void>} setDial   [4] kẹp theo min/max/step
  */
 
 export {};

@@ -55,6 +55,8 @@ export function createLadder({ ladder = ['dpr'], layers, stage, dpr }) {
     },
     /** Id các nấc đang áp, theo thứ tự đã áp: __sma.quality() và huy hiệu đọc. */
     ids: () => steps.slice(0, applied).map((s) => s.id),
+    /** Id của nấc thứ `index` trong thang (bộ điều chỉnh nói nấc bị khóa bằng chỉ số). */
+    idAt: (index) => steps[index]?.id ?? null,
     /** Áp nấc kế tiếp. false khi đã hết thang. */
     down() {
       if (applied >= steps.length) return false;

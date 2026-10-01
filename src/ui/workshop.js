@@ -1,6 +1,7 @@
 // ui/workshop.js — xưởng trên trang: thanh lớp + Sổ tay + chế độ mài có hướng dẫn. Nhận studio() (null ở tầng tĩnh: chỉ đọc).
 import { createRail } from './layer-rail.js';
 import { createNotebook } from './notebook.js';
+import { createRailTools } from './rail-tools.js';
 
 /**
  * Chế độ mài (spec §4.1): mọi lớp trừ Cốt mờ dần về 0, bức trở về đất sét; "Phủ lớp tiếp theo" sơn lại lần lượt
@@ -26,6 +27,8 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
   let bound = studio(); // bàn thợ đang vẽ Sổ tay; "Dựng lại cảnh" tạo bàn thợ mới
 
   const notebook = createNotebook(doc, { meta, content, t, studio, ...notebookOptions });
+  // Đồ nghề (công cụ học) và thanh trượt của các Dial: chỉ khi có cảnh 3D.
+  const tools = interactive ? createRailTools(doc, { t, content, studio }) : null;
   const openLayer = (id, options) => {
     notebook.show(id, options);
     rail.setActive(id);
@@ -49,6 +52,7 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
       },
       close: () => close(),
     },
+    tools: tools?.el ?? null,
   });
   doc.body.append(rail.el, notebook.el);
 
@@ -57,6 +61,7 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
     const s = studio();
     if (s) for (const { id } of meta.layers) rail.setWeight(id, s.weight(id));
     rail.setNext(nextLayer()?.name ?? null);
+    tools?.sync();
     // Cảnh vừa được dựng lại (bàn thợ mới, thí nghiệm về tắt hết): vẽ lại Sổ tay đang mở theo bàn thợ mới.
     if (s && s !== bound) {
       bound = s;
@@ -73,11 +78,12 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
     frame = 0;
   };
 
-  /** Đóng thanh lớp và Sổ tay, phủ lại mọi lớp: về chế độ ngắm, thấy bức tranh hoàn chỉnh. */
+  /** Đóng thanh lớp và Sổ tay, tắt công cụ học, phủ lại mọi lớp: về chế độ ngắm, thấy bức tranh hoàn chỉnh. */
   function close() {
     stop();
     rail.el.hidden = true;
     notebook.hide();
+    if (interactive) studio()?.setTool(null);
     for (const { id } of rest) studio()?.setWeight(id, 1, { tween: true });
     onClose();
   }

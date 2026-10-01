@@ -22,7 +22,7 @@ export async function boot(entry, { lang = 'vi', t, win = window, doc = document
   const flags = readFlags(win.location.search);
   const now = flags.at ?? new Date(); // cố định lúc khởi động: con dấu và pha trăng cùng một "bây giờ"
   const sma = createSma(win);
-  const shell = mountShell(doc, entry.meta, { now, t, onState: (state) => sma.set({ state }) });
+  const shell = mountShell(doc, entry.meta, { now, t, onState: (state) => sma.set({ state }), poster: flags.poster });
   shell.setState('detecting');
 
   // Dò tầng không bao giờ được làm trắng trang: lỗi bất ngờ, kể cả lúc đọc window, đều về tầng tĩnh.

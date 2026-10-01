@@ -18,7 +18,9 @@ import { breathAmplitude, breathOffset } from './breath.js';
  */
 export async function createStage({ tier, flags, parent, clearColor, reducedMotion = false, win = window }) {
   // WebGPURenderer chỉ quyết định lùi về WebGL2 BÊN TRONG init(); forceWebGL ép tầng B ngay từ đầu.
-  const renderer = new WebGPURenderer({ antialias: false, forceWebGL: tier === 'webgl2' });
+  // trackTimestamp: đo thời gian GPU (gpu-timer.js). Bật từ lúc tạo, vì WebGPU chỉ kiểm tính năng 'timestamp-query' lúc
+  // init: máy không có thì three tự tắt cờ, không báo lỗi validation mỗi khung (Phụ lục A.40, khác A.21).
+  const renderer = new WebGPURenderer({ antialias: false, forceWebGL: tier === 'webgl2', trackTimestamp: true });
   await renderer.init();
   // Backend THẬT, chỉ đáng tin sau init(): three có thể lặng lẽ lùi về WebGL2. Huy hiệu dùng giá trị này.
   const backend = renderer.backend.isWebGPUBackend ? 'webgpu' : 'webgl2';

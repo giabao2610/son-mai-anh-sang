@@ -1,5 +1,6 @@
+// tests/unit/clock.test.js — đồng hồ của cảnh (thật, tất định) và bộ chặn 60 khung/giây trên nhiều loại màn hình.
 import { describe, it, expect } from 'vitest';
-import { MAX_FPS, createClock, createFrameCap } from '../../src/engine/gpu/clock.js';
+import { MAX_FPS, SLOW_DISPLAY_MS, createClock, createFrameCap } from '../../src/engine/gpu/clock.js';
 
 describe('createClock — chế độ freeze (tất định)', () => {
   it('khung 1 có t = 1/60; dt luôn 1/60; ms bị bỏ qua', () => {
@@ -90,6 +91,40 @@ describe('createFrameCap — tối đa 60 khung/giây', () => {
       expect(drawn(hz), `${hz} Hz`).toBeGreaterThanOrEqual(59);
       expect(drawn(hz), `${hz} Hz`).toBeLessThanOrEqual(61);
     }
+  });
+
+  it('màn "60 Hz" thật ra chạy 60,02 / 60,05 / 60,1 Hz (dao động tới ±1 ms): không bỏ khung nào trong 60 giây', () => {
+    // GĐ 3 bỏ 2–15 khung mỗi phút trên các màn này: mỗi khung bỏ là hình giật một nhịp.
+    expect(SLOW_DISPLAY_MS).toBeCloseTo(1000 / 63, 6);
+    for (const hz of [59.94, 60.02, 60.05, 60.1]) {
+      for (const jitter of [0, 1]) {
+        const cap = createFrameCap();
+        const total = Math.round(hz * 60);
+        let skipped = 0;
+        for (let i = 0; i < total; i++) if (!cap.ready((i * 1000) / hz + jitter * Math.sin(i * 1.7))) skipped += 1;
+        expect(skipped, `${hz} Hz, dao động ±${jitter} ms`).toBe(0);
+      }
+    }
+  });
+
+  it('màn 72, 75, 90, 120, 144 Hz (nhanh hơn ~63 Hz): vẫn chặn, khoảng 60 khung mỗi giây', () => {
+    for (const hz of [72, 75, 90, 120, 144]) {
+      const fps = drawn(hz, { seconds: 20, jitter: 0.3 });
+      expect(fps, `${hz} Hz`).toBeGreaterThanOrEqual(59);
+      expect(fps, `${hz} Hz`).toBeLessThanOrEqual(61);
+    }
+  });
+
+  it('nhịp màn hình đo cả những nhịp bị bỏ: đổi từ màn 120 Hz sang màn 60 Hz (kéo cửa sổ) thì thôi chặn', () => {
+    const cap = createFrameCap();
+    let t = 0;
+    let n = 0;
+    for (let i = 0; i < 240; i++) if (cap.ready((t += 1000 / 120))) n += 1;
+    expect(n).toBeGreaterThanOrEqual(118);
+    expect(n).toBeLessThanOrEqual(122);
+    n = 0;
+    for (let i = 0; i < 3606; i++) if (cap.ready((t += 1000 / 60.1))) n += 1;
+    expect(n).toBeGreaterThanOrEqual(3605); // một phút ở 60,1 Hz; chỉ vài nhịp đầu còn đo lại nhịp màn hình
   });
 
   it('tab vừa hiện lại sau lâu: vẽ ngay rồi đi tiếp, không vẽ dồn; ms không phải số thì vẽ', () => {

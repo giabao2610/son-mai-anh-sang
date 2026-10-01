@@ -6,6 +6,7 @@
    và thiếu phần Latin cơ bản. */
 @import './tokens.css';
 @import './notebook.css';
+@import './tools.css';
 @import '@fontsource/cormorant-garamond/500.css';
 @import '@fontsource/cormorant-garamond/500-italic.css';
 @import '@fontsource/be-vietnam-pro/400.css';
@@ -42,15 +43,14 @@ body {
 ::selection { background: var(--vang-la); color: var(--den-then); }
 
 /* ── Lớp 0: poster ─────────────────────────────────────────────────────────────────────── */
-/* Ảnh tĩnh phủ kín màn hình. object-fit: cover cắt bớt mép thay vì bóp méo ảnh;
-   object-position lệch phải để điện thoại dọc vẫn thấy trăng. */
-[data-poster] {
+/* Ảnh tĩnh phủ kín màn hình. object-fit: cover cắt bớt mép thay vì bóp méo ảnh. Từ GĐ 4 poster được chụp từ chính camera
+   của cảnh (scripts/poster.js): cắt ở GIỮA như canvas cắt khung hình, nên lúc hòa dần poster → cảnh không bị lệch khung. */
+img[data-poster] {
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 62% 50%;
 }
 
 /* ── Lớp 1: sân khấu 3D ───────────────────────────────────────────────────────────────── */
@@ -299,6 +299,9 @@ header h1 {
 [data-moon]:empty { display: none; }
 .moon-dark { fill: color-mix(in srgb, var(--cham) 80%, var(--den-then)); }
 .moon-lit { fill: var(--nga); }
+
+/* ── ?poster (GĐ 4): chỉ còn canvas, để scripts/poster.js chụp poster từ chính cảnh (không chữ, không huy hiệu, không UI) ── */
+body[data-poster] :is(.frame, .rail, .notebook, .toolbar) { display: none !important; }
 
 /* ── Chế độ thợ (?debug=stats): stats-gl tự đặt ở góc trái trên, đè lên tên bức. Dời ra giữa mép trên ── */
 [data-debug='stats'] { left: 50% !important; transform: translateX(-50%); }

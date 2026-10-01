@@ -7,6 +7,7 @@ import {
   RIPPLE_SLOTS,
   createRipples,
   defaultHour,
+  formatHour,
   makeRippleHeight,
   moonDirection,
   setup,
@@ -169,5 +170,32 @@ describe('setup(ctx)', () => {
     s.shared.hour.value = 26;
     s.update(1 / 60, 0);
     expect(s.shared.moon.dir.value.toArray()).toEqual(moonDirection(26));
+  });
+});
+
+describe('thanh giờ (Dial "gio", GĐ 4)', () => {
+  it('formatHour: thang 18 → 29,5 ra "hh:mm"; quá 24 giờ là sáng hôm sau', () => {
+    expect([formatHour(18), formatHour(21), formatHour(23.75), formatHour(26.25), formatHour(29.5)])
+      .toEqual(['18:00', '21:00', '23:45', '02:15', '05:30']);
+  });
+
+  it('setup().dials: một Dial trên đúng uniform giờ; 18 → 29,5, bước 15 phút', () => {
+    const s = setup(makeEngineCtx(meta));
+    const [gio] = s.dials;
+    expect(gio).toMatchObject({ id: 'gio', min: 18, max: 29.5, step: 0.25 });
+    expect(gio.uniform).toBe(s.shared.hour);
+    expect([gio.format(gio.min), gio.format(gio.max)]).toEqual(['18:00', '05:30']);
+  });
+
+  it('ghi chú "daytime" chỉ khi đang là ban ngày VÀ thanh còn ở giá trị mặc định; đêm thì không bao giờ', () => {
+    const day = setup(makeEngineCtx(meta, { now: vn('2026-09-28T12:00') }));
+    const [gio] = day.dials;
+    expect(gio.note()).toBe('daytime');
+    gio.uniform.value = 27; // người xem kéo thanh
+    expect(gio.note()).toBeNull();
+    gio.uniform.value = 21; // kéo về đúng 21:00 thì lời nhắc quay lại (vẫn là giờ mượn)
+    expect(gio.note()).toBe('daytime');
+    const night = setup(makeEngineCtx(meta, { now: NOW }));
+    expect(night.dials[0].note()).toBeNull();
   });
 });

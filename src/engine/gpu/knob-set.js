@@ -35,6 +35,18 @@ export function knobMax(knob, env) {
 const viaOf = (knob) => knob.via ?? 'uniform';
 
 /**
+ * Kiểm trần của một núm số ngay lúc dựng (GĐ 4): max() trả NaN hay undefined thì Math.min lặng lẽ bỏ trần (hay ra NaN),
+ * và trần nhỏ hơn min thì núm không có giá trị nào hợp lệ. Cả hai là lỗi của khai báo: báo ngay, đừng để người xem gặp.
+ */
+function checkMax(layerId, knob, env) {
+  if ((knob.kind ?? 'number') !== 'number' || knob.max === undefined) return;
+  const max = knobMax(knob, env);
+  if (Number.isFinite(max) && (knob.min === undefined || max >= knob.min)) return;
+  throw new Error(`Lớp "${layerId}": trần của núm "${knob.id}" là ${max} ở tầng ${env.tier}, mức ${env.level}; `
+    + `phải là số hữu hạn và không nhỏ hơn min (${knob.min})`);
+}
+
+/**
  * Đưa một giá trị về đúng kiểu của núm. Số bị kẹp trong [min, trần]; màu là '#rrggbb' chữ thường;
  * 'select' phải là một id trong options. Nhờ vậy snapshot() luôn là JSON gọn, và Sổ tay không đưa được số lạ vào.
  * @param {string} layerId
@@ -96,6 +108,7 @@ export function createKnobs(layerId, knobs, env) {
   const values = {};
   for (const knob of knobs) {
     if (specs.has(knob.id)) throw new Error(`Lớp "${layerId}" khai báo núm "${knob.id}" hai lần`);
+    checkMax(layerId, knob, env);
     specs.set(knob.id, knob);
     const value = normalizeKnob(layerId, knob, knobValue(knob, env), env);
     values[knob.id] = value;

@@ -1,19 +1,34 @@
 // engine/gpu/scene.js — dựng MỘT cảnh trên một sân khấu: ctx → setup → lớp → pipeline → thang nấc → input → bàn thợ; và hàm vẽ một khung.
-import { FRAME_BUDGET_MS, budgetFor, createTuner, isMobile, pickLevel } from '../quality.js';
+import { budgetFor, isMobile, pickLevel } from '../quality.js';
+import { FRAME_BUDGET_MS, createTuner } from '../tuner.js';
+import { createGpuTimer } from './gpu-timer.js';
 import { createCtx, buildLayers, ensureEmissive } from './layers.js';
 import { createPipeline } from './pipeline.js';
 import { createLadder } from './ladder.js';
 import { createStudio } from './studio.js';
 import { createInput } from './input.js';
+import { createToolbox } from './toolbox.js';
+import { createDialSet } from './dial-set.js';
 
 /**
- * Bộ điều chỉnh của một cảnh: bộ quyết định (tuner, hàm thuần) + thang nấc (ladder, chạm GPU).
+ * Bộ điều chỉnh của một cảnh: bộ quyết định (tuner, hàm thuần) + thang nấc (ladder, chạm GPU) + bộ đo GPU (gpu-timer).
  * tuner = null khi ?freeze: ảnh phải tất định, chỉ hạ/nâng tay (__sma) được.
  */
-function createQuality({ level, ladder, tuner }) {
+function createQuality({ level, ladder, tuner, timer }) {
   const listeners = new Set();
   let guarding = false;
-  const state = () => ({ level, steps: ladder.ids(), guarding, capped: tuner?.state().capped ?? false });
+  let live = false; // chỉ đo từ lúc live: khung ẩn và 0,9 giây hòa dần không phải nhịp thật của cảnh
+  const state = () => {
+    const t = tuner?.state();
+    return {
+      level,
+      steps: ladder.ids(),
+      guarding,
+      capped: t?.capped ?? false,
+      gpu: timer.available, // máy đo được ms GPU: bộ điều chỉnh chẩn đoán theo tải
+      locked: (t?.locked ?? []).map((i) => ladder.idAt(i)), // nấc bị khóa chống dao động: giữ tới khi tải lại trang
+    };
+  };
   const changed = () => {
     for (const cb of listeners) cb(state());
   };
@@ -29,11 +44,19 @@ function createQuality({ level, ladder, tuner }) {
     state,
     degrade: () => act('down'),
     upgrade: () => act('up'),
+    /** run.js gọi khi cảnh vừa live (sau hòa dần): từ đây bộ điều chỉnh mới đo. */
+    start() {
+      live = true;
+    },
     /** Mỗi khung, trước khi vẽ: bộ quyết định nói hạ / nâng / trả lại hết thì áp ngay. */
     sample(ms) {
+      if (!live) return;
       const action = tuner?.sample(ms, ladder);
       if (action) act(action);
     },
+    /** ms CPU của khung vừa vẽ, và mỗi mẫu ms GPU: "tải" của máy (tuner.js, đường tải). */
+    cpu: (ms) => tuner?.cpu(ms),
+    gpu: (ms) => tuner?.gpu(ms),
     /**
      * Thanh lớp mở: người xem cố ý làm chậm để học (tắt instancing, nhiều đom đóm), nên bộ điều chỉnh chỉ CANH:
      * chậm vừa phải thì để yên cho số đo trung thực, quá tải nặng thì vẫn hạ để máy không bị ép quá sức.
@@ -64,8 +87,11 @@ function createQuality({ level, ladder, tuner }) {
  * @param {Date} p.now
  * @param {boolean} p.reducedMotion
  * @param {Window} p.win
+ * @param {import('../contracts/runtime.js').Tool[]} [p.tools]   công cụ học (engine/tools/index.js)
+ * @param {Record<string, any>} [p.t]        chữ giao diện (nhãn view của công cụ)
+ * @param {object | null} [p.content]        chữ của bức (nhãn tap của lớp)
  */
-export function buildScene({ stage, disposer, painting, meta, flags, now, reducedMotion, win }) {
+export function buildScene({ stage, disposer, painting, meta, flags, now, reducedMotion, win, tools = [], t = {}, content = null }) {
   stage.useCamera(painting.camera);
   const mobile = isMobile(win.navigator);
   // Mức chọn theo backend THẬT (three có thể đã lùi WebGPU → WebGL2); ?level ép một mức khác (xem mức thấp trên máy tính).
@@ -89,11 +115,16 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
   // Thang nấc dựng SAU pipeline: nấc của lớp dùng chung (bloom) chạm vào node mà pipeline vừa dựng.
   const ladder = createLadder({ ladder: painting.quality?.ladder, layers, stage, dpr: budget.dpr });
   const tuner = flags.freeze ? null : createTuner({ budgetMs: mobile ? FRAME_BUDGET_MS.mobile : FRAME_BUDGET_MS.desktop });
-  const quality = createQuality({ level, ladder, tuner });
-
-  // Con trỏ → cử chỉ (hàng đợi, xử lý đầu mỗi khung). Kéo là của camera; công cụ học (GĐ 4) nhận trước bức.
-  const input = createInput({ canvas: stage.renderer.domElement, camera: stage.camera, controls: stage.controls, pointer: stage.u.pointer, win });
-  disposer.add(() => input.dispose());
+  // ms GPU thật (máy nào đo được): cho bộ điều chỉnh chẩn đoán theo tải, và cho số đo của Sổ tay.
+  const timer = createGpuTimer(stage.renderer, {
+    onSample: (ms) => {
+      quality.gpu(ms);
+      studio.gpu(ms);
+    },
+    onStop: () => studio.gpu(null), // đo hỏng giữa phiên: Sổ tay về "—", bộ điều chỉnh tự về đường nhịp
+  });
+  disposer.add(() => timer.dispose());
+  const quality = createQuality({ level, ladder, tuner, timer });
 
   // Vòng lặp đã dừng ở khung N của ?freeze=N: thay đổi từ Sổ tay hay __sma thì vẽ lại đúng khung đó (không tiến đồng hồ).
   // Vẽ lại ở nhịp requestAnimationFrame KẾ TIẾP, gộp mọi thay đổi trong cùng nhịp làm một: scene pass và reflector
@@ -108,7 +139,15 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
       win.requestAnimationFrame(() => {
         pending = null;
         try {
-          if (!disposer.closed) pipeline.render();
+          if (!disposer.closed) {
+            route(); // cử chỉ tới lúc đứng yên (rê Kính mài) cũng có tác dụng
+            // update(0, t) (GĐ 4): lớp và bức đồng bộ theo uniform vừa đổi (thanh giờ → trăng, bóng) mà KHÔNG tiến mô phỏng
+            // (compute, hạt CPU): ảnh vẫn là khung N.
+            const t = stage.u.time.value;
+            setup?.update?.(0, t);
+            for (const { layer } of layers) layer.update?.(0, t);
+            pipeline.render();
+          }
           resolve();
         } catch (err) {
           reject(err);
@@ -117,6 +156,26 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     });
     return pending;
   };
+
+  // Công cụ học (GĐ 4): gắn vào pipeline, overlay ghép MỘT lần; mỗi lúc một công cụ (toolbox.js).
+  const toolbox = createToolbox({ tools, views: pipeline.views, doc: win.document, t, content, redraw });
+  disposer.add(() => toolbox.dispose());
+
+  // Con trỏ → cử chỉ (hàng đợi, xử lý đầu mỗi khung). Kéo là của camera; công cụ học nhận trước bức.
+  // Khung đứng yên: cử chỉ tới thì vẽ lại cho nó có tác dụng. Rê chuột chỉ công cụ nhận, nên chỉ vẽ lại khi có công cụ bật.
+  const input = createInput({
+    canvas: stage.renderer.domElement, camera: stage.camera, controls: stage.controls, pointer: stage.u.pointer, win,
+    onQueue: (kind) => frozen && (kind !== 'hover' || toolbox.list().some((x) => x.on)) && redraw(),
+  });
+  disposer.add(() => input.dispose());
+  /** Cử chỉ tới công cụ đang bật trước; công cụ không dùng thì tới bức. 'hover' không bao giờ tới bức. */
+  const route = () => {
+    for (const g of input.drain()) {
+      if (toolbox.gesture(g) || g.kind === 'hover') continue;
+      setup?.onGesture?.(g);
+    }
+  };
+
   const studio = createStudio({
     meta,
     layers,
@@ -125,6 +184,8 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     tweenSeconds: reducedMotion ? 0 : undefined, // giảm chuyển động: lớp bật/tắt ngay, không mờ dần
     redraw,
     quality,
+    toolbox,
+    dials: createDialSet(setup?.dials ?? []), // núm của cả bức (Bức 1: thanh giờ)
   });
 
   return {
@@ -134,20 +195,22 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     quality,
     /** Biên dịch trước với đúng render target + MRT của pass, trong lúc poster còn hiện. */
     compile: () => pipeline.compile(),
-    /** Một khung: nấc → đồng hồ → cử chỉ → setup.update → layer.update → tween trọng số → camera → render → số đo. */
+    /** Một khung: nấc → đồng hồ → cử chỉ → setup.update → layer.update → tween trọng số → camera → render → ms GPU → số đo. */
     step(ms) {
       const start = win.performance.now();
       quality.sample(ms ?? start);
       const { t, dt } = stage.tick(ms);
-      for (const g of input.drain()) setup?.onGesture?.(g);
+      route();
       setup?.update?.(dt, t);
       for (const { layer } of layers) layer.update?.(dt, t);
       weights.step(dt);
       stage.breathe(t);
       stage.controls?.update();
       pipeline.render();
+      timer.poll(ms ?? start); // hỏi ms GPU của các khung trước, không chờ
       const end = win.performance.now();
       studio.measure(stage.renderer.info, end, end - start); // ms CPU: luồng chính bận bao lâu cho khung này
+      quality.cpu(end - start);
     },
     /** run.js gọi khi vòng lặp dừng ở khung N của ?freeze=N. */
     freeze() {

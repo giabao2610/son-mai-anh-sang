@@ -2,12 +2,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import { buildLayers, createWeights } from '../../src/engine/gpu/layers.js';
 import { createStudio } from '../../src/engine/gpu/studio.js';
+import { createDialSet } from '../../src/engine/gpu/dial-set.js';
+import { uniform } from 'three/tsl';
 
 const env = { tier: 'webgl2', level: 'vua', budget: {}, now: new Date('2026-09-28T14:00:00Z'), mobile: false };
 const meta = { layers: [{ id: 'cot', name: 'Cốt' }, { id: 'lop-hai', name: 'Lớp hai' }] };
 
 /** Hai lớp giả: Cốt có núm uniform + núm rebuild; lớp hai có thí nghiệm (một kiểu compare) và số đo. */
-function setup({ tier = 'webgl2', quality } = {}) {
+function setup({ tier = 'webgl2', quality, toolbox, dials } = {}) {
   const log = [];
   const cot = {
     id: 'cot',
@@ -35,7 +37,7 @@ function setup({ tier = 'webgl2', quality } = {}) {
   const weights = createWeights(meta.layers);
   const layers = buildLayers([cot, two], {}, {}, { ...env, tier });
   const redraw = vi.fn();
-  const studio = createStudio({ meta, layers, weights, env: { ...env, tier }, redraw, tweenSeconds: 0.5, quality });
+  const studio = createStudio({ meta, layers, weights, env: { ...env, tier }, redraw, tweenSeconds: 0.5, quality, toolbox, dials });
   return { studio, weights, layers, redraw, log };
 }
 
@@ -96,7 +98,7 @@ describe('createStudio', () => {
     expect(studio.readouts('lop-hai')).toEqual([{ id: 'dinh', value: 42, unit: 'đỉnh' }, { id: 'ten', value: 'x', unit: '' }]);
     const info = { render: { drawCalls: 21, triangles: 90000 } };
     studio.measure(info, 1000, 4);
-    expect(studio.stats()).toEqual({ drawCalls: 21, triangles: 90000, ms: 0, cpuMs: 4 });
+    expect(studio.stats()).toEqual({ drawCalls: 21, triangles: 90000, ms: 0, cpuMs: 4, gpuMs: null });
     studio.measure(info, 1016, 4);
     expect(studio.stats().ms).toBe(16);
     studio.measure(info, 1052, 14);
@@ -115,14 +117,41 @@ describe('createStudio', () => {
     frames(10, 16, 2); // 160 ms đầu: còn trong khoảng bỏ qua
     expect(studio.compare('lop-hai', 'so').off).toBeNull();
     frames(20, 16, 2);
-    expect(studio.compare('lop-hai', 'so').off).toEqual({ ms: 16, cpuMs: 2 });
+    expect(studio.compare('lop-hai', 'so').off).toEqual({ ms: 16, cpuMs: 2, gpuMs: null });
     await studio.toggleExperiment('lop-hai', 'so', true);
     frames(7, 33, 9); // vừa bật: 231 ms đầu vẫn bị bỏ qua
     expect(studio.compare('lop-hai', 'so').on).toBeNull();
     frames(20, 33, 9);
-    expect(studio.compare('lop-hai', 'so')).toEqual({ off: { ms: 16, cpuMs: 2 }, on: { ms: 33, cpuMs: 9 } });
+    expect(studio.compare('lop-hai', 'so')).toEqual({ off: { ms: 16, cpuMs: 2, gpuMs: null }, on: { ms: 33, cpuMs: 9, gpuMs: null } });
     expect(studio.compare('lop-hai', 'pha')).toEqual({ off: null, on: null });
     expect(() => studio.compare('lop-hai', 'khac')).toThrow('Lớp "lop-hai" không có thí nghiệm "khac"');
+  });
+
+  it('ms GPU (GĐ 4): null tới khi có mẫu; compare ghi vào bên đang đo, bỏ mẫu về trong 0,25 s sau lần đổi', async () => {
+    const { studio } = setup();
+    const info = { render: { drawCalls: 1, triangles: 1 } };
+    let t = 0;
+    const frames = (n, gap, gpu) => {
+      for (let i = 0; i < n; i++) {
+        studio.measure(info, (t += gap), 1);
+        if (gpu !== undefined && i % 4 === 0) studio.gpu(gpu); // mẫu GPU về thưa hơn khung
+      }
+    };
+    expect(studio.stats().gpuMs).toBeNull();
+    frames(30, 16, 5);
+    expect(studio.stats().gpuMs).toBe(5);
+    expect(studio.compare('lop-hai', 'so').off).toEqual({ ms: 16, cpuMs: 1, gpuMs: 5 });
+    await studio.toggleExperiment('lop-hai', 'so', true);
+    studio.measure(info, (t += 16), 1); // khung đầu sau lần đổi đặt mốc bỏ qua
+    studio.gpu(40); // mẫu của khung TRƯỚC lúc đổi, về muộn: không ghi vào bên "Bật"
+    frames(20, 16, 12);
+    const { off, on } = studio.compare('lop-hai', 'so');
+    expect(off.gpuMs).toBe(5);
+    expect(on.gpuMs).toBeCloseTo(12, 6);
+    expect(studio.stats().gpuMs).toBeGreaterThan(5);
+    studio.gpu(null); // đo GPU hỏng giữa phiên (gpu-timer thôi đo): Sổ tay về "—", cột so sánh giữ số đã đo
+    expect(studio.stats().gpuMs).toBeNull();
+    expect(studio.compare('lop-hai', 'so').on.gpuMs).toBeCloseTo(12, 6);
   });
 
   it('nấc: quality() đọc bộ điều chỉnh; degrade()/upgrade() hạ/nâng tay một nấc rồi vẽ lại; thiếu bộ điều chỉnh thì không có gì', async () => {
@@ -149,8 +178,40 @@ describe('createStudio', () => {
     studio.onQuality(cb);
     expect(listeners).toEqual([cb]);
     const bare = setup().studio;
-    expect(bare.quality()).toEqual({ level: null, steps: [], guarding: false, capped: false });
+    expect(bare.quality()).toEqual({ level: null, steps: [], guarding: false, capped: false, gpu: false, locked: [] });
     expect(await bare.degrade()).toBe(false);
+  });
+
+  it('công cụ học (GĐ 4): tools() đọc hộp đồ nghề; setTool() bật/tắt rồi vẽ lại; không có hộp đồ nghề thì không có công cụ', async () => {
+    let on = null;
+    const toolbox = { list: () => [{ id: 'kinh', on: on === 'kinh' }], set: vi.fn((id) => { on = id; }) };
+    const { studio, redraw } = setup({ toolbox });
+    await studio.setTool('kinh');
+    expect(studio.tools()).toEqual([{ id: 'kinh', on: true }]);
+    await studio.setTool(null);
+    expect(toolbox.set.mock.calls).toEqual([['kinh'], [null]]);
+    expect(redraw).toHaveBeenCalledTimes(2);
+    const bare = setup().studio;
+    expect(bare.tools()).toEqual([]);
+    await expect(bare.setTool('kinh')).rejects.toThrow('Không có công cụ "kinh"');
+    await expect(bare.setTool(null)).resolves.toBeUndefined();
+  });
+
+  it('Dial (GĐ 4): dials() đọc, setDial() kẹp rồi vẽ lại; snapshot có dials (bức không có Dial thì không có khóa này); restore đem về', async () => {
+    const hour = uniform(21);
+    const dials = createDialSet([{ id: 'gio', uniform: hour, min: 18, max: 29.5, step: 0.25, format: (v) => `${v}h` }]);
+    const { studio, redraw } = setup({ dials });
+    expect(studio.dials()).toEqual([{ id: 'gio', min: 18, max: 29.5, step: 0.25, value: 21, text: '21h', note: null }]);
+    await studio.setDial('gio', 40);
+    expect(hour.value).toBe(29.5);
+    expect(redraw).toHaveBeenCalledTimes(1);
+    const snap = studio.snapshot();
+    expect(snap.dials).toEqual({ gio: 29.5 });
+    hour.value = 18;
+    await studio.restore(snap);
+    expect(hour.value).toBe(29.5);
+    expect(setup().studio.snapshot()).not.toHaveProperty('dials');
+    await expect(setup().studio.setDial('gio', 20)).rejects.toThrow('Bức không có Dial "gio"');
   });
 
   it('snapshot → JSON gọn: trọng số lấy ĐÍCH của tween, núm theo địa chỉ "layerId.knobId"', () => {

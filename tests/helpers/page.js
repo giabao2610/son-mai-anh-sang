@@ -16,9 +16,11 @@ export const PAGE_BODY = `
 export function mountPage(doc = document) {
   doc.body.innerHTML = PAGE_BODY;
   doc.body.dataset.state = 'poster';
+  delete doc.body.dataset.poster; // cờ ?poster của test trước (GĐ 4)
+  delete doc.body.dataset.tool;
   const $ = (sel) => doc.querySelector(sel);
   return {
-    poster: $('[data-poster]'),
+    poster: $('img[data-poster]'),
     stage: $('[data-stage]'),
     badge: $('[data-badge]'),
     badgeNote: $('[data-badge-note]'),

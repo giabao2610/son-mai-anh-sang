@@ -1,4 +1,4 @@
-// ui/strings.vi.js — Chữ tiếng Việt của xưởng: tầng, tầng tĩnh, lời mời, thanh lớp, Sổ tay, mất GPU, tháng/can/chi, con dấu.
+// ui/strings.vi.js — Chữ tiếng Việt của xưởng: tầng, tầng tĩnh, lời mời, thanh lớp, công cụ học, Sổ tay, mất GPU, tháng/can/chi, con dấu.
 //
 // Quy ước: file này KHÔNG import gì và không file nào trong src/ import nó. Chỉ trang HTML import rồi
 // truyền `t` vào boot(); engine/ và ui/ nhận `t` qua tham số. Thêm ngôn ngữ = thêm strings.<lang>.js cùng bộ khóa.
@@ -51,6 +51,9 @@ const t = {
     steps: (n) => `hạ ${n} nấc`,
     stepsExplain: (n) => `Máy đang bớt ${n} nấc chi tiết (độ nét, phản chiếu, bloom…) để hình không giật; `
       + 'khi máy rảnh hơn, chi tiết tự trở lại.',
+    /** Có nấc bị khóa chống dao động (GĐ 4): nói thật là nấc đó giữ tới khi tải lại trang. */
+    lockedExplain: (n, k) => `Máy đang bớt ${n} nấc chi tiết (độ nét, phản chiếu, bloom…) để hình không giật. `
+      + `${k} nấc trong số đó giữ nguyên tới khi tải lại trang, vì trả lại là máy chậm ngay.`,
   },
   static: {
     noGpu: 'Máy này chưa vẽ được cảnh 3D, thường là vì trình duyệt đang tắt tăng tốc phần cứng. '
@@ -76,7 +79,27 @@ const t = {
     toggle: (name) => `Bật hoặc tắt lớp ${name}`,
     next: (name) => `Phủ lớp tiếp theo · ${name}`,
     close: 'Đóng thanh lớp, xem lại bức tranh',
+    /** Mục dưới danh sách lớp (GĐ 4): công cụ học và thanh trượt của bức (Dial). */
+    tools: 'Đồ nghề',
   },
+  /** Công cụ học (GĐ 4): tên trên nút "Đồ nghề" của thanh lớp, và chữ trên thanh điều khiển của từng công cụ. */
+  tools: {
+    'kinh-mai': {
+      name: 'Kính mài',
+      shapeLabel: 'Hình kính',
+      shapes: { tron: 'Tròn', gat: 'Gạt' },
+      viewLabel: 'Soi qua kính',
+      handle: 'Vạch gạt: bên trái là ảnh đang soi, bên phải là ảnh cuối',
+    },
+    'lot-lop': {
+      name: 'Lột lớp',
+      label: 'Lột dần ảnh',
+    },
+  },
+  /** Các view của xưởng mà công cụ nhìn được; tap của lớp lấy nhãn ở content của lớp. */
+  views: { final: 'Ảnh cuối', emissive: 'Chỉ emissive', normal: 'Normal', depth: 'Depth' },
+  /** Dòng trạng thái (aria-live) trên thanh công cụ: view Normal phải biên dịch lại một lần. */
+  toolStatus: { grinding: 'đang mài…', failed: 'Không mài được view này; vẫn giữ view cũ.' },
   /** Sổ tay của một lớp: ba tab Hiểu / Chỉnh / Phá. */
   notebook: {
     label: 'Sổ tay',
@@ -103,13 +126,17 @@ const t = {
       triangles: 'Tam giác mỗi khung',
       ms: 'Mili giây mỗi khung',
       cpuMs: 'Mili giây CPU mỗi khung',
+      gpuMs: 'Mili giây GPU mỗi khung',
     },
+    /** Máy không đo được thời gian GPU (GĐ 4): dòng ms GPU ghi "—" kèm câu này. */
+    gpuMissing:
+      'Máy này chưa đo được thời gian GPU: Safari và nhiều điện thoại chưa cho đo, còn GPU Apple trên Chrome báo các lượt vẽ chồng lên nhau nên số không dùng được.',
     /** Hai cột "Tắt / Bật" của thí nghiệm so sánh (GĐ 3). */
     compare: {
       off: 'Tắt',
       on: 'Bật',
       empty: 'chưa đo',
-      value: (ms, cpu) => `khung ${ms} ms · CPU ${cpu} ms`,
+      value: (ms, cpu, gpu) => `khung ${ms} ms · CPU ${cpu} ms${gpu === null ? '' : ` · GPU ${gpu} ms`}`,
     },
     /** Nút mở Sổ tay ở tầng tĩnh (chỉ đọc). */
     openStatic: (n) => `Xem ${n} lớp của bức tranh`,

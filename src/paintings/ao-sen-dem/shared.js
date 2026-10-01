@@ -1,4 +1,4 @@
-// paintings/ao-sen-dem/shared.js — setup() của Bức 1: giờ đêm nay, hướng trăng, bộ đệm gợn sóng, điểm hút đom đóm, xoáy sương, cử chỉ.
+// paintings/ao-sen-dem/shared.js — setup() của Bức 1: giờ đêm nay (thanh giờ), hướng trăng, gợn sóng, điểm hút đom đóm, xoáy sương, cử chỉ.
 import { Plane, Vector2, Vector3, Vector4 } from 'three/webgpu';
 import { Fn, Loop, exp, float, length, pow2, sin, step, uniform, uniformArray } from 'three/tsl';
 import { hourOfNight, tonight } from '../../lib/astro/moon.js';
@@ -19,6 +19,17 @@ const SWIRL_SPIN = { min: 0.6, max: 2.4, perSpeed: 0.35 };
 export function defaultHour(now) {
   const { instant, isNight, evening } = tonight(now);
   return isNight ? { hour: hourOfNight(instant, evening), note: null } : { hour: NIGHT.fallback, note: 'daytime' };
+}
+
+const pad = (n) => String(n).padStart(2, '0');
+
+/**
+ * Chữ của thanh giờ: giờ trên thang của Bức 1 (18 → 29,5; quá 24 là sáng hôm sau) ra "hh:mm". 29,5 → '05:30'.
+ * @param {number} v
+ */
+export function formatHour(v) {
+  const minutes = Math.round(v * 60);
+  return `${pad(Math.floor(minutes / 60) % 24)}:${pad(minutes % 60)}`;
 }
 
 /**
@@ -103,6 +114,17 @@ export function setup(ctx) {
 
   return {
     shared: { hour: uHour, hourNote: note, moon: { dir: moonDir }, ripples, attract, swirl },
+    // Thanh giờ (GĐ 4): xưởng vẽ thanh trượt, kéo thì chỉ đổi uHour.value. Ban ngày mượn 21:00 và ghi chú, nhưng chỉ
+    // tới khi người xem kéo thanh đi: lúc đó họ đã chọn giờ của mình. Nhãn và chữ ghi chú ở content.dials.gio.
+    dials: [{
+      id: 'gio',
+      uniform: uHour,
+      min: NIGHT.start,
+      max: NIGHT.end,
+      step: 0.25,
+      format: formatHour,
+      note: () => (note === 'daytime' && uHour.value === hour ? 'daytime' : null),
+    }],
 
     // Cử chỉ mà không công cụ nào dùng. Tia đi từ camera qua ngón tay; bức tự giao với mặt nước y = 0.
     onGesture(g) {

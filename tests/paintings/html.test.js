@@ -3,7 +3,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
-import { paintings } from '../../src/paintings/registry.js';
+import { SITE, paintings } from '../../src/paintings/registry.js';
 import { mergePalette } from '../../src/engine/palette.js';
 import { svgColors } from '../helpers/svg.js';
 
@@ -54,6 +54,18 @@ for (const { meta, page, lang } of paintings) {
       expect(existsSync(file)).toBe(true);
       const limit = meta.poster.src.endsWith('.svg') ? 10 * 1024 : 150 * 1024;
       expect(statSync(file).size).toBeLessThanOrEqual(limit);
+    });
+
+    it('thẻ chia sẻ (GĐ 4): og:title = <title>, og:description = tagline, og:url = SITE, og:image = SITE + meta.og (1200×630), twitter summary_large_image', () => {
+      const prop = (name) => $(`meta[property="${name}"]`)?.getAttribute('content');
+      expect(prop('og:title')).toBe(doc.title);
+      expect(prop('og:description')).toBe(meta.tagline);
+      expect(prop('og:type')).toBe('website');
+      expect(prop('og:url')).toBe(SITE + page.replace(/index\.html$/, ''));
+      expect(meta.og, 'meta.og là đường dẫn trong public/, không có "/" đầu').toMatch(/^[^/].*\.jpg$/);
+      expect(prop('og:image')).toBe(SITE + meta.og);
+      expect([prop('og:image:width'), prop('og:image:height')]).toEqual(['1200', '630']);
+      expect($('meta[name="twitter:card"]')?.getAttribute('content')).toBe('summary_large_image');
     });
 
     it('poster SVG chỉ dùng màu của bảng sơn mài (đã ghép meta.palette)', () => {
@@ -114,13 +126,28 @@ for (const { meta, page, lang } of paintings) {
   });
 }
 
+describe('styles/tools.css (GĐ 4)', () => {
+  it('thanh công cụ nằm DƯỚI thanh lớp và Sổ tay (z-index nhỏ hơn hẳn): sau "Dựng lại cảnh", thanh công cụ mới được gắn sau chúng trong DOM, tay nắm gạt không được đè lên', () => {
+    const zIndex = (file, selector) => {
+      const css = readFileSync(ROOT + file, 'utf8');
+      const rule = css.match(new RegExp(`(?:^|\\n)${selector}\\s*\\{([^}]*)\\}`));
+      return Number(rule?.[1].match(/z-index:\s*(\d+)/)?.[1]);
+    };
+    const toolbar = zIndex('src/styles/tools.css', '\\.toolbar');
+    const panels = zIndex('src/styles/notebook.css', '\\.rail,\\s*\\.notebook');
+    expect([toolbar, panels].every(Number.isFinite), `toolbar ${toolbar}, rail/notebook ${panels}`).toBe(true);
+    expect(toolbar).toBeLessThan(panels);
+  });
+});
+
 describe('styles/shell.css (trang nào cũng dùng)', () => {
-  it('@import tokens.css, notebook.css (GĐ 2) rồi đúng 5 file font theo trọng lượng (spec §5), tất cả trước luật đầu tiên', () => {
+  it('@import tokens.css, notebook.css (GĐ 2), tools.css (GĐ 4) rồi đúng 5 file font theo trọng lượng (spec §5), trước luật đầu tiên', () => {
     const css = readFileSync(ROOT + 'src/styles/shell.css', 'utf8');
     const imports = [...css.matchAll(/@import\s+'([^']+)'/g)].map((m) => m[1]);
     expect(imports).toEqual([
       './tokens.css',
       './notebook.css',
+      './tools.css',
       '@fontsource/cormorant-garamond/500.css',
       '@fontsource/cormorant-garamond/500-italic.css',
       '@fontsource/be-vietnam-pro/400.css',

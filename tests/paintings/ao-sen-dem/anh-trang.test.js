@@ -4,6 +4,7 @@ import { OrthographicCamera, Vector3 } from 'three/webgpu';
 import meta from '../../../src/paintings/ao-sen-dem/meta.js';
 import * as painting from '../../../src/paintings/ao-sen-dem/painting.js';
 import * as anhTrang from '../../../src/paintings/ao-sen-dem/layers/l2-anh-trang.js';
+import { moonStrength } from '../../../src/paintings/ao-sen-dem/layers/l2-anh-trang.js';
 import { MOON } from '../../../src/paintings/ao-sen-dem/parts/anh-trang-moon.js';
 import { LIGHT_DISTANCE, SHADOW_BOX, fitShadowCamera } from '../../../src/paintings/ao-sen-dem/parts/anh-trang-shadow.js';
 import { moonDirection } from '../../../src/paintings/ao-sen-dem/shared.js';
@@ -70,6 +71,39 @@ describe('l2-anh-trang', () => {
     layers['anh-trang'].update(1 / 60, 2);
     expect(sun.intensity).toBe(0);
     expect(shared.cot.hemi.intensity).toBeCloseTo(shared.cot.hemiIntensity, 6);
+  });
+
+  it('theo thanh giờ (GĐ 4): trăng càng thấp ánh trăng càng yếu; ở 21:00 và khi trăng cao hơn thì giữ nguyên như GĐ 3', () => {
+    const at = (hour) => moonStrength(moonDirection(hour)[1]);
+    expect(at(21)).toBe(1);
+    expect(at(23.75)).toBe(1); // trăng cao nhất
+    expect(at(18)).toBeCloseTo(0.35, 6);
+    expect(at(29.5)).toBeCloseTo(0.35, 6);
+    expect(at(19)).toBeGreaterThan(0.35);
+    expect(at(19)).toBeLessThan(at(20));
+    const { ctx, setup, shared, layers } = build();
+    const [sun] = lights(ctx.scene, 'isDirectionalLight');
+    shared.hour.value = 18.5;
+    setup.update(0, 1);
+    layers['anh-trang'].update(0, 1);
+    expect(sun.intensity).toBeCloseTo(3 * at(18.5), 6);
+  });
+
+  it('vẽ lại khung đứng yên (update(0, t), ?freeze): kéo thanh giờ thì hướng trăng đổi và bóng vẽ lại đúng một lần', () => {
+    const { ctx, setup, shared, layers } = build();
+    const [sun] = lights(ctx.scene, 'isDirectionalLight');
+    const [moon] = layers['anh-trang'].objects;
+    const still = () => {
+      sun.shadow.needsUpdate = false;
+      setup.update(0, 1); // xưởng gọi setup trước, rồi các lớp, với dt = 0
+      layers['anh-trang'].update(0, 1);
+      return sun.shadow.needsUpdate;
+    };
+    expect(still()).toBe(true);
+    expect(still()).toBe(false);
+    shared.hour.value = 27;
+    expect(still()).toBe(true);
+    expect(moon.position.clone().normalize().distanceTo(new Vector3(...moonDirection(27)))).toBeLessThan(1e-6);
   });
 
   it('dispose gỡ trăng, đèn, hoa đăng (2 lần vẫn an toàn); đèn xưởng của Cốt thì ở lại', () => {

@@ -34,6 +34,21 @@ describe('knobValue / knobMax', () => {
   });
 });
 
+describe('createKnobs: trần do max() trả (GĐ 4)', () => {
+  it('max() trả số không hữu hạn, nhỏ hơn min, hay thiếu tầng: ném lỗi tiếng Việt ngay lúc dựng (không lặng lẽ bỏ trần)', () => {
+    const bad = [
+      { id: 'count', min: 100, max: () => Number.NaN },
+      { id: 'count', min: 100, max: () => undefined },
+      { id: 'count', min: 100, max: (e) => (e.level === 'vua' ? 50 : 500) },
+      { id: 'count', min: 100, max: { webgpu: 200000 } },
+    ];
+    for (const knob of bad) {
+      expect(() => createKnobs('vang-la', [{ ...knob, value: 100 }], env), String(knob.max)).toThrow(/Lớp "vang-la": trần của núm "count"/);
+    }
+    expect(() => createKnobs('vang-la', [{ id: 'count', min: 100, max: (e) => (e.level === 'vua' ? 100 : 500), value: 100 }], env)).not.toThrow();
+  });
+});
+
 describe('normalizeKnob', () => {
   it('số: kẹp trong [min, trần của tầng]; chuỗi số cũng nhận; không phải số thì ném lỗi', () => {
     const count = { id: 'count', min: 100, max: { webgpu: 200000, webgl2: 20000 } };

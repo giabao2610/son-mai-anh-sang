@@ -1,0 +1,142 @@
+/* styles/tools.css — mục Đồ nghề và thanh giờ trong thanh lớp; thanh điều khiển của công cụ học và tay nắm gạt; màu từ bảng sơn mài. */
+
+/* Thanh công cụ: máy tính ở giữa đáy tranh, điện thoại ngay trên dải thanh lớp.
+   KHÔNG đặt transform hay backdrop-filter lên .toolbar và .tool: cả hai tạo containing block cho con position: fixed,
+   và tay nắm gạt (con của .tool) phải đo theo cả khung nhìn. Nền mờ đặt ở .tool-panel. */
+.toolbar {
+  position: fixed;
+  /* Dưới thanh lớp và Sổ tay (z-index 2), trên tranh và lớp chữ. Bằng nhau thì thứ tự DOM quyết định: "Dựng lại cảnh" gắn
+     thanh công cụ mới SAU thanh lớp, và tay nắm gạt (cao cả khung) sẽ đè lên thanh lớp, Sổ tay. */
+  z-index: 1;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--gutter) + 8px);
+  display: flex;
+  justify-content: center;
+  pointer-events: none; /* chỗ trống hai bên thanh vẫn là của canvas */
+}
+.tool-panel {
+  max-width: min(560px, calc(100vw - 2 * var(--gutter)));
+  padding: 10px 12px;
+  color: var(--nga);
+  background: var(--veil-strong);
+  border: 1px solid color-mix(in srgb, var(--vang-la) 35%, transparent);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--den-then) 70%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+.tool-panel > * + * { margin-top: 8px; }
+.tool-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tool-panel button {
+  padding: 5px 12px;
+  font: 600 12px/1.3 var(--sans);
+  color: var(--bac-la);
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--bac-la) 35%, transparent);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.tool-panel button[aria-pressed='true'] { color: var(--den-then); background: var(--vang-la); border-color: var(--vang-la); }
+.tool-panel :focus-visible,
+.lens-handle:focus-visible { outline: 2px solid var(--vang-la-sang); outline-offset: 2px; }
+.tool-panel label { font: 600 12px/1.3 var(--sans); color: var(--vang-la); }
+.tool-panel input[type='range'] { width: min(260px, 50vw); accent-color: var(--vang-la); }
+.tool-value { min-width: 7em; font: 400 12px/1.3 var(--mono); color: var(--vang-la-sang); }
+/* Vùng aria-live: luôn có mặt, trống thì thu lại (không dùng hidden hay display: none). */
+.tool-status { margin: 0; font-size: 12px; color: var(--vang-la-sang); }
+.tool-panel > .tool-status:empty { margin-top: 0; }
+
+/* Tay nắm của hình gạt: một dải dọc cả khung ở vị trí --split (0–1); vạch vàng lá ở giữa, núm tròn ở giữa chiều cao.
+   Kéo bằng chuột hay ngón tay (touch-action: none để trình duyệt không cuộn trang thay vì kéo). */
+.lens-handle {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--split, 0.5) * 100%);
+  width: 32px;
+  margin-left: -16px;
+  cursor: ew-resize;
+  touch-action: none;
+  pointer-events: auto;
+}
+.lens-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  background: var(--vang-la);
+  border: 2px solid var(--den-then);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--den-then) 60%, transparent);
+}
+
+/* ── Mục "Đồ nghề" trong thanh lớp (ui/rail-tools.js): nút của từng công cụ, rồi thanh trượt của các Dial ─────────── */
+.rail-tools {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--vang-la) 25%, transparent);
+}
+.rail-title { margin: 0; font: 600 11px/1.4 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--vang-la); }
+.rail-tool-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.rail-tool-list button {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: none;
+  border: 1px solid var(--vang-la);
+  border-radius: 999px;
+}
+.rail-tool-list button[aria-pressed='true'] { color: var(--den-then); background: var(--vang-la); }
+.dial { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; }
+.dial label { font: 600 12px/1.4 var(--sans); color: var(--bac-la); }
+.dial output { font: 400 13px/1.4 var(--mono); color: var(--vang-la-sang); }
+.dial input { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: var(--vang-la); }
+.dial input:focus-visible { outline: 2px solid var(--vang-la-sang); outline-offset: 2px; }
+/* Ghi chú là vùng aria-live: luôn có mặt, trống thì không chiếm chỗ. */
+.dial-note { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.5; color: var(--bac-la); }
+.dial-chip { display: none; }
+
+/* Công cụ đang bật: thơ và con dấu ở chân tranh nhường chỗ cho thanh điều khiển (tắt công cụ thì hiện lại). */
+body[data-tool] .foot { visibility: hidden; }
+
+/* Điện thoại: thanh công cụ ngay trên dải thanh lớp (68px); Sổ tay thu lại khi một công cụ bật, để chừa chỗ nhìn cảnh. */
+@media (max-width: 640px) {
+  .toolbar { bottom: 76px; padding: 0 8px; }
+  .tool-panel { max-width: 100%; }
+  body[data-tool] .notebook { display: none; }
+  /* Dải thanh lớp: Đồ nghề nằm cùng hàng, chỉ còn nút công cụ và nút nhỏ "◷ 21:00". Ô trượt mở ra ngay trên dải: nó đặt
+     theo khung nhìn (position: fixed), nên dải thanh lớp không được có backdrop-filter (thuộc tính đó biến dải thành khối
+     chứa của con fixed, và dải cuộn ngang thì cắt mất ô trượt). */
+  .rail { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .rail-tools { display: flex; align-items: center; flex-shrink: 0; gap: 6px; padding: 0 0 0 10px; border-top: 0; border-left: 1px solid color-mix(in srgb, var(--vang-la) 25%, transparent); }
+  .rail-title { display: none; }
+  .rail-tool-list { flex-wrap: nowrap; }
+  .rail-tool-list button,
+  .dial-chip { white-space: nowrap; }
+  .dial-chip {
+    display: inline-block;
+    padding: 5px 10px;
+    font: 400 12px/1.3 var(--mono);
+    color: var(--vang-la-sang);
+    background: none;
+    border: 1px solid color-mix(in srgb, var(--vang-la) 55%, transparent);
+    border-radius: 999px;
+  }
+  .rail-dials {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 68px;
+    z-index: 3;
+    padding: 12px 16px;
+    background: var(--veil-strong);
+    border-top: 1px solid color-mix(in srgb, var(--vang-la) 35%, transparent);
+  }
+  .rail-dials:not([data-open]) { display: none; }
+}

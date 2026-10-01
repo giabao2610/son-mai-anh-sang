@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
+// tests/unit/pipeline.test.js — nối post của các lớp (build → renderOutput → display), MRT, tap, view Normal lười; không cần GPU.
+import { describe, it, expect, vi } from 'vitest';
 import {
   NoToneMapping, MaterialBlending, SRGBColorSpace, Scene, PerspectiveCamera, Vector4,
 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
-import { buildOutputNode, createPipeline } from '../../src/engine/gpu/pipeline.js';
+import { buildFinalNode, createPipeline } from '../../src/engine/gpu/pipeline.js';
 
 // three r186: vec4(a, b) trả về VarNode "intent" bọc một JoinNode. Bóc lớp vỏ để xem các thành phần.
 const unwrap = (node) => (node.isVarNode && node.intent ? node.node : node);
@@ -17,8 +18,8 @@ function recordingLayer(id, calls, { build = false, display = false } = {}) {
   return { id, layer: { post, dispose() {} } };
 }
 
-describe('buildOutputNode', () => {
-  it('mọi build theo thứ tự → renderOutput(…, NoToneMapping) → mọi display theo thứ tự → vec4(rgb, 1)', () => {
+describe('buildFinalNode', () => {
+  it('mọi build theo thứ tự → renderOutput(…, NoToneMapping) → mọi display theo thứ tự; trả ảnh cuối (chưa overlay)', () => {
     const calls = [];
     const color = marker();
     const channel = () => null;
@@ -29,7 +30,7 @@ describe('buildOutputNode', () => {
       recordingLayer('b', calls, { build: true, display: true }),
     ];
 
-    const result = buildOutputNode({ color, channel, layers, weight: (id) => weights[id] });
+    const result = buildFinalNode({ color, channel, layers, weight: (id) => weights[id] });
 
     expect(calls.map((c) => `${c.stage}:${c.id}`)).toEqual(['build:a', 'build:b', 'display:a', 'display:b']);
     expect(calls[0].input.color).toBe(color);
@@ -42,24 +43,38 @@ describe('buildOutputNode', () => {
     for (const c of calls) {
       expect(c.input.channel).toBe(channel);
       expect(c.input.weight).toBe(weights[c.id]);
+      expect(typeof c.input.tap).toBe('function');
     }
-
-    expect(result.isNode).toBe(true);
-    const join = unwrap(result);
-    expect(join.nodeType).toBe('vec4');
-    expect(join.nodes[0].node).toBe(calls[3].out);
-    expect(join.nodes[0].components).toBe('xyz');
-    expect(join.nodes[1].value).toBe(1);
+    expect(result).toBe(calls[3].out);
   });
 
-  it('không lớp nào có post: màu scene pass vẫn qua renderOutput và alpha = 1', () => {
+  it('không lớp nào có post: ảnh cuối là màu scene pass qua renderOutput', () => {
     const color = marker();
     const layers = [{ id: 'cot', layer: { dispose() {} } }];
-    const join = unwrap(buildOutputNode({ color, channel: () => null, layers, weight: () => uniform(1) }));
-    const ro = join.nodes[0].node;
+    const ro = buildFinalNode({ color, channel: () => null, layers, weight: () => uniform(1) });
     expect(ro.isRenderOutputNode).toBe(true);
     expect(ro.colorNode).toBe(color);
-    expect(join.nodes[1].value).toBe(1);
+  });
+
+  it('tap (GĐ 4): ghi theo thứ tự gặp, kèm id lớp; chụp ở build là tuyến tính, ở display là màu hiển thị', () => {
+    const a = marker();
+    const b = marker();
+    const layers = [{
+      id: 'phu-bong',
+      layer: {
+        post: {
+          build: ({ color, tap }) => { tap('truoc-bloom', a); return color; },
+          display: ({ color, tap }) => { tap('truoc-fxaa', b); return color; },
+        },
+        dispose() {},
+      },
+    }];
+    const taps = [];
+    buildFinalNode({ color: marker(), channel: () => null, layers, weight: () => uniform(1), taps });
+    expect(taps).toEqual([
+      { layerId: 'phu-bong', tapId: 'truoc-bloom', node: a, linear: true },
+      { layerId: 'phu-bong', tapId: 'truoc-fxaa', node: b, linear: false },
+    ]);
   });
 });
 
@@ -97,13 +112,13 @@ describe('createPipeline (dựng đồ thị, không cần GPU)', () => {
     const passMRT = p.scenePass.getMRT();
     expect(Object.keys(passMRT.outputNodes)).toEqual(['output', 'emissive']);
     expect(passMRT.getBlendMode('emissive').blending).toBe(MaterialBlending);
-    expect(p.views()).toEqual([{ id: 'final', label: 'final', ready: true }]);
+    expect(p.views.list().map((v) => v.id)).toEqual(['final', 'emissive', 'normal', 'depth']);
     expect(typeof p.render).toBe('function');
     expect(typeof p.compile).toBe('function');
     expect(() => { p.dispose(); p.dispose(); }).not.toThrow();
   });
 
-  it('renderPipeline.outputColorTransform = false: renderOutput chỉ chạy một lần, trong outputNode do buildOutputNode dựng', () => {
+  it('renderPipeline.outputColorTransform = false: renderOutput chỉ chạy một lần, trong outputNode do buildFinalNode dựng', () => {
     const p = createPipeline({
       renderer: fakeRenderer, scene: new Scene(), camera: new PerspectiveCamera(), layers: [], weight: () => uniform(1),
     });
@@ -121,6 +136,46 @@ describe('createPipeline (dựng đồ thị, không cần GPU)', () => {
     expect(ro.colorNode).toBe(p.scenePass.getTextureNode('output'));
     expect(ro.getToneMapping()).toBe(NoToneMapping);
 
+    p.dispose();
+  });
+
+  it('requireView("normal") (GĐ 4): MRT thêm kênh normal (emissive vẫn blend theo material), ghép lại overlay trên chuỗi post CŨ, biên dịch trước', async () => {
+    const calls = [];
+    const layer = recordingLayer('phu-bong', calls, { build: true, display: true });
+    const p = createPipeline({ renderer: fakeRenderer, scene: new Scene(), camera: new PerspectiveCamera(), layers: [layer], weight: () => uniform(1) });
+    p.scenePass.compileAsync = vi.fn(async () => {});
+    const seen = [];
+    p.views.setOverlays([{ id: 'kinh', fn: (final, view) => { seen.push(view('normal')); return final; } }]);
+    expect(p.views.list().find((v) => v.id === 'normal').ready).toBe(false);
+    const placeholder = seen[0];
+    await p.views.require('normal');
+    const passMRT = p.scenePass.getMRT();
+    expect(Object.keys(passMRT.outputNodes)).toEqual(['output', 'emissive', 'normal']);
+    expect(passMRT.getBlendMode('emissive').blending).toBe(MaterialBlending);
+    expect(p.views.list().find((v) => v.id === 'normal').ready).toBe(true);
+    expect(seen).toHaveLength(2); // overlay được ghép lại
+    expect(seen[1]).not.toBe(placeholder);
+    expect(seen[1]).toBe(p.scenePass.getTextureNode('normal'));
+    expect(calls.map((c) => c.stage)).toEqual(['build', 'display']); // bloom, FXAA… KHÔNG dựng lại
+    expect(p.scenePass.compileAsync).toHaveBeenCalledTimes(1);
+    await p.views.require('normal'); // lần hai: không làm gì
+    await p.views.require('depth');
+    expect(p.scenePass.compileAsync).toHaveBeenCalledTimes(1);
+    p.dispose();
+  });
+
+  it('bấm Normal hai lần liền khi đang mài (chưa biên dịch xong): MRT chỉ đổi một lần, biên dịch một lần, overlay ghép lại một lần', async () => {
+    const p = createPipeline({ renderer: fakeRenderer, scene: new Scene(), camera: new PerspectiveCamera(), layers: [], weight: () => uniform(1) });
+    let done;
+    p.scenePass.compileAsync = vi.fn(() => new Promise((resolve) => { done = resolve; }));
+    const overlay = vi.fn((final) => final);
+    p.views.setOverlays([{ id: 'kinh', fn: overlay }]);
+    const setMRT = vi.spyOn(p.scenePass, 'setMRT');
+    const first = p.views.require('normal');
+    const second = p.views.require('normal'); // lần hai chờ cùng lần biên dịch, không xong trước nó
+    done();
+    await Promise.all([first, second]);
+    expect([setMRT.mock.calls.length, p.scenePass.compileAsync.mock.calls.length, overlay.mock.calls.length]).toEqual([1, 1, 2]);
     p.dispose();
   });
 });

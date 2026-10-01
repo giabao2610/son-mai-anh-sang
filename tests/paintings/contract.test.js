@@ -1,13 +1,17 @@
 // tests/paintings/contract.test.js — hợp đồng của mọi bức (registry + tranh mẫu _mau): meta, thứ tự lớp, marker, chữ, runtime.
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { paintings } from '../../src/paintings/registry.js';
 import mau from '../../src/paintings/_mau/meta.js';
 import { mergePalette } from '../../src/engine/palette.js';
 import { hasCode } from '../../src/ui/code-view.js';
-import { buildPainting } from '../helpers/fake-ctx.js';
+import { NOW, buildPainting } from '../helpers/fake-ctx.js';
 import { svgColors } from '../helpers/svg.js';
+import { jpegSize, webpSize } from '../helpers/image.js';
+import { parseAt } from '../../src/engine/flags.js';
+import { pass } from 'three/tsl';
+import { buildFinalNode, makeMRT } from '../../src/engine/gpu/pipeline.js';
 
 const SRC = resolve(import.meta.dirname, '../../src');
 const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -71,6 +75,26 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
         // Tranh mẫu không deploy nên cố ý nằm ngoài glob của ui/code-view.js.
         if (row.deployed) expect(hasCode(file), `src/${file} nằm ngoài glob ?code của ui/code-view.js`).toBe(true);
       }
+    }
+  });
+
+  it('poster (GĐ 4): capture đọc được (at theo ?at, freeze nguyên dương); file WebP đúng cỡ và ≤ 150 KB; og 1200×630, ≤ 200 KB', () => {
+    const { capture } = meta.poster;
+    if (capture) {
+      expect(parseAt(capture.at), `poster.capture.at "${capture.at}" không đọc được như ?at`).not.toBeNull();
+      expect(Number.isInteger(capture.freeze) && capture.freeze > 0, 'poster.capture.freeze phải là số nguyên dương').toBe(true);
+    }
+    if (!row.deployed) return; // tranh mẫu không có file trong public/
+    const PUBLIC = resolve(SRC, '../public');
+    if (meta.poster.src.endsWith('.webp')) {
+      const file = readFileSync(PUBLIC + meta.poster.src);
+      expect(webpSize(file), 'cỡ poster phải đúng meta.poster').toEqual({ width: meta.poster.width, height: meta.poster.height });
+      expect(file.length, 'poster ≤ 150 KB').toBeLessThanOrEqual(150 * 1024);
+    }
+    if (meta.og) {
+      expect(existsSync(resolve(PUBLIC, meta.og)), `thiếu public/${meta.og}`).toBe(true);
+      expect(jpegSize(readFileSync(resolve(PUBLIC, meta.og)))).toEqual({ width: 1200, height: 630 });
+      expect(statSync(resolve(PUBLIC, meta.og)).size, 'og ≤ 200 KB').toBeLessThanOrEqual(200 * 1024);
     }
   });
 
@@ -142,6 +166,10 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
     const { painting } = await loadPainting();
     if (!painting.quality) return;
     expect(Object.keys(painting.quality.levels).sort(), 'quality.levels phải có cao, vua, thap').toEqual(['cao', 'thap', 'vua']);
+    // Ba mức cùng bộ khóa (GĐ 4): thiếu một khóa ở một mức thì lớp lặng lẽ lấy số mặc định của nó, không ai hay.
+    const keys = Object.fromEntries(Object.entries(painting.quality.levels).map(([level, l]) => [level, Object.keys(l).sort()]));
+    expect(keys.vua, 'quality.levels.vua phải có cùng khóa với cao').toEqual(keys.cao);
+    expect(keys.thap, 'quality.levels.thap phải có cùng khóa với cao').toEqual(keys.cao);
     const { ladder } = painting.quality;
     expect(new Set(ladder).size, `ladder có mục trùng: ${ladder.join(', ')}`).toBe(ladder.length);
     const { built } = buildPainting(painting, meta, { level: 'cao' });
@@ -156,6 +184,35 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
       step.apply();
       step.revert();
       expect(read(), `nấc "${entry}" gỡ ra thì số đo phải về như cũ`).toEqual(before);
+    }
+  });
+
+  it('Dial (nếu có): id kebab-case, không trùng; min < max; format ra chuỗi; có nhãn; mọi khóa note() trả ra đều có chữ', async () => {
+    const { painting } = await loadPainting();
+    // Ban đêm và ban ngày: note() có thể khác nhau (Bức 1 ghi chú 'daytime' khi mượn giờ).
+    for (const now of [NOW, new Date('2026-09-28T12:00:00+07:00')]) {
+      const { setup } = buildPainting(painting, meta, { now });
+      const dials = setup?.dials ?? [];
+      const ids = dials.map((d) => d.id);
+      expect(new Set(ids).size, `Dial trùng id: ${ids.join(', ')}`).toBe(ids.length);
+      for (const dial of dials) {
+        expect(dial.id, `id Dial "${dial.id}"`).toMatch(KEBAB);
+        expect(dial.min, `Dial "${dial.id}": min < max`).toBeLessThan(dial.max);
+        expect(dial.uniform?.isNode, `Dial "${dial.id}" thiếu uniform`).toBe(true);
+        if (dial.format) for (const v of [dial.min, dial.max]) expect(typeof dial.format(v), `format(${v})`).toBe('string');
+        for (const lang of langs) {
+          const { default: content } = await entry.content[lang]();
+          const text = content.dials?.[dial.id];
+          expect(text?.label, `${lang}: thiếu content.dials["${dial.id}"].label`).toBeTruthy();
+          for (const v of [dial.uniform.value, dial.min, dial.max]) {
+            const before = dial.uniform.value;
+            dial.uniform.value = v;
+            const key = dial.note?.() ?? null;
+            dial.uniform.value = before;
+            if (key !== null) expect(text.notes?.[key], `${lang}: thiếu chữ ghi chú "${dial.id}.${key}"`).toBeTruthy();
+          }
+        }
+      }
     }
   });
 
@@ -192,6 +249,19 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
           expect(e?.label && e?.explain, `nhãn + lời giải thích của thí nghiệm "${id}.${exp.id}"`).toBeTruthy();
         }
         for (const r of layer.readouts ?? []) expect(text.readouts?.[r.id], `nhãn số đo "${id}.${r.id}"`).toBeTruthy();
+      }
+    });
+
+    it.each(langs)('%s: mọi tap mà các lớp ghi trong build/display có nhãn ở content.layers[id].taps (GĐ 4)', async (lang) => {
+      const { default: content } = await entry.content[lang]();
+      const { ctx, built } = buildPainting(await entry.load(), meta);
+      const scenePass = pass(ctx.scene, ctx.camera);
+      scenePass.setMRT(makeMRT());
+      const channel = (name) => (name === 'depth' ? scenePass.getLinearDepthNode() : scenePass.getTextureNode(name));
+      const taps = [];
+      buildFinalNode({ color: channel('output'), channel, layers: built, weight: ctx.weight, taps });
+      for (const { layerId, tapId } of taps) {
+        expect(content.layers?.[layerId]?.taps?.[tapId], `nhãn tap "${layerId}:${tapId}"`).toBeTruthy();
       }
     });
 

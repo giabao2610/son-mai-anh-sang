@@ -1,8 +1,11 @@
-// e2e/painting.spec.js — E2E chung cho MỌI bức trong registry: tầng tĩnh, và cảnh 3D trên WebGL2 / WebGPU.
+// e2e/painting.spec.js — E2E chung cho MỌI bức trong registry: tầng tĩnh; cảnh 3D trên WebGL2 / WebGPU; công cụ học, ?poster (GĐ 4).
 import { readdirSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { paintings } from '../src/paintings/registry.js';
-import { DARK, waitForSettled, waitForFrames, canvasStats, gpuReport, collectConsole, readSma } from './helpers.js';
+import t from '../src/ui/strings.vi.js';
+import {
+  DARK, FULL, waitForSettled, waitForFrames, canvasStats, canvasRegions, twoFrames, gpuReport, collectConsole, readSma,
+} from './helpers.js';
 
 /**
  * URL tương đối (không có '/' đầu) để giữ base '/son-mai-anh-sang/' của baseURL.
@@ -300,6 +303,153 @@ for (const { meta, page: htmlPage, lang } of paintings) {
         expect(log.errors).toEqual([]);
       });
     }
+
+    /** Mở cảnh đứng yên ở khung 10 (?freeze), đúng một "bây giờ": mọi ảnh sau đó so được với nhau. */
+    async function still(page, testInfo, ...extra) {
+      const { query } = testInfo.project.metadata;
+      await page.goto(urlOf(htmlPage, query, 'freeze=10', 'at=2026-09-28T21:00', ...extra));
+      const settled = await waitForSettled(page);
+      expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+      await waitForFrames(page, 10);
+    }
+    // Kính tròn mặc định ở giữa khung, bán kính 18% cạnh ngắn (spec §7). Chừa lề quanh viền vàng lá của kính và vạch gạt.
+    const LENS = {
+      inside: { ...FULL, ring: { r: 0.18 * 0.8, inside: true } },
+      outside: { ...FULL, ring: { r: 0.18 * 1.25, inside: false } },
+      left: { x0: 0, y0: 0, x1: 0.48, y1: 1 },
+      right: { x0: 0.52, y0: 0, x1: 1, y1: 1 },
+      all: FULL,
+    };
+
+    test('mài về cốt (GĐ 4): mọi lớp trừ Cốt về 0 thì còn đất sét (ít màu, thấy hình khối, không điểm trong suốt); phủ lại thì như cũ', async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(120_000);
+      await still(page, testInfo);
+      const base = (await canvasRegions(page)).all;
+      const rest = meta.layers.slice(1).map((l) => l.id);
+      for (const id of rest) await page.evaluate((layerId) => window.__sma.setWeight(layerId, 0), id);
+      const clay = (await canvasRegions(page)).all;
+      await page.screenshot({ path: testInfo.outputPath('mai-ve-cot.png') });
+      expect(clay.chroma, 'đất sét phải gần như không màu').toBeLessThan(0.06);
+      expect(clay.std, 'phải thấy hình khối (độ sáng thay đổi theo mặt khối)').toBeGreaterThan(0.04);
+      expect(clay.mean, 'không đen kịt, không cháy trắng').toBeGreaterThan(0.03);
+      expect(clay.mean).toBeLessThan(0.8);
+      expect(clay.transparent, 'luật 3: không bao giờ trong suốt').toBe(0);
+      for (const id of rest) await page.evaluate((layerId) => window.__sma.setWeight(layerId, 1), id);
+      expect((await canvasRegions(page)).all.checksum, 'phủ lại mọi lớp thì phải về đúng ảnh cũ').toBe(base.checksum);
+      expect(log.errors).toEqual([]);
+    });
+
+    test('Kính mài (GĐ 4): kính tròn giữa khung soi một view (trong kính khác, ngoài như cũ); gạt 50% (nửa trái khác, nửa phải như cũ); tắt thì như cũ', async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(120_000);
+      await still(page, testInfo);
+      const base = await canvasRegions(page, LENS);
+      await page.evaluate(() => window.__sma.setTool('kinh-mai'));
+      await expect(page.locator('body')).toHaveAttribute('data-tool', 'kinh-mai');
+      const lens = await canvasRegions(page, LENS);
+      await page.screenshot({ path: testInfo.outputPath('kinh-tron.png') });
+      expect(lens.inside.checksum, 'trong kính phải là view khác ảnh cuối').not.toBe(base.inside.checksum);
+      expect(lens.outside.checksum, 'ngoài kính phải giữ nguyên ảnh cuối').toBe(base.outside.checksum);
+      await page.locator('[data-toolbar] [data-shape="gat"]').click();
+      await twoFrames(page);
+      const wipe = await canvasRegions(page, LENS);
+      await page.screenshot({ path: testInfo.outputPath('kinh-gat.png') });
+      expect(wipe.left.checksum, 'bên trái vạch gạt là view').not.toBe(base.left.checksum);
+      expect(wipe.right.checksum, 'bên phải vạch gạt là ảnh cuối').toBe(base.right.checksum);
+      await page.evaluate(() => window.__sma.setTool(null));
+      expect((await canvasRegions(page, LENS)).all.checksum, 'tắt công cụ thì về đúng ảnh cũ').toBe(base.all.checksum);
+      expect(log.errors).toEqual([]);
+      expect(log.warnings).toEqual([]);
+    });
+
+    test('khung hẹp như điện thoại (≤ 640px, GĐ 4): bật công cụ khi Sổ tay đang mở thì Sổ tay thu lại; tắt thì hiện lại', async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(120_000);
+      await still(page, testInfo);
+      expect(page.viewportSize().width, 'viewport của e2e phải là khung hẹp').toBeLessThanOrEqual(640);
+      const box = await page.locator('[data-stage] canvas').boundingBox();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.8); // lần chạm đầu → lời mời
+      await page.locator('[data-hint] button').click();
+      const notebook = page.locator('[data-notebook]');
+      await expect(notebook).toBeVisible();
+      const tool = page.locator('[data-rail] [data-tool="kinh-mai"]');
+      await tool.click();
+      await expect(page.locator('[data-toolbar]')).toBeVisible();
+      await expect(notebook, 'Sổ tay phải thu lại để chừa chỗ nhìn cảnh').toBeHidden();
+      await tool.click();
+      await expect(notebook).toBeVisible();
+      await expect(page.locator('[data-toolbar]')).toBeHidden();
+      expect(log.errors).toEqual([]);
+    });
+
+    test('Lột lớp (GĐ 4): mỗi nấc cho ảnh khác nấc kề bên; về nấc cuối (bên phải) thì đúng ảnh cũ', async ({ page }, testInfo) => {
+      test.setTimeout(180_000);
+      await still(page, testInfo);
+      const base = (await canvasRegions(page)).all;
+      await page.evaluate(() => window.__sma.setTool('lot-lop'));
+      const range = page.locator('[data-toolbar] input[type="range"]');
+      const last = Number(await range.getAttribute('max'));
+      const slide = async (v) => {
+        const before = await range.getAttribute('aria-valuetext');
+        await range.evaluate((el, value) => {
+          el.value = String(value);
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        }, v);
+        // View Normal phải mài (biên dịch lại) trước khi hiện: chờ tên view đổi, rồi chờ khung vẽ lại.
+        await expect.poll(() => range.getAttribute('aria-valuetext'), { timeout: 60_000 }).not.toBe(before);
+        await twoFrames(page);
+        return (await canvasRegions(page)).all.checksum;
+      };
+      let previous = base.checksum;
+      for (let v = last - 1; v >= 0; v -= 1) {
+        const shot = await slide(v);
+        const name = await range.getAttribute('aria-valuetext');
+        expect(shot, `nấc ${v} (${name}) giống nấc kề bên`).not.toBe(previous);
+        previous = shot;
+      }
+      await page.screenshot({ path: testInfo.outputPath('lot-lop-cuoi.png') });
+      expect(await slide(last), 'về nấc cuối thì phải đúng ảnh cũ').toBe(base.checksum);
+      expect(log.errors).toEqual([]);
+    });
+
+    test('Normal (GĐ 4): chọn Normal trong Kính mài thì thấy "đang mài…", rồi ảnh đổi; không lỗi console', async ({ page }, testInfo) => {
+      test.setTimeout(120_000);
+      await still(page, testInfo);
+      const base = await canvasRegions(page, LENS);
+      await page.evaluate(() => window.__sma.setTool('kinh-mai'));
+      // Ghi mọi chữ từng hiện trong dòng trạng thái (vùng aria-live): "đang mài…" có thể chỉ hiện vài trăm ms.
+      await page.evaluate(() => {
+        window.__statusLog = [];
+        const status = document.querySelector('[data-tool-slot="kinh-mai"] .tool-status');
+        new MutationObserver(() => window.__statusLog.push(status.textContent)).observe(status, { childList: true, characterData: true, subtree: true });
+      });
+      const normal = page.locator('[data-toolbar] [data-view="normal"]');
+      await normal.click();
+      await expect(normal).toHaveAttribute('aria-pressed', 'true', { timeout: 60_000 });
+      await twoFrames(page);
+      expect(await page.evaluate(() => window.__statusLog)).toContain(t.toolStatus.grinding);
+      const shot = await canvasRegions(page, LENS);
+      await page.screenshot({ path: testInfo.outputPath('normal.png') });
+      expect(shot.inside.checksum).not.toBe(base.inside.checksum);
+      expect(shot.outside.checksum).toBe(base.outside.checksum);
+      expect(log.errors).toEqual([]);
+      expect(log.warnings).toEqual([]);
+    });
+
+    test('?poster (GĐ 4): ngoài canvas không có phần tử UI nào hiện (chữ, huy hiệu, thanh lớp, thanh công cụ)', async ({ page }, testInfo) => {
+      await still(page, testInfo, 'poster');
+      await expect(page.locator('[data-stage] canvas')).toBeVisible();
+      const shown = await page.evaluate(() => [...document.body.querySelectorAll('*')]
+        .filter((el) => !el.closest('[data-stage]') && el.tagName !== 'SCRIPT')
+        .filter((el) => el.checkVisibility({ visibilityProperty: true, opacityProperty: true }))
+        .map((el) => el.outerHTML.slice(0, 80)));
+      expect(shown).toEqual([]);
+      expect(log.errors).toEqual([]);
+    });
 
     // Review Focus #5 · giảm chuyển động: CSS bỏ transition nên không có transitionend để chờ, và crossfade
     // phải xong ngay. Chỉ kiểm "tới live" thì chưa đủ, vì lưới an toàn 1200 ms của shell cũng đưa tới live.
