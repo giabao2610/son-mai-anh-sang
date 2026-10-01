@@ -268,6 +268,9 @@ ngả nâu cánh gián như đáy poster. Mọi số là giá trị mặc địn
   GPU thật, ở cả 1280×800 và 390×844.
 - Bao duyệt ảnh trước và sau khi thêm chặng display.
 - Poster mới được chụp từ chính cảnh đã duyệt (§8.7). Từ GĐ 4, poster và cảnh 3D là cùng một ảnh.
+- (Dựng thử GĐ 4, `?at=2026-09-28T21:00&freeze=300`, mức cao) Trước chặng display: 57,7 / 0,32 / 10,1% ở 1280×800, 68,2 / 0,28 / 6,4% ở
+  390×844. LUT 0,6 làm sương chân trời ngả cam. Chọn `lutIntensity` 0,45, `vignette` 0,45, `grain` 0,03: 54,3 / 0,43 / 12,2% và
+  62,5 / 0,39 / 7,1%, tức nhích về phía poster cũ (33 / 0,42 / 30%) mà không bệt. Ba số nằm trong một commit riêng.
 
 ### Chi tiết sống
 - **Trăng đúng pha của đêm hôm đó**, tính từ `ctx.now`. Vị trí trăng trên trời là tính nghệ thuật, không theo thiên văn thật.
@@ -497,6 +500,8 @@ Phủ bóng là bước cuối của nghề sơn mài, nên nó thuộc về k�
       thành `Data3DTexture` với `LinearFilter` và `ClampToEdge`.
     - Cách tính là tách tông theo độ sáng: vùng tối kéo về `canhGian`, vùng sáng về `vangLa`, màu ngả xanh kéo về `cham`. Độ sáng của
       từng điểm gần như giữ nguyên.
+    - (Dựng thử GĐ 4) Màu càng gần xám thì nhuộm càng mạnh, màu đậm (lá xanh, nhị vàng) chỉ nhuộm nhẹ; màu tối mà ngả lam (trời
+      đêm) nhuộm chàm thay cho cánh gián, để trời chàm không ngả nâu.
     - Test khóa **tính chất**, không khóa công thức:
       - đen vẫn đen, trắng vẫn gần trắng;
       - độ sáng lệch ít;
@@ -518,8 +523,8 @@ Phủ bóng là bước cuối của nghề sơn mài, nên nó thuộc về k�
   - (GĐ 4) Nhãn của tap nằm ở `content.layers['phu-bong'].taps`: 'Trước tone', 'Trước bloom'.
 - **Núm:** `bloomStrength`, `bloomRadius`, `bloomThreshold`, `toneMapping` (uniform chọn: none/AgX/ACES), `exposure`, `lutIntensity`, `grain`, `vignette`, tất cả là uniform. GĐ 0 có `bloomStrength` và `exposure`; GĐ 2 có đủ núm của chặng `build`; ba núm cuối đi cùng chặng `display` ở GĐ 4.
   - (GĐ 2) `bloom()` giữ nguyên node được truyền vào làm strength/radius/threshold, nên ba núm bloom là uniform thật.
-  - (GĐ 4) Khoảng giá trị: `lutIntensity` 0–1, `grain` 0–0,15, `vignette` 0–1. Số mặc định chốt ở lượt màu GĐ 4 (§5). Nhãn thêm vào
-    content của lớp dùng chung.
+  - (GĐ 4) Khoảng giá trị: `lutIntensity` 0–1, `grain` 0–0,15, `vignette` 0–1. Số mặc định chốt ở lượt màu GĐ 4 (§5): 0,45 / 0,03 /
+    0,45. Nhãn thêm vào content của lớp dùng chung.
 - **Nấc:** `bloom` nhân `resolutionScale` hiện tại với 0.5 (mặc định lấy `ctx.budget.bloom ?? 0.5`).
   (GĐ 3) `BloomNode` đọc `resolutionScale` và đặt lại cỡ render target mỗi khung (Phụ lục A.36), nên nấc này không biên dịch lại.
 - **Phá:** *"Bloom cả khung vs chọn lọc"* (bloom lên cả output thì ảnh bết), *"Tắt tone mapping"*, thanh trượt so sánh trước/sau.
@@ -554,6 +559,9 @@ Phủ bóng là bước cuối của nghề sơn mài, nên nó thuộc về k�
   1. gọi `requireView` trước;
   2. hiện "đang mài…" trong một vùng `aria-live`;
   3. xong rồi mới đổi `uLensMode`.
+
+  Khi một công cụ đang bật, thơ và con dấu ở chân tranh ẩn đi (`visibility: hidden`, vẫn giữ chỗ) để nhường chỗ cho thanh điều
+  khiển; tắt công cụ thì hiện lại.
 - (GĐ 4) **Cử chỉ:** kính chỉ giữ cú chạm và cú giữ của ngón tay hay bút (`g.pointer !== 'mouse'`). Trên máy tính, bấm chuột dưới kính
   vẫn tạo gợn sóng như thường.
 - (GĐ 4) **`requireView('normal')`**, theo thứ tự:
@@ -663,6 +671,7 @@ son-mai-anh-sang/
         pipeline.js                  [0→4] scene pass + MRT; build → renderOutput → display; alpha 1; views(); overlay
         views.js                     [4] danh sách view (kênh, tap, Normal lười), ghép overlay của công cụ, requireView
         gpu-timer.js                 [4] ms GPU mỗi khung: resolveTimestampsAsync (render + compute), không chờ, không gọi chồng
+        meter.js                     [4] số đo của bàn thợ: draw call, tam giác, ms, ms CPU, ms GPU; hai bên "Tắt / Bật" của compare
         toolbox.js                   [4] hộp đồ nghề: gắn công cụ, cử chỉ tới công cụ trước bức, mỗi lúc một công cụ, body[data-tool]
         dial-set.js                  [4] Dial của bức: đọc/ghi (kẹp min/max/step), chữ giá trị, ghi chú, snapshot
         clock.js                     [3→4] đồng hồ + trần 60 khung/giây; GĐ 4: màn ≤ ~63 Hz không bị bỏ khung nào
@@ -682,6 +691,7 @@ son-mai-anh-sang/
       tools/
         index.js                     [4] [kinhMai, lotLop]; thêm công cụ = thêm 1 dòng
         kinh-mai.js lot-lop.js       [4] overlay (If trong Fn) + thanh điều khiển (ui/dom.js) + cử chỉ
+        pick.js                      [4] chọn một view theo chỉ số bằng If/ElseIf (hai công cụ dùng chung)
     lib/                             HỘP MÀU: hàm "lá", chỉ trả SỐ
       random.js                      [0] PRNG có hạt giống (mulberry32)
       astro/lunar.js                 [0] âm lịch Hồ Ngọc Đức (tz tham số, mặc định +7); canChiIndex
@@ -726,6 +736,7 @@ son-mai-anh-sang/
     helpers/source.js                [0] phân tích mã bằng parseSync của vite
     helpers/fake-ctx.js              [1→2] Scene/Camera/uniform thật, renderer giả (Proxy ghi lời gọi); dựng ctx bằng createCtx của xưởng
     helpers/svg.js                   [2] đọc mã màu trong SVG (poster, sơ đồ)
+    helpers/image.js                 [4] đọc cỡ ảnh WebP, JPEG từ phần đầu file (poster, og)
   e2e/
     helpers.js                       [0] chờ trạng thái, đọc pixel canvas (screenshot), báo GPU
     painting.spec.js                 [0→4] lặp qua registry: tĩnh, WebGL2, WebGPU; GĐ 3: hạ hết nấc rồi nâng lại; GĐ 4: mài về cốt, Kính mài, Lột lớp, ?poster
@@ -1299,7 +1310,14 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
 - Sau mỗi `render()`, nếu không có lần resolve nào đang dở thì gọi `resolveTimestampsAsync('render')` và `('compute')`, không chờ kết
   quả. Hai số cộng lại thành ms GPU của một khung.
 - Mẫu đến trễ vài khung và không đều. Cửa sổ 2 giây vẫn đủ mẫu.
-- Máy được coi là "đo được" khi đã có ít nhất một mẫu hữu hạn và lớn hơn 0.
+- Máy được coi là "đo được" khi đã có ít nhất một mẫu hợp lệ: hữu hạn, lớn hơn 0, và không lớn hơn 1,5 lần nhịp khung trung bình
+  của mẻ đó (`GPU_PLAUSIBLE`).
+  - Mỗi lần hỏi, three gom các khung đã vẽ từ lần hỏi trước thành một mẻ, rồi trả tổng thời gian các pass của khung cuối mẻ. GPU
+    vẽ lần lượt từng pass thì không thể bận lâu hơn nhịp khung.
+  - (Dựng thử GĐ 4) GPU Apple trên Chrome báo thời lượng các pass chồng lên nhau: 16 pass, mỗi pass khoảng 10 ms, kể cả các lượt
+    bloom rất nhỏ. three cộng lại thành khoảng 160 ms cho một khung 16,7 ms (Phụ lục A.48). Luật 1,5 lần loại các số đó, nên trên
+    GPU Apple việc đo thôi sau 3 mẫu, và bộ điều chỉnh đi đường nhịp.
+  - Máy nặng lên đột ngột (bật một thí nghiệm nặng) chỉ lệch một mẫu, vì mẻ sau đã đo theo nhịp mới.
 
 **Phân loại một cửa sổ** (`engine/tuner.js`), khi cửa sổ có từ 3 mẫu GPU trở lên. Tải = max(trung vị ms GPU, trung bình ms CPU):
 - **Quá tải:** trung bình nhịp > ngân sách × 1,05 **và** tải > ngân sách × 0,85, tức máy là nút cổ chai.
@@ -1313,9 +1331,11 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
   theo tải. Vì vậy các nấc đã hạ trước đó được trả lại dần khi máy dư, không phải chờ hết khóa.
 - **Chế độ canh** (Sổ tay mở) giữ như GĐ 3: chỉ hạ khi tải > ngân sách × 2,2, không bao giờ nâng.
 - **Dùng chung với đường nhịp của GĐ 3:** cửa sổ, khởi động, bỏ cửa sổ khi giật, chống dao động, khóa nấc.
-- Các ngưỡng 0,5 / 0,6 / 0,85 chỉ là số khởi đầu. Chúng được chốt khi đo trên GPU thật lúc dựng thử.
+- Các ngưỡng 0,5 / 0,6 / 0,85 vẫn là số khởi đầu. Máy dựng thử (GPU Apple) không cho số dùng được. Trên SwiftShader mọi phép vẽ
+  chạy trên CPU, nên ms GPU gần bằng nhịp khung (khoảng 300 ms). Việc kiểm các ngưỡng trên một máy Windows hay Linux có GPU thật
+  nằm trong mục kiểm tra thủ công (§12). Nếu lệch nhiều thì sửa số trong `TUNER` (`engine/tuner.js`), test sửa theo.
 
-**Không đo được** (Safari, nhiều điện thoại, WebGL2 không có extension): chạy y hệt GĐ 3.
+**Không đo được** (Safari, nhiều điện thoại, WebGL2 không có extension, GPU Apple trên Chrome vì số chồng nhau): chạy y hệt GĐ 3.
 
 **Kèm theo:**
 - `quality()` có thêm `gpu` (đo được hay không) và `locked`.
@@ -1323,7 +1343,8 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
 - `quality.js` chỉ còn chọn mức và ghép ngân sách. Bộ điều chỉnh tách sang `engine/tuner.js`, vẫn là hàm thuần, không three.
 
 **(GĐ 4) Sửa các lỗi còn lại của bộ điều chỉnh GĐ 3:**
-- **Trần 60 khung/giây bỏ nhầm khung.** Trên các màn "60 Hz" thật ra chạy 60,02–60,1 Hz, cứ 1–5 giây lại bỏ một khung.
+- **Trần 60 khung/giây bỏ nhầm khung.** Trên các màn "60 Hz" thật ra chạy 60,02–60,1 Hz, mỗi phút bỏ 2–15 khung (đo khi dựng thử
+  GĐ 4, nhịp dao động 0–1 ms), tức hình giật một nhịp vài giây một lần.
   - Nguyên nhân: mốc "đã vẽ" tiến đúng 16,67 ms mỗi bước, còn nhịp màn hình ngắn hơn một chút. Độ lệch dồn dần, tới lúc quá 1,5 ms
     thì một khung bị bỏ.
   - Sửa: `createFrameCap` đo nhịp màn hình, bằng trung bình trượt của mọi khoảng rAF (kể cả khung bị bỏ).
@@ -1344,16 +1365,18 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
   - (GĐ 3) Bóng tĩnh chỉ vẽ khi có thay đổi, nên khung thường không có phần `2 × bóng`. Bức 1 đủ sáu lớp có 11 đối tượng (Cốt 6,
     trăng, đèn hoa đăng, vòm trời, mặt nước, đom đóm): `11 + 10 + 12 + 1 = 34` ở mức cao, **đo được đúng 34** trên cả WebGPU lẫn
     WebGL2; mức thấp không có phản chiếu nên đo được 24. Mục tiêu chính là **tổng ≤ 45** (e2e đo ở mức cao).
-  - (GĐ 4) FXAA vẽ chuỗi display ra một RTT, thêm 1 lượt vẽ: mức cao dự kiến 35, e2e vẫn giữ ≤ 45. Overlay của công cụ nằm trong
+  - (GĐ 4) FXAA vẽ chuỗi display ra một RTT, thêm 1 lượt vẽ: mức cao đo được 35 ở 1280×800 và 33 ở 390×844; e2e vẫn giữ ≤ 45. Overlay của công cụ nằm trong
     lượt cuối nên không thêm lượt vẽ. View Normal (`requireView`) thêm một target MRT, cũng không thêm lượt vẽ.
 - **Poster:** WebP 150 KB trở xuống (GĐ 4). `og.jpg` 1200×630, 200 KB trở xuống.
 - **JS:**
   - Chunk `three` đo được khoảng 243 KB gzip. Con số này gần như cố định, vì `three/tsl` kéo cả namespace nên không tree-shake được.
-  - Toàn bộ cảnh ước khoảng 253 KB; cộng Tweakpane khoảng 284 KB. (GĐ 2 đo được: đường 3D 289 KB, gồm cả Sổ tay và chữ của nó; cộng Tweakpane 320 KB. GĐ 3 đo được: đường 3D 297,8 KB; cộng Tweakpane 328,8 KB.)
+  - Toàn bộ cảnh ước khoảng 253 KB; cộng Tweakpane khoảng 284 KB. (GĐ 2 đo được: đường 3D 289 KB, gồm cả Sổ tay và chữ của nó; cộng Tweakpane 320 KB. GĐ 3 đo được: đường 3D 297,8 KB; cộng Tweakpane 328,8 KB. GĐ 4 đo được: đường 3D 306,6 KB; cộng Tweakpane 337,5 KB.)
   - Mục tiêu cho cả đường 3D: **450 KB gzip trở xuống**. Số đo ghi vào README.
   - (GĐ 4) Đồ nghề, Dial, LUT và chặng display đi cùng đường 3D; `@axe-core/playwright` chỉ là gói dev, không vào bundle.
   - Inspector (39 KB) và stats-gl (10 KB) chỉ tải khi có `?debug`.
 - **Máy yếu:** biên dịch trước bằng `scenePass.compileAsync(renderer)`, rồi vẽ một khung ẩn trong lúc poster còn hiện.
+- (GĐ 4) **Đo trên máy dựng thử** (GPU Apple, Chrome, cảnh live): đủ 60 khung/giây ở cả ba mức, ở 1280×800 (DPR 2) và 390×844
+  (DPR 3). ms CPU mỗi khung khoảng 1,2–1,8 ms.
 - **`prefers-reduced-motion`:** `CameraSpec.breathe` bị ép về 0, gợn sóng nhẹ hơn.
 
 ## 11. Âm lịch và pha trăng (`src/lib/astro/`, chỉ trả về số)
@@ -1580,7 +1603,10 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
   - laptop yếu (hoặc `?level=cao` trên máy yếu) không kẹt ở 30 fps;
   - Energy Saver / Low Power Mode vẫn vào "bị khóa nhịp" mà không hạ nấc;
   - màn 60,0x Hz không giật định kỳ;
-  - `__sma.quality().gpu` đúng với máy.
+  - `__sma.quality().gpu` đúng với máy;
+  - máy Windows hay Linux có GPU thật (NVIDIA, AMD, Intel) trên Chrome: ms GPU trong Sổ tay nhỏ hơn ms mỗi khung và đổi theo mức;
+    từ đó chốt ba ngưỡng 0,5 / 0,6 / 0,85 (§10);
+  - GPU Apple trên Chrome: vài giây sau khi live, `__sma.quality().gpu` là `false` và Sổ tay ghi "—" kèm lời giải thích.
 
 ## 13. Repo, CI, deploy
 
@@ -1744,6 +1770,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | ~~Đo ms GPU thật cho thí nghiệm `compare`~~ | Làm ở GĐ 4 | §10 "Bộ điều chỉnh đo được thời gian GPU": `gpu-timer.js`, cột ms GPU trong "Tắt / Bật" |
 | Trả nấc đã hạ lúc canh, khi đóng thanh lớp mà đang bị khóa nhịp (máy không đo được GPU) | Khi gặp trên máy thật | Trả dần các nấc đó khi về lại đúng nhịp bị khóa, như luật "dư" |
 | Khóa nấc chống dao động kéo dài cả phiên | Khi số đo GPU cho thấy khóa quá chặt | Mở khóa sau vài phút, hoặc khi tải GPU dư nhiều |
+| Đo GPU trên GPU kiểu tile (Apple, điện thoại) | Khi three trả thời điểm đầu/cuối của từng pass, hay khi cần đường tải trên Mac | Lấy khoảng từ lúc pass đầu bắt đầu tới lúc pass cuối xong (span của khung) thay cho tổng các pass (Phụ lục A.48). Hiện luật 1,5 lần nhịp khung tắt việc đo trên các máy này |
 | Đổi bán kính kính tròn (lăn chuột, chụm hai ngón) | Khi người xem cần | Uniform `uLensRadius` đã có, chỉ còn thiếu cử chỉ |
 | Các mục nhỏ còn lại từ PR #3: đổi cỡ khung vẽ lại bóng một lần thừa; Inspector ném lỗi trong hook khi có `?debug`; `onKnob` ném lỗi giữa chừng để lại trạng thái dở | Khi gặp | Ghi trong PR #3, phần "Để sau" |
 | Tự lùi về đom đóm CPU khi compute WebGL2 hỏng | Khi gặp máy thật lỗi | Đếm lỗi của `renderer.onError` trong vài khung đầu; quá ngưỡng thì bật biến thể CPU làm mặc định cho lần dựng đó |
@@ -1780,8 +1807,9 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
   - Logic nằm trong một hàm thuần, test bằng chuỗi khung giả cho từng tình huống; chỉ canh quá tải nặng khi Sổ tay mở; tắt khi `?freeze`.
   - Huy hiệu và `__sma.quality()` cho thấy máy đang hạ gì, nên người xem và Bao biết khi nó hạ.
 - **Máy của Bao đang tắt WebGL và dùng Node 20.** Kiểm tra `chrome://gpu`; cài Node 24 bằng fnm (§13). Tầng C giải thích cách bật lại tăng tốc phần cứng.
-- **(GĐ 4) Số đo GPU không đáng tin như nhau trên mọi máy.** Chrome làm tròn timestamp tới 0,1 ms; WebGL2 có thể báo "disjoint"; GPU
-  kiểu tile của điện thoại đo theo từng pass kém chính xác.
+- **(GĐ 4) Số đo GPU không đáng tin như nhau trên mọi máy.** Chrome làm tròn timestamp (bước 0,066 ms trên máy dựng thử); WebGL2 có
+  thể báo "disjoint"; GPU kiểu tile (Apple, điện thoại) báo thời lượng các pass chồng lên nhau, và three cộng chúng lại (Phụ lục A.48).
+  - Số lớn hơn 1,5 lần nhịp khung của mẻ là số vô lý. Trên GPU Apple, luật này làm việc đo thôi sau 3 mẫu.
   - Chỉ dùng số GPU khi một cửa sổ có từ 3 mẫu hữu hạn trở lên, và lấy trung vị. Số vô lý thì bỏ; hỏng liền thì tắt đo cho phiên đó.
   - Máy không đo được thì đi đường nhịp của GĐ 3, vốn đã test kỹ.
   - E2e trên SwiftShader không kiểm được số GPU thật. Bù lại có project GPU thật ở máy local, và mục kiểm tra thủ công.
@@ -1938,3 +1966,30 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - Vì vậy node đứng SAU `fxaa` (overlay của công cụ) chạy ở lượt cuối, và phải tự lấy mẫu các view từ texture của chúng.
 43. **`packNormalToRGB(n) = n × 0,5 + 0,5`** (đọc mã nguồn r186, GĐ 4): hàm này thay `directionToColor` (deprecated từ r185; gọi hàm cũ thì
     có cảnh báo "renamed").
+44. **Đổi MRT lúc chạy** (`requireView('normal')`; kiểm bằng e2e trên WebGL2 và WebGPU SwiftShader, và GPU thật, GĐ 4):
+    `scenePass.setMRT(mrt có thêm 'normal')` TRƯỚC, rồi mới `getTextureNode('normal')`. Render target nhận thêm ảnh ở lần vẽ
+    sau, và mọi material biên dịch lại một lần: khoảng 0,17 giây trên GPU Apple, 0,4 giây trên WebGL2 SwiftShader. Gọi
+    `getTextureNode` cho kênh chưa có trong MRT thì `getTexture()` đã thêm ảnh vào target; target có nhiều ảnh hơn số đầu ra của
+    shader là vỡ. Vì vậy view Normal dùng node giữ chỗ tới lúc đó.
+45. **`screenCoordinate` có gốc ở góc trên trái trên cả hai backend** (đọc mã nguồn `ScreenNode`, kiểm bằng ảnh, GĐ 4): WebGL lật
+    trục y theo `screenSize`. Kính mài đổi NDC của con trỏ (y hướng lên) thành `(x/2 + 0,5, 0,5 − y/2)`.
+46. **`If` trong một `Fn` gọi ngay** (kiểm khi dựng thử GĐ 4): nhánh trả giá trị (`() => x.assign(…)`) làm three cảnh báo
+    "Return statement used in an inline 'Fn()'". Viết thân nhánh trong ngoặc nhọn.
+47. **FXAA và phép trộn cùng đọc một RTT** (đo bằng e2e, GĐ 4): `convertToTexture(node)`, rồi `mix(rtt, fxaa(rtt), k)`. Lượt cuối
+    không tính lại cả chuỗi display. Mức cao đo được 35 draw call (34 + 1 lượt vẽ RTT).
+48. **Đo GPU trên máy thử** (đo bằng Playwright trên GPU thật và SwiftShader, dựng thử GĐ 4): WebGPU trên GPU Apple có
+    `timestamp-query`, nhưng thời lượng các pass chồng lên nhau. Một khung ở 1280×800 (DPR 2, mức cao) có 16 pass; pass nào cũng báo
+    10–12 ms, kể cả các lượt bloom rất nhỏ, trong khi cảnh vẫn chạy đủ 60 khung/giây. `resolveTimestampsAsync('render')` trả
+    **tổng các pass của khung cuối** (`framesDuration` của `WebGPUTimestampQueryPool`), nên ra khoảng 160 ms. Timestamp được làm tròn
+    theo bước 0,066 ms. WebGL2 và WebGPU trên SwiftShader cũng báo số, khoảng 300 ms mỗi khung, gần bằng nhịp khung, vì mọi phép vẽ
+    chạy trên CPU. Mẫu đầu tiên sau live lớn hơn nhiều (khung đầu còn biên dịch pipeline); ms GPU của Sổ tay là trung bình trượt, nên
+    giảm dần về số thật trong vài chục mẫu, như ms mỗi khung.
+49. **OrbitControls tự gọi `update()` khi rê** (đọc mã nguồn, kiểm bằng e2e, GĐ 4): camera đổi ngay cả khi vòng lặp đã dừng ở
+    `?freeze`, nhưng canvas chỉ đổi ở lần vẽ lại kế tiếp. E2e sương xoáy ép vẽ lại, để so hai cú kéo có cùng một camera.
+50. **Mã hóa ảnh ngay trong trang** (`scripts/poster.js`, GĐ 4): `canvas.toBlob('image/webp', q)` của Chromium ra WebP dạng
+    `VP8 ` (nén mất dữ liệu). Poster 1600×1000 của Bức 1 nặng 142 KB ở q 0,88; og JPEG q 0,85 nặng 86 KB.
+51. **Chromium giao `pointermove` theo nhịp khung** (đo bằng Playwright trên WebGL2 SwiftShader, dựng thử GĐ 4): các sự kiện rê
+    được gộp lại và giao ngay trước `requestAnimationFrame`, còn `pointerdown`/`pointerup` giao ngay. GPU phần mềm còn dồn việc vẽ
+    lại (năm lần `setWeight`, mỗi lần một lần vẽ) thì khung chậm: một cú vuốt 3 bước bị giãn từ khoảng 140 ms lên hơn 500 ms, thành
+    cú kéo. E2e sương xoáy vì vậy gộp các `setWeight` vào một nhịp, rồi đợi 4 khung trước khi vuốt. `gesture.js` đo bằng
+    `performance.now()` lúc xử lý sự kiện; trên máy thật, nhịp khung do bộ điều chỉnh giữ, nên độ giãn chỉ chừng một khung.
