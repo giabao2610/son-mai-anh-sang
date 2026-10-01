@@ -141,6 +141,11 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
         try {
           if (!disposer.closed) {
             route(); // cử chỉ tới lúc đứng yên (rê Kính mài) cũng có tác dụng
+            // update(0, t) (GĐ 4): lớp và bức đồng bộ theo uniform vừa đổi (thanh giờ → trăng, bóng) mà KHÔNG tiến mô phỏng
+            // (compute, hạt CPU): ảnh vẫn là khung N.
+            const t = stage.u.time.value;
+            setup?.update?.(0, t);
+            for (const { layer } of layers) layer.update?.(0, t);
             pipeline.render();
           }
           resolve();

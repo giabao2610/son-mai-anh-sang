@@ -55,6 +55,8 @@
  * @typedef {Object} Layer
  * @property {any[]} [objects]            [0] mảng SỐNG các mesh/sprite của lớp; lớp sửa tại chỗ khi dựng lại
  * @property {(dt: number, t: number) => void} [update]   [0] lớp 5 gọi ctx.renderer.compute() ở đây
+ *                                 [4] update(0, t): xưởng vẽ lại khung đứng yên (?freeze): đồng bộ theo uniform (hướng trăng, bóng),
+ *                                 KHÔNG tiến mô phỏng (compute, hạt CPU)
  * @property {PostStage} [post]           [0] xử lý ẢNH sau scene pass
  * @property {() => void} dispose         [0] gọi 2 lần vẫn an toàn; tự gỡ object khỏi scene
  * @property {Record<string, (v: any) => void | Promise<void>>} [onKnob]   [2] cho núm 'js' | 'rebuild'. Thiếu hàm cho

@@ -40,6 +40,7 @@ export function createLayer(ctx, shared) {
     swirl: shared.swirl,
     moonDir: shared.moon.dir,
     moonLight,
+    hour: shared.hour,
     density: ctx.knob('density'), // @knob density
     heightFalloff: ctx.knob('heightFalloff'), // @knob heightFalloff
     noiseScale: ctx.knob('noiseScale'), // @knob noiseScale
@@ -81,7 +82,9 @@ export function createLayer(ctx, shared) {
       },
     ],
     readouts: [{ id: 'octaves', get: () => Math.min(ctx.knob('octaves').value, octaveCap.value) }],
-    degrade: [
+    // Nấc 'chi-tiet' chỉ có khi mức này chạy hơn 1 octave (GĐ 4): mức thấp vốn chạy 1 octave, đưa ra một nấc không tác
+    // dụng là trái luật "lớp chỉ đưa nấc có tác dụng ở mức hiện tại".
+    degrade: (ctx.budget.fogOctaves ?? 3) > 1 ? [
       {
         id: 'chi-tiet',
         apply() {
@@ -93,7 +96,7 @@ export function createLayer(ctx, shared) {
           syncCap();
         },
       },
-    ],
+    ] : [],
     dispose() {
       if (disposed) return;
       disposed = true;

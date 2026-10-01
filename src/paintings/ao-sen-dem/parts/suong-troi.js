@@ -30,6 +30,13 @@ const STARS = { scale: 220, maxShare: 0.035 }; // ô sao: 220 ô mỗi đơn v�
 const GALAXY = [0.42, 0.55, 0.72]; // pháp tuyến của mặt phẳng dải Ngân Hà (một đường tròn lớn nghiêng qua trời)
 
 /**
+ * Chạng vạng (18h–19h30) và gần sáng (28h30–29h30) → 1, giữa đêm → 0. Trời và sương cùng dùng hàm này (GĐ 4), nên chân
+ * trời và sương ấm lên cùng nhau khi kéo thanh giờ.
+ * @param {any} hour  uniform giờ của bức (18 → 29,5)
+ */
+export const duskOf = (hour) => oneMinus(smoothstep(18, 19.5, hour)).add(smoothstep(28.5, 29.5, hour));
+
+/**
  * Hàm màu trời theo hướng nhìn (vector đơn vị, từ mắt ra trời). Không cần ảnh nào: mọi thứ tính từ hướng.
  * Trả màu TUYẾN TÍNH, chưa trộn trọng số (lớp tự trộn với đen then).
  * @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx
@@ -44,7 +51,7 @@ export function makeSky(ctx, { moonDir, moonLight, hour, fogColor, density, star
     const e = dir.y; // độ cao của hướng nhìn: 0 là chân trời, 1 là đỉnh đầu
     // Dải màu theo poster: đen then ở chân trời, chàm ở đỉnh. Chạng vạng (18h–19h30) và gần sáng (28h30–29h30)
     // chân trời ấm lên màu nâu cánh gián. Giờ là uniform của bức: thanh giờ (GĐ 4) chỉ việc đổi nó.
-    const dusk = oneMinus(smoothstep(18, 19.5, hour)).add(smoothstep(28.5, 29.5, hour));
+    const dusk = duskOf(hour);
     const base = mix(color(hex.denThen), color(hex.cham).mul(2), smoothstep(0, 0.6, e))
       .add(color(hex.canhGian).mul(dusk.mul(0.6)).mul(oneMinus(smoothstep(0, 0.25, e))));
 

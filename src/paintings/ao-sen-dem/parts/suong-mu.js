@@ -21,6 +21,7 @@ import {
   vec3,
 } from 'three/tsl';
 import { fbm } from '../../../lib/tsl/noise.js';
+import { duskOf } from './suong-troi.js';
 
 const WIND = [0.92, 0, 0.4]; // hướng gió trên mặt ao (gần như từ trái sang phải khung hình)
 const WIND_SPEED = 0.1; // miền noise trôi chừng này đơn vị mỗi giây khi sức gió = 1
@@ -29,11 +30,12 @@ const SWIRL = { radius: 9, settle: 0.6 }; // xoáy: bán kính ảnh hưởng (�
 /**
  * Màu sương theo hướng nhìn (đơn vị): bạc lá pha chàm, tối như đêm; ngả vàng lá khi nhìn về phía trăng, vì sương tán xạ
  * ánh trăng về phía trước (nhìn ngược sáng thì sương sáng nhất). `moonLight`: độ sáng của trăng (lớp Ánh trăng công bố).
+ * GĐ 4: lúc chạng vạng và gần sáng (`hour`, cùng hệ số dusk với vòm trời) nền sương ấm về nâu cánh gián.
  * @returns {(dir: any) => any}  gọi được trong TSL
  */
-export function makeFogColor(ctx, { moonDir, moonLight }) {
+export function makeFogColor(ctx, { moonDir, moonLight, hour }) {
   const hex = ctx.palette.hex;
-  const base = mix(color(hex.cham), color(hex.bacLa), 0.25).mul(0.2);
+  const base = mix(color(hex.cham), color(hex.bacLa), 0.25).mul(0.2).add(color(hex.canhGian).mul(duskOf(hour).mul(0.6)));
   const glow = color(hex.vangLaSang).mul(0.12).mul(moonLight);
   // saturate trước pow: pow của số âm là NaN trên GPU thật.
   return Fn(([dir]) => base.add(glow.mul(pow(saturate(dot(dir, moonDir)), 16))));
@@ -45,10 +47,10 @@ export function makeFogColor(ctx, { moonDir, moonLight }) {
  * Mọi thứ đổi lúc chạy (trọng số, núm, xoáy, "Xem noise thô") là uniform bên trong: fogNode nằm trong cache key của MỌI
  * material, nên node này dựng MỘT lần và không bao giờ gán lại.
  * @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx
- * @param {{ w: any, swirl: any, moonDir: any, moonLight: any, density: any, heightFalloff: any, noiseScale: any,
+ * @param {{ w: any, swirl: any, moonDir: any, moonLight: any, hour: any, density: any, heightFalloff: any, noiseScale: any,
  *   windStrength: any, octaves: any }} p  node hoặc uniform
  */
-export function createFog(ctx, { w, swirl, moonDir, moonLight, density, heightFalloff, noiseScale, windStrength, octaves }) {
+export function createFog(ctx, { w, swirl, moonDir, moonLight, hour, density, heightFalloff, noiseScale, windStrength, octaves }) {
   const t = ctx.u.time; // đồng hồ của xưởng: ?freeze cho ra đúng cùng một làn sương
   const raw = uniform(0).setName('suong_raw'); // thí nghiệm "Xem noise thô": 1 → mọi bề mặt hiện noise xám
   const wind = vec3(...WIND).normalize().mul(windStrength).mul(WIND_SPEED);
@@ -71,7 +73,7 @@ export function createFog(ctx, { w, swirl, moonDir, moonLight, density, heightFa
   const amount = distance.mul(density).mul(thick).mul(noise.mul(0.4).add(0.6));
   const factor = oneMinus(exp(amount.negate())).mul(w);
 
-  const fogColor = makeFogColor(ctx, { moonDir, moonLight });
+  const fogColor = makeFogColor(ctx, { moonDir, moonLight, hour });
   const view = normalize(positionWorld.sub(cameraPosition));
   // "Xem noise thô": màu sương thành noise xám, hệ số thành 1 (mọi bề mặt thay hẳn bằng noise). Chỉ đổi uniform.
   const node = fog(mix(fogColor(view), vec3(noise.mul(0.5).add(0.5)), raw), mix(factor, 1, raw));

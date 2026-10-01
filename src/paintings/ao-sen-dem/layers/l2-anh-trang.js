@@ -13,6 +13,7 @@ import { moonPhase } from '../../../lib/astro/moon.js';
 import { createMoon } from '../parts/anh-trang-moon.js';
 import { paintCot } from '../parts/anh-trang-paint.js';
 import { LIGHT_DISTANCE, createShadowWatch } from '../parts/anh-trang-shadow.js';
+import { moonDirection } from '../shared.js';
 
 export const id = 'anh-trang';
 
@@ -34,7 +35,19 @@ export const knobs = [
   { id: 'shadowBias', via: 'js', min: -0.005, max: 0.005, step: 0.0001, value: BIAS.bias },
 ];
 
-const MOONLIGHT = 3; // cường độ ánh trăng ở trọng số 1
+const MOONLIGHT = 3; // cường độ ánh trăng ở trọng số 1, khi trăng cao từ độ cao của 21:00 trở lên
+const LOW = moonDirection(18)[1]; // độ cao (thành phần y của hướng) lúc trăng sát chân trời
+const FULL = moonDirection(21)[1];
+
+/**
+ * Trăng càng thấp thì ánh trăng càng yếu (GĐ 4, theo thanh giờ): 35% khi trăng sát chân trời (chạng vạng, gần sáng), đủ
+ * 100% từ độ cao của 21:00 trở lên. Nhờ vậy ảnh ở giờ mặc định giữ nguyên như GĐ 3.
+ * @param {number} y  thành phần y của hướng trăng (đơn vị)
+ */
+export function moonStrength(y) {
+  const s = Math.min(Math.max((y - LOW) / (FULL - LOW), 0), 1);
+  return 0.35 + 0.65 * s * s * (3 - 2 * s);
+}
 const SKY_FILL = 4; // trời chàm hắt xuống, nước đen hắt lên
 const CANDLE = { distance: 14, position: [-5, 0.08, 13] };
 
@@ -144,7 +157,7 @@ export function createLayer(ctx, shared) {
       moon.update(dir);
       moonlight.position.copy(dir).multiplyScalar(LIGHT_DISTANCE);
       watch?.check(); // có gì đổi thì khớp lại khung bóng và vẽ lại shadow map MỘT lần
-      moonlight.intensity = MOONLIGHT * k;
+      moonlight.intensity = MOONLIGHT * k * moonStrength(dir.y);
       fill.intensity = SKY_FILL * k;
       // Đèn xưởng lui dần khi trăng lên: ở trọng số 1 chỉ còn ánh sáng của bức.
       cot.hemi.intensity = cot.hemiIntensity * (1 - k);

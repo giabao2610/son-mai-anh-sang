@@ -7,6 +7,8 @@ import { buildScene } from '../../src/engine/gpu/scene.js';
 import { createDisposer } from '../../src/engine/gpu/disposer.js';
 import { fakeRenderer } from '../helpers/fake-ctx.js';
 
+/** Test gắn hàm vào đây để nghe update() của lớp tô màu. */
+const hooks = { update: null };
 /** Bức giả hai lớp: Cốt (một khối đất sét) và một lớp tô màu theo trọng số. */
 const meta = { layers: [{ id: 'cot', name: 'Cốt', files: [] }, { id: 'to-mau', name: 'Tô màu', files: [] }] };
 const painting = {
@@ -30,7 +32,7 @@ const painting = {
       knobs: [],
       createLayer(ctx, shared) {
         shared.cot.material.colorNode = mix(color(ctx.palette.hex.datSet), color(ctx.palette.hex.doSon), ctx.weight('to-mau'));
-        return { dispose() {} };
+        return { update: (dt, t) => hooks.update?.(dt, t), dispose() {} };
       },
     },
   ],
@@ -121,6 +123,21 @@ describe('buildScene', () => {
     await Promise.all([a, b]);
     expect(renders()).toBe(1);
     expect(scene.studio.weight('to-mau').value).toBe(0.5);
+  });
+
+  it('vẽ lại khung đứng yên (GĐ 4): setup.update(0, t) → layer.update(0, t) → render, với t của khung đang giữ', async () => {
+    const order = [];
+    hooks.update = (dt, t) => order.push(['lop', dt, t]);
+    const { stage, scene, flush, renders } = build({ setup: () => ({ update: (dt, t) => order.push(['bức', dt, t]) }) });
+    stage.u.time.value = 1.5;
+    stage.renderer.render.mockImplementation(() => order.push(['render']));
+    scene.freeze();
+    const done = scene.studio.setWeight('to-mau', 0);
+    flush();
+    await done;
+    hooks.update = null;
+    expect(order).toEqual([['bức', 0, 1.5], ['lop', 0, 1.5], ['render']]);
+    expect(renders()).toBe(1);
   });
 
   it('vẽ lại khung đứng yên mà render ném lỗi: Promise hỏng (không treo mãi), lần sau vẽ lại được', async () => {
