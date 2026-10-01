@@ -16,10 +16,10 @@ export const knobs = [
   { id: 'bloomThreshold', min: 0, max: 2, step: 0.01, value: 0 },
   { id: 'toneMapping', kind: 'select', options: Object.keys(TONE), value: 'agx' },
   { id: 'exposure', min: 0.1, max: 3, step: 0.01, value: 1 },
-  // Chặng display (GĐ 4). Số mặc định chốt ở lượt màu GĐ 4 (spec §5).
-  { id: 'lutIntensity', min: 0, max: 1, step: 0.01, value: 0.6 },
+  // Chặng display (GĐ 4). Số mặc định chốt ở lượt màu GĐ 4 (spec §5): LUT 0,45 để sương chân trời ấm mà không ngả cam.
+  { id: 'lutIntensity', min: 0, max: 1, step: 0.01, value: 0.45 },
   { id: 'grain', min: 0, max: 0.15, step: 0.005, value: 0.03 },
-  { id: 'vignette', min: 0, max: 1, step: 0.01, value: 0.35 },
+  { id: 'vignette', min: 0, max: 1, step: 0.01, value: 0.45 },
 ];
 
 /**
