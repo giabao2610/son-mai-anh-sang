@@ -1,5 +1,6 @@
 // engine/gpu/scene.js — dựng MỘT cảnh trên một sân khấu: ctx → setup → lớp → pipeline → thang nấc → input → bàn thợ; và hàm vẽ một khung.
-import { FRAME_BUDGET_MS, budgetFor, createTuner, isMobile, pickLevel } from '../quality.js';
+import { budgetFor, isMobile, pickLevel } from '../quality.js';
+import { FRAME_BUDGET_MS, createTuner } from '../tuner.js';
 import { createCtx, buildLayers, ensureEmissive } from './layers.js';
 import { createPipeline } from './pipeline.js';
 import { createLadder } from './ladder.js';

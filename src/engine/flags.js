@@ -1,12 +1,11 @@
 // engine/flags.js — đọc cờ URL (?static, ?webgl, ?force3d, ?debug, ?at, ?freeze, ?poster, ?level) thành một object thuần.
+// Ba mức lấy từ quality.js: từ GĐ 4 file đó chỉ còn chọn mức (bộ điều chỉnh ở tuner.js), nên đường nhẹ import được.
+import { LEVELS } from './quality.js';
 
 // ?at chỉ nhận dạng ISO 8601: "2026-09-28T21:00", có thể thêm ":ss" và một offset ("Z", "+07:00", "-05:00").
 // Dạng khác (ví dụ "09/28/2026") bị V8 đọc theo múi giờ của MÁY, nên bị loại: ?at phải cho cùng kết quả ở mọi nơi.
 const AT = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?)(Z|[+-]\d{2}:\d{2})?$/;
 const OFF = ['0', 'false'];
-// Cùng ba mức với engine/quality.js#LEVELS (test giữ cho khớp). Không import từ đó: file này nằm trên đường nhẹ
-// của poster, còn quality.js mang cả bộ điều chỉnh mà chỉ tầng 3D mới cần.
-const LEVELS = ['cao', 'vua', 'thap'];
 
 /**
  * Đọc giá trị của ?at thành Date.
