@@ -1,7 +1,7 @@
 // ui/notebook.js — Sổ tay của một lớp: ba tab Hiểu / Chỉnh / Phá (panel bên phải trên máy tính, tấm trượt dưới trên điện thoại).
 import { h } from './dom.js';
 import { createCodeView } from './code-view.js';
-import { understandPage, experimentList, readoutList, compareBars } from './notebook-pages.js';
+import { understandPage, experimentList, measureList, compareBars } from './notebook-pages.js';
 
 const TABS = ['hieu', 'chinh', 'pha'];
 const READOUT_MS = 250; // số đo đổi 4 lần mỗi giây: đủ đọc được, không làm nặng khung hình
@@ -168,11 +168,7 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
       list.querySelector(`[data-experiment="${expId}"]`).after(bars.el);
       compares.set(expId, bars);
     }
-    const rows = [
-      ...spec.readouts.map((r) => ({ id: `lop:${r.id}`, label: text?.readouts?.[r.id] ?? r.id, unit: r.unit })),
-      ...['drawCalls', 'triangles', 'ms', 'cpuMs'].map((id) => ({ id, label: t.notebook.readouts[id] })),
-    ];
-    readouts = readoutList(doc, { rows, lang: t.lang });
+    readouts = measureList(doc, { readouts: spec.readouts, labels: text?.readouts, t });
     panels.pha.replaceChildren(off, list, h(doc, 'h3', { text: t.notebook.measure }), readouts.el);
   };
 

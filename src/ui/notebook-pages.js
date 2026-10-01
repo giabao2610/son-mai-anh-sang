@@ -90,6 +90,10 @@ export function readoutList(doc, { rows, lang }) {
       for (const [id, dd] of cells) {
         const v = values[id];
         if (v === undefined) continue;
+        if (v === null) {
+          dd.textContent = '—'; // máy không đo được số này (ms GPU trên Safari, nhiều điện thoại, GPU Apple)
+          continue;
+        }
         const shown = typeof v === 'number' ? format.format(v) : String(v);
         dd.textContent = units.get(id) ? `${shown} ${units.get(id)}` : shown;
       }
@@ -97,37 +101,66 @@ export function readoutList(doc, { rows, lang }) {
   };
 }
 
+/** Số đo của xưởng, cho mọi lớp, theo thứ tự hiện trong tab Phá. */
+const STUDIO_READOUTS = ['drawCalls', 'triangles', 'ms', 'cpuMs', 'gpuMs'];
+
 /**
- * Hai cột "Tắt / Bật" của một thí nghiệm 'compare' (GĐ 3). Mỗi hàng có hai vạch: ms mỗi khung (vàng lá) và ms CPU
- * (bạc lá), dài theo số lớn hơn của hai hàng; kèm số viết ra. Vạch chỉ để nhìn (aria-hidden), số là chữ để đọc.
- * Máy mạnh thường thấy hai vạch ms khung bằng nhau: trình duyệt khóa ở nhịp màn hình. ms CPU thì không bị khóa.
+ * Số đo trực tiếp của tab Phá: của lớp (nhãn trong content), rồi của xưởng. Máy không đo được ms GPU thì dòng đó ghi "—"
+ * và có thêm một câu giải thích (GĐ 4); mẫu GPU đầu tiên về thì câu ấy ẩn đi.
+ * @param {Document} doc
+ * @param {{ readouts: { id: string, unit?: string }[], labels?: Record<string, string>, t: Record<string, any> }} p
+ */
+export function measureList(doc, { readouts, labels, t }) {
+  const rows = [
+    ...readouts.map((r) => ({ id: `lop:${r.id}`, label: labels?.[r.id] ?? r.id, unit: r.unit })),
+    ...STUDIO_READOUTS.map((id) => ({ id, label: t.notebook.readouts[id] })),
+  ];
+  const list = readoutList(doc, { rows, lang: t.lang });
+  const missing = h(doc, 'p', { class: 'nb-gpu-missing', text: t.notebook.gpuMissing });
+  return {
+    el: h(doc, 'div', { class: 'nb-measure' }, list.el, missing),
+    /** @param {Record<string, number | string | null>} values  'lop:<id>' cho số của lớp, còn lại là stats() của bàn thợ */
+    update(values) {
+      list.update(values);
+      missing.hidden = values.gpuMs !== null;
+    },
+  };
+}
+
+/**
+ * Hai cột "Tắt / Bật" của một thí nghiệm 'compare' (GĐ 3). Mỗi hàng có ba vạch: ms mỗi khung (vàng lá), ms CPU (bạc lá)
+ * và (GĐ 4) ms GPU (chàm sáng), mỗi loại dài theo số lớn hơn của hai hàng; kèm số viết ra. Vạch chỉ để nhìn
+ * (aria-hidden), số là chữ để đọc. Máy mạnh thường thấy hai vạch ms khung bằng nhau: trình duyệt khóa ở nhịp màn hình.
+ * ms CPU và ms GPU thì không bị khóa. Bên nào chưa có mẫu GPU (hay máy không đo được) thì không ghi số GPU.
  * @param {Document} doc
  * @param {{ t: Record<string, any> }} p
  */
 export function compareBars(doc, { t }) {
   const format = new Intl.NumberFormat(t.lang, { maximumFractionDigits: 1 });
+  const KEYS = ['ms', 'cpuMs', 'gpuMs'];
   const row = (side) => {
-    const frame = h(doc, 'i');
-    const cpu = h(doc, 'i');
+    const bars = KEYS.map(() => h(doc, 'i'));
     const value = h(doc, 'span', { class: 'nb-compare-value', text: t.notebook.compare.empty });
     const el = h(doc, 'div', { class: 'nb-compare-row', 'data-side': side },
       h(doc, 'span', { text: t.notebook.compare[side] }),
-      h(doc, 'span', { class: 'nb-bars', 'aria-hidden': 'true' }, frame, cpu),
+      h(doc, 'span', { class: 'nb-bars', 'aria-hidden': 'true' }, bars),
       value);
-    return { el, frame, cpu, value };
+    return { el, bars, value };
   };
   const rows = { off: row('off'), on: row('on') };
   return {
     el: h(doc, 'div', { class: 'nb-compare', 'data-compare': '' }, rows.off.el, rows.on.el),
-    /** @param {{ off: { ms: number, cpuMs: number } | null, on: { ms: number, cpuMs: number } | null }} data */
+    /** @param {{ off: { ms: number, cpuMs: number, gpuMs?: number | null } | null, on: object | null }} data */
     update(data) {
       const top = (key) => Math.max(data.off?.[key] ?? 0, data.on?.[key] ?? 0) || 1;
       for (const side of ['off', 'on']) {
-        const { frame, cpu, value } = rows[side];
+        const { bars, value } = rows[side];
         const v = data[side];
-        frame.style.width = v ? `${(v.ms / top('ms')) * 100}%` : '0%';
-        cpu.style.width = v ? `${(v.cpuMs / top('cpuMs')) * 100}%` : '0%';
-        value.textContent = v ? t.notebook.compare.value(format.format(v.ms), format.format(v.cpuMs)) : t.notebook.compare.empty;
+        KEYS.forEach((key, i) => {
+          bars[i].style.width = v?.[key] != null ? `${(v[key] / top(key)) * 100}%` : '0%';
+        });
+        const gpu = v?.gpuMs != null ? format.format(v.gpuMs) : null;
+        value.textContent = v ? t.notebook.compare.value(format.format(v.ms), format.format(v.cpuMs), gpu) : t.notebook.compare.empty;
       }
     },
   };

@@ -51,6 +51,9 @@ const t = {
     steps: (n) => `hạ ${n} nấc`,
     stepsExplain: (n) => `Máy đang bớt ${n} nấc chi tiết (độ nét, phản chiếu, bloom…) để hình không giật; `
       + 'khi máy rảnh hơn, chi tiết tự trở lại.',
+    /** Có nấc bị khóa chống dao động (GĐ 4): nói thật là nấc đó giữ tới khi tải lại trang. */
+    lockedExplain: (n, k) => `Máy đang bớt ${n} nấc chi tiết (độ nét, phản chiếu, bloom…) để hình không giật. `
+      + `${k} nấc trong số đó giữ nguyên tới khi tải lại trang, vì trả lại là máy chậm ngay.`,
   },
   static: {
     noGpu: 'Máy này chưa vẽ được cảnh 3D, thường là vì trình duyệt đang tắt tăng tốc phần cứng. '
@@ -103,13 +106,17 @@ const t = {
       triangles: 'Tam giác mỗi khung',
       ms: 'Mili giây mỗi khung',
       cpuMs: 'Mili giây CPU mỗi khung',
+      gpuMs: 'Mili giây GPU mỗi khung',
     },
+    /** Máy không đo được thời gian GPU (GĐ 4): dòng ms GPU ghi "—" kèm câu này. */
+    gpuMissing:
+      'Máy này chưa đo được thời gian GPU: Safari và nhiều điện thoại chưa cho đo, còn GPU Apple trên Chrome báo các lượt vẽ chồng lên nhau nên số không dùng được.',
     /** Hai cột "Tắt / Bật" của thí nghiệm so sánh (GĐ 3). */
     compare: {
       off: 'Tắt',
       on: 'Bật',
       empty: 'chưa đo',
-      value: (ms, cpu) => `khung ${ms} ms · CPU ${cpu} ms`,
+      value: (ms, cpu, gpu) => `khung ${ms} ms · CPU ${cpu} ms${gpu === null ? '' : ` · GPU ${gpu} ms`}`,
     },
     /** Nút mở Sổ tay ở tầng tĩnh (chỉ đọc). */
     openStatic: (n) => `Xem ${n} lớp của bức tranh`,
