@@ -1,6 +1,6 @@
-// tests/unit/poster.test.js — scripts/poster.js: URL chụp theo meta.poster.capture, vùng cắt og ở giữa, chọn chất lượng WebP; đọc cỡ ảnh.
-import { describe, it, expect } from 'vitest';
-import { LIMITS, OG, QUALITIES, captureUrl, centerCrop, pickQuality } from '../../scripts/poster.js';
+// tests/unit/poster.test.js — scripts/poster.js: URL chụp theo meta.poster.capture, vùng cắt og ở giữa, chọn chất lượng WebP, luôn tắt vite preview; đọc cỡ ảnh.
+import { describe, it, expect, vi } from 'vitest';
+import { LIMITS, OG, QUALITIES, captureUrl, centerCrop, pickQuality, shutdown, waitForServer } from '../../scripts/poster.js';
 import { jpegSize, webpSize } from '../helpers/image.js';
 
 const meta = { slug: 'thu', poster: { width: 1600, height: 1000, capture: { at: '2026-10-25T21:00', freeze: 300 } } };
@@ -24,6 +24,25 @@ describe('scripts/poster.js', () => {
     const q = await pickQuality(size, LIMITS.poster);
     expect(q).toBe(QUALITIES.find((x) => x * 200_000 <= LIMITS.poster));
     await expect(pickQuality(async () => 1e9, LIMITS.poster)).rejects.toThrow('vẫn quá 150 KB');
+  });
+});
+
+describe('scripts/poster.js: vite preview mà script mở', () => {
+  it('shutdown: đóng Chromium hỏng thì vẫn tắt vite preview (cổng 4274 không kẹt lại) và nói lý do; chưa mở được Chromium cũng tắt', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const server = { kill: vi.fn() };
+    await shutdown({ close: vi.fn(async () => { throw new Error('mất kết nối'); }) }, server);
+    expect(server.kill).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('mất kết nối');
+    await shutdown(null, server);
+    expect(server.kill).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
+  });
+
+  it('waitForServer: vite preview đã dừng (chưa build, cổng bận) thì báo ngay kèm lý do, không chờ hết 30 giây', async () => {
+    const started = Date.now();
+    await expect(waitForServer('http://127.0.0.1:9/', () => 'đã dừng (mã 1)')).rejects.toThrow(/vite preview đã dừng \(mã 1\)/);
+    expect(Date.now() - started).toBeLessThan(400); // nhỏ hơn một nhịp chờ 500 ms
   });
 });
 

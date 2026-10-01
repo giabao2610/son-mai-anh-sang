@@ -54,17 +54,35 @@ export async function pickQuality(sizeAt, limit, qualities = QUALITIES) {
   throw new Error(`Ở chất lượng thấp nhất (${qualities.at(-1)}) ảnh vẫn quá ${Math.round(limit / 1024)} KB`);
 }
 
-/** Chờ `vite preview` trả lời (tối đa 30 giây). */
-async function waitForServer(url) {
-  for (let i = 0; i < 60; i += 1) {
+/**
+ * Chờ `vite preview` trả lời (tối đa 30 giây). Server đã dừng (chưa build, cổng bận, thiếu npx) thì báo ngay kèm lý do,
+ * không chờ hết giờ: lỗi của chính vite đã in ra stderr.
+ * @param {string} url
+ * @param {() => string | null} stopped  lý do server không còn chạy, hay null khi vẫn chạy
+ */
+export async function waitForServer(url, stopped = () => null, { tries = 60, everyMs = 500 } = {}) {
+  for (let i = 0; i < tries; i += 1) {
+    const why = stopped();
+    if (why) throw new Error(`vite preview ${why}: đã chạy npm run build chưa, hay cổng ${PORT} đang bận?`);
     try {
       if ((await fetch(url)).ok) return;
     } catch {
       // chưa mở cổng
     }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, everyMs));
   }
   throw new Error(`vite preview không trả lời ở ${url}`);
+}
+
+/** Đóng Chromium rồi tắt vite preview: LUÔN tắt server, kể cả khi đóng trình duyệt hỏng (cổng 4274 không kẹt lại). */
+export async function shutdown(browser, server) {
+  try {
+    await browser?.close();
+  } catch (err) {
+    console.warn(`Không đóng được Chromium: ${err.message}`);
+  } finally {
+    server.kill();
+  }
 }
 
 async function main(slug) {
@@ -72,11 +90,22 @@ async function main(slug) {
   if (!row) throw new Error(`Không có bức "${slug}" trong registry. Có: ${paintings.map((p) => p.meta.slug).join(', ')}`);
   const { poster, og } = row.meta;
   if (!og) throw new Error(`Bức "${slug}" chưa có meta.og (đường dẫn ảnh og trong public/)`);
-  const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });
+  // stderr của vite in thẳng ra (cổng bận, thiếu dist/); thiếu npx thì spawn báo 'error': bắt lấy để nói lý do.
+  const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], {
+    cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'],
+  });
+  let spawnError = null;
+  server.on('error', (err) => {
+    spawnError = err;
+  });
+  const stopped = () => {
+    if (spawnError) return `không chạy được (${spawnError.message})`;
+    return server.exitCode === null ? null : `đã dừng (mã ${server.exitCode})`;
+  };
   let browser = null;
   try {
     browser = await chromium.launch({ channel: 'chromium' }); // Chromium đầy đủ: dùng GPU thật của máy
-    await waitForServer(BASE);
+    await waitForServer(BASE, stopped);
     const page = await browser.newPage({ viewport: { width: poster.width, height: poster.height }, deviceScaleFactor: 1 });
     await page.goto(BASE + captureUrl(row));
     const freeze = poster.capture.freeze;
@@ -111,8 +140,7 @@ async function main(slug) {
     console.log(`Đã chụp ở khung ${sma.frames} (${sma.backend}): public${poster.src} (${Math.round(webp.length / 1024)} KB, WebP q ${q}), `
       + `public/${og} (${Math.round(jpeg.length / 1024)} KB)`);
   } finally {
-    await browser?.close();
-    server.kill();
+    await shutdown(browser, server);
   }
 }
 
