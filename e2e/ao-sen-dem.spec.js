@@ -2,6 +2,7 @@
 import { test, expect } from '@playwright/test';
 import { DARK, waitForSettled, waitForFrames, canvasStats, gpuReport, collectConsole, readSma, twoFrames } from './helpers.js';
 import meta from '../src/paintings/ao-sen-dem/meta.js';
+import { GESTURE } from '../src/engine/gpu/gesture.js';
 
 const AT = 'at=2026-09-28T21:00';
 const N = 90; // số khung của mỗi lần chạy; vòng gợn kịp lan trong ~1 giây đồng hồ của cảnh
@@ -84,9 +85,10 @@ test.describe('Ao Sen Đêm · chạm mặt nước', () => {
   });
 
   /**
-   * Cảnh đứng yên ở khung 30, chỉ bật Cốt + Sương, rồi vuốt (nhanh) hoặc kéo CHẬM cùng một đường đi trên mặt nước.
-   * Đứng yên thì máy không bận vẽ, nên cú vuốt được nhận đúng nhịp (dưới 300 ms) cả trên GPU phần mềm chậm. Kéo nào cũng xoay
-   * camera (OrbitControls tự cập nhật khi rê), nên ép vẽ lại một lần rồi mới chụp: hai ảnh cùng một camera đã xoay.
+   * Cảnh đứng yên ở khung 30, chỉ bật Cốt + Sương, rồi vuốt (nhanh) hoặc kéo CHẬM cùng một đường đi 120 px trên mặt nước. Kéo nào
+   * cũng xoay camera (OrbitControls tự cập nhật khi rê), nên ép vẽ lại một lần rồi mới chụp: hai ảnh cùng một camera đã xoay.
+   * Trả kèm `ms`: thời lượng nét từ pointerdown tới pointerup, đo lúc handler chạy như gesture.js đo. Mỗi sự kiện chuột của Playwright
+   * phải đợi một nhịp khung mới tới trang, mà trên GPU phần mềm nhịp đó mất vài chục tới vài trăm ms: nét dài ra tùy máy.
    */
   async function stillStroke(page, testInfo, kind) {
     const { query } = testInfo.project.metadata;
@@ -102,18 +104,28 @@ test.describe('Ao Sen Đêm · chạm mặt nước', () => {
     await twoFrames(page);
     const box = await page.locator('[data-stage] canvas').boundingBox();
     const [x, y] = [box.x + box.width * WATER.x, box.y + box.height * WATER.y];
+    await page.evaluate(() => {
+      window.__stroke = {};
+      const stamp = (name) => () => { window.__stroke[name] = performance.now(); };
+      window.addEventListener('pointerdown', stamp('down'), { capture: true, once: true });
+      window.addEventListener('pointerup', stamp('up'), { capture: true, once: true });
+    });
     await page.mouse.move(x - 60, y);
     await page.mouse.down();
-    if (kind === 'swipe') await page.mouse.move(x + 60, y, { steps: 3 });
+    if (kind === 'swipe') await page.mouse.move(x + 60, y); // một bước: ít sự kiện nhất, nét ngắn nhất
     else {
-      for (let i = 1; i <= 20; i += 1) {
-        await page.mouse.move(x - 60 + i * 6, y);
-        await page.waitForTimeout(40); // cả cú kéo dài hơn 300 ms: không phải vuốt
+      // Bước đầu vượt ngay ngưỡng chạm (GESTURE.tapPx): cử chỉ thành "kéo" ngay. Bước đầu dưới ngưỡng thì cử chỉ còn "chờ", và bước kế
+      // tới trễ quá GESTURE.holdMs (máy CI chậm) là thành "giữ": input.js tắt camera giữa chừng, hai cú kéo cho hai ảnh khác nhau.
+      await page.mouse.move(x - 48, y);
+      for (let i = 1; i <= 18; i += 1) {
+        await page.mouse.move(x - 48 + i * 6, y);
+        await page.waitForTimeout(40); // cả cú kéo dài hơn GESTURE.swipeMs: không phải vuốt
       }
     }
     await page.mouse.up();
+    const ms = await page.evaluate(() => window.__stroke.up - window.__stroke.down);
     await page.evaluate(() => window.__sma.setWeight('suong', 1)); // ép vẽ lại khung 30 (trọng số không đổi)
-    return canvasStats(page);
+    return { ...(await canvasStats(page)), ms };
   }
 
   test('vuốt trên mặt nước làm sương xoáy (GĐ 4): chỉ Cốt + Sương, cảnh đứng yên; vuốt khác một cú kéo chậm cùng đường đi', async ({
@@ -122,12 +134,22 @@ test.describe('Ao Sen Đêm · chạm mặt nước', () => {
     // Giảm chuyển động tắt quán tính (damping) của camera: kéo chậm và vuốt cùng đường đi thì xoay camera y hệt nhau. Chỉ cú vuốt
     // sinh cử chỉ 'swipe' → shared.swirl → sương xoáy (ở khung đứng yên, góc xoáy lớn nhất). Hai cú kéo chậm phải cho cùng một
     // ảnh (phép so công bằng), cú vuốt thì khác.
-    test.setTimeout(180_000);
+    test.setTimeout(300_000); // tới năm nét (hai cú kéo, tối đa ba cú vuốt) trên GPU phần mềm
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const a = await stillStroke(page, testInfo, 'drag');
     const b = await stillStroke(page, testInfo, 'drag');
+    expect(Math.min(a.ms, b.ms), 'cú kéo chậm tới trang nhanh như một cú vuốt').toBeGreaterThan(GESTURE.swipeMs);
     expect(b.checksum, 'hai cú kéo chậm như nhau phải cho cùng một ảnh').toBe(a.checksum);
-    const swiped = await stillStroke(page, testInfo, 'swipe');
+    // Nét chỉ là vuốt nếu tới tay gesture.js trong GESTURE.swipeMs (chừa 25 ms: hai bên đo ở hai handler khác nhau). Máy CI có lúc giao
+    // sự kiện chậm hơn thế: nét thành cú kéo và phép so vô nghĩa, nên vuốt lại trên trang mới (tối đa ba lần) thay vì báo nhầm.
+    const fast = GESTURE.swipeMs - 25;
+    let swiped = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      swiped = await stillStroke(page, testInfo, 'swipe');
+      if (swiped.ms <= fast) break;
+      testInfo.annotations.push({ type: 'vuot-cham', description: `lần ${attempt}: nét tới trang trong ${Math.round(swiped.ms)} ms` });
+    }
+    expect(swiped.ms, `môi trường quá chậm: ba lần vuốt đều tới trang sau hơn ${fast} ms`).toBeLessThanOrEqual(fast);
     await page.screenshot({ path: testInfo.outputPath('suong-xoay.png') });
     expect(swiped.checksum, 'vuốt mà sương không xoáy (ảnh giống cú kéo chậm)').not.toBe(a.checksum);
     expect(log.errors).toEqual([]);
