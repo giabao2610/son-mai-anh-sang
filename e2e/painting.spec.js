@@ -114,13 +114,16 @@ for (const { meta, page: htmlPage, lang } of paintings) {
     test('?freeze=10 và ?freeze=40: live, đúng số khung, đúng backend, có sáng có tối, hai ảnh khác nhau', async ({
       page,
     }, testInfo) => {
+      // Hai lần tải trang rồi vẽ 10 và 40 khung trên GPU phần mềm: WebGPU SwiftShader trên CI mất 50–56 giây, sát trần mặc
+      // định 60 giây; có lượt 40 khung về sau hơn 30 giây chờ (frames vẫn đủ 40). Trần riêng như các test nặng khác.
+      test.setTimeout(180_000);
       const { query, backend } = testInfo.project.metadata;
       const shots = [];
       for (const n of [10, 40]) {
         await page.goto(urlOf(htmlPage, query, `freeze=${n}`));
-        const settled = await waitForSettled(page);
+        const settled = await waitForSettled(page, { timeout: 60_000 });
         expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
-        const sma = await waitForFrames(page, n);
+        const sma = await waitForFrames(page, n, { timeout: 60_000 });
         expect(sma.state, `về tầng tĩnh sau khi live: ${sma.reason} · ${sma.error}`).toBe('live');
         expect(sma.frames).toBe(n);
         expect(sma.backend).toBe(backend);
