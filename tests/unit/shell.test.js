@@ -213,6 +213,25 @@ describe('trăng SVG', () => {
 });
 
 
+describe('?poster (GĐ 4): chỉ còn canvas để chụp poster', () => {
+  it('body[data-poster]; không gợi ý, không lời mời; poster (img) vẫn là ảnh poster, không phải body', () => {
+    const shell = mountShell(document, meta, { now: NOW, t, poster: true });
+    expect(document.body.hasAttribute('data-poster')).toBe(true);
+    shell.setState('live');
+    shell.showHint('Chạm vào mặt nước');
+    shell.invite(() => {});
+    expect(page.hint.childNodes).toHaveLength(0);
+    shell.setState('static');
+    expect(page.poster.hidden).toBe(false); // vẫn đúng ảnh poster: shell không nhầm body là poster
+    expect(document.body.hidden).toBe(false);
+  });
+
+  it('không có cờ thì không gắn data-poster', () => {
+    mountShell(document, meta, { now: NOW, t });
+    expect(document.body.hasAttribute('data-poster')).toBe(false);
+  });
+});
+
 describe('gợi ý và lời mời', () => {
   it('showHint hiện chữ của bức; invite đổi thành NÚT mời có số lớp; bấm thì lời mời biến mất và gọi onOpen', () => {
     const shell = mountShell(document, meta, { now: NOW, t });

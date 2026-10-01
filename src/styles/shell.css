@@ -45,7 +45,7 @@ body {
 /* ── Lớp 0: poster ─────────────────────────────────────────────────────────────────────── */
 /* Ảnh tĩnh phủ kín màn hình. object-fit: cover cắt bớt mép thay vì bóp méo ảnh;
    object-position lệch phải để điện thoại dọc vẫn thấy trăng. */
-[data-poster] {
+img[data-poster] {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -300,6 +300,9 @@ header h1 {
 [data-moon]:empty { display: none; }
 .moon-dark { fill: color-mix(in srgb, var(--cham) 80%, var(--den-then)); }
 .moon-lit { fill: var(--nga); }
+
+/* ── ?poster (GĐ 4): chỉ còn canvas, để scripts/poster.js chụp poster từ chính cảnh (không chữ, không huy hiệu, không UI) ── */
+body[data-poster] :is(.frame, .rail, .notebook, .toolbar) { display: none !important; }
 
 /* ── Chế độ thợ (?debug=stats): stats-gl tự đặt ở góc trái trên, đè lên tên bức. Dời ra giữa mép trên ── */
 [data-debug='stats'] { left: 50% !important; transform: translateX(-50%); }

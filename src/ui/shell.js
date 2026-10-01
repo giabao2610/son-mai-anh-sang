@@ -1,4 +1,4 @@
-// ui/shell.js — vỏ trang của mọi bức: con dấu âm lịch, data-state, hòa dần poster → canvas, huy hiệu, ghi chú, gợi ý và lời mời
+// ui/shell.js — vỏ trang của mọi bức: con dấu âm lịch, data-state, hòa dần poster → canvas, huy hiệu, ghi chú, gợi ý, lời mời, ?poster
 import { lunarFromDate, canChiIndex } from '../lib/astro/lunar.js';
 import { moonPhase } from '../lib/astro/moon.js';
 import { renderBadge } from './badge.js';
@@ -18,11 +18,14 @@ const POSTER_STATES = ['static', 'lost'];
  * được bỏ `hidden` vừa được điền chữ trong cùng một nhịp thường bị VoiceOver bỏ qua, không đọc.
  * @param {Document} doc
  * @param {object} meta  PaintingMeta của bức (lời mời "{n} lớp")
- * @param {{ now: Date, t: Record<string, any>, onState?: (state: string) => void }} opts
+ * @param {{ now: Date, t: Record<string, any>, onState?: (state: string) => void, poster?: boolean }} opts
+ *   poster: cờ ?poster (GĐ 4): body[data-poster], CSS ẩn mọi UI trừ canvas; không gợi ý, không lời mời
  */
-export function mountShell(doc, meta, { now, t, onState = () => {} }) {
+export function mountShell(doc, meta, { now, t, onState = () => {}, poster: posterMode = false }) {
   const $ = (sel) => doc.querySelector(sel);
-  const poster = $('[data-poster]');
+  // img: từ GĐ 4, body cũng có thể mang data-poster (cờ ?poster), nên chỉ rõ là ảnh.
+  const poster = $('img[data-poster]');
+  if (posterMode) doc.body.dataset.poster = '';
   const stageEl = $('[data-stage]');
   const badge = $('[data-badge]');
   const badgeNote = $('[data-badge-note]');
@@ -126,7 +129,7 @@ export function mountShell(doc, meta, { now, t, onState = () => {} }) {
 
   /** Gợi ý của bức (content.hint), hiện khi cảnh đã live. Tầng tĩnh thì thôi. */
   function showHint(text) {
-    if (!hint || !text || showingPoster()) return;
+    if (!hint || !text || showingPoster() || posterMode) return;
     hint.dataset.kind = 'hint';
     hint.textContent = text;
   }
@@ -137,7 +140,7 @@ export function mountShell(doc, meta, { now, t, onState = () => {} }) {
    * @param {() => void} [onOpen]
    */
   function invite(onOpen) {
-    if (!hint || showingPoster()) return;
+    if (!hint || showingPoster() || posterMode) return;
     hint.dataset.kind = 'invite';
     hint.replaceChildren(button(t.invite(meta.layers.length), () => {
       clearHint();
