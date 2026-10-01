@@ -1314,9 +1314,13 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
   của mẻ đó (`GPU_PLAUSIBLE`).
   - Mỗi lần hỏi, three gom các khung đã vẽ từ lần hỏi trước thành một mẻ, rồi trả tổng thời gian các pass của khung cuối mẻ. GPU
     vẽ lần lượt từng pass thì không thể bận lâu hơn nhịp khung.
+  - Mẻ không có nhịp khung đáng tin thì không có trần: lần hỏi đầu (chưa có mốc), hay mẻ có nhịp trung bình dài hơn một lần nghẽn
+    (`TUNER.hiccupMs`, 250 ms: lúc hòa dần, tab ẩn). Mẫu hợp lệ của mẻ đó bị bỏ mà không tính là hỏng: số chưa kiểm được thì không
+    vào Sổ tay hay bộ điều chỉnh.
   - (Dựng thử GĐ 4) GPU Apple trên Chrome báo thời lượng các pass chồng lên nhau: 16 pass, mỗi pass khoảng 10 ms, kể cả các lượt
-    bloom rất nhỏ. three cộng lại thành khoảng 160 ms cho một khung 16,7 ms (Phụ lục A.48). Luật 1,5 lần loại các số đó, nên trên
-    GPU Apple việc đo thôi sau 3 mẫu, và bộ điều chỉnh đi đường nhịp.
+    bloom rất nhỏ. three cộng lại thành khoảng 160 ms cho một khung 16,7 ms (Phụ lục A.48). Luật 1,5 lần loại các số đó: mẫu của lần
+    hỏi đầu bị bỏ, ba mẫu có trần kế tiếp đều vô lý, nên việc đo thôi ngay sau khi live, Sổ tay không bao giờ hiện 160 ms, và bộ
+    điều chỉnh đi đường nhịp.
   - Máy nặng lên đột ngột (bật một thí nghiệm nặng) chỉ lệch một mẫu, vì mẻ sau đã đo theo nhịp mới.
 
 **Phân loại một cửa sổ** (`engine/tuner.js`), khi cửa sổ có từ 3 mẫu GPU trở lên. Tải = max(trung vị ms GPU, trung bình ms CPU):
@@ -1457,7 +1461,8 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
   - `state()` có `locked` và `gpu`.
 - (GĐ 4) **Trần khung:** màn 60,02 / 60,05 / 60,1 Hz không bỏ khung nào trong 60 giây; màn 72/75/90/120/144 Hz vẫn khoảng 60 khung
   mỗi giây.
-- (GĐ 4) **`gpu-timer`** (renderer giả): không gọi resolve chồng; cộng render + compute; bỏ số vô lý; hỏng 3 lần liền thì tắt.
+- (GĐ 4) **`gpu-timer`** (renderer giả): không gọi resolve chồng; cộng render + compute; bỏ số vô lý; mẻ không có nhịp để so (lần
+  hỏi đầu, mẻ dài hơn một lần nghẽn) thì bỏ mẫu mà không tính là hỏng; hỏng 3 lần liền thì tắt.
 - (GĐ 4) **`lut`:** các tính chất ở §6 Lớp 6; mảng dài 32³ × 4; đổi bảng màu thì LUT đổi theo.
 - (GĐ 4) **`views`:**
   - thứ tự và nhãn: tap của lớp, `t.views`;
@@ -1809,7 +1814,8 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 - **Máy của Bao đang tắt WebGL và dùng Node 20.** Kiểm tra `chrome://gpu`; cài Node 24 bằng fnm (§13). Tầng C giải thích cách bật lại tăng tốc phần cứng.
 - **(GĐ 4) Số đo GPU không đáng tin như nhau trên mọi máy.** Chrome làm tròn timestamp (bước 0,066 ms trên máy dựng thử); WebGL2 có
   thể báo "disjoint"; GPU kiểu tile (Apple, điện thoại) báo thời lượng các pass chồng lên nhau, và three cộng chúng lại (Phụ lục A.48).
-  - Số lớn hơn 1,5 lần nhịp khung của mẻ là số vô lý. Trên GPU Apple, luật này làm việc đo thôi sau 3 mẫu.
+  - Số lớn hơn 1,5 lần nhịp khung của mẻ là số vô lý. Trên GPU Apple, luật này làm việc đo thôi sau 3 mẫu có trần (mẫu của lần
+    hỏi đầu bị bỏ vì chưa có nhịp để so).
   - Chỉ dùng số GPU khi một cửa sổ có từ 3 mẫu hữu hạn trở lên, và lấy trung vị. Số vô lý thì bỏ; hỏng liền thì tắt đo cho phiên đó.
   - Máy không đo được thì đi đường nhịp của GĐ 3, vốn đã test kỹ.
   - E2e trên SwiftShader không kiểm được số GPU thật. Bù lại có project GPU thật ở máy local, và mục kiểm tra thủ công.
@@ -1982,8 +1988,9 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     10–12 ms, kể cả các lượt bloom rất nhỏ, trong khi cảnh vẫn chạy đủ 60 khung/giây. `resolveTimestampsAsync('render')` trả
     **tổng các pass của khung cuối** (`framesDuration` của `WebGPUTimestampQueryPool`), nên ra khoảng 160 ms. Timestamp được làm tròn
     theo bước 0,066 ms. WebGL2 và WebGPU trên SwiftShader cũng báo số, khoảng 300 ms mỗi khung, gần bằng nhịp khung, vì mọi phép vẽ
-    chạy trên CPU. Mẫu đầu tiên sau live lớn hơn nhiều (khung đầu còn biên dịch pipeline); ms GPU của Sổ tay là trung bình trượt, nên
-    giảm dần về số thật trong vài chục mẫu, như ms mỗi khung.
+    chạy trên CPU; nhịp đó dài hơn một lần nghẽn (250 ms), nên gpu-timer bỏ các mẫu này và e2e không dựa vào ms GPU. Mẫu của lần hỏi
+    đầu (khung đầu còn biên dịch pipeline) và của mẻ trải qua lúc hòa dần không có nhịp khung đáng tin, nên cũng bị bỏ mà không tính là
+    hỏng (sửa sau review GĐ 4: trước đó GPU Apple kịp hiện 160 ms trong Sổ tay).
 49. **OrbitControls tự gọi `update()` khi rê** (đọc mã nguồn, kiểm bằng e2e, GĐ 4): camera đổi ngay cả khi vòng lặp đã dừng ở
     `?freeze`, nhưng canvas chỉ đổi ở lần vẽ lại kế tiếp. E2e sương xoáy ép vẽ lại, để so hai cú kéo có cùng một camera.
 50. **Mã hóa ảnh ngay trong trang** (`scripts/poster.js`, GĐ 4): `canvas.toBlob('image/webp', q)` của Chromium ra WebP dạng
