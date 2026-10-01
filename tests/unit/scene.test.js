@@ -141,6 +141,7 @@ describe('buildScene', () => {
 
   it('bộ điều chỉnh: 40 fps thì hạ nấc dpr, huy hiệu được báo; thanh lớp mở (guard) thì chậm vừa phải không hạ nữa', () => {
     const { scene, stage } = build();
+    scene.quality.start();
     const seen = [];
     scene.quality.onChange((q) => seen.push(q.steps.length));
     let ms = 0;
@@ -153,6 +154,52 @@ describe('buildScene', () => {
     expect(scene.studio.quality()).toMatchObject({ steps: ['dpr=1.75'], guarding: true });
     for (let i = 0; i < 160; i++) scene.step((ms += 50)); // 20 fps: quá tải nặng, vẫn hạ
     expect(scene.studio.quality().steps.slice(0, 2)).toEqual(['dpr=1.75', 'dpr=1.5']);
+  });
+
+  it('bộ điều chỉnh chỉ đo từ lúc live (run.js gọi start() sau hòa dần): trước đó 40 fps cũng không hạ', () => {
+    const { scene, stage } = build();
+    let ms = 0;
+    for (let i = 0; i < 400; i++) scene.step((ms += 25)); // 10 giây chưa live (khung ẩn, hòa dần)
+    expect(stage.setDpr.mock.calls).toEqual([[2]]);
+    scene.quality.start();
+    for (let i = 0; i < 280; i++) scene.step((ms += 25));
+    expect(scene.studio.quality().steps).toEqual(['dpr=1.75']);
+  });
+
+  it('ms GPU (GĐ 4): mẫu của gpu-timer vào số đo và bộ điều chỉnh (khóa 30 fps mà GPU nhàn: không hạ); quality() có gpu', async () => {
+    const { scene, stage } = build();
+    stage.renderer.backend = { trackTimestamp: true };
+    stage.renderer.info.compute = { frameCalls: 0 };
+    stage.renderer.resolveTimestampsAsync.mockImplementation(async () => 5); // GPU chỉ bận 5 ms mỗi khung
+    scene.quality.start();
+    expect(scene.studio.quality()).toMatchObject({ gpu: false, locked: [] });
+    let ms = 0;
+    for (let i = 0; i < 240; i++) {
+      scene.step((ms += 2 * 1000 / 60)); // nhịp 33 ms như bị khóa 30 fps
+      await Promise.resolve(); // để kết quả của gpu-timer về
+      await Promise.resolve();
+    }
+    expect(scene.studio.stats().gpuMs).toBe(5);
+    // Nhịp 33 ms mà máy nhàn: trình duyệt khóa nhịp. Đường nhịp (GĐ 3) sẽ hạ nấc ở giây thứ 6; đường tải thì không.
+    expect(scene.studio.quality()).toMatchObject({ gpu: true, capped: true, steps: [] });
+    expect(stage.renderer.resolveTimestampsAsync).toHaveBeenCalledWith('render');
+  });
+
+  it('GPU báo số chồng nhau (160 ms mỗi khung ở 60 khung/giây, GPU Apple): thôi đo, Sổ tay "—", bộ điều chỉnh theo nhịp', async () => {
+    const { scene, stage } = build();
+    stage.renderer.backend = { trackTimestamp: true };
+    stage.renderer.info.compute = { frameCalls: 0 };
+    stage.renderer.resolveTimestampsAsync.mockImplementation(async () => 160);
+    scene.quality.start();
+    let ms = 0;
+    for (let i = 0; i < 20; i++) {
+      scene.step((ms += 1000 / 60));
+      await Promise.resolve();
+      await Promise.resolve();
+    }
+    expect(scene.studio.stats().gpuMs).toBeNull();
+    expect(scene.studio.quality()).toMatchObject({ gpu: false, steps: [] });
+    expect(stage.renderer.resolveTimestampsAsync.mock.calls.length).toBeLessThanOrEqual(4); // lần đầu + 3 lần vô lý
   });
 
   it('?freeze: không có bộ điều chỉnh (ảnh tất định); hạ/nâng tay vẫn được, rồi vẽ lại', async () => {

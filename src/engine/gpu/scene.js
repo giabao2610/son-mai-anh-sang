@@ -1,6 +1,7 @@
 // engine/gpu/scene.js — dựng MỘT cảnh trên một sân khấu: ctx → setup → lớp → pipeline → thang nấc → input → bàn thợ; và hàm vẽ một khung.
 import { budgetFor, isMobile, pickLevel } from '../quality.js';
 import { FRAME_BUDGET_MS, createTuner } from '../tuner.js';
+import { createGpuTimer } from './gpu-timer.js';
 import { createCtx, buildLayers, ensureEmissive } from './layers.js';
 import { createPipeline } from './pipeline.js';
 import { createLadder } from './ladder.js';
@@ -8,13 +9,24 @@ import { createStudio } from './studio.js';
 import { createInput } from './input.js';
 
 /**
- * Bộ điều chỉnh của một cảnh: bộ quyết định (tuner, hàm thuần) + thang nấc (ladder, chạm GPU).
+ * Bộ điều chỉnh của một cảnh: bộ quyết định (tuner, hàm thuần) + thang nấc (ladder, chạm GPU) + bộ đo GPU (gpu-timer).
  * tuner = null khi ?freeze: ảnh phải tất định, chỉ hạ/nâng tay (__sma) được.
  */
-function createQuality({ level, ladder, tuner }) {
+function createQuality({ level, ladder, tuner, timer }) {
   const listeners = new Set();
   let guarding = false;
-  const state = () => ({ level, steps: ladder.ids(), guarding, capped: tuner?.state().capped ?? false });
+  let live = false; // chỉ đo từ lúc live: khung ẩn và 0,9 giây hòa dần không phải nhịp thật của cảnh
+  const state = () => {
+    const t = tuner?.state();
+    return {
+      level,
+      steps: ladder.ids(),
+      guarding,
+      capped: t?.capped ?? false,
+      gpu: timer.available, // máy đo được ms GPU: bộ điều chỉnh chẩn đoán theo tải
+      locked: (t?.locked ?? []).map((i) => ladder.idAt(i)), // nấc bị khóa chống dao động: giữ tới khi tải lại trang
+    };
+  };
   const changed = () => {
     for (const cb of listeners) cb(state());
   };
@@ -30,11 +42,19 @@ function createQuality({ level, ladder, tuner }) {
     state,
     degrade: () => act('down'),
     upgrade: () => act('up'),
+    /** run.js gọi khi cảnh vừa live (sau hòa dần): từ đây bộ điều chỉnh mới đo. */
+    start() {
+      live = true;
+    },
     /** Mỗi khung, trước khi vẽ: bộ quyết định nói hạ / nâng / trả lại hết thì áp ngay. */
     sample(ms) {
+      if (!live) return;
       const action = tuner?.sample(ms, ladder);
       if (action) act(action);
     },
+    /** ms CPU của khung vừa vẽ, và mỗi mẫu ms GPU: "tải" của máy (tuner.js, đường tải). */
+    cpu: (ms) => tuner?.cpu(ms),
+    gpu: (ms) => tuner?.gpu(ms),
     /**
      * Thanh lớp mở: người xem cố ý làm chậm để học (tắt instancing, nhiều đom đóm), nên bộ điều chỉnh chỉ CANH:
      * chậm vừa phải thì để yên cho số đo trung thực, quá tải nặng thì vẫn hạ để máy không bị ép quá sức.
@@ -90,7 +110,16 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
   // Thang nấc dựng SAU pipeline: nấc của lớp dùng chung (bloom) chạm vào node mà pipeline vừa dựng.
   const ladder = createLadder({ ladder: painting.quality?.ladder, layers, stage, dpr: budget.dpr });
   const tuner = flags.freeze ? null : createTuner({ budgetMs: mobile ? FRAME_BUDGET_MS.mobile : FRAME_BUDGET_MS.desktop });
-  const quality = createQuality({ level, ladder, tuner });
+  // ms GPU thật (máy nào đo được): cho bộ điều chỉnh chẩn đoán theo tải, và cho số đo của Sổ tay.
+  const timer = createGpuTimer(stage.renderer, {
+    onSample: (ms) => {
+      quality.gpu(ms);
+      studio.gpu(ms);
+    },
+    onStop: () => studio.gpu(null), // đo hỏng giữa phiên: Sổ tay về "—", bộ điều chỉnh tự về đường nhịp
+  });
+  disposer.add(() => timer.dispose());
+  const quality = createQuality({ level, ladder, tuner, timer });
 
   // Con trỏ → cử chỉ (hàng đợi, xử lý đầu mỗi khung). Kéo là của camera; công cụ học (GĐ 4) nhận trước bức.
   const input = createInput({ canvas: stage.renderer.domElement, camera: stage.camera, controls: stage.controls, pointer: stage.u.pointer, win });
@@ -135,7 +164,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     quality,
     /** Biên dịch trước với đúng render target + MRT của pass, trong lúc poster còn hiện. */
     compile: () => pipeline.compile(),
-    /** Một khung: nấc → đồng hồ → cử chỉ → setup.update → layer.update → tween trọng số → camera → render → số đo. */
+    /** Một khung: nấc → đồng hồ → cử chỉ → setup.update → layer.update → tween trọng số → camera → render → ms GPU → số đo. */
     step(ms) {
       const start = win.performance.now();
       quality.sample(ms ?? start);
@@ -147,8 +176,10 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
       stage.breathe(t);
       stage.controls?.update();
       pipeline.render();
+      timer.poll(ms ?? start); // hỏi ms GPU của các khung trước, không chờ
       const end = win.performance.now();
       studio.measure(stage.renderer.info, end, end - start); // ms CPU: luồng chính bận bao lâu cho khung này
+      quality.cpu(end - start);
     },
     /** run.js gọi khi vòng lặp dừng ở khung N của ?freeze=N. */
     freeze() {

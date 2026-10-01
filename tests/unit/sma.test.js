@@ -1,6 +1,6 @@
 // tests/unit/sma.test.js — window.__sma: bảng trạng thái công khai của trang
 import { describe, it, expect } from 'vitest';
-import { createSma } from '../../src/engine/sma.js';
+import { createSma, studioApi } from '../../src/engine/sma.js';
 
 const INITIAL = { state: 'poster', tier: null, backend: null, level: null, frames: 0, reason: null, error: null };
 
@@ -47,5 +47,22 @@ describe('sma.expose (GĐ 2)', () => {
     unexposeOld();
     expect(sma.setWeight).toBe(fresh);
     expect(sma.snapshot).toBeUndefined();
+  });
+});
+
+describe('studioApi (GĐ 4): các hàm của bàn thợ mà __sma lộ ra', () => {
+  it('luôn đọc bàn thợ HIỆN TẠI; chưa có bàn thợ (mất GPU) thì trả null hay mảng rỗng, không ném', async () => {
+    let studio = null;
+    const api = studioApi(() => studio);
+    expect([api.layers(), api.snapshot(), api.quality(), api.stats(), api.setWeight('x', 0)]).toEqual([[], null, null, null, undefined]);
+    studio = {
+      layers: () => [{ id: 'cot', name: 'Cốt', knobs: [] }],
+      weight: () => ({ value: 1, target: 1 }),
+      stats: () => ({ gpuMs: 4 }),
+      quality: () => ({ gpu: true, locked: ['dpr=1.5'] }),
+    };
+    expect(api.layers()).toEqual([{ id: 'cot', name: 'Cốt', weight: 1 }]);
+    expect(api.stats().gpuMs).toBe(4);
+    expect(api.quality().locked).toEqual(['dpr=1.5']);
   });
 });

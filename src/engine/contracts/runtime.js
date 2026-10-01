@@ -150,6 +150,8 @@
 /** Trạng thái tác phẩm dạng JSON (spec §16): trọng số và núm khác mặc định; GĐ 4 thêm dials.
  * @typedef {{ weights: Record<string, number>, knobs: Record<string, any> }} Snapshot   [2] khóa núm là 'layerId.knobId'
  */
+/** Một bên của thí nghiệm 'compare' [3]: trung bình trượt. [4] gpuMs: null khi máy không đo được thời gian GPU.
+ * @typedef {{ ms: number, cpuMs: number, gpuMs: number | null }} CompareSide */
 /** Bàn thợ [2] (engine/gpu/studio.js): API DUY NHẤT mà Sổ tay (ui/) và __sma thấy. Không có ở tầng tĩnh.
  * @typedef {Object} Studio
  * @property {() => { id: string, name: string, knobs: object[], experiments: { id: string, kind: string }[], readouts: { id: string, unit: string }[] }[]} layers
@@ -160,13 +162,15 @@
  * @property {(layerId: string, expId: string) => boolean} experiment
  * @property {(layerId: string, expId: string, on: boolean) => Promise<void>} toggleExperiment
  * @property {(layerId: string) => { id: string, value: number | string, unit: string }[]} readouts
- * @property {() => { drawCalls: number, triangles: number, ms: number, cpuMs: number }} stats   số của khung vừa vẽ ([3] cpuMs)
+ * @property {() => { drawCalls: number, triangles: number, ms: number, cpuMs: number, gpuMs: number | null }} stats
+ *   số của khung vừa vẽ ([3] cpuMs; [4] gpuMs: null khi máy không đo được thời gian GPU)
  * @property {() => Snapshot} snapshot
  * @property {(s: Snapshot) => Promise<void>} restore
- * @property {(layerId: string, expId: string) => { off: { ms: number, cpuMs: number } | null, on: { ms: number, cpuMs: number } | null }} compare
+ * @property {(layerId: string, expId: string) => { off: CompareSide | null, on: CompareSide | null }} compare
  *   [3] số đo của một thí nghiệm 'compare' theo từng trạng thái (null: chưa đo; thí nghiệm kiểu khác thì luôn null)
- * @property {() => { level: string | null, steps: string[], guarding: boolean, capped: boolean }} quality
- *   [3] bộ điều chỉnh: mức, id các nấc đang hạ, đang canh (Sổ tay mở: chỉ hạ khi quá tải nặng), có đang coi là nhịp bị khóa
+ * @property {() => { level: string | null, steps: string[], guarding: boolean, capped: boolean, gpu: boolean, locked: string[] }} quality
+ *   [3] bộ điều chỉnh: mức, id các nấc đang hạ, đang canh (Sổ tay mở: chỉ hạ khi quá tải nặng), có đang coi là nhịp bị khóa;
+ *   [4] gpu: máy đo được ms GPU (chẩn đoán theo tải); locked: id các nấc bị khóa chống dao động (giữ tới khi tải lại trang)
  * @property {() => Promise<boolean>} degrade   [3] hạ tay MỘT nấc (DevTools, e2e); false khi hết thang
  * @property {() => Promise<boolean>} upgrade   [3] nâng tay MỘT nấc; false khi không còn nấc nào
  * @property {(cb: (q: object) => void) => () => void} onQuality   [3] báo mỗi lần nấc đổi; trả hàm bỏ nghe

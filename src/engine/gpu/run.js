@@ -1,5 +1,6 @@
 // engine/gpu/run.js — Vòng đời một bức ở tầng 3D: dựng → compileAsync → khung ẩn → hòa dần → chạy; mất GPU lần đầu thì dựng lại.
 import { mergePalette } from '../palette.js';
+import { studioApi } from '../sma.js';
 import { withDeadline, DeadlineError } from '../deadline.js';
 import { createStage } from './stage.js';
 import { createDisposer } from './disposer.js';
@@ -156,6 +157,7 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     shell.showBadge({ tier: stage.backend, level: scene.level });
     studio = scene.studio;
     quality = scene.quality;
+    quality.start(); // bộ điều chỉnh đo từ lúc live: khung ẩn và lúc hòa dần không tính
     d.add(() => {
       studio = null;
       quality = null;
@@ -164,16 +166,7 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     d.add(scene.quality.onChange((q) => shell.showBadge({ tier: stage.backend, level: q.level, steps: q.steps.length })));
     if (workshop?.isOpen) scene.quality.guard(true);
     // DevTools: __sma.setWeight('<id lớp>', 0) mài một lớp, __sma.degrade() hạ một nấc; e2e so ảnh ở cùng một khung.
-    d.add(sma.expose({
-      layers: () => studio?.layers().map(({ id, name }) => ({ id, name, weight: studio.weight(id).value })) ?? [],
-      setWeight: (id, v) => studio?.setWeight(id, v),
-      snapshot: () => studio?.snapshot() ?? null,
-      restore: (s) => studio?.restore(s),
-      quality: () => studio?.quality() ?? null,
-      degrade: () => studio?.degrade(),
-      upgrade: () => studio?.upgrade(),
-      stats: () => studio?.stats() ?? null,
-    }));
+    d.add(sma.expose(studioApi(() => studio)));
     // Gợi ý của bức ("Chạm vào…") chỉ lúc mở trang; lần chạm đầu tiên đổi thành lời mời mài lớp.
     if (!snapshot && content?.hint) shell.showHint(content.hint);
     if (!workshop) scene.input.onFirst(() => shell.invite(openWorkshop));

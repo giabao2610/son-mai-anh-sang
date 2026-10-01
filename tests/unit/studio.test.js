@@ -96,7 +96,7 @@ describe('createStudio', () => {
     expect(studio.readouts('lop-hai')).toEqual([{ id: 'dinh', value: 42, unit: 'đỉnh' }, { id: 'ten', value: 'x', unit: '' }]);
     const info = { render: { drawCalls: 21, triangles: 90000 } };
     studio.measure(info, 1000, 4);
-    expect(studio.stats()).toEqual({ drawCalls: 21, triangles: 90000, ms: 0, cpuMs: 4 });
+    expect(studio.stats()).toEqual({ drawCalls: 21, triangles: 90000, ms: 0, cpuMs: 4, gpuMs: null });
     studio.measure(info, 1016, 4);
     expect(studio.stats().ms).toBe(16);
     studio.measure(info, 1052, 14);
@@ -115,14 +115,41 @@ describe('createStudio', () => {
     frames(10, 16, 2); // 160 ms đầu: còn trong khoảng bỏ qua
     expect(studio.compare('lop-hai', 'so').off).toBeNull();
     frames(20, 16, 2);
-    expect(studio.compare('lop-hai', 'so').off).toEqual({ ms: 16, cpuMs: 2 });
+    expect(studio.compare('lop-hai', 'so').off).toEqual({ ms: 16, cpuMs: 2, gpuMs: null });
     await studio.toggleExperiment('lop-hai', 'so', true);
     frames(7, 33, 9); // vừa bật: 231 ms đầu vẫn bị bỏ qua
     expect(studio.compare('lop-hai', 'so').on).toBeNull();
     frames(20, 33, 9);
-    expect(studio.compare('lop-hai', 'so')).toEqual({ off: { ms: 16, cpuMs: 2 }, on: { ms: 33, cpuMs: 9 } });
+    expect(studio.compare('lop-hai', 'so')).toEqual({ off: { ms: 16, cpuMs: 2, gpuMs: null }, on: { ms: 33, cpuMs: 9, gpuMs: null } });
     expect(studio.compare('lop-hai', 'pha')).toEqual({ off: null, on: null });
     expect(() => studio.compare('lop-hai', 'khac')).toThrow('Lớp "lop-hai" không có thí nghiệm "khac"');
+  });
+
+  it('ms GPU (GĐ 4): null tới khi có mẫu; compare ghi vào bên đang đo, bỏ mẫu về trong 0,25 s sau lần đổi', async () => {
+    const { studio } = setup();
+    const info = { render: { drawCalls: 1, triangles: 1 } };
+    let t = 0;
+    const frames = (n, gap, gpu) => {
+      for (let i = 0; i < n; i++) {
+        studio.measure(info, (t += gap), 1);
+        if (gpu !== undefined && i % 4 === 0) studio.gpu(gpu); // mẫu GPU về thưa hơn khung
+      }
+    };
+    expect(studio.stats().gpuMs).toBeNull();
+    frames(30, 16, 5);
+    expect(studio.stats().gpuMs).toBe(5);
+    expect(studio.compare('lop-hai', 'so').off).toEqual({ ms: 16, cpuMs: 1, gpuMs: 5 });
+    await studio.toggleExperiment('lop-hai', 'so', true);
+    studio.measure(info, (t += 16), 1); // khung đầu sau lần đổi đặt mốc bỏ qua
+    studio.gpu(40); // mẫu của khung TRƯỚC lúc đổi, về muộn: không ghi vào bên "Bật"
+    frames(20, 16, 12);
+    const { off, on } = studio.compare('lop-hai', 'so');
+    expect(off.gpuMs).toBe(5);
+    expect(on.gpuMs).toBeCloseTo(12, 6);
+    expect(studio.stats().gpuMs).toBeGreaterThan(5);
+    studio.gpu(null); // đo GPU hỏng giữa phiên (gpu-timer thôi đo): Sổ tay về "—", cột so sánh giữ số đã đo
+    expect(studio.stats().gpuMs).toBeNull();
+    expect(studio.compare('lop-hai', 'so').on.gpuMs).toBeCloseTo(12, 6);
   });
 
   it('nấc: quality() đọc bộ điều chỉnh; degrade()/upgrade() hạ/nâng tay một nấc rồi vẽ lại; thiếu bộ điều chỉnh thì không có gì', async () => {
@@ -149,7 +176,7 @@ describe('createStudio', () => {
     studio.onQuality(cb);
     expect(listeners).toEqual([cb]);
     const bare = setup().studio;
-    expect(bare.quality()).toEqual({ level: null, steps: [], guarding: false, capped: false });
+    expect(bare.quality()).toEqual({ level: null, steps: [], guarding: false, capped: false, gpu: false, locked: [] });
     expect(await bare.degrade()).toBe(false);
   });
 
