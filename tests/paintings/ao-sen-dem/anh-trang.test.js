@@ -1,9 +1,12 @@
 // tests/paintings/ao-sen-dem/anh-trang.test.js — Lớp 2 · Ánh trăng: trăng đúng pha, ánh trăng + bóng theo mức, sơn màu cho Cốt, hoa đăng.
 import { describe, it, expect } from 'vitest';
+import { OrthographicCamera, Vector3 } from 'three/webgpu';
 import meta from '../../../src/paintings/ao-sen-dem/meta.js';
 import * as painting from '../../../src/paintings/ao-sen-dem/painting.js';
 import * as anhTrang from '../../../src/paintings/ao-sen-dem/layers/l2-anh-trang.js';
 import { MOON } from '../../../src/paintings/ao-sen-dem/parts/anh-trang-moon.js';
+import { LIGHT_DISTANCE, SHADOW_BOX, fitShadowCamera } from '../../../src/paintings/ao-sen-dem/parts/anh-trang-shadow.js';
+import { moonDirection } from '../../../src/paintings/ao-sen-dem/shared.js';
 import { moonPhase } from '../../../src/lib/astro/moon.js';
 import { knobValue } from '../../../src/engine/gpu/knob-set.js';
 import { NOW, buildPainting } from '../../helpers/fake-ctx.js';
@@ -23,11 +26,12 @@ describe('l2-anh-trang', () => {
     expect(knobValue(phase, { now: NOW })).toBe(moonPhase(NOW).phase);
   });
 
-  it('trăng và đèn hoa đăng là objects của lớp; trăng có emissiveNode', () => {
+  it('trăng và đèn hoa đăng là objects của lớp; trăng có emissiveNode và không nhận sương', () => {
     const { ctx, layers } = build();
     const [moon, lantern] = layers['anh-trang'].objects;
     expect(moon.geometry.parameters.radius).toBe(MOON.radius);
     expect(moon.material.emissiveNode).toBeTruthy();
+    expect(moon.material.fog).toBe(false);
     expect(lantern.isInstancedMesh).toBe(true);
     expect(ctx.scene.children).toEqual(expect.arrayContaining([moon, lantern]));
     expect(lights(ctx.scene, 'isDirectionalLight')).toHaveLength(1);
@@ -96,6 +100,71 @@ describe('l2-anh-trang', () => {
     expect(sun.shadow.bias).toBe(-0.002);
     expect(layer.readouts.find((r) => r.id === 'shadowMap').get()).toBe(2048);
     expect(build({ level: 'thap' }).layers['anh-trang'].readouts[0].get()).toBe(0); // mức thấp: tắt bóng
+  });
+
+  it('khung bóng ôm sát vùng lá theo hướng trăng (thay ±55, tức 110 đơn vị): cả đêm, chiều dọc chỉ còn dưới 32', () => {
+    for (let hour = 18; hour <= 29.5; hour += 0.5) {
+      const camera = new OrthographicCamera();
+      const dir = new Vector3(...moonDirection(hour));
+      const { width, height } = fitShadowCamera(camera, dir);
+      expect(width, `${hour}h`).toBeLessThanOrEqual(2 * SHADOW_BOX.radius + 1e-6);
+      expect(height, `${hour}h`).toBeLessThan(32);
+      // Các điểm trên vành đáy và vành đỉnh của vùng lá nằm trong khung (camera nhìn từ trăng về tâm ao, như three làm).
+      camera.position.copy(dir).multiplyScalar(LIGHT_DISTANCE);
+      camera.lookAt(0, 0, 0);
+      camera.updateMatrixWorld();
+      for (const [x, y, z] of [[-54, 0, 0], [54, 6, 0], [0, 6, 54], [0, 0, -54], [38, 6, -38], [-38, 0, 38]]) {
+        const p = new Vector3(x, y, z).applyMatrix4(camera.matrixWorldInverse);
+        expect(p.x).toBeGreaterThanOrEqual(camera.left);
+        expect(p.x).toBeLessThanOrEqual(camera.right);
+        expect(p.y).toBeGreaterThanOrEqual(camera.bottom);
+        expect(p.y).toBeLessThanOrEqual(camera.top);
+        expect(-p.z).toBeGreaterThanOrEqual(camera.near);
+        expect(-p.z).toBeLessThanOrEqual(camera.far);
+      }
+    }
+  });
+
+  it('shadow map tĩnh: chỉ vẽ lại khi hướng trăng, độ nở hoa hay bố cục của Cốt đổi', () => {
+    const { ctx, shared, layers, knobs } = build();
+    const [sun] = lights(ctx.scene, 'isDirectionalLight');
+    const layer = layers['anh-trang'];
+    expect(sun.shadow.autoUpdate).toBe(false);
+    const frame = () => {
+      sun.shadow.needsUpdate = false; // như ShadowNode sau khi vẽ xong
+      layer.update(1 / 60, 1);
+      return sun.shadow.needsUpdate;
+    };
+    expect(frame()).toBe(true); // khung đầu: khớp khung bóng, vẽ một lần
+    expect(sun.shadow.camera.top - sun.shadow.camera.bottom).toBeLessThan(34);
+    expect(frame()).toBe(false); // không gì đổi: không vẽ lại
+    shared.cot.openness.value = 0.2;
+    expect(frame()).toBe(true);
+    knobs.cot.set('seed', 5);
+    expect(frame()).toBe(true);
+    shared.moon.dir.value.set(...moonDirection(26));
+    expect(frame()).toBe(true);
+    knobs['anh-trang'].set('shadowBias', -0.001); // bias chỉ dùng lúc tra bóng: không cần vẽ lại map
+    expect(frame()).toBe(false);
+    knobs['anh-trang'].set('shadowMapSize', 512);
+    expect(sun.shadow.needsUpdate).toBe(true);
+  });
+
+  it("nấc 'bong': trần cỡ map chia đôi (không dưới 256) rồi trả lại; hiệu lực = min(núm, trần); mức thấp không có nấc", () => {
+    const { ctx, layers, knobs } = build();
+    const [sun] = lights(ctx.scene, 'isDirectionalLight');
+    const [step] = layers['anh-trang'].degrade;
+    expect(step.id).toBe('bong');
+    step.apply();
+    expect(sun.shadow.mapSize.x).toBe(512);
+    knobs['anh-trang'].set('shadowMapSize', 2048); // người xem kéo núm lên: trần vẫn giữ
+    expect(sun.shadow.mapSize.x).toBe(512);
+    knobs['anh-trang'].set('shadowMapSize', 256); // núm dưới trần: theo núm
+    expect(sun.shadow.mapSize.x).toBe(256);
+    step.revert();
+    knobs['anh-trang'].set('shadowMapSize', 2048);
+    expect(sun.shadow.mapSize.x).toBe(2048);
+    expect(build({ level: 'thap' }).layers['anh-trang'].degrade).toEqual([]);
   });
 
   it('Phá: "Bias = 0" rồi trả lại đúng bias của núm; "Tắt fresnel", "Đổi màu đèn" chỉ đổi uniform', () => {

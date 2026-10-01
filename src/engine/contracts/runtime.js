@@ -45,7 +45,8 @@
  *                                 Marker '// @knob <id>': núm 'uniform' ở dòng dùng uniform; 'js'/'rebuild' ở dòng xử lý onKnob.
  * @property {number|string|boolean|((env: KnobEnv) => any)} value   mặc định; hàm khi phụ thuộc mức/tầng/đêm nay
  * @property {number} [min]
- * @property {number | { webgpu: number, webgl2: number }} [max]   trần theo tầng
+ * @property {number | { webgpu: number, webgl2: number } | ((env: KnobEnv) => number)} [max]   trần theo tầng;
+ *                                 [3] hoặc hàm của env (theo mức): núm không kéo được máy yếu quá sức
  * @property {number} [step]
  * @property {string[]} [options]  kind 'select': id các lựa chọn; uniform giữ chỉ số
  */
@@ -66,13 +67,18 @@
  * @typedef {Object} Experiment
  * @property {string} id
  * @property {(on: boolean) => void | Promise<void>} toggle   trả Promise → UI hiện "đang dựng…"; bật hai lần vẫn an toàn
- * @property {'toggle'|'compare'} [kind]  'compare' [3]: xưởng đo ms lúc tắt/bật và vẽ biểu đồ nhỏ
+ * @property {'toggle'|'compare'} [kind]  'compare' [3]: toggle(true) là biến thể, toggle(false) là trạng thái thường. Bàn thợ
+ *                                        ghi ms mỗi khung và ms CPU riêng cho từng trạng thái (bỏ 0,25 s đầu sau mỗi lần
+ *                                        đổi); Sổ tay vẽ hai cột "Tắt / Bật".
  */
 /** Nhãn ở content.layers[layerId].readouts[id]. get() đọc ngay lúc gọi (Sổ tay đọc 4 lần mỗi giây).
  * @typedef {{ id: string, get: () => number | string, unit?: string }} Readout */
 /** Nấc chỉ hạ TRẦN của lớp, KHÔNG BAO GIỜ ghi vào uniform của núm.
  * Núm = ý người xem, nấc = trần của máy, hiệu lực = min(núm, trần).
  * Nấc không được đổi thứ nằm trong cache key (castShadow, receiveShadow, shadowMap.enabled, fogNode…).
+ * [3] Lớp chỉ đưa những nấc có tác dụng ở mức hiện tại (mức thấp tắt bóng thì không có nấc bóng). Xưởng (engine/gpu/ladder.js)
+ * gọi apply/revert như một ngăn xếp: revert luôn gỡ nấc apply gần nhất; mỗi nấc apply tối đa một lần trước khi revert.
+ * Địa chỉ trong QualitySpec.ladder là '<layerId>.<id>'.
  * @typedef {{ id: string, apply: () => void, revert: () => void }} DegradeStep */
 /** Xưởng nối post của các lớp theo thứ tự:
  *   màu scene pass → build của từng lớp → renderOutput(x, NoToneMapping) → display của từng lớp → overlay công cụ → vec4(rgb, 1)
@@ -120,7 +126,7 @@
 /** Thứ xưởng đưa cho bức. Bức chỉ chạm vào thế giới qua đây và qua three.
  * @typedef {Object} EngineCtx
  * @property {'webgpu'|'webgl2'} tier          [0] backend THẬT sau renderer.init()
- * @property {'cao'|'vua'|'thap'} level        [0] mức lúc khởi động
+ * @property {'cao'|'vua'|'thap'} level        [0] mức lúc khởi động ([3] hoặc mức ép bằng ?level); nấc hạ KHÔNG đổi số này
  * @property {Record<string, number>} budget   [0] mức mặc định của xưởng ghép với quality.levels[level] của bức
  * @property {boolean} mobile                  [0]
  * @property {boolean} reducedMotion           [0]
@@ -154,9 +160,16 @@
  * @property {(layerId: string, expId: string) => boolean} experiment
  * @property {(layerId: string, expId: string, on: boolean) => Promise<void>} toggleExperiment
  * @property {(layerId: string) => { id: string, value: number | string, unit: string }[]} readouts
- * @property {() => { drawCalls: number, triangles: number, ms: number }} stats   số của khung vừa vẽ
+ * @property {() => { drawCalls: number, triangles: number, ms: number, cpuMs: number }} stats   số của khung vừa vẽ ([3] cpuMs)
  * @property {() => Snapshot} snapshot
  * @property {(s: Snapshot) => Promise<void>} restore
+ * @property {(layerId: string, expId: string) => { off: { ms: number, cpuMs: number } | null, on: { ms: number, cpuMs: number } | null }} compare
+ *   [3] số đo của một thí nghiệm 'compare' theo từng trạng thái (null: chưa đo; thí nghiệm kiểu khác thì luôn null)
+ * @property {() => { level: string | null, steps: string[], guarding: boolean, capped: boolean }} quality
+ *   [3] bộ điều chỉnh: mức, id các nấc đang hạ, đang canh (Sổ tay mở: chỉ hạ khi quá tải nặng), có đang coi là nhịp bị khóa
+ * @property {() => Promise<boolean>} degrade   [3] hạ tay MỘT nấc (DevTools, e2e); false khi hết thang
+ * @property {() => Promise<boolean>} upgrade   [3] nâng tay MỘT nấc; false khi không còn nấc nào
+ * @property {(cb: (q: object) => void) => () => void} onQuality   [3] báo mỗi lần nấc đổi; trả hàm bỏ nghe
  */
 
 export {};

@@ -3,6 +3,12 @@
 /** Cảnh báo API cũ mà three in ra lúc chạy (spec §3: e2e bắt các cảnh báo này). */
 export const DEPRECATION = /deprecated|renamed|has been removed/i;
 
+/**
+ * Tỉ lệ điểm tối tối thiểu của một ảnh "có sáng có tối" (không cháy trắng, không trống). GĐ 3 có trời chàm và sương
+ * nên ít điểm đen tuyệt đối hơn nền đen then trước đó (đo được 7–8% ở khung 10): 3% vẫn đủ chứng minh ảnh có vùng tối.
+ */
+export const DARK = 0.03;
+
 /** Bản sao dữ liệu của window.__sma (bỏ hàm set/frame, vì hàm không gửi qua evaluate được). */
 export function readSma(page) {
   return page.evaluate(() => JSON.parse(JSON.stringify(window.__sma ?? null)));

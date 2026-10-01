@@ -1,7 +1,7 @@
 // ui/notebook.js — Sổ tay của một lớp: ba tab Hiểu / Chỉnh / Phá (panel bên phải trên máy tính, tấm trượt dưới trên điện thoại).
 import { h } from './dom.js';
 import { createCodeView } from './code-view.js';
-import { understandPage, experimentList, readoutList } from './notebook-pages.js';
+import { understandPage, experimentList, readoutList, compareBars } from './notebook-pages.js';
 
 const TABS = ['hieu', 'chinh', 'pha'];
 const READOUT_MS = 250; // số đo đổi 4 lần mỗi giây: đủ đọc được, không làm nặng khung hình
@@ -45,6 +45,9 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
   let pane = null; // Tweakpane của lớp đang mở (null: chưa dựng)
   let paneFor = null;
   let readouts = null;
+  let compares = new Map(); // id thí nghiệm 'compare' → hai cột "Tắt / Bật"
+  // "Lớp đang tắt": vùng aria-live nên luôn có mặt, trống khi lớp đang phủ (CSS thu lại khi :empty, không dùng hidden).
+  const off = h(doc, 'p', { class: 'nb-off', 'aria-live': 'polite' });
   let timer = null;
   let pending = 0;
 
@@ -121,12 +124,19 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
     }
   };
 
-  const tick = () => {
+  /** Số đo của tab Phá. `announce = false`: chưa đụng dòng "lớp đang tắt" (lần gọi cùng nhịp với lúc tab hiện). */
+  const tick = (announce = true) => {
     const s = studio();
     if (!s || !readouts) return;
     const values = { ...s.stats() };
     for (const r of s.readouts(layerId)) values[`lop:${r.id}`] = r.value;
     readouts.update(values);
+    for (const [expId, bars] of compares) bars.update(s.compare(layerId, expId));
+    if (!announce) return;
+    // Lớp ở trọng số 0 (chế độ mài): thí nghiệm của nó không làm gì thấy được, số đo so sánh cũng vô nghĩa.
+    // Vùng aria-live: chỉ ghi khi chữ đổi, vì ghi lại cùng một câu thì vài trình đọc màn hình đọc lại.
+    const text = s.weight(layerId).target < 0.5 ? t.notebook.layerOff : '';
+    if (off.textContent !== text) off.textContent = text;
   };
   const stopTimer = () => {
     clearInterval(timer);
@@ -147,16 +157,23 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
       onToggle: studio() ? (expId, on) => track(() => studio()?.toggleExperiment(id, expId, on)) : null,
     });
     readouts = null;
+    compares = new Map();
     if (!spec) {
       panels.pha.replaceChildren(list, h(doc, 'p', { class: 'nb-missing', text: t.notebook.experimentsStatic }));
       return;
     }
+    // Thí nghiệm so sánh: hai cột "Tắt / Bật" ngay dưới nút, cùng nhịp với số đo.
+    for (const { id: expId } of experiments.filter((e) => e.kind === 'compare')) {
+      const bars = compareBars(doc, { t });
+      list.querySelector(`[data-experiment="${expId}"]`).after(bars.el);
+      compares.set(expId, bars);
+    }
     const rows = [
       ...spec.readouts.map((r) => ({ id: `lop:${r.id}`, label: text?.readouts?.[r.id] ?? r.id, unit: r.unit })),
-      ...['drawCalls', 'triangles', 'ms'].map((id) => ({ id, label: t.notebook.readouts[id] })),
+      ...['drawCalls', 'triangles', 'ms', 'cpuMs'].map((id) => ({ id, label: t.notebook.readouts[id] })),
     ];
     readouts = readoutList(doc, { rows, lang: t.lang });
-    panels.pha.replaceChildren(list, h(doc, 'h3', { text: t.notebook.measure }), readouts.el);
+    panels.pha.replaceChildren(off, list, h(doc, 'h3', { text: t.notebook.measure }), readouts.el);
   };
 
   /** Chọn tab: đúng mẫu tab của ARIA (aria-selected, roving tabindex). Chỉnh → dựng núm; Phá → chạy số đo. */
@@ -171,8 +188,10 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
     if (id === 'chinh') mountPane();
     stopTimer();
     if (id === 'pha' && readouts) {
-      tick();
-      timer = setInterval(tick, READOUT_MS);
+      // Tab vừa hiện: dòng nhắc để trống, nhịp đo sau mới điền (điền cùng nhịp với lúc bỏ hidden thì VoiceOver bỏ qua).
+      off.textContent = '';
+      tick(false);
+      timer = setInterval(() => tick(), READOUT_MS);
     }
   };
 

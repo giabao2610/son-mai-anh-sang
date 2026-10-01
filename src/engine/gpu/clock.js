@@ -1,7 +1,9 @@
-// engine/gpu/clock.js — đồng hồ của cảnh: thật (theo ms của requestAnimationFrame) hoặc tất định khi có ?freeze.
+// engine/gpu/clock.js — đồng hồ của cảnh (thật, hoặc tất định khi có ?freeze) và bộ chặn 60 khung/giây.
 
 const FRAME = 1 / 60;
 const MAX_DT = 0.1;
+/** Cảnh vẽ tối đa chừng này khung mỗi giây, dù màn hình nhanh hơn (spec §10, GĐ 3). */
+export const MAX_FPS = 60;
 
 /**
  * Hàm thuần, không dùng three: stage.js đổ { t, dt } vào ctx.u.time / ctx.u.delta mỗi khung.
@@ -38,6 +40,30 @@ export function createClock({ freeze = false } = {}) {
     },
     get frames() {
       return frames;
+    },
+  };
+}
+
+/**
+ * Bộ chặn khung (hàm thuần): trình duyệt gọi requestAnimationFrame theo nhịp màn hình (60, 90, 120, 144 Hz…), mà một
+ * bức tranh ngắm chậm chỉ cần 60 khung/giây. Nhịp nào tới sớm quá thì bỏ: màn 120 Hz không bắt GPU vẽ gấp đôi, máy mát
+ * hơn, pin lâu hơn. Mốc "đã vẽ" tiến đều từng bước 1/60 s (không bám nhịp màn hình), nên màn 90 Hz vẽ xen kẽ, trung bình
+ * vẫn 60 khung/giây. Màn 60 Hz, hay máy chậm hơn 60 khung, thì không khung nào bị bỏ.
+ * @param {number} [fps]
+ * @returns {{ ready: (ms: number) => boolean }}  ready(ms) = true: vẽ khung này
+ */
+export function createFrameCap(fps = MAX_FPS) {
+  const step = 1000 / fps;
+  const slack = 1.5; // ms: nhịp 60 Hz thật dao động nhẹ, đừng bỏ nhầm khung của màn 60 Hz
+  let last = -Infinity;
+  return {
+    ready(ms) {
+      if (!Number.isFinite(ms)) return true;
+      const gap = ms - last;
+      if (gap < step - slack) return false;
+      // Tụt lại xa (tab vừa hiện lại, máy chậm): bám lại thời điểm hiện tại, không vẽ dồn để đuổi kịp.
+      last = gap > 2 * step ? ms : last + step;
+      return true;
     },
   };
 }

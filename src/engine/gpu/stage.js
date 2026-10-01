@@ -117,10 +117,15 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
       controls.target.set(base.x + x, base.y + y, base.z + z);
     },
 
-    /** Đặt trần DPR theo mức chất lượng (budget.dpr) rồi tính lại kích thước. */
+    /** Đặt trần DPR theo mức chất lượng (budget.dpr), hay theo nấc hạ của bộ điều chỉnh, rồi tính lại kích thước. */
     setDpr(max) {
       dprMax = max;
       resize();
+    },
+
+    /** DPR đang dùng: devicePixelRatio của máy, kẹp dưới trần hiện tại. Thang nấc 'dpr' bắt đầu từ số này. */
+    dpr() {
+      return Math.min(win.devicePixelRatio || 1, dprMax);
     },
 
     /** Một nhịp đồng hồ: cập nhật u.time / u.delta. Khung đầu của vòng lặp three có thể không có ms. */

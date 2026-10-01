@@ -136,6 +136,16 @@ describe('l1-cot', () => {
 });
 
 describe('l1-cot · núm rebuild (GĐ 2): ghi lại InstancedMesh sẵn có, không tạo mesh mới', () => {
+  it('công bố độ nở hoa (uniform của núm) và số lần ghi lại hình (lớp Ánh trăng vẽ lại bóng khi số này đổi)', () => {
+    const { shared, knobs } = build();
+    expect(shared.cot.openness).toBe(knobs.cot.knob('openness'));
+    const v = shared.cot.version;
+    knobs.cot.set('leafCount', 900);
+    expect(shared.cot.version).toBe(v + 1);
+    knobs.cot.set('wireframe', true);
+    expect(shared.cot.version).toBe(v + 2);
+  });
+
   it('leafCount: đổi số lá, cùng các object cũ', () => {
     const { layers, knobs } = build();
     const before = [...layers.cot.objects];

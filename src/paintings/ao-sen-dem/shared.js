@@ -1,5 +1,5 @@
-// paintings/ao-sen-dem/shared.js — setup() của Bức 1: giờ đêm nay, hướng trăng, bộ đệm gợn sóng, điểm hút đom đóm, cử chỉ.
-import { Plane, Vector3, Vector4 } from 'three/webgpu';
+// paintings/ao-sen-dem/shared.js — setup() của Bức 1: giờ đêm nay, hướng trăng, bộ đệm gợn sóng, điểm hút đom đóm, xoáy sương, cử chỉ.
+import { Plane, Vector2, Vector3, Vector4 } from 'three/webgpu';
 import { Fn, Loop, exp, float, length, pow2, sin, step, uniform, uniformArray } from 'three/tsl';
 import { hourOfNight, tonight } from '../../lib/astro/moon.js';
 
@@ -7,6 +7,8 @@ export const POND_RADIUS = 60; // bán kính mặt nước: đĩa nước của 
 export const RIPPLE_SLOTS = 8;
 const NIGHT = { start: 18, end: 29.5, fallback: 21 }; // thang giờ của Bức 1: 18:00 → 05:30 sáng hôm sau
 const FLY_HEIGHT = 1.2; // điểm hút đom đóm nằm trên mặt nước một chút
+// Vuốt → sương xoáy: góc xoay (radian) ở tâm xoáy tăng theo tốc độ vuốt (NDC mỗi giây), kẹp trong [min, max].
+const SWIRL_SPIN = { min: 0.6, max: 2.4, perSpeed: 0.35 };
 
 /**
  * Chính sách giờ của Bức 1 (§7): đang là đêm thì dùng giờ thật (21:00 → 21, 02:00 → 26);
@@ -87,14 +89,20 @@ export function setup(ctx) {
   const moonDir = uniform(new Vector3(...moonDirection(hour))).setName('moonDir');
   const ripples = createRipples();
   const attract = { point: uniform(new Vector3(0, FLY_HEIGHT, 0)), strength: uniform(0) };
-  const rippleAmp = ctx.reducedMotion ? 0.5 : 1; // §10: giảm chuyển động thì gợn sóng nhẹ hơn
+  // Xoáy sương (lớp Sương đọc): tâm trên mặt nước (x, z), lúc bắt đầu, góc xoay có dấu (chiều vuốt).
+  const swirl = {
+    center: uniform(new Vector2()).setName('swirlCenter'),
+    start: uniform(-1e4).setName('swirlStart'),
+    spin: uniform(0).setName('swirlSpin'),
+  };
+  const rippleAmp = ctx.reducedMotion ? 0.5 : 1; // §10: giảm chuyển động thì gợn sóng (và xoáy sương) nhẹ hơn
 
   const water = new Plane(new Vector3(0, 1, 0), 0);
   const hit = new Vector3();
   let holding = false;
 
   return {
-    shared: { hour: uHour, hourNote: note, moon: { dir: moonDir }, ripples, attract },
+    shared: { hour: uHour, hourNote: note, moon: { dir: moonDir }, ripples, attract, swirl },
 
     // Cử chỉ mà không công cụ nào dùng. Tia đi từ camera qua ngón tay; bức tự giao với mặt nước y = 0.
     onGesture(g) {
@@ -106,7 +114,18 @@ export function setup(ctx) {
         holding = false;
         return;
       }
-      // Chỉ chạm và giữ mới dời điểm hút; vuốt thì không (vuốt để dành cho sương, GĐ 3).
+      // Vuốt trên mặt nước: sương xoáy quanh chỗ vuốt, chiều theo hướng vuốt; không dời điểm hút, không tạo gợn.
+      if (g.kind === 'swipe') {
+        if (!onPond) return;
+        const v = g.velocity ?? { x: 0, y: 0 };
+        const along = Math.abs(v.x) >= Math.abs(v.y) ? v.x : -v.y;
+        const spin = Math.min(SWIRL_SPIN.max, Math.max(SWIRL_SPIN.min, Math.hypot(v.x, v.y) * SWIRL_SPIN.perSpeed));
+        swirl.center.value.set(hit.x, hit.z);
+        swirl.start.value = ctx.u.time.value;
+        swirl.spin.value = (along < 0 ? -1 : 1) * spin * rippleAmp;
+        return;
+      }
+      // Chỉ chạm và giữ mới dời điểm hút.
       if (!onPond || !['tap', 'hold-start', 'hold-move'].includes(g.kind)) return;
       attract.point.value.set(hit.x, FLY_HEIGHT, hit.z);
       if (g.kind === 'tap') {

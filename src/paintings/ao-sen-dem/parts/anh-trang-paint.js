@@ -49,6 +49,9 @@ export function paintCot(ctx, cot, w, moonDir) {
     // Gân là vàng thật (kim loại, bóng hơn) nên lóe lên khi ánh trăng lướt qua.
     material.metalnessNode = veins.mul(w);
     material.roughnessNode = mix(float(0.9), mix(float(0.8), float(0.35), veins), w);
+    // Thân lá bớt bóng: camera nhìn về phía trăng, nên mặt lá nằm ngang hắt ánh trăng thành một lớp xám phủ lên màu xanh.
+    // specularIntensity giảm cả phản xạ ở góc xiên (F90); gân là kim loại nên vẫn lóe (lượt màu GĐ 3).
+    material.specularIntensityNode = mix(float(1), float(0.3), w);
     // Clearcoat: lớp bóng như sáp phủ trên lá; uniform của núm nhân trọng số, không biên dịch lại.
     material.clearcoatNode = ctx.knob('clearcoat').mul(w); // @knob clearcoat
     material.clearcoatRoughnessNode = float(0.5);

@@ -2,6 +2,7 @@
 import phuBong from '../../engine/stock/phu-bong/content.vi.js';
 import cotDiagram from './diagrams/cot.svg?raw';
 import anhTrangDiagram from './diagrams/anh-trang.svg?raw';
+import suongDiagram from './diagrams/suong.svg?raw';
 import matNuocDiagram from './diagrams/mat-nuoc.svg?raw';
 import vangLaDiagram from './diagrams/vang-la.svg?raw';
 
@@ -105,10 +106,54 @@ export default {
       readouts: { shadowMap: 'Cỡ shadow map' },
     },
 
+    suong: {
+      understand:
+        'Lớp này vẽ bầu trời và làn sương. Trời là một quả cầu lớn nhìn từ bên trong: màu mỗi điểm tính từ hướng '
+        + 'nhìn, chàm ở đỉnh, đen then ở chân trời; sao là những ô ngẫu nhiên (hash) được chọn cho sáng lên, không '
+        + 'cần tấm ảnh nào. Sương thì không phải một vật: mọi bề mặt tự pha màu sương theo khoảng cách tới mắt. Càng '
+        + 'xa và càng sát mặt nước thì càng đặc (hàm mũ theo độ cao), còn noise nhiều tầng (fbm) cho sương loang từng '
+        + 'mảng và trôi theo gió. Mỗi tầng noise (octave) thêm chi tiết nhỏ nhưng tốn thêm phép tính ở mọi điểm ảnh. '
+        + 'Vuốt trên mặt nước để sương xoáy.',
+      diagram: suongDiagram,
+      learned: [
+        'Sương là phép pha màu theo khoảng cách: 1 − e^(−khoảng cách × mật độ).',
+        'fbm: cộng nhiều tầng noise, tầng sau nhỏ gấp đôi và nhạt đi một nửa.',
+        'Bầu trời vẽ bằng công thức theo hướng nhìn, không cần ảnh.',
+      ],
+      readMore: [
+        { title: 'Inigo Quilez · Better Fog', url: 'https://iquilezles.org/articles/fog/' },
+        { title: 'The Book of Shaders · Fractal Brownian Motion', url: 'https://thebookofshaders.com/13/' },
+      ],
+      knobs: {
+        density: 'Mật độ sương',
+        heightFalloff: 'Sương mỏng dần theo độ cao',
+        noiseScale: 'Cỡ mảng sương (nhỏ là mảng to)',
+        octaves: 'Số tầng noise (octave)',
+        windStrength: 'Sức gió',
+        starDensity: 'Mật độ sao',
+        haloSize: 'Cỡ quầng trăng',
+      },
+      experiments: {
+        rawNoise: {
+          label: 'Xem noise thô',
+          explain: 'Mọi bề mặt hiện thẳng giá trị noise của sương dạng ảnh xám: sáng là chỗ sương đặc. Trời, trăng '
+            + 'và đom đóm không nhận sương nên vẫn như cũ.',
+        },
+        oneOctave: {
+          label: 'Chỉ 1 octave',
+          explain: 'Sương còn một tầng noise: mảng to, mềm, mất chi tiết. Hai cột đo ms lúc tắt và lúc bật. Máy yếu '
+            + 'thấy bớt octave là nhẹ đi; máy mạnh thì cột ms khung có thể bằng nhau vì trình duyệt khóa ở nhịp màn hình. '
+            + 'Ở mức thấp sương vốn chỉ có 1 octave: kéo núm "Số tầng noise" lên rồi hãy so.',
+        },
+      },
+      readouts: { octaves: 'Số octave đang chạy' },
+    },
+
     'mat-nuoc': {
       understand:
         'Mặt nước là một đĩa phẳng, nhưng soi được trăng, hoa và trời. Mỗi khung, reflector vẽ lại toàn cảnh từ '
-        + 'một camera lật ngược qua mặt nước, vào một ảnh nhỏ hơn màn hình, rồi dán ảnh ấy lên đĩa. Chạm vào '
+        + 'một camera lật ngược qua mặt nước, vào một ảnh nhỏ hơn màn hình, rồi dán ảnh ấy lên đĩa. Máy yếu (mức '
+        + 'thấp) không có reflector, nên hai núm phản chiếu không đổi gì: nước lấy màu trời theo hướng phản xạ. Chạm vào '
         + 'nước là thêm một vòng gợn vào bộ đệm tám vòng; một hàm TSL tính độ cao gợn tại mỗi điểm, và pháp '
         + 'tuyến lấy từ độ dốc của hàm ấy. Pháp tuyến lệch thì chỗ đọc ảnh phản chiếu lệch theo: vòng gợn đi '
         + 'qua là bóng trăng bị xẻ đôi. Fresnel quyết định soi bao nhiêu: nhìn xiên về chân trời thì nước như '
@@ -155,27 +200,45 @@ export default {
     'vang-la': {
       understand:
         'Đom đóm ở đây không do CPU tính. Vị trí và vận tốc của từng con nằm trong hai bộ đệm trên GPU; mỗi '
-        + 'khung, một compute shader chạy song song hàng nghìn luồng, mỗi luồng lo đúng một con: lượn theo nhịp '
-        + 'riêng, xoáy chậm quanh ao, bị tay người xem hút lại hay đẩy ra. Rồi MỘT Sprite vẽ cả đàn, đọc vị trí '
-        + 'thẳng từ bộ đệm mà không đi qua CPU. Đom đóm chỉ phát sáng (emissive), cộng dồn màu lên nhau '
-        + '(additive), và nhấp nháy theo sin của đồng hồ cảnh. Phần phát sáng đi vào bloom của lớp Phủ bóng, '
-        + 'nên chúng tỏa vàng lá.',
+        + 'khung, một compute shader chạy song song hàng nghìn luồng, mỗi luồng lo đúng một con: trôi theo dòng '
+        + 'curl noise (một trường xoáy không dồn về chỗ nào), bị tay người xem hút lại hay đẩy ra. Rồi MỘT Sprite '
+        + 'vẽ cả đàn, đọc vị trí thẳng từ bộ đệm mà không đi qua CPU. Đom đóm chỉ phát sáng (emissive), cộng dồn '
+        + 'màu lên nhau (additive), nhấp nháy theo đồng hồ cảnh, và mờ đi trong sương. Phần phát sáng đi vào '
+        + 'bloom của lớp Phủ bóng, nên chúng tỏa vàng lá.',
       diagram: vangLaDiagram,
       learned: [
         'Compute shader: GPU chạy cùng một hàm trên hàng nghìn phần tử cùng lúc.',
         'Dữ liệu ở lại trên GPU: bộ đệm vừa được tính vừa được vẽ.',
+        'Curl noise: lấy curl của một trường noise để có dòng chảy không phân kỳ.',
         'Additive blending: ánh sáng cộng dồn, không che nhau.',
       ],
       readMore: [
         { title: 'Ví dụ three.js: hạt tính bằng compute (WebGPU)', url: 'https://threejs.org/examples/#webgpu_compute_particles' },
         { title: 'WebGPU Fundamentals · Compute shader', url: 'https://webgpufundamentals.org/webgpu/lessons/webgpu-compute-shaders.html' },
+        { title: 'Bridson · Curl-noise cho mô phỏng dòng chảy (SIGGRAPH 2007)', url: 'https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph2007-curlnoise.pdf' },
       ],
       knobs: {
         size: 'Cỡ đom đóm',
         glow: 'Độ sáng',
         attraction: 'Lực hút của tay',
+        flowScale: 'Cỡ dòng xoáy (nhỏ là xoáy to)',
+        speed: 'Tốc độ trôi',
+        blinkRate: 'Nhịp nháy',
         count: 'Số con',
       },
+      experiments: {
+        cpu: {
+          label: 'CPU vs GPU',
+          explain: 'Cùng luật bay, nhưng tính bằng JS: một vòng lặp đi qua từng con (tối đa 5.000), rồi chép cả mảng vị '
+            + 'trí lên GPU mỗi khung. Nhìn cột ms CPU: phần việc mà compute shader làm song song trên GPU.',
+        },
+        noAdditive: {
+          label: 'Tắt additive',
+          explain: 'Bỏ phép cộng dồn ánh sáng: con vẽ sau che con vẽ trước, bất kể xa gần, và con đang tắt thành đốm '
+            + 'tối. Hạt phát sáng cần additive vì ánh sáng không che nhau.',
+        },
+      },
+      readouts: { count: 'Số con đang vẽ' },
     },
 
     // Lớp dùng chung: chữ viết trung tính cho mọi bức. Muốn ví dụ riêng của ao sen thì ghi đè bằng spread ở đây.

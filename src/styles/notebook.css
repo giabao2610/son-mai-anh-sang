@@ -258,6 +258,16 @@ body:is([data-state='lost'], [data-state='loading'], [data-state='compiling'], [
 .nb-readouts dt { color: var(--bac-la); }
 .nb-readouts dd { margin: 0; font: 400 13px/1.5 var(--mono); text-align: right; color: var(--vang-la-sang); }
 
+/* Thí nghiệm so sánh (GĐ 3): hai hàng Tắt / Bật, mỗi hàng hai vạch (ms khung: vàng lá; ms CPU: bạc lá) và số. */
+.nb-compare { display: grid; gap: 4px; margin: 8px 0 0; font: 400 12px/1.4 var(--mono); }
+.nb-compare-row { display: grid; grid-template-columns: 2.5em minmax(40px, 1fr) auto; align-items: center; gap: 8px; color: var(--bac-la); }
+.nb-bars { display: grid; gap: 2px; }
+.nb-bars i { display: block; height: 4px; width: 0; border-radius: 2px; background: var(--vang-la); }
+.nb-bars i + i { background: var(--bac-la); }
+.nb-compare-value { color: var(--vang-la-sang); white-space: nowrap; }
+.nb-off { margin: 0 0 8px; font-size: 13px; line-height: 1.5; color: var(--vang-la); }
+.nb-off:empty { margin: 0; }
+
 /* ── Điện thoại: thanh lớp là dải ngang dưới đáy, Sổ tay là tấm trượt ngay trên nó ─── */
 @media (max-width: 640px) {
   .rail {

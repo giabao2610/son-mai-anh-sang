@@ -1,9 +1,12 @@
-// engine/flags.js — đọc cờ URL (?static, ?webgl, ?force3d, ?debug, ?at, ?freeze, ?poster) thành một object thuần.
+// engine/flags.js — đọc cờ URL (?static, ?webgl, ?force3d, ?debug, ?at, ?freeze, ?poster, ?level) thành một object thuần.
 
 // ?at chỉ nhận dạng ISO 8601: "2026-09-28T21:00", có thể thêm ":ss" và một offset ("Z", "+07:00", "-05:00").
 // Dạng khác (ví dụ "09/28/2026") bị V8 đọc theo múi giờ của MÁY, nên bị loại: ?at phải cho cùng kết quả ở mọi nơi.
 const AT = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?)(Z|[+-]\d{2}:\d{2})?$/;
 const OFF = ['0', 'false'];
+// Cùng ba mức với engine/quality.js#LEVELS (test giữ cho khớp). Không import từ đó: file này nằm trên đường nhẹ
+// của poster, còn quality.js mang cả bộ điều chỉnh mà chỉ tầng 3D mới cần.
+const LEVELS = ['cao', 'vua', 'thap'];
 
 /**
  * Đọc giá trị của ?at thành Date.
@@ -25,7 +28,7 @@ export function parseAt(value) {
  * Cờ bật khi có mặt: ?webgl hay ?webgl=1 đều bật; ?webgl=0 hoặc ?webgl=false thì tắt.
  * @param {string} [search]  location.search, ví dụ '?webgl&at=2026-09-28T21:00'
  * @returns {{ static: boolean, webgl: boolean, force3d: boolean, debug: false | true | 'stats',
- *   at: Date | null, freeze: false | true | number, poster: boolean }}
+ *   at: Date | null, freeze: false | true | number, poster: boolean, level: 'cao' | 'vua' | 'thap' | null }}
  */
 export function readFlags(search = '') {
   const q = new URLSearchParams(search);
@@ -42,5 +45,11 @@ export function readFlags(search = '') {
     console.warn(`?at="${q.get('at')}" không hợp lệ nên dùng giờ thật. Ví dụ đúng: ?at=2026-09-28T21:00`);
   }
 
-  return { static: on('static'), webgl: on('webgl'), force3d: on('force3d'), debug, at, freeze, poster: on('poster') };
+  // ?level=thap: ép mức chất lượng thay cho bảng tầng × máy (xem mức thấp ngay trên máy tính; e2e dùng).
+  const level = LEVELS.includes(q.get('level')) ? q.get('level') : null;
+  if (debug && q.has('level') && level === null) {
+    console.warn(`?level="${q.get('level')}" không hợp lệ nên bỏ qua. Dùng một trong: ${LEVELS.join(', ')}`);
+  }
+
+  return { static: on('static'), webgl: on('webgl'), force3d: on('force3d'), debug, at, freeze, poster: on('poster'), level };
 }

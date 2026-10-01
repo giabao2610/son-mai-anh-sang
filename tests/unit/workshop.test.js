@@ -21,7 +21,10 @@ const content = {
       learned: ['Fresnel'],
       readMore: [],
       knobs: {},
-      experiments: { pha: { label: 'Phá thử', explain: 'Xem chuyện gì xảy ra.' } },
+      experiments: {
+        pha: { label: 'Phá thử', explain: 'Xem chuyện gì xảy ra.' },
+        so: { label: 'So sánh', explain: 'Đo lúc tắt và lúc bật.' },
+      },
       readouts: { dinh: 'Số đỉnh' },
     },
   },
@@ -35,7 +38,7 @@ function fakeStudio() {
     calls: [],
     layers: () => [
       { id: 'cot', knobs: [{ id: 'size', kind: 'number', via: 'uniform', min: 0, max: 1, step: 0.1 }], experiments: [], readouts: [] },
-      { id: 'hai', knobs: [], experiments: [{ id: 'pha', kind: 'toggle' }], readouts: [{ id: 'dinh', unit: '' }] },
+      { id: 'hai', knobs: [], experiments: [{ id: 'pha', kind: 'toggle' }, { id: 'so', kind: 'compare' }], readouts: [{ id: 'dinh', unit: '' }] },
       { id: 'ba', knobs: [], experiments: [], readouts: [] },
     ],
     weight: (id) => ({ value: weights[id], target: weights[id] }),
@@ -48,7 +51,8 @@ function fakeStudio() {
     experiment: (layerId, id) => on.has(`${layerId}.${id}`),
     toggleExperiment: vi.fn(async (layerId, id, value) => (value ? on.add(`${layerId}.${id}`) : on.delete(`${layerId}.${id}`))),
     readouts: () => [{ id: 'dinh', value: 1234, unit: '' }],
-    stats: () => ({ drawCalls: 21, triangles: 90000, ms: 16.66 }),
+    stats: () => ({ drawCalls: 21, triangles: 90000, ms: 16.66, cpuMs: 3.21 }),
+    compare: (layerId, id) => (id === 'so' ? { off: { ms: 16.7, cpuMs: 2 }, on: { ms: 33.4, cpuMs: 9.5 } } : { off: null, on: null }),
   };
 }
 
@@ -265,6 +269,63 @@ describe('Sổ tay', () => {
     expect(read('lop:dinh')).toBe('1.234');
     expect(read('drawCalls')).toBe('21');
     expect(read('ms')).toBe('16,7');
+    expect(read('cpuMs')).toBe('3,2');
+    workshop.dispose();
+  });
+
+  it('Phá: lớp đang tắt (chế độ mài) thì nhắc bật lớp lên, điền ở nhịp sau lúc tab hiện (cùng nhịp thì VoiceOver bỏ qua)', () => {
+    vi.useFakeTimers();
+    const studio = fakeStudio();
+    const { workshop, rail, notebook } = mount(studio);
+    workshop.open({ grind: true }); // mọi lớp trừ Cốt về 0
+    rail.querySelector('[data-layer="hai"] .rail-name').click();
+    notebook.querySelector('[data-tab="pha"]').click();
+    const hint = notebook.querySelector('.nb-off');
+    expect(hint.textContent).toBe('');
+    vi.advanceTimersByTime(300);
+    expect(hint.textContent).toBe(t.notebook.layerOff);
+    rail.querySelector('[data-layer="ba"] .rail-name').click(); // sang một lớp khác cũng đang tắt, vẫn ở tab Phá
+    expect(hint.textContent).toBe('');
+    vi.advanceTimersByTime(300);
+    expect(hint.textContent).toBe(t.notebook.layerOff);
+    studio.setWeight('ba', 1); // phủ lớp rồi thì dòng nhắc trống
+    vi.advanceTimersByTime(300);
+    expect(hint.textContent).toBe('');
+    workshop.dispose();
+  });
+
+  it('Phá: dòng nhắc "lớp đang tắt" không bị ghi lại mỗi 250 ms khi chữ không đổi (trình đọc màn hình có thể đọc lại)', () => {
+    vi.useFakeTimers();
+    const { workshop, rail, notebook } = mount(fakeStudio());
+    workshop.open({ grind: true });
+    rail.querySelector('[data-layer="hai"] .rail-name').click();
+    notebook.querySelector('[data-tab="pha"]').click();
+    vi.advanceTimersByTime(300);
+    const hint = notebook.querySelector('.nb-off');
+    expect(hint.textContent).toBe(t.notebook.layerOff);
+    const seen = new MutationObserver(() => {});
+    seen.observe(hint, { childList: true, characterData: true, subtree: true });
+    vi.advanceTimersByTime(1000);
+    expect(seen.takeRecords()).toHaveLength(0);
+    seen.disconnect();
+    workshop.dispose();
+  });
+
+  it('Phá: thí nghiệm so sánh có hai cột "Tắt / Bật" ngay dưới nút (ms khung và ms CPU); thí nghiệm thường thì không', () => {
+    vi.useFakeTimers();
+    const { workshop, rail, notebook } = mount(fakeStudio());
+    workshop.open();
+    rail.querySelector('[data-layer="hai"] .rail-name').click();
+    notebook.querySelector('[data-tab="pha"]').click();
+    const bars = notebook.querySelectorAll('[data-compare]');
+    expect(bars).toHaveLength(1);
+    expect(bars[0].previousElementSibling.dataset.experiment).toBe('so');
+    const row = (side) => bars[0].querySelector(`[data-side="${side}"]`);
+    expect(row('off').textContent).toBe(`${t.notebook.compare.off}khung 16,7 ms · CPU 2 ms`);
+    expect(row('on').querySelector('.nb-compare-value').textContent).toBe('khung 33,4 ms · CPU 9,5 ms');
+    const [frame, cpu] = row('off').querySelectorAll('.nb-bars i');
+    expect([frame.style.width, cpu.style.width]).toEqual(['50%', `${(2 / 9.5) * 100}%`]);
+    expect(row('on').querySelector('.nb-bars').getAttribute('aria-hidden')).toBe('true');
     workshop.dispose();
   });
 

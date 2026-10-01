@@ -35,9 +35,10 @@ const painting = {
   ],
 };
 
-/** Sân khấu giả: đủ những gì buildScene đọc; renderer là Proxy ghi lời gọi (render, compute…). */
+/** Sân khấu giả: đủ những gì buildScene đọc; renderer là Proxy ghi lời gọi (render, compute…). Máy có DPR 2. */
 function fakeStage(backend) {
   const renderer = fakeRenderer();
+  let dprMax = Infinity;
   const canvas = Object.assign(new EventTarget(), { getBoundingClientRect: () => ({ left: 0, top: 0, width: 640, height: 400 }) });
   Object.assign(renderer, { toneMapping: NoToneMapping, outputColorSpace: SRGBColorSpace, domElement: canvas });
   return {
@@ -48,7 +49,10 @@ function fakeStage(backend) {
     u: { time: uniform(0), delta: uniform(1 / 60), resolution: uniform(new Vector2(640, 400)), pointer: uniform(new Vector2()) },
     controls: { enabled: true, update: vi.fn() },
     useCamera: vi.fn(),
-    setDpr: vi.fn(),
+    setDpr: vi.fn((v) => {
+      dprMax = v;
+    }),
+    dpr: () => Math.min(2, dprMax),
     tick: vi.fn(() => ({ t: 0.5, dt: 1 / 60 })),
     breathe: vi.fn(),
   };
@@ -68,11 +72,11 @@ function fakeWin() {
   return { win, frames, flush: () => frames.splice(0).forEach((cb) => cb(16)) };
 }
 
-function build({ backend = 'webgpu', reducedMotion = false } = {}) {
+function build({ backend = 'webgpu', reducedMotion = false, flags = {} } = {}) {
   const stage = fakeStage(backend);
   const disposer = createDisposer();
   const { win, frames, flush } = fakeWin();
-  const scene = buildScene({ stage, disposer, painting, meta, flags: {}, now: new Date('2026-09-28T14:00:00Z'), reducedMotion, win });
+  const scene = buildScene({ stage, disposer, painting, meta, flags, now: new Date('2026-09-28T14:00:00Z'), reducedMotion, win });
   const renders = () => stage.renderer.render.mock.calls.length;
   return { stage, disposer, scene, frames, flush, renders };
 }
@@ -127,6 +131,53 @@ describe('buildScene', () => {
     flush();
     await expect(b).resolves.toBeUndefined();
     expect(renders()).toBe(2);
+  });
+
+  it('?level ép mức: WebGPU máy tính mà ?level=thap thì mức thấp (dpr 1.25)', () => {
+    const { scene, stage } = build({ flags: { level: 'thap' } });
+    expect(scene.level).toBe('thap');
+    expect(stage.setDpr).toHaveBeenCalledWith(1.25);
+  });
+
+  it('bộ điều chỉnh: 40 fps thì hạ nấc dpr, huy hiệu được báo; thanh lớp mở (guard) thì chậm vừa phải không hạ nữa', () => {
+    const { scene, stage } = build();
+    const seen = [];
+    scene.quality.onChange((q) => seen.push(q.steps.length));
+    let ms = 0;
+    for (let i = 0; i < 280; i++) scene.step((ms += 25)); // 7 giây ở 40 fps
+    expect(stage.setDpr.mock.calls.map((c) => c[0])).toEqual([2, 1.75]);
+    expect(scene.studio.quality()).toMatchObject({ level: 'cao', steps: ['dpr=1.75'], guarding: false });
+    expect(seen).toEqual([1]);
+    scene.quality.guard(true);
+    for (let i = 0; i < 400; i++) scene.step((ms += 25));
+    expect(scene.studio.quality()).toMatchObject({ steps: ['dpr=1.75'], guarding: true });
+    for (let i = 0; i < 160; i++) scene.step((ms += 50)); // 20 fps: quá tải nặng, vẫn hạ
+    expect(scene.studio.quality().steps.slice(0, 2)).toEqual(['dpr=1.75', 'dpr=1.5']);
+  });
+
+  it('?freeze: không có bộ điều chỉnh (ảnh tất định); hạ/nâng tay vẫn được, rồi vẽ lại', async () => {
+    const { scene, stage, flush, renders } = build({ flags: { freeze: 10 } });
+    let ms = 0;
+    for (let i = 0; i < 400; i++) scene.step((ms += 40));
+    expect(stage.setDpr.mock.calls).toEqual([[2]]);
+    scene.freeze();
+    // degrade() áp nấc rồi mới xin nhịp vẽ lại (sau một microtask): chờ một vòng rồi mới chạy nhịp rAF giả.
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 0)).then(flush);
+    const down = scene.studio.degrade();
+    await tick();
+    expect(await down).toBe(true);
+    expect(stage.setDpr).toHaveBeenLastCalledWith(1.75);
+    const up = scene.studio.upgrade();
+    await tick();
+    expect(await up).toBe(true);
+    expect(stage.setDpr).toHaveBeenLastCalledWith(2);
+    expect(renders()).toBe(402);
+  });
+
+  it('ms CPU của khung đi vào số đo của bàn thợ', () => {
+    const { scene } = build();
+    scene.step(1000);
+    expect(scene.studio.stats()).toHaveProperty('cpuMs');
   });
 
   it('giảm chuyển động: bật/tắt lớp trên thanh lớp là ngay, không mờ dần', () => {

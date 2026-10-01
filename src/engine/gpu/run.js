@@ -6,6 +6,7 @@ import { createDisposer } from './disposer.js';
 import { buildScene } from './scene.js';
 import { createFailCounter, createBurstCounter } from './guards.js';
 import { openDebug } from './debug.js';
+import { createFrameCap } from './clock.js';
 import { mountWorkshop } from '../../ui/workshop.js';
 
 /** Hạn cho một lần "Dựng lại cảnh" (lần mở trang đã có hạn 10 s của boot.js). */
@@ -43,6 +44,7 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
   const { meta } = entry;
   let disposer = createDisposer(); // của lần dựng hiện tại; "Dựng lại cảnh" thay bằng một cái mới
   let studio = null; // bàn thợ của cảnh đang live (null khi chưa live, hoặc đang mất GPU)
+  let quality = null; // bộ điều chỉnh của cảnh đang live: chỉ canh quá tải nặng khi thanh lớp mở
   let workshop = null; // thanh lớp + Sổ tay: tạo một lần, sống qua các lần dựng lại
   let losses = 0;
   let failed = false;
@@ -79,13 +81,16 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
   let painting = null;
   let content = null;
 
-  // Lời mời "{n} lớp — mài thử?" là một nút: bấm vào thì vào chế độ mài (mọi lớp trừ Cốt mờ về 0).
-  // Đóng thanh lớp thì lời mời quay lại, để người xem mở lại được lúc nào cũng được.
+  // Lời mời "{n} lớp — mài thử?" là nút vào chế độ mài; đóng thanh lớp thì lời mời quay lại (mở lại lúc nào cũng được).
+  // Thanh lớp mở = người xem đang học, có khi cố ý làm chậm cảnh: bộ điều chỉnh chỉ canh quá tải nặng tới khi đóng.
+  const onClose = () => {
+    quality?.guard(false);
+    shell.invite(openWorkshop);
+  };
   const openWorkshop = () => {
-    workshop ??= mountWorkshop(win.document, {
-      meta, content, t, studio: () => studio, onClose: () => shell.invite(openWorkshop),
-    });
+    workshop ??= mountWorkshop(win.document, { meta, content, t, studio: () => studio, onClose });
     workshop.open({ grind: true });
+    quality?.guard(true);
   };
 
   /** Mất GPU trước khi live, hoặc lần thứ hai: tầng tĩnh. Lần đầu sau khi live: poster + nút "Dựng lại cảnh". */
@@ -150,15 +155,24 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     shell.setState('live');
     shell.showBadge({ tier: stage.backend, level: scene.level });
     studio = scene.studio;
+    quality = scene.quality;
     d.add(() => {
       studio = null;
+      quality = null;
     });
-    // DevTools: __sma.setWeight('<id lớp>', 0) mài một lớp; e2e dùng để so ảnh ở cùng một khung.
+    // Nấc đổi → huy hiệu ghi "hạ {n} nấc". Dựng lại cảnh lúc thanh lớp đang mở thì bộ điều chỉnh mới cũng chỉ canh.
+    d.add(scene.quality.onChange((q) => shell.showBadge({ tier: stage.backend, level: q.level, steps: q.steps.length })));
+    if (workshop?.isOpen) scene.quality.guard(true);
+    // DevTools: __sma.setWeight('<id lớp>', 0) mài một lớp, __sma.degrade() hạ một nấc; e2e so ảnh ở cùng một khung.
     d.add(sma.expose({
       layers: () => studio?.layers().map(({ id, name }) => ({ id, name, weight: studio.weight(id).value })) ?? [],
       setWeight: (id, v) => studio?.setWeight(id, v),
       snapshot: () => studio?.snapshot() ?? null,
       restore: (s) => studio?.restore(s),
+      quality: () => studio?.quality() ?? null,
+      degrade: () => studio?.degrade(),
+      upgrade: () => studio?.upgrade(),
+      stats: () => studio?.stats() ?? null,
     }));
     // Gợi ý của bức ("Chạm vào…") chỉ lúc mở trang; lần chạm đầu tiên đổi thành lời mời mài lớp.
     if (!snapshot && content?.hint) shell.showHint(content.hint);
@@ -177,8 +191,9 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     });
 
     const frameErrors = createFailCounter({ limit: 3 });
+    const cap = createFrameCap(); // màn 90/120/144 Hz: tối đa 60 khung/giây, GPU không phải vẽ gấp đôi
     const loop = (ms) => {
-      if (failed || d.closed) return;
+      if (failed || d.closed || !cap.ready(ms)) return;
       try {
         frame(ms);
         frameErrors.ok();

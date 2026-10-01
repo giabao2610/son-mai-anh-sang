@@ -45,21 +45,40 @@ export default {
         'paintings/ao-sen-dem/layers/l2-anh-trang.js',
         'paintings/ao-sen-dem/parts/anh-trang-moon.js',
         'paintings/ao-sen-dem/parts/anh-trang-paint.js',
+        'paintings/ao-sen-dem/parts/anh-trang-shadow.js',
       ],
+    },
+    {
+      id: 'suong',
+      name: 'Sương',
+      files: [
+        'paintings/ao-sen-dem/layers/l3-suong.js',
+        'paintings/ao-sen-dem/parts/suong-troi.js',
+        'paintings/ao-sen-dem/parts/suong-mu.js',
+      ],
+      poem: { lines: ['Đêm qua ra đứng bờ ao', 'Trông cá cá lặn, trông sao sao mờ'], source: 'Ca dao' },
     },
     {
       id: 'mat-nuoc',
       name: 'Mặt nước',
-      files: ['paintings/ao-sen-dem/layers/l4-mat-nuoc.js'],
+      files: ['paintings/ao-sen-dem/layers/l4-mat-nuoc.js', 'paintings/ao-sen-dem/parts/mat-nuoc-gia.js'],
       poem: {
         lines: ['Vầng trăng ai xẻ làm đôi', 'Nửa in gối chiếc, nửa soi dặm trường'],
         source: 'Truyện Kiều',
         author: 'Nguyễn Du',
       },
     },
-    { id: 'vang-la', name: 'Vàng lá', files: ['paintings/ao-sen-dem/layers/l5-vang-la.js'] },
+    {
+      id: 'vang-la',
+      name: 'Vàng lá',
+      files: [
+        'paintings/ao-sen-dem/layers/l5-vang-la.js',
+        'paintings/ao-sen-dem/parts/vang-la-dan.js',
+        'paintings/ao-sen-dem/parts/vang-la-cpu.js',
+      ],
+    },
     phuBong,
   ],
   // Từ vựng riêng của bức: test luật cấm xưởng (engine/, ui/, lib/tsl/) nhắc tới.
-  fence: ['ripple', 'lotus', 'firefl', 'uhour', 'moondir', 'lantern', 'mặt nước', 'đom đóm', 'hoa sen', 'hoa đăng'],
+  fence: ['ripple', 'lotus', 'firefl', 'uhour', 'moondir', 'lantern', 'milky', 'mặt nước', 'đom đóm', 'hoa sen', 'hoa đăng', 'ngân hà'],
 };

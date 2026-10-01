@@ -2,7 +2,7 @@
 import { readdirSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { paintings } from '../src/paintings/registry.js';
-import { waitForSettled, waitForFrames, canvasStats, gpuReport, collectConsole, readSma } from './helpers.js';
+import { DARK, waitForSettled, waitForFrames, canvasStats, gpuReport, collectConsole, readSma } from './helpers.js';
 
 /**
  * URL tương đối (không có '/' đầu) để giữ base '/son-mai-anh-sang/' của baseURL.
@@ -125,7 +125,7 @@ for (const { meta, page: htmlPage, lang } of paintings) {
         const stats = await canvasStats(page);
         await page.screenshot({ path: testInfo.outputPath(`freeze-${n}.png`) });
         expect(stats.bright, `freeze=${n}: quá ít điểm sáng`).toBeGreaterThan(0.02);
-        expect(stats.dark, `freeze=${n}: quá ít điểm tối`).toBeGreaterThan(0.1);
+        expect(stats.dark, `freeze=${n}: quá ít điểm tối`).toBeGreaterThan(DARK);
         shots.push(stats);
       }
       const still = 'khung 10 và khung 40 giống hệt nhau: cảnh không chuyển động theo ctx.u.time';
@@ -225,6 +225,35 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       const again = await canvasStats(page);
       expect(again.checksum, 'bật lại mọi lớp thì phải về đúng ảnh cũ').toBe(base.checksum);
       expect((await readSma(page)).frames, 'vẽ lại không được tiến đồng hồ').toBe(10);
+      expect(log.errors).toEqual([]);
+      expect(log.warnings).toEqual([]);
+    });
+
+    test('hạ hết mọi nấc bằng __sma.degrade(): vẫn vẽ, có sáng có tối, không lỗi; nâng lại hết thì về đúng ảnh cũ', async ({
+      page,
+    }, testInfo) => {
+      const { query } = testInfo.project.metadata;
+      test.setTimeout(120_000);
+      await page.goto(urlOf(htmlPage, query, 'freeze=10', 'at=2026-09-28T21:00'));
+      const settled = await waitForSettled(page);
+      expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+      await waitForFrames(page, 10);
+      const base = await canvasStats(page);
+      // ?freeze: không có bộ điều chỉnh (ảnh tất định), nhưng hạ/nâng tay vẫn được và vẽ lại đúng khung 10.
+      let steps = 0;
+      while (await page.evaluate(() => window.__sma.degrade())) steps += 1;
+      const quality = await page.evaluate(() => window.__sma.quality());
+      expect(quality.steps).toHaveLength(steps);
+      await expect(page.locator('[data-badge]')).toHaveAttribute('data-steps', String(steps));
+      const low = await canvasStats(page);
+      await page.screenshot({ path: testInfo.outputPath('ha-het-nac.png') });
+      expect(low.bright, 'hạ hết nấc: quá ít điểm sáng').toBeGreaterThan(0.02);
+      expect(low.dark, 'hạ hết nấc: quá ít điểm tối').toBeGreaterThan(DARK);
+      while (await page.evaluate(() => window.__sma.upgrade()));
+      await expect(page.locator('[data-badge]')).toHaveAttribute('data-steps', '0');
+      const again = await canvasStats(page);
+      expect(again.checksum, 'nâng lại hết nấc thì phải về đúng ảnh cũ').toBe(base.checksum);
+      expect((await readSma(page)).frames, 'hạ/nâng nấc không được tiến đồng hồ').toBe(10);
       expect(log.errors).toEqual([]);
       expect(log.warnings).toEqual([]);
     });

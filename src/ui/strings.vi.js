@@ -47,6 +47,10 @@ const t = {
       static: 'Bạn đang xem bản tranh tĩnh: poster, thơ và con dấu, không cần GPU. '
         + 'Cảnh 3D chỉ chạy khi trình duyệt dùng được WebGPU hoặc WebGL2.',
     },
+    /** Bộ điều chỉnh chất lượng đang hạ n nấc (GĐ 3). */
+    steps: (n) => `hạ ${n} nấc`,
+    stepsExplain: (n) => `Máy đang bớt ${n} nấc chi tiết (độ nét, phản chiếu, bloom…) để hình không giật; `
+      + 'khi máy rảnh hơn, chi tiết tự trở lại.',
   },
   static: {
     noGpu: 'Máy này chưa vẽ được cảnh 3D, thường là vì trình duyệt đang tắt tăng tốc phần cứng. '
@@ -92,8 +96,21 @@ const t = {
     noExperiments: 'Lớp này chưa có thí nghiệm.',
     knobsStatic: 'Núm chỉ chạy khi có cảnh 3D. Code thì đọc được ngay.',
     experimentsStatic: 'Thử phá cần cảnh 3D.',
+    layerOff: 'Lớp này đang tắt: bật nó trên thanh lớp thì thí nghiệm và số đo mới có ý nghĩa.',
     measure: 'Số đo trực tiếp',
-    readouts: { drawCalls: 'Draw call mỗi khung', triangles: 'Tam giác mỗi khung', ms: 'Mili giây mỗi khung' },
+    readouts: {
+      drawCalls: 'Draw call mỗi khung',
+      triangles: 'Tam giác mỗi khung',
+      ms: 'Mili giây mỗi khung',
+      cpuMs: 'Mili giây CPU mỗi khung',
+    },
+    /** Hai cột "Tắt / Bật" của thí nghiệm so sánh (GĐ 3). */
+    compare: {
+      off: 'Tắt',
+      on: 'Bật',
+      empty: 'chưa đo',
+      value: (ms, cpu) => `khung ${ms} ms · CPU ${cpu} ms`,
+    },
     /** Nút mở Sổ tay ở tầng tĩnh (chỉ đọc). */
     openStatic: (n) => `Xem ${n} lớp của bức tranh`,
   },

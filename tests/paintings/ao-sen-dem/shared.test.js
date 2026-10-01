@@ -72,13 +72,14 @@ describe('createRipples: bộ đệm vòng 8 gợn', () => {
 });
 
 describe('setup(ctx)', () => {
-  it('shared: giờ, hướng trăng theo giờ, gợn sóng, điểm hút', () => {
+  it('shared: giờ, hướng trăng theo giờ, gợn sóng, điểm hút, xoáy sương (chưa xoáy)', () => {
     const { shared } = setup(makeEngineCtx(meta));
     expect(shared.hour.value).toBe(21);
     expect(shared.hourNote).toBeNull();
     expect(shared.moon.dir.value.toArray()).toEqual(moonDirection(21));
     expect(shared.ripples.slots).toHaveLength(RIPPLE_SLOTS);
     expect(shared.attract.strength.value).toBe(0);
+    expect(shared.swirl.spin.value).toBe(0);
   });
 
   it('chạm lên mặt nước: một gợn tại điểm chạm, lúc ctx.u.time; đom đóm quanh đó tản ra', () => {
@@ -91,7 +92,26 @@ describe('setup(ctx)', () => {
     expect(s.shared.attract.strength.value).toBeLessThan(0);
   });
 
-  it('vuốt trên mặt nước: không dời điểm hút, không tạo gợn (vuốt để dành cho sương, GĐ 3)', () => {
+  it('vuốt trên mặt nước: sương xoáy quanh chỗ vuốt, lúc ctx.u.time; chiều theo hướng vuốt; độ mạnh theo tốc độ (có kẹp)', () => {
+    const ctx = makeEngineCtx(meta);
+    const s = setup(ctx);
+    ctx.u.time.value = 3;
+    s.onGesture({ kind: 'swipe', ray: down(5, -4), velocity: { x: 4, y: 0.5 } });
+    expect(s.shared.swirl.center.value.toArray()).toEqual([5, -4]);
+    expect(s.shared.swirl.start.value).toBe(3);
+    expect(s.shared.swirl.spin.value).toBeCloseTo(Math.hypot(4, 0.5) * 0.35, 6);
+    s.onGesture({ kind: 'swipe', ray: down(0, 0), velocity: { x: -40, y: 0 } }); // vuốt rất nhanh sang trái
+    expect(s.shared.swirl.spin.value).toBe(-2.4);
+    s.onGesture({ kind: 'swipe', ray: down(0, 0), velocity: { x: 0, y: 0.1 } }); // rất chậm: vẫn xoáy nhẹ
+    expect(Math.abs(s.shared.swirl.spin.value)).toBe(0.6);
+    s.onGesture({ kind: 'swipe', ray: down(100, 0), velocity: { x: 4, y: 0 } }); // ngoài ao: bỏ qua
+    expect(s.shared.swirl.center.value.toArray()).toEqual([0, 0]);
+    const calm = setup(makeEngineCtx(meta, { reducedMotion: true }));
+    calm.onGesture({ kind: 'swipe', ray: down(0, 0), velocity: { x: 40, y: 0 } });
+    expect(calm.shared.swirl.spin.value).toBe(1.2); // giảm chuyển động: nửa góc
+  });
+
+  it('vuốt trên mặt nước: không dời điểm hút, không tạo gợn', () => {
     const s = setup(makeEngineCtx(meta));
     const before = s.shared.attract.point.value.toArray();
     s.onGesture({ kind: 'swipe', ray: down(5, 5), velocity: { x: 1, y: 0 } });

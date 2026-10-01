@@ -100,6 +100,7 @@ export function createLayer(ctx, shared) {
   hemi.position.set(-1, 2, 0.5); // trời hơi lệch trái: một bên lòng lá sáng hơn bên kia, đọc ra hình lõm
 
   const objects = [leaves, standingLeaves, petals, cores, stems, reeds]; // mảng SỐNG: thí nghiệm thêm/bớt tại chỗ
+  let version = 0; // tăng mỗi lần hình đổi: lớp Ánh trăng thấy số này đổi thì vẽ lại shadow map (bóng tĩnh, GĐ 3)
   let loose = null; // các Mesh rời của "Tắt instancing": tạo lần đầu bật, giữ tới khi gỡ lớp (bật/tắt chỉ hiện/giấu)
   let looseOn = false;
   const setLoose = (on) => {
@@ -120,6 +121,7 @@ export function createLayer(ctx, shared) {
     fillStems(stems, [...pond.flowers, ...pond.buds, ...pond.standing]);
     fillReeds(reeds, mulberry32(SEED + params.seed * 7919 + 3));
     if (looseOn) loose.sync();
+    version += 1;
   };
   const rebuild = (key) => (v) => {
     params[key] = v;
@@ -131,6 +133,7 @@ export function createLayer(ctx, shared) {
       m[prop] = v;
       m.needsUpdate = true;
     }
+    version += 1;
   };
   apply();
 
@@ -143,6 +146,10 @@ export function createLayer(ctx, shared) {
     stemMaterial,
     reedMaterial,
     petalGeometry,
+    openness: ctx.knob('openness'), // độ nở của hoa: hình cánh đổi thì bóng của hoa đổi
+    get version() {
+      return version;
+    },
     hemi,
     hemiIntensity: STUDIO.intensity,
     casters: [standingLeaves, petals, cores, stems], // thứ đứng trên mặt nước: đổ bóng lên lá nổi

@@ -32,6 +32,9 @@ describe('l4-mat-nuoc', () => {
     expect(scale(water)).toBe(0.1);
     low.toggle(false);
     expect(scale(water)).toBe(0.6);
+    const vua = build({ level: 'vua' });
+    vua.knobs['mat-nuoc'].set('reflectionResolution', 1); // mức vừa: trần 0.6, máy yếu không bị kéo quá sức
+    expect(scale(vua.layers['mat-nuoc'])).toBe(0.6);
   });
 
   it('thí nghiệm "Tắt fresnel" và "Xem heightfield" chỉ đổi uniform (material giữ nguyên node)', () => {
@@ -71,6 +74,46 @@ describe('l4-mat-nuoc', () => {
     const { shared } = build();
     expect(shared.cot.leafMaterial.positionNode).toBeTruthy();
     expect(shared.cot.standingMaterial.positionNode).toBeNull();
+  });
+
+  it("nấc 'phan-chieu': trần độ phân giải chia đôi (không dưới 0,15) rồi trả lại; hiệu lực = min(núm, trần)", () => {
+    const scale = (layer) => layer.readouts.find((r) => r.id === 'reflectionScale').get();
+    const { layers, knobs } = build();
+    const water = layers['mat-nuoc'];
+    const [step] = water.degrade;
+    expect(step.id).toBe('phan-chieu');
+    step.apply();
+    expect(scale(water)).toBe(0.25);
+    knobs['mat-nuoc'].set('reflectionResolution', 0.8); // người xem kéo núm lên: trần vẫn giữ
+    expect(scale(water)).toBe(0.25);
+    knobs['mat-nuoc'].set('reflectionResolution', 0.2); // núm dưới trần: theo núm
+    expect(scale(water)).toBe(0.2);
+    step.revert();
+    knobs['mat-nuoc'].set('reflectionResolution', 0.8);
+    expect(scale(water)).toBe(0.8);
+    knobs['mat-nuoc'].set('reflectionResolution', 0.2);
+    step.apply(); // min(0.2, ∞) × 0.5 = 0.1 → sàn 0.15; núm 0.2 → hiệu lực 0.15
+    expect(scale(water)).toBe(0.15);
+  });
+
+  it('mức thấp (budget.reflection = 0): phản chiếu GIẢ, không có reflector, không nấc, không có "Độ phân giải 0.1"', () => {
+    const { ctx, layers } = build({ level: 'thap', budget: { reflection: 0 } });
+    const water = layers['mat-nuoc'];
+    const [mesh] = water.objects;
+    expect(ctx.scene.children.filter((o) => o.type === 'Object3D' && o !== mesh)).toHaveLength(1); // chỉ target của đèn trăng
+    expect(water.readouts[0].get()).toBe(0);
+    expect(water.degrade).toEqual([]);
+    // Không có ảnh phản chiếu thì không có gì để hạ độ phân giải: nút bấm mà ảnh không đổi là dạy sai.
+    expect(water.experiments.map((e) => e.id)).toEqual(['noFresnel', 'heightfield']);
+    expect(build({ level: 'cao' }).layers['mat-nuoc'].experiments.map((e) => e.id)).toEqual(['lowRes', 'noFresnel', 'heightfield']);
+    for (const key of ['colorNode', 'normalNode', 'emissiveNode', 'mrtNode']) expect(mesh.material[key], key).toBeTruthy();
+    for (const exp of water.experiments) {
+      exp.toggle(true);
+      exp.toggle(false);
+    }
+    const before = ctx.scene.children.length;
+    water.dispose();
+    expect(ctx.scene.children).toHaveLength(before - 1);
   });
 
   it('dispose gỡ nước và target (2 lần vẫn an toàn)', () => {

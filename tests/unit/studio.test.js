@@ -6,8 +6,8 @@ import { createStudio } from '../../src/engine/gpu/studio.js';
 const env = { tier: 'webgl2', level: 'vua', budget: {}, now: new Date('2026-09-28T14:00:00Z'), mobile: false };
 const meta = { layers: [{ id: 'cot', name: 'Cốt' }, { id: 'lop-hai', name: 'Lớp hai' }] };
 
-/** Hai lớp giả: Cốt có núm uniform + núm rebuild; lớp hai có thí nghiệm và số đo. */
-function setup({ tier = 'webgl2' } = {}) {
+/** Hai lớp giả: Cốt có núm uniform + núm rebuild; lớp hai có thí nghiệm (một kiểu compare) và số đo. */
+function setup({ tier = 'webgl2', quality } = {}) {
   const log = [];
   const cot = {
     id: 'cot',
@@ -24,7 +24,10 @@ function setup({ tier = 'webgl2' } = {}) {
     id: 'lop-hai',
     knobs: [{ id: 'tone', kind: 'select', options: ['none', 'agx'], value: 'agx' }],
     createLayer: () => ({
-      experiments: [{ id: 'pha', toggle: vi.fn((on) => { log.push(`pha=${on}`); }) }],
+      experiments: [
+        { id: 'pha', toggle: vi.fn((on) => { log.push(`pha=${on}`); }) },
+        { id: 'so', kind: 'compare', toggle: vi.fn() },
+      ],
       readouts: [{ id: 'dinh', get: () => 42, unit: 'đỉnh' }, { id: 'ten', get: () => 'x' }],
       dispose() {},
     }),
@@ -32,7 +35,7 @@ function setup({ tier = 'webgl2' } = {}) {
   const weights = createWeights(meta.layers);
   const layers = buildLayers([cot, two], {}, {}, { ...env, tier });
   const redraw = vi.fn();
-  const studio = createStudio({ meta, layers, weights, tier, redraw, tweenSeconds: 0.5 });
+  const studio = createStudio({ meta, layers, weights, env: { ...env, tier }, redraw, tweenSeconds: 0.5, quality });
   return { studio, weights, layers, redraw, log };
 }
 
@@ -46,7 +49,10 @@ describe('createStudio', () => {
       { id: 'count', kind: 'number', via: 'rebuild', min: 10, max: 500, step: undefined, options: undefined },
     ]);
     expect(setup({ tier: 'webgpu' }).studio.layers()[0].knobs[1].max).toBe(2000);
-    expect(two).toMatchObject({ experiments: [{ id: 'pha', kind: 'toggle' }], readouts: [{ id: 'dinh', unit: 'đỉnh' }, { id: 'ten', unit: '' }] });
+    expect(two).toMatchObject({
+      experiments: [{ id: 'pha', kind: 'toggle' }, { id: 'so', kind: 'compare' }],
+      readouts: [{ id: 'dinh', unit: 'đỉnh' }, { id: 'ten', unit: '' }],
+    });
   });
 
   it('setWeight: mặc định đặt ngay rồi vẽ lại; tween: true thì chỉ đặt đích (vòng lặp tiến dần)', async () => {
@@ -85,16 +91,66 @@ describe('createStudio', () => {
     expect(() => studio.experiment('lop-hai', 'khac')).toThrow('Lớp "lop-hai" không có thí nghiệm "khac"');
   });
 
-  it('readouts đọc ngay lúc gọi; stats: draw call, tam giác, ms giữa hai khung (trung bình trượt)', () => {
+  it('readouts đọc ngay lúc gọi; stats: draw call, tam giác, ms giữa hai khung và ms CPU (trung bình trượt)', () => {
     const { studio } = setup();
     expect(studio.readouts('lop-hai')).toEqual([{ id: 'dinh', value: 42, unit: 'đỉnh' }, { id: 'ten', value: 'x', unit: '' }]);
     const info = { render: { drawCalls: 21, triangles: 90000 } };
-    studio.measure(info, 1000);
-    expect(studio.stats()).toEqual({ drawCalls: 21, triangles: 90000, ms: 0 });
-    studio.measure(info, 1016);
+    studio.measure(info, 1000, 4);
+    expect(studio.stats()).toEqual({ drawCalls: 21, triangles: 90000, ms: 0, cpuMs: 4 });
+    studio.measure(info, 1016, 4);
     expect(studio.stats().ms).toBe(16);
-    studio.measure(info, 1052);
+    studio.measure(info, 1052, 14);
     expect(studio.stats().ms).toBeCloseTo(16 * 0.9 + 36 * 0.1, 6);
+    expect(studio.stats().cpuMs).toBeCloseTo(4 * 0.9 + 14 * 0.1, 6);
+  });
+
+  it("compare: số đo tách theo trạng thái của thí nghiệm; bỏ 0,25 s đầu sau mỗi lần đổi; thí nghiệm thường thì null", async () => {
+    const { studio } = setup();
+    const info = { render: { drawCalls: 1, triangles: 1 } };
+    let t = 0;
+    const frames = (n, gap, cpu) => {
+      for (let i = 0; i < n; i++) studio.measure(info, (t += gap), cpu);
+    };
+    expect(studio.compare('lop-hai', 'so')).toEqual({ off: null, on: null });
+    frames(10, 16, 2); // 160 ms đầu: còn trong khoảng bỏ qua
+    expect(studio.compare('lop-hai', 'so').off).toBeNull();
+    frames(20, 16, 2);
+    expect(studio.compare('lop-hai', 'so').off).toEqual({ ms: 16, cpuMs: 2 });
+    await studio.toggleExperiment('lop-hai', 'so', true);
+    frames(7, 33, 9); // vừa bật: 231 ms đầu vẫn bị bỏ qua
+    expect(studio.compare('lop-hai', 'so').on).toBeNull();
+    frames(20, 33, 9);
+    expect(studio.compare('lop-hai', 'so')).toEqual({ off: { ms: 16, cpuMs: 2 }, on: { ms: 33, cpuMs: 9 } });
+    expect(studio.compare('lop-hai', 'pha')).toEqual({ off: null, on: null });
+    expect(() => studio.compare('lop-hai', 'khac')).toThrow('Lớp "lop-hai" không có thí nghiệm "khac"');
+  });
+
+  it('nấc: quality() đọc bộ điều chỉnh; degrade()/upgrade() hạ/nâng tay một nấc rồi vẽ lại; thiếu bộ điều chỉnh thì không có gì', async () => {
+    const steps = [];
+    const listeners = [];
+    const quality = {
+      state: () => ({ level: 'cao', steps: [...steps], guarding: false, capped: false }),
+      degrade: () => (steps.length < 2 ? Boolean(steps.push(`n${steps.length}`)) : false),
+      upgrade: () => Boolean(steps.pop()),
+      onChange: (cb) => {
+        listeners.push(cb);
+        return () => {};
+      },
+    };
+    const { studio, redraw } = setup({ quality });
+    expect(await studio.degrade()).toBe(true);
+    expect(await studio.degrade()).toBe(true);
+    expect(await studio.degrade()).toBe(false);
+    expect(studio.quality()).toEqual({ level: 'cao', steps: ['n0', 'n1'], guarding: false, capped: false });
+    expect(await studio.upgrade()).toBe(true);
+    expect(studio.quality().steps).toEqual(['n0']);
+    expect(redraw).toHaveBeenCalledTimes(4);
+    const cb = () => {};
+    studio.onQuality(cb);
+    expect(listeners).toEqual([cb]);
+    const bare = setup().studio;
+    expect(bare.quality()).toEqual({ level: null, steps: [], guarding: false, capped: false });
+    expect(await bare.degrade()).toBe(false);
   });
 
   it('snapshot → JSON gọn: trọng số lấy ĐÍCH của tween, núm theo địa chỉ "layerId.knobId"', () => {

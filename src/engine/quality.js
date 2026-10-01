@@ -1,4 +1,4 @@
-// engine/quality.js — chọn mức chất lượng lúc khởi động (cao / vừa / thấp) và ghép ngân sách của bức lên mức mặc định.
+// engine/quality.js — chọn mức chất lượng lúc khởi động, ghép ngân sách của bức, và bộ điều chỉnh có trễ (hàm thuần, không three).
 
 export const LEVELS = Object.freeze(['cao', 'vua', 'thap']);
 
@@ -7,6 +7,26 @@ export const DEFAULT_LEVELS = Object.freeze({
   cao: Object.freeze({ dpr: 2 }),
   vua: Object.freeze({ dpr: 1.5 }),
   thap: Object.freeze({ dpr: 1.25 }),
+});
+
+/** Ngân sách một khung (ms): 60 khung/giây trên máy tính, 45 khung/giây trên điện thoại (spec §10). */
+export const FRAME_BUDGET_MS = Object.freeze({ desktop: 1000 / 60, mobile: 1000 / 45 });
+
+/** Các hằng số của bộ điều chỉnh (spec §10). Test ghi đè được. */
+export const TUNER = Object.freeze({
+  windowMs: 2000, // một cửa sổ đo
+  warmupMs: 2000, // bỏ qua lúc mới live hay mới chạy lại (còn biên dịch dở)
+  hiccupMs: 250, // khoảng giữa hai khung dài hơn thế (tab ẩn, debugger) thì bỏ cả cửa sổ
+  over: 1.2, // "quá tải": trung bình > ngân sách × 1,2
+  severe: 2.2, // "quá tải nặng": trung bình > ngân sách × 2,2 (khi Sổ tay mở, chỉ phản ứng với mức này)
+  spare: 0.7, // "dư nhiều": trung bình < ngân sách × 0,7
+  near: 1.05, // "dư vừa": trung bình ≤ ngân sách × 1,05 VÀ không rớt khung nào
+  frameMs: 1000 / 60, // nhịp của bộ chặn khung (MAX_FPS của gpu/clock.js): cửa sổ thiếu ≥ 0,75 nhịp là rớt khung
+  downAfter: 2, // số cửa sổ quá tải liền nhau thì hạ một nấc
+  upAfter: 5, // số cửa sổ dư liền nhau thì nâng một nấc
+  lockWithin: 3, // nâng một nấc mà trong chừng này cửa sổ phải hạ lại đúng nấc đó thì khóa nó
+  gain: 0.9, // hạ hết thang mà trung bình vẫn ≥ 90% lúc bắt đầu hạ: nhịp bị khóa, không phải GPU yếu
+  beyond: 1.25, // đang bị khóa nhịp: chậm hơn nhịp ấy × 1,25 là quá tải thật (hạ); nhanh hơn ÷ 1,25 là hết khóa
 });
 
 /**
@@ -38,4 +58,163 @@ export function pickLevel({ tier, mobile }) {
 export function budgetFor(level, qualitySpec) {
   if (!LEVELS.includes(level)) throw new Error(`budgetFor: không có mức "${level}"`);
   return { ...DEFAULT_LEVELS[level], ...(qualitySpec?.levels?.[level] ?? {}) };
+}
+
+/**
+ * Bộ điều chỉnh có trễ: đọc thời điểm của từng khung (nhịp requestAnimationFrame), đo theo cửa sổ 2 giây,
+ * rồi trả lời nên hạ một nấc ('down'), nâng một nấc ('up'), trả lại mọi nấc ('reset') hay để yên (null).
+ * Chỉ QUYẾT ĐỊNH; việc áp nấc là của engine/gpu/ladder.js. Nấc đã áp là một ngăn xếp: `applied` nấc đầu của thang.
+ *
+ * Nhịp rAF không phải thời gian GPU: trình duyệt khóa nó theo màn hình (60 Hz: không bao giờ dưới 16,7 ms) và theo
+ * chế độ tiết kiệm pin (30 fps). Ba luật ngoài spec gốc sinh ra từ đó (spec §10, GĐ 3):
+ * 1. "Dư" gồm cả "không rớt khung nào mà trung bình không vượt ngân sách": màn 60 Hz mới nâng lại được.
+ *    Nâng một nấc mà phải hạ lại ngay đúng nấc đó thì khóa nó: không dao động qua lại.
+ * 2. Hạ hết thang mà không nhanh hơn lúc bắt đầu hạ thì nhịp đang bị khóa: trả lại hết ('reset') rồi thôi hạ.
+ *    Mốc "lúc bắt đầu hạ" ghi ở nấc đầu tiên (cả khi đang canh) và bỏ khi đã nâng về hết.
+ *    Hết khóa khi nhịp nhanh hẳn lên (≤ 1,05 × ngân sách như "dư vừa", hay nhanh hơn nhịp bị khóa ÷ 1,25). Còn khóa
+ *    mà chậm hẳn hơn nhịp bị khóa (× 1,25, 2 cửa sổ liền) thì là quá tải thật: vẫn hạ, để về lại nhịp ấy; về lại
+ *    đúng nhịp bị khóa 5 cửa sổ liền (người xem trả núm về) thì trả dần các nấc đó, Sổ tay mở thì chờ.
+ * 3. guard(true) khi Sổ tay mở: người xem cố ý làm chậm để học (tắt instancing, nhiều đom đóm), nên chậm vừa phải
+ *    thì để yên cho số đo trung thực; nhưng quá tải NẶNG (> ngân sách × 2,2) thì vẫn hạ, để máy không bị ép quá sức.
+ *    Lúc canh không bao giờ nâng.
+ *
+ * @param {{ budgetMs: number } & Partial<typeof TUNER>} options
+ */
+export function createTuner({ budgetMs, ...options }) {
+  const o = { ...TUNER, ...options };
+  let guarding = false; // Sổ tay đang mở: chỉ canh quá tải nặng
+  let since = null; // thời điểm bắt đầu đo (sau khi live, hay sau khi chạy lại)
+  let last = null; // thời điểm của khung trước
+  let gaps = []; // các khoảng giữa hai khung của cửa sổ đang đo
+  let total = 0;
+  let windowNo = 0;
+  let overRun = 0;
+  let spareRun = 0;
+  let descentStart = null; // trung bình của cửa sổ khiến hạ nấc đầu tiên (từ lúc chưa hạ gì)
+  let capped = false; // nhịp đang bị khóa: không hạ nữa, trừ khi chậm hẳn hơn nhịp bị khóa
+  let capAvg = null; // trung bình lúc nhận ra nhịp bị khóa
+  let beyondRun = 0; // số cửa sổ liền nhau chậm hẳn hơn nhịp bị khóa
+  let calmRun = 0; // số cửa sổ liền nhau đúng nhịp bị khóa (lúc đang bị khóa)
+  let lastUp = null; // { index, windowNo } của lần nâng gần nhất
+  const locked = new Set();
+  const cappedLocks = new Set(); // nấc khóa trong lúc bị khóa nhịp: hết khóa thì quên, cắm sạc luôn trả lại được
+
+  const clear = () => {
+    gaps = [];
+    total = 0;
+  };
+  /** Hạ lại đúng nấc vừa nâng, ngay trong vài cửa sổ: khóa nấc ấy (chống dao động). Trả true nếu vừa khóa. */
+  const lockIfBounced = (applied) => {
+    const bounced = lastUp !== null && lastUp.index === applied && windowNo - lastUp.windowNo <= o.lockWithin;
+    if (bounced) locked.add(applied);
+    return bounced;
+  };
+
+  /**
+   * Còn bị khóa nhịp. Chậm hẳn hơn nhịp bị khóa (người xem kéo núm nặng) là quá tải thật: hạ để về lại nhịp ấy.
+   * Về lại đúng nhịp bị khóa đủ lâu (người xem trả núm về): trả dần các nấc đã hạ lúc khóa; Sổ tay mở thì chờ.
+   */
+  function whileCapped(applied, steps) {
+    if (beyondRun >= o.downAfter && applied < steps) {
+      beyondRun = 0;
+      calmRun = 0;
+      if (lockIfBounced(applied)) cappedLocks.add(applied);
+      return 'down';
+    }
+    if (!guarding && calmRun >= o.upAfter && applied > 0 && !locked.has(applied - 1)) {
+      calmRun = 0;
+      lastUp = { index: applied - 1, windowNo };
+      return 'up';
+    }
+    return null;
+  }
+
+  /** Quyết định ở cuối mỗi cửa sổ. */
+  function decide(avg, drops, applied, steps) {
+    const over = avg > budgetMs * (guarding ? o.severe : o.over);
+    const spare = !guarding && (avg < budgetMs * o.spare || (avg <= budgetMs * o.near && drops === 0));
+    overRun = over ? overRun + 1 : 0;
+    spareRun = spare ? spareRun + 1 : 0;
+    if (capped) {
+      beyondRun = avg > capAvg * o.beyond ? beyondRun + 1 : 0;
+      calmRun = avg <= capAvg * o.near ? calmRun + 1 : 0;
+      if (avg > budgetMs * o.near && avg >= capAvg / o.beyond) return whileCapped(applied, steps);
+      capped = false; // hết khóa (cắm sạc, tắt tiết kiệm pin; màn 59,94 Hz hay rớt lẻ một khung vẫn tính): chạy lại
+      beyondRun = 0;
+      calmRun = 0;
+      overRun = 0; // các cửa sổ lúc bị khóa là nhịp của trình duyệt, không phải máy quá tải: đếm lại từ đầu
+      for (const index of cappedLocks) locked.delete(index);
+      cappedLocks.clear();
+    }
+    if (overRun >= o.downAfter) {
+      overRun = 0;
+      spareRun = 0;
+      if (applied < steps) {
+        if (applied === 0) descentStart = avg; // mốc của lần hạ này, ghi cả khi đang canh (Sổ tay mở)
+        lockIfBounced(applied);
+        return 'down';
+      }
+      if (!guarding && descentStart !== null && avg >= descentStart * o.gain) {
+        capped = true;
+        capAvg = avg;
+        beyondRun = 0;
+        calmRun = 0;
+        descentStart = null;
+        return 'reset';
+      }
+      return null;
+    }
+    if (spareRun >= o.upAfter && applied > 0 && !locked.has(applied - 1)) {
+      spareRun = 0;
+      lastUp = { index: applied - 1, windowNo };
+      if (applied === 1) descentStart = null; // nâng về hết: lần hạ sau đo mốc mới, không dùng lại mốc cũ
+      return 'up';
+    }
+    return null;
+  }
+
+  return {
+    /**
+     * Gọi MỘT lần mỗi khung, trước khi vẽ.
+     * @param {number} ms  thời điểm của khung (timestamp của requestAnimationFrame)
+     * @param {{ applied: number, steps: number }} ladder  số nấc đang áp và tổng số nấc của thang
+     * @returns {'down' | 'up' | 'reset' | null}
+     */
+    sample(ms, { applied, steps }) {
+      since ??= ms;
+      const gap = last === null ? null : ms - last;
+      last = ms;
+      if (gap === null) return null;
+      if (gap <= 0 || gap > o.hiccupMs) {
+        clear();
+        return null;
+      }
+      if (ms - since < o.warmupMs) return null;
+      gaps.push(gap);
+      total += gap;
+      if (total < o.windowMs) return null;
+      const avg = total / gaps.length;
+      // Rớt khung = số nhịp 60 khung/giây trôi qua mà không có khung nào, đếm trên cả cửa sổ. Không so từng khoảng:
+      // sau bộ chặn khung, màn 75 Hz hay 144 Hz có nhịp lệch đều (75 Hz: 26,7 + 13,3 + 13,3 + 13,3 ms) mà không
+      // rớt khung nào; phần lẻ dưới 0,75 nhịp là lệch pha ở hai đầu cửa sổ.
+      const missed = total / o.frameMs - gaps.length;
+      const drops = missed < 0.75 ? 0 : Math.round(missed);
+      clear();
+      windowNo += 1;
+      return decide(avg, drops, applied, steps);
+    },
+    /** Chuyển sang chế độ canh (Sổ tay mở) hay về như thường; đổi chế độ thì đo lại từ đầu, có khởi động. */
+    guard(on) {
+      guarding = on;
+      since = null;
+      last = null;
+      overRun = 0;
+      spareRun = 0;
+      beyondRun = 0;
+      calmRun = 0;
+      clear();
+    },
+    /** @returns {{ guarding: boolean, capped: boolean, locked: number[] }} */
+    state: () => ({ guarding, capped, locked: [...locked] }),
+  };
 }
