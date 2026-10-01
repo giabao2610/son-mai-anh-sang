@@ -19,7 +19,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # GĐ 3 trên ubuntu-latest: e2e chặn khoảng 12 phút, e2e WebGPU không chặn khoảng 10 phút (SwiftShader vẽ bằng CPU).
+    # Cổng chặn: unit, build, e2e tĩnh + WebGL2 trên SwiftShader (gồm cả a11y). GĐ 3 đo được khoảng 12 phút e2e.
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,17 +39,11 @@ jobs:
       - name: Build (Vite, base /son-mai-anh-sang/)
         run: npm run build
 
-      - name: Cài Chromium (đầy đủ + headless shell) và thư viện hệ thống
-        run: npx playwright install --with-deps chromium
+      - name: Cài Chromium headless shell và thư viện hệ thống
+        run: npx playwright install --with-deps --only-shell chromium
 
-      - name: E2E chặn · tranh tĩnh + WebGL2 trên SwiftShader
+      - name: E2E chặn · tranh tĩnh + WebGL2 trên SwiftShader (kèm a11y)
         run: npx playwright test --project=static --project=webgl2-swiftshader
-
-      # Playwright xóa thư mục output ở đầu mỗi lần chạy, nên lần này ghi vào thư mục con riêng.
-      - name: E2E không chặn · WebGPU trên SwiftShader (Chromium đầy đủ)
-        continue-on-error: true
-        timeout-minutes: 15 # treo thì chỉ bước này hỏng, job vẫn xong
-        run: npx playwright test --project=webgpu-swiftshader --output=e2e/.results/webgpu-swiftshader
 
       - name: Giữ ảnh chụp và trace của e2e
         if: ${{ !cancelled() }}
@@ -66,8 +60,44 @@ jobs:
         with:
           path: dist
 
+  # WebGPU trên SwiftShader (Chromium đầy đủ): KHÔNG chặn, chạy song song với build. GĐ 3 để bước này chung job build với
+  # trần 15 phút, và ở PR #3 nó chạy mất 14,9 phút; tách ra job riêng thì hỏng hay treo cũng không kéo build theo.
+  e2e-webgpu:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build (Vite, base /son-mai-anh-sang/)
+        run: npm run build
+
+      - name: Cài Chromium đầy đủ và thư viện hệ thống
+        run: npx playwright install --with-deps --no-shell chromium
+
+      - name: E2E không chặn · WebGPU trên SwiftShader
+        run: npx playwright test --project=webgpu-swiftshader
+
+      - name: Giữ ảnh chụp và trace của e2e WebGPU
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-results-webgpu
+          path: e2e/.results/
+          if-no-files-found: ignore
+          retention-days: 7
+
   deploy:
-    # Chỉ deploy từ main, và chỉ khi mọi bước chặn của job build đều qua.
+    # Chỉ deploy từ main, và chỉ khi mọi bước chặn của job build đều qua (không chờ job e2e-webgpu).
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
