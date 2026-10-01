@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 170" role="img" aria-labelledby="dg-pb-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
-  <title id="dg-pb-title">Hậu kỳ: cảnh được vẽ một lần ra hai ảnh (MRT): ảnh màu và ảnh chỉ có phần tự phát sáng. Bloom làm nhòe ảnh phát sáng rồi cộng vào ảnh màu. Tone mapping nén dải sáng HDR về màn hình.</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 240" role="img" aria-labelledby="dg-pb-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-pb-title">Hậu kỳ hai chặng. Chặng build: cảnh được vẽ một lần ra hai ảnh (MRT), ảnh màu và ảnh chỉ có phần tự phát sáng; bloom làm nhòe ảnh phát sáng rồi cộng vào ảnh màu; tone mapping nén dải sáng HDR về màn hình. Chặng display: LUT sơn mài, hạt, tối góc, rồi FXAA khử răng cưa.</title>
   <defs>
     <marker id="dg-pb-mui" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M0 0 L10 5 L0 10 Z" fill="#D4A94A"/>
@@ -12,6 +12,12 @@
     <rect x="200" y="104" width="54" height="36" rx="6"/>
     <rect x="280" y="60" width="70" height="44" rx="6"/>
   </g>
+  <g fill="#3B1F14" stroke="#D4A94A" stroke-width="1">
+    <rect x="10" y="182" width="70" height="36" rx="6"/>
+    <rect x="100" y="182" width="70" height="36" rx="6"/>
+    <rect x="190" y="182" width="70" height="36" rx="6"/>
+    <rect x="280" y="182" width="70" height="36" rx="6"/>
+  </g>
   <g fill="#EDE3CF" text-anchor="middle">
     <text x="41" y="86">cảnh</text>
     <text x="140" y="48">màu</text>
@@ -19,6 +25,10 @@
     <text x="227" y="126">bloom</text>
     <text x="315" y="80">tone</text>
     <text x="315" y="95">mapping</text>
+    <text x="45" y="204">LUT</text>
+    <text x="135" y="204">hạt</text>
+    <text x="225" y="204">tối góc</text>
+    <text x="315" y="204">FXAA</text>
   </g>
   <g stroke="#D4A94A" stroke-width="1.6" fill="none">
     <path d="M72 76 L102 50" marker-end="url(#dg-pb-mui)"/>
@@ -26,9 +36,13 @@
     <path d="M176 122 H198" marker-end="url(#dg-pb-mui)"/>
     <path d="M176 44 H246 L278 72" marker-end="url(#dg-pb-mui)"/>
     <path d="M254 116 L278 92" marker-end="url(#dg-pb-mui)"/>
+    <path d="M315 104 V150 H45 V180" marker-end="url(#dg-pb-mui)"/>
+    <path d="M80 200 H98" marker-end="url(#dg-pb-mui)"/>
+    <path d="M170 200 H188" marker-end="url(#dg-pb-mui)"/>
+    <path d="M260 200 H278" marker-end="url(#dg-pb-mui)"/>
   </g>
-  <text x="88" y="16" fill="#8A8580" text-anchor="middle">MRT: 1 lần vẽ, 2 ảnh</text>
+  <text x="88" y="16" fill="#8A8580" text-anchor="middle">build · HDR: 1 lần vẽ, 2 ảnh (MRT)</text>
   <text x="262" y="92" fill="#F2D48A" text-anchor="middle">+</text>
-  <text x="315" y="126" fill="#8A8580" text-anchor="middle">HDR → màn hình</text>
-  <text x="180" y="162" fill="#F2D48A" text-anchor="middle">chỉ thứ phát sáng mới tỏa (bloom chọn lọc)</text>
+  <text x="180" y="164" fill="#8A8580" text-anchor="middle">display · màu màn hình</text>
+  <text x="180" y="234" fill="#F2D48A" text-anchor="middle">chỉ thứ phát sáng mới tỏa; FXAA đứng cuối</text>
 </svg>

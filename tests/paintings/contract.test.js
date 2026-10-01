@@ -8,6 +8,8 @@ import { mergePalette } from '../../src/engine/palette.js';
 import { hasCode } from '../../src/ui/code-view.js';
 import { NOW, buildPainting } from '../helpers/fake-ctx.js';
 import { svgColors } from '../helpers/svg.js';
+import { pass } from 'three/tsl';
+import { buildFinalNode, makeMRT } from '../../src/engine/gpu/pipeline.js';
 
 const SRC = resolve(import.meta.dirname, '../../src');
 const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -225,6 +227,19 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
           expect(e?.label && e?.explain, `nhãn + lời giải thích của thí nghiệm "${id}.${exp.id}"`).toBeTruthy();
         }
         for (const r of layer.readouts ?? []) expect(text.readouts?.[r.id], `nhãn số đo "${id}.${r.id}"`).toBeTruthy();
+      }
+    });
+
+    it.each(langs)('%s: mọi tap mà các lớp ghi trong build/display có nhãn ở content.layers[id].taps (GĐ 4)', async (lang) => {
+      const { default: content } = await entry.content[lang]();
+      const { ctx, built } = buildPainting(await entry.load(), meta);
+      const scenePass = pass(ctx.scene, ctx.camera);
+      scenePass.setMRT(makeMRT());
+      const channel = (name) => (name === 'depth' ? scenePass.getLinearDepthNode() : scenePass.getTextureNode(name));
+      const taps = [];
+      buildFinalNode({ color: channel('output'), channel, layers: built, weight: ctx.weight, taps });
+      for (const { layerId, tapId } of taps) {
+        expect(content.layers?.[layerId]?.taps?.[tapId], `nhãn tap "${layerId}:${tapId}"`).toBeTruthy();
       }
     });
 
