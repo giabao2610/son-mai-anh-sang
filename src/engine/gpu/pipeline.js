@@ -1,47 +1,61 @@
-// engine/gpu/pipeline.js — scene pass + MRT (output, emissive); nối post của các lớp: build → renderOutput → display; alpha luôn 1.
+// engine/gpu/pipeline.js — scene pass + MRT (output, emissive; normal khi cần); nối post của các lớp: build → renderOutput → display → overlay; alpha luôn 1.
 import { RenderPipeline, BlendMode, MaterialBlending, NoToneMapping } from 'three/webgpu';
-import { pass, mrt, output, emissive, vec4, renderOutput } from 'three/tsl';
+import { pass, mrt, output, emissive, normalView, packNormalToRGB, vec4, renderOutput } from 'three/tsl';
+import { createViews } from './views.js';
 
 /**
  * Nối post của các lớp thành MỘT đồ thị node. Gọi một lần khi dựng pipeline:
  *
- *   màu scene pass → build của từng lớp → renderOutput(x, NoToneMapping) → display của từng lớp → vec4(rgb, 1)
+ *   màu scene pass → build của từng lớp → renderOutput(x, NoToneMapping) → display của từng lớp   (= ảnh cuối)
  *
  * - build nhận HDR tuyến tính (bloom, tone mapping). Tone mapping là việc của lớp Phủ bóng, viết bằng node,
  *   nên renderOutput chỉ đổi không gian màu tuyến tính → sRGB (NoToneMapping), không tone map lần nữa.
  * - display nhận màu hiển thị sRGB (LUT, grain, vignette, FXAA: GĐ 4).
- * - Kết quả luôn có alpha = 1: canvas mặc định có alpha, và renderOutput "bỏ nhân trước" alpha;
- *   chỗ nào alpha 0 sẽ ra vec4(0), tức trong suốt, và poster phía sau lộ ra (luật 3: không bao giờ trong suốt).
+ * - tap(tapId, node) (GĐ 4): lớp chụp một bước giữa chừng thành view '<layerId>:<tapId>' cho công cụ học. Ghi vào `taps`
+ *   theo thứ tự gặp; `linear` cho biết node còn tuyến tính (chụp ở build) hay đã là màu hiển thị (chụp ở display).
  *
- * @param {{ color: any, channel: (name: string) => any, layers: { id: string, layer: object }[], weight: (id: string) => any }} input
+ * @param {{ color: any, channel: (name: string) => any, layers: { id: string, layer: object }[], weight: (id: string) => any,
+ *   taps?: { layerId: string, tapId: string, node: any, linear: boolean }[] }} input
+ * @returns {any} ảnh cuối ở không gian hiển thị, CHƯA có overlay của công cụ (views.js ghép, rồi vec4(rgb, 1))
  */
-export function buildOutputNode({ color, channel, layers, weight }) {
+export function buildFinalNode({ color, channel, layers, weight, taps = [] }) {
+  const tapFor = (layerId, linear) => (tapId, node) => taps.push({ layerId, tapId, node, linear });
   let c = color;
   for (const { id, layer } of layers) {
-    if (layer.post?.build) c = layer.post.build({ color: c, channel, weight: weight(id) });
+    if (layer.post?.build) c = layer.post.build({ color: c, channel, weight: weight(id), tap: tapFor(id, true) });
   }
   c = renderOutput(c, NoToneMapping);
   for (const { id, layer } of layers) {
-    if (layer.post?.display) c = layer.post.display({ color: c, channel, weight: weight(id) });
+    if (layer.post?.display) c = layer.post.display({ color: c, channel, weight: weight(id), tap: tapFor(id, false) });
   }
-  return vec4(c.rgb, 1);
+  return c;
+}
+
+/**
+ * MRT của scene pass: một lần vẽ scene ghi nhiều ảnh. `output`: màu đã chiếu sáng; `emissive`: riêng phần tự phát sáng
+ * (bloom chỉ đọc ảnh này, nên chỉ thứ có emissive mới tỏa: bloom chọn lọc); `normal` (GĐ 4, chỉ khi công cụ cần):
+ * pháp tuyến trong không gian camera, nén về [0, 1] bằng packNormalToRGB để ghi được vào ảnh.
+ * Target MRT khác 'output' mặc định KHÔNG blend: các sprite cộng dồn (AdditiveBlending) sẽ đè lên nhau trong ảnh
+ * emissive. MaterialBlending cho target này dùng đúng blend của material. Dựng MRT mới thì phải đặt lại blend.
+ * @param {{ normal?: boolean }} [options]
+ */
+export function makeMRT({ normal = false } = {}) {
+  const outputs = { output, emissive: vec4(emissive, output.a) };
+  if (normal) outputs.normal = vec4(packNormalToRGB(normalView), 1);
+  const passMRT = mrt(outputs);
+  passMRT.setBlendMode('emissive', new BlendMode(MaterialBlending));
+  return passMRT;
 }
 
 /**
  * Dựng pipeline hậu kỳ của cảnh.
  * @param {{ renderer: any, scene: any, camera: any, layers: { id: string, layer: object }[], weight: (id: string) => any }} options
- * @returns {{ scenePass: any, renderPipeline: any, render: () => void, compile: () => Promise<void>, views: () => { id: string, label: string, ready: boolean }[], dispose: () => void }}
+ * @returns {{ scenePass: any, renderPipeline: any, views: ReturnType<typeof createViews>, render: () => void,
+ *   compile: () => Promise<void>, dispose: () => void }}
  */
 export function createPipeline({ renderer, scene, camera, layers, weight }) {
   const scenePass = pass(scene, camera);
-
-  // MRT: một lần vẽ scene ghi HAI ảnh: màu đã chiếu sáng (output) và riêng phần tự phát sáng (emissive).
-  // Bloom chỉ đọc ảnh emissive, nên chỉ thứ có emissive mới tỏa sáng (bloom chọn lọc).
-  const passMRT = mrt({ output, emissive: vec4(emissive, output.a) });
-  // Target MRT khác 'output' mặc định KHÔNG blend: các sprite cộng dồn (AdditiveBlending) sẽ đè lên nhau
-  // trong ảnh emissive. MaterialBlending cho target này dùng đúng blend của material.
-  passMRT.setBlendMode('emissive', new BlendMode(MaterialBlending));
-  scenePass.setMRT(passMRT);
+  scenePass.setMRT(makeMRT());
 
   const channel = (name) => {
     if (name === 'output' || name === 'emissive') return scenePass.getTextureNode(name);
@@ -50,9 +64,15 @@ export function createPipeline({ renderer, scene, camera, layers, weight }) {
   };
 
   const renderPipeline = new RenderPipeline(renderer);
-  // renderOutput đã nằm sẵn trong đồ thị (buildOutputNode), nên tắt bước three tự thêm ở cuối.
+  // renderOutput đã nằm sẵn trong đồ thị (buildFinalNode), nên tắt bước three tự thêm ở cuối.
   renderPipeline.outputColorTransform = false;
-  renderPipeline.outputNode = buildOutputNode({ color: channel('output'), channel, layers, weight });
+  // Biên dịch trước với ĐÚNG render target + MRT của pass. renderer.compileAsync(scene, camera)
+  // thì biên dịch cho canvas, không có MRT, nên khung đầu vẫn phải biên dịch lại.
+  const compile = () => scenePass.compileAsync(renderer);
+  const taps = [];
+  const final = buildFinalNode({ color: channel('output'), channel, layers, weight, taps });
+  const views = createViews({ scenePass, renderPipeline, mrtFor: makeMRT, final, taps, compile });
+  views.setOverlays([]); // chưa có công cụ: ảnh cuối → vec4(rgb, 1)
 
   return {
     scenePass,
@@ -60,11 +80,9 @@ export function createPipeline({ renderer, scene, camera, layers, weight }) {
     // bị xóa, RenderPipeline sẽ tự renderOutput() thêm một lần nữa bằng renderer.toneMapping/
     // outputColorSpace lúc render() thật, tô màu tuyến tính → sRGB hai lần trên outputNode đã sRGB.
     renderPipeline,
+    views,
     render: () => renderPipeline.render(),
-    // Biên dịch trước với ĐÚNG render target + MRT của pass. renderer.compileAsync(scene, camera)
-    // thì biên dịch cho canvas, không có MRT, nên khung đầu vẫn phải biên dịch lại.
-    compile: () => scenePass.compileAsync(renderer),
-    views: () => [{ id: 'final', label: 'final', ready: true }],
+    compile,
     dispose: () => {
       renderPipeline.dispose();
       scenePass.dispose();
