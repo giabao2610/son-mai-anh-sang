@@ -142,6 +142,10 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
     const { painting } = await loadPainting();
     if (!painting.quality) return;
     expect(Object.keys(painting.quality.levels).sort(), 'quality.levels phải có cao, vua, thap').toEqual(['cao', 'thap', 'vua']);
+    // Ba mức cùng bộ khóa (GĐ 4): thiếu một khóa ở một mức thì lớp lặng lẽ lấy số mặc định của nó, không ai hay.
+    const keys = Object.fromEntries(Object.entries(painting.quality.levels).map(([level, l]) => [level, Object.keys(l).sort()]));
+    expect(keys.vua, 'quality.levels.vua phải có cùng khóa với cao').toEqual(keys.cao);
+    expect(keys.thap, 'quality.levels.thap phải có cùng khóa với cao').toEqual(keys.cao);
     const { ladder } = painting.quality;
     expect(new Set(ladder).size, `ladder có mục trùng: ${ladder.join(', ')}`).toBe(ladder.length);
     const { built } = buildPainting(painting, meta, { level: 'cao' });
