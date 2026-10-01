@@ -214,14 +214,16 @@ describe('buildScene', () => {
     stage.renderer.resolveTimestampsAsync.mockImplementation(async () => 160);
     scene.quality.start();
     let ms = 0;
+    const shown = new Set(); // ms GPU mà Sổ tay đọc được ở từng khung
     for (let i = 0; i < 20; i++) {
       scene.step((ms += 1000 / 60));
       await Promise.resolve();
       await Promise.resolve();
+      shown.add(scene.studio.stats().gpuMs);
     }
-    expect(scene.studio.stats().gpuMs).toBeNull();
+    expect([...shown]).toEqual([null]); // không khung nào hiện 160 ms, kể cả mẫu của lần hỏi đầu
     expect(scene.studio.quality()).toMatchObject({ gpu: false, steps: [] });
-    expect(stage.renderer.resolveTimestampsAsync.mock.calls.length).toBeLessThanOrEqual(4); // lần đầu + 3 lần vô lý
+    expect(stage.renderer.resolveTimestampsAsync.mock.calls.length).toBeLessThanOrEqual(4); // lần đầu (bỏ: chưa có trần) + 3 lần vô lý
   });
 
   it('?freeze: không có bộ điều chỉnh (ảnh tất định); hạ/nâng tay vẫn được, rồi vẽ lại', async () => {

@@ -1,4 +1,5 @@
 // engine/gpu/gpu-timer.js — ms GPU mỗi khung: hỏi renderer.resolveTimestampsAsync (render + compute) sau khi vẽ, không chờ, không hỏi chồng.
+import { TUNER } from '../tuner.js';
 
 /** Hỏng chừng này lần liền (bị reject, hay số vô lý) thì thôi đo GPU cho phiên này. */
 export const GPU_FAIL_LIMIT = 3;
@@ -20,7 +21,9 @@ export const GPU_PLAUSIBLE = 1.5;
  *
  * Mỗi lần hỏi, three gom rồi xóa các truy vấn của những khung vẽ từ lần hỏi trước (một "mẻ"). Trần cho số trả về là nhịp khung
  * trung bình của mẻ đó × GPU_PLAUSIBLE: GPU vẽ lần lượt từng pass thì không thể bận lâu hơn nhịp khung. Máy nặng lên đột ngột
- * (bật thí nghiệm nặng) chỉ lệch một mẫu, vì mẻ sau đã đo theo nhịp mới.
+ * (bật thí nghiệm nặng) chỉ lệch một mẫu, vì mẻ sau đã đo theo nhịp mới. Mẻ không có nhịp khung đáng tin thì không có trần:
+ * lần hỏi đầu (chưa có mốc), hay mẻ có nhịp trung bình dài hơn một lần nghẽn (TUNER.hiccupMs: lúc hòa dần không hỏi, tab ẩn).
+ * Mẫu của mẻ đó bị bỏ mà không tính là hỏng: số chưa kiểm được thì không đưa cho Sổ tay hay bộ điều chỉnh.
  *
  * @param {any} renderer  WebGPURenderer ĐÃ init()
  * @param {{ onSample?: (ms: number) => void, onStop?: () => void }} [options]
@@ -56,7 +59,8 @@ export function createGpuTimer(renderer, { onSample = () => {}, onStop = () => {
       if (pending) return;
       pending = true;
       const frameMs = askedAt === null ? 0 : (now - askedAt) / frames; // nhịp khung trung bình của mẻ này
-      const limit = frameMs > 0 ? frameMs * GPU_PLAUSIBLE : Infinity; // lần hỏi đầu (hay không có mốc): chưa có trần
+      // null: mẻ không có nhịp đáng tin (lần hỏi đầu, không có mốc, hay dài hơn một lần nghẽn), nên không có trần để kiểm
+      const limit = frameMs > 0 && frameMs <= TUNER.hiccupMs ? frameMs * GPU_PLAUSIBLE : null;
       askedAt = now;
       frames = 0;
       const withCompute = computes > 0;
@@ -68,9 +72,14 @@ export function createGpuTimer(renderer, { onSample = () => {}, onStop = () => {
         .then(([render, compute]) => {
           if (dead) return;
           const ms = render + (compute ?? 0);
-          // Số vô lý (0, âm, NaN, vô cực, undefined khi pool chưa có, hay lâu hơn hẳn nhịp khung): bỏ mẫu đó.
-          if (!(render > 0) || !Number.isFinite(ms) || ms > limit) {
+          // Số vô lý (0, âm, NaN, vô cực, undefined khi pool chưa có): hỏng, kể cả ở lần hỏi đầu.
+          if (!(render > 0) || !Number.isFinite(ms)) {
             fail();
+            return;
+          }
+          if (limit === null) return; // không có trần để kiểm: bỏ mẫu, không tính là hỏng (Apple trả ~160 ms ngay lần đầu)
+          if (ms > limit) {
+            fail(); // lâu hơn hẳn nhịp khung của mẻ: GPU báo các pass chồng nhau (Phụ lục A.48)
             return;
           }
           failures = 0;
