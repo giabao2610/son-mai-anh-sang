@@ -33,6 +33,14 @@ describe('appliesNow', () => {
 });
 
 describe('mountKnobs', () => {
+  it('mọi ô nhập của Tweakpane (ô số, ô chọn, ô màu, ô đánh dấu) có aria-label là nhãn của núm (axe: luật label, GĐ 4)', () => {
+    const { container } = mount();
+    const inputs = [...container.querySelectorAll('[data-knob] input, [data-knob] select')];
+    expect(inputs.length).toBeGreaterThanOrEqual(knobs.length);
+    for (const input of inputs) expect(input.getAttribute('aria-label'), input.outerHTML.slice(0, 60)).toBeTruthy();
+    expect(container.querySelector('[data-knob="size"] input').getAttribute('aria-label')).toBe('Cỡ');
+  });
+
   it('mỗi núm một blade có data-knob; nhãn từ content, thiếu thì dùng id', () => {
     const { blade, pane } = mount();
     for (const { id } of knobs) expect(blade(id), id).not.toBeNull();

@@ -1,4 +1,4 @@
-// e2e/helpers.js — Tiện ích e2e: chờ __sma ổn định, chờ khung, đọc pixel canvas, báo GPU, gom lỗi console.
+// e2e/helpers.js — Tiện ích e2e: chờ __sma ổn định, chờ khung, đọc pixel canvas (cả khung và từng vùng), báo GPU, gom lỗi console.
 
 /** Cảnh báo API cũ mà three in ra lúc chạy (spec §3: e2e bắt các cảnh báo này). */
 export const DEPRECATION = /deprecated|renamed|has been removed/i;
@@ -70,6 +70,67 @@ export async function canvasStats(page, selector = '[data-stage] canvas') {
     const n = img.width * img.height;
     return { width: img.width, height: img.height, bright: bright / n, dark: dark / n, checksum: sum };
   }, png.toString('base64'));
+}
+
+/** Cả khung (tọa độ 0–1): vùng mặc định của canvasRegions. */
+export const FULL = { x0: 0, y0: 0, x1: 1, y1: 1 };
+
+/**
+ * Số đo của từng VÙNG canvas (GĐ 4, công cụ học): vùng là hình chữ nhật { x0, y0, x1, y1 } theo tỉ lệ khung (0–1), có thể
+ * kèm `ring: { r, inside }` để chỉ lấy điểm trong (inside: true) hay ngoài một vòng tròn giữa khung bán kính r × cạnh ngắn.
+ * Mỗi vùng: checksum, độ sáng trung bình (0–1), độ lệch chuẩn độ sáng, sắc độ trung bình (chroma = (max − min) / 255: đo
+ * theo tuyệt đối, vì độ bão hòa (max − min) / max thổi phồng những điểm gần đen như nền đen then), và `transparent`: số
+ * điểm canvas trong suốt. Lúc chụp, nền trang tô màu hồng sen (#ff00ff): điểm trong suốt để lộ nền ấy ra.
+ * @param {import('@playwright/test').Page} page
+ * @param {Record<string, { x0: number, y0: number, x1: number, y1: number, ring?: { r: number, inside: boolean } }>} regions
+ */
+export async function canvasRegions(page, regions = { all: FULL }, selector = '[data-stage] canvas') {
+  const style = `${STAGE_ONLY} html, body { background: #ff00ff !important; }`;
+  const png = await page.locator(selector).screenshot({ style });
+  return page.evaluate(async ({ b64, regions: wanted }) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const { width: w, height: h } = img;
+    const c = new OffscreenCanvas(w, h);
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, w, h).data;
+    const out = {};
+    for (const [name, r] of Object.entries(wanted)) {
+      let n = 0;
+      let sum = 0;
+      let sumL = 0;
+      let sumL2 = 0;
+      let sumS = 0;
+      let transparent = 0;
+      const radius = r.ring ? r.ring.r * Math.min(w, h) : 0;
+      for (let y = Math.floor(r.y0 * h); y < Math.floor(r.y1 * h); y++) {
+        for (let x = Math.floor(r.x0 * w); x < Math.floor(r.x1 * w); x++) {
+          if (r.ring && (Math.hypot(x + 0.5 - w / 2, y + 0.5 - h / 2) < radius) !== r.ring.inside) continue;
+          const i = (y * w + x) * 4;
+          const [R, G, B] = [d[i], d[i + 1], d[i + 2]];
+          const max = Math.max(R, G, B);
+          const min = Math.min(R, G, B);
+          const l = (0.2126 * R + 0.7152 * G + 0.0722 * B) / 255;
+          n += 1;
+          sum += (R * 3 + G * 5 + B * 7) * ((x % 13) + 1);
+          sumL += l;
+          sumL2 += l * l;
+          sumS += (max - min) / 255;
+          if (R > 240 && G < 20 && B > 240) transparent += 1;
+        }
+      }
+      const mean = sumL / n;
+      out[name] = { checksum: sum, mean, std: Math.sqrt(Math.max(sumL2 / n - mean * mean, 0)), chroma: sumS / n, transparent };
+    }
+    return out;
+  }, { b64: png.toString('base64'), regions });
+}
+
+/** Chờ hai nhịp requestAnimationFrame: vẽ lại khung đứng yên (?freeze) xảy ra ở nhịp kế tiếp sau thay đổi. */
+export function twoFrames(page) {
+  return page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
 /** Hỏi thẳng trình duyệt nó có GPU gì (để bỏ qua test WebGPU khi không có adapter). */
