@@ -126,6 +126,20 @@ for (const { meta, page, lang } of paintings) {
   });
 }
 
+describe('styles/tools.css (GĐ 4)', () => {
+  it('thanh công cụ nằm DƯỚI thanh lớp và Sổ tay (z-index nhỏ hơn hẳn): sau "Dựng lại cảnh", thanh công cụ mới được gắn sau chúng trong DOM, tay nắm gạt không được đè lên', () => {
+    const zIndex = (file, selector) => {
+      const css = readFileSync(ROOT + file, 'utf8');
+      const rule = css.match(new RegExp(`(?:^|\\n)${selector}\\s*\\{([^}]*)\\}`));
+      return Number(rule?.[1].match(/z-index:\s*(\d+)/)?.[1]);
+    };
+    const toolbar = zIndex('src/styles/tools.css', '\\.toolbar');
+    const panels = zIndex('src/styles/notebook.css', '\\.rail,\\s*\\.notebook');
+    expect([toolbar, panels].every(Number.isFinite), `toolbar ${toolbar}, rail/notebook ${panels}`).toBe(true);
+    expect(toolbar).toBeLessThan(panels);
+  });
+});
+
 describe('styles/shell.css (trang nào cũng dùng)', () => {
   it('@import tokens.css, notebook.css (GĐ 2), tools.css (GĐ 4) rồi đúng 5 file font theo trọng lượng (spec §5), trước luật đầu tiên', () => {
     const css = readFileSync(ROOT + 'src/styles/shell.css', 'utf8');

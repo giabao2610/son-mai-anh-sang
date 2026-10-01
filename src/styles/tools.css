@@ -5,7 +5,9 @@
    và tay nắm gạt (con của .tool) phải đo theo cả khung nhìn. Nền mờ đặt ở .tool-panel. */
 .toolbar {
   position: fixed;
-  z-index: 2;
+  /* Dưới thanh lớp và Sổ tay (z-index 2), trên tranh và lớp chữ. Bằng nhau thì thứ tự DOM quyết định: "Dựng lại cảnh" gắn
+     thanh công cụ mới SAU thanh lớp, và tay nắm gạt (cao cả khung) sẽ đè lên thanh lớp, Sổ tay. */
+  z-index: 1;
   left: 0;
   right: 0;
   bottom: calc(var(--gutter) + 8px);
