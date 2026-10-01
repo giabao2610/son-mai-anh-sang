@@ -36,6 +36,11 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 beforeEach(() => document.body.replaceChildren());
 
 describe('Kính mài', () => {
+  it('viền kính hiện đúng vàng lá #D4A94A: overlay trộn với ảnh cuối ở không gian hiển thị, nên màu viền là số sRGB, không phải số tuyến tính', () => {
+    const shown = [kinhMai.RIM.r, kinhMai.RIM.g, kinhMai.RIM.b].map((v) => Math.round(v * 255));
+    expect(shown).toEqual([0xd4, 0xa9, 0x4a]);
+  });
+
   it('thanh điều khiển: hai nút hình (Tròn đang chọn), nút view lấy từ views() bỏ ảnh cuối; tay nắm gạt ẩn khi kính tròn', () => {
     const api = fakeApi();
     kinhMai.mount(api);

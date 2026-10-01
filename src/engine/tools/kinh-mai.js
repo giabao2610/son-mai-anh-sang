@@ -1,5 +1,5 @@
 // engine/tools/kinh-mai.js — công cụ Kính mài: soi một view (trước tone, emissive, normal…) qua kính tròn đi theo tay, hay gạt trước/sau.
-import { Vector2 } from 'three/webgpu';
+import { Color, Vector2 } from 'three/webgpu';
 import { Fn, If, abs, color, length, min, mix, oneMinus, screenCoordinate, screenSize, smoothstep, step, uniform, vec3, vec4 } from 'three/tsl';
 import { h } from '../../ui/dom.js';
 import { pickView } from './pick.js';
@@ -9,7 +9,10 @@ export const id = 'kinh-mai';
 /** Bán kính mặc định của kính tròn: 18% cạnh ngắn của khung (spec §7). */
 export const LENS_RADIUS = 0.18;
 const SHAPES = ['tron', 'gat']; // chỉ số trong uniform lens_shape
-const RIM = '#D4A94A'; // viền vàng lá của bảng sơn mài
+// Viền vàng lá #D4A94A của bảng sơn mài. Overlay trộn với ảnh cuối, mà ảnh cuối đã ở không gian hiển thị (sRGB, sau renderOutput),
+// nên màu viền phải là số sRGB. Color('#D4A94A') của three tự đổi sang không gian tuyến tính (ColorManagement): dùng thẳng thì viền
+// ra cam đất (168, 101, 17). convertLinearToSRGB() đổi ngược về đúng số của #D4A94A.
+export const RIM = new Color('#D4A94A').convertLinearToSRGB();
 const STEP = 0.02; // một lần bấm mũi tên trên tay nắm gạt: 2% chiều ngang
 const HOLD = ['tap', 'hold-start', 'hold-move', 'hold-end'];
 const clamp01 = (v) => Math.min(Math.max(v, 0), 1);
