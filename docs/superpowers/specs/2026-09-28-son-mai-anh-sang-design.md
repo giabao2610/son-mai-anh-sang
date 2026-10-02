@@ -99,6 +99,14 @@ Ao Sen Đêm là **Bức 1**. Đèn kéo quân, Đông Hồ, Cung Quế về sau
   - kiểm tra a11y bằng axe-core ngay trong e2e.
 
   Đồ nghề (Kính mài, Lột lớp, thanh giờ) nằm trong thanh lớp. Kính mài có hai hình: tròn, và gạt trước/sau (§4.1, §7).
+- **(GĐ 5)** GĐ 5 là giai đoạn tùy chọn. Bạn chọn ba mục trong sáu mục của §14:
+  - **Trăng tiến độ:** trăng cạnh con dấu có một vòng quầng vẽ dần theo các bước tải cảnh 3D (§4.1);
+  - **Từng sợi:** công cụ học thứ ba, dựng lại khung hình từng lần vẽ một, chỉ trong lượt vẽ cảnh (§7);
+  - **Thả hoa đăng:** chạm hai lần lên nước thì thả một ngọn hoa đăng mang một cặp câu thơ, chữ đi theo đèn (§4.2).
+
+  Bạn duyệt ba cách làm: Từng sợi chặn lần vẽ bằng `renderer.setRenderObjectFunction`; xưởng thêm `ctx.captions` cho chữ đi theo một
+  điểm 3D; hoa đăng thuộc lớp Ánh trăng, gộp với đèn ở bờ thành một InstancedMesh. Link công thức, "Xem bản dịch" và đàn bầu để sau
+  (§16). Bạn giao cho Claude tự quyết chi tiết của Từng sợi, trăng tiến độ và phần kiểm thử, rồi duyệt lại một lượt trong spec.
 
 ### Giả định (bạn đã xem và không phản đối)
 - Project nằm ở `~/Documents/Projects/son-mai-anh-sang`.
@@ -153,6 +161,14 @@ Ao Sen Đêm là **Bức 1**. Đèn kéo quân, Đông Hồ, Cung Quế về sau
    - HTML tĩnh hiện ngay poster của bức, tên bức, thơ và con dấu ngày âm lịch.
    - JS 3D tải ngầm, dò tầng, biên dịch trước (`scenePass.compileAsync(renderer)`), rồi vẽ một khung ẩn sau poster để các pipeline còn lại kịp biên dịch.
    - Sau đó **hòa dần** từ poster sang cảnh 3D. Poster được ẩn khi hòa xong. Không có spinner.
+   - (GĐ 5) **Trăng tiến độ:** trong lúc tải phần 3D, trăng SVG cạnh con dấu có thêm một **vòng quầng** mảnh màu vàng lá, vẽ dần
+     theo chiều kim đồng hồ từ đỉnh. Trăng vẫn giữ đúng pha đêm nay; chỉ quầng là tiến độ.
+     - Quầng hiện từ `loading`. Nó nhích qua từng mốc: tải xong code 3D, dựng xong renderer và bức, biên dịch xong shader, vẽ xong
+       khung ẩn. Giữa hai mốc, quầng bò chậm dần về mốc sau, nên mạng chậm vẫn thấy nó nhích chứ không đứng hẳn.
+     - Quầng đầy ở `fading` rồi tan cùng lúc hòa dần. Tầng tĩnh không có quầng; rơi về tĩnh giữa chừng thì quầng biến mất ngay.
+       "Dựng lại cảnh" vẽ quầng lại từ đầu.
+     - Quầng chỉ để nhìn (`aria-hidden`, như trăng). Người xem xin giảm chuyển động thì quầng nhảy thẳng tới từng mốc, không bò.
+     - Chi tiết ở §8.5.
 2. **Ngắm (mặc định):** không có UI.
    - Chỉ có câu thơ ở góc và camera chuyển động chậm như đang thở (GĐ 1).
    - Kéo để xoay camera trong giới hạn do bức khai báo (`CameraSpec`).
@@ -191,6 +207,7 @@ Ao Sen Đêm là **Bức 1**. Đèn kéo quân, Đông Hồ, Cung Quế về sau
      và tranh về ảnh cuối.
    - Công cụ đang bật hiện thanh điều khiển của nó: trên máy tính ở giữa đáy tranh, trên điện thoại ngay trên dải thanh lớp.
      Trên điện thoại, Sổ tay thu lại khi một công cụ bật, để chừa chỗ nhìn cảnh.
+   - (GĐ 5) Đồ nghề có thêm **Từng sợi** (§7): dựng lại khung hình từng lần vẽ một, theo đúng thứ tự GPU nhận.
 7. **Núm của bức (Dial, GĐ 4):** xưởng vẽ thanh trượt cho mọi Dial mà bức khai báo. Thanh trượt nằm trong thanh lớp, dưới "Đồ nghề".
    - Mỗi Dial là một `input type="range"`:
      - nhãn lấy từ `content.dials[id].label`;
@@ -209,9 +226,18 @@ Ao Sen Đêm là **Bức 1**. Đèn kéo quân, Đông Hồ, Cung Quế về sau
 9. **Chế độ thợ:**
    - `?debug` ở GĐ 0: in chi tiết lỗi. Từ GĐ 1: mở thêm three.js Inspector.
    - `?debug=stats` (GĐ 1): mở stats-gl. Không bật cùng lúc với Inspector.
+10. **Chữ đi theo vật (GĐ 5):** bức có thể cho một dòng chữ (thơ, chú thích) hiện cạnh một điểm trong cảnh và đi theo điểm đó.
+    - Chữ nằm ở `content.captions[key]`, cùng dạng với thơ của meta: `{ lines, source, author? }`. Bức gọi
+      `ctx.captions.show(key, anchor)`, với `anchor()` trả vị trí 3D của điểm neo ở mỗi khung (§8.4).
+    - Mỗi lúc một dòng: dòng mới thay dòng đang hiện. Chữ hiện mờ dần, đứng chừng 9 giây theo đồng hồ của cảnh, rồi tan.
+    - Vùng chứa chữ là một `aria-live="polite"` phủ lên canvas. Theo luật của vùng live, nó không bao giờ `hidden` và để trống khi
+      không có chữ. Trình đọc màn hình đọc câu chữ và nguồn.
+    - Điểm neo ra ngoài khung hay ra sau camera thì chữ ẩn đi (vẫn nằm trong vùng live).
+    - `?poster` không có chữ. Người xem xin giảm chuyển động thì chữ không mờ dần. Tầng tĩnh không có cảnh nên không có chữ.
 
 ### 4.2 Trải nghiệm riêng của Bức 1 · Ao Sen Đêm
-- Gợi ý duy nhất: *"Chạm vào mặt nước"*, lấy từ `content.hint` (GĐ 1).
+- Gợi ý duy nhất: *"Chạm vào mặt nước"*, lấy từ `content.hint` (GĐ 1). (GĐ 5) Gợi ý thành *"Chạm vào mặt nước · chạm hai lần để
+  thả hoa đăng"*.
 - Chạm thì tạo gợn sóng, đom đóm tản ra. Giữ thì đom đóm tụ lại quanh ngón tay, thả ra thì chúng bung ra (GĐ 1).
 - Vuốt trên mặt nước thì sương xoáy quanh chỗ vuốt rồi lắng lại (GĐ 3).
 - **Thanh "giờ"** là Dial của Bức 1: kéo từ 18:00 đến 05:30 (§7, GĐ 4). Từ GĐ 1, giờ mặc định đã điều khiển vị trí trăng.
@@ -220,6 +246,18 @@ Ao Sen Đêm là **Bức 1**. Đèn kéo quân, Đông Hồ, Cung Quế về sau
   - trời và sương ấm lên lúc chạng vạng và lúc gần sáng;
   - trăng càng thấp thì ánh trăng càng yếu.
 - Thơ của cả bức, và câu Truyện Kiều ở lớp Mặt nước (§5).
+- (GĐ 5) **Thả hoa đăng:** chạm hai lần lên nước.
+  - Mỗi lần chạm vẫn là một lần chạm, nên hai vòng gợn lan ra. Giữa vòng gợn hiện một búp hoa đăng, nở đủ 8 cánh trong khoảng
+    1,5 giây.
+  - Một cặp câu thơ cùng nguồn hiện phía trên ngọn đèn và đi theo nó (chữ đi theo vật, §4.1 mục 10; danh sách thơ ở §5).
+  - Đèn trôi chậm ra xa về phía lối trăng. Hướng trôi lấy theo trăng lúc thả, nên kéo thanh giờ sau đó không làm đèn đổi đường.
+    Đèn lắc nhẹ, nhấp nhô khi gợn đi qua, hắt một vũng sáng ấm trên nước, hiện trong ảnh phản chiếu, và mờ dần trong sương.
+  - Tới gần mép ao, hoặc sau 90 giây, đèn chìm dần trong 3 giây rồi tắt.
+  - Ao giữ tối đa 8 đèn trôi ở mức cao, 6 ở mức vừa, 4 ở mức thấp (`budget.lanterns`). Thả thêm thì đèn cũ nhất chìm sớm.
+  - **Thứ tự thơ:** PRNG (`lib/random.js`) xáo danh sách, hạt giống là số ngày (theo giờ Việt Nam) của `ctx.now`. Mỗi đêm một thứ
+    tự khác; cùng `?at` thì cùng thứ tự, nên e2e đoán trước được. Hết danh sách thì quay lại từ đầu.
+  - Mài lớp Ánh trăng về 0 thì đèn thành đất sét, không sáng, và vũng sáng tắt. Chữ vẫn hiện: chữ là giao diện, không thuộc lớp nào.
+  - Chạm hai lần ngoài ao (lên trời) thì không có gì, như chạm.
 
 ## 5. Chỉ đạo nghệ thuật
 
@@ -255,6 +293,24 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
 - Cả Bức 1: *"Trong đầm gì đẹp bằng sen / Lá xanh bông trắng lại chen nhị vàng / Nhị vàng bông trắng lá xanh / Gần bùn mà chẳng hôi tanh mùi bùn"* (ca dao).
 - Lớp Mặt nước: *"Vầng trăng ai xẻ làm đôi / Nửa in gối chiếc, nửa soi dặm trường"* (Truyện Kiều, Nguyễn Du).
 - Lớp nào cũng có thể thêm một câu ngắn khác, nhưng phải là văn học dân gian hoặc cổ điển đã hết bản quyền, và phải ghi nguồn.
+- (GĐ 5) **Thơ của hoa đăng** (`content.captions`, mỗi mục một cặp câu cùng nguồn). Mười hai mục, đều là ca dao hay thơ cổ điển
+  đã hết bản quyền (Nguyễn Trãi thế kỷ 15, Hồ Xuân Hương và Nguyễn Du đầu thế kỷ 19, Nguyễn Khuyến mất năm 1909). Thứ tự hiện xáo
+  theo ngày (§4.2). Khóa trong ngoặc là id của mục.
+  1. *"Đèn khoe đèn tỏ hơn trăng / Đèn ra trước gió còn chăng hỡi đèn?"* (ca dao) `den-khoe`
+  2. *"Trăng khoe trăng tỏ hơn đèn / Cớ sao trăng lại chịu luồn đám mây?"* (ca dao) `trang-khoe`
+  3. *"Thuyền về có nhớ bến chăng? / Bến thì một dạ khăng khăng đợi thuyền"* (ca dao) `thuyen-ve`
+  4. *"Gió đưa cành trúc la đà / Tiếng chuông Trấn Vũ, canh gà Thọ Xương"* (ca dao) `gio-dua`
+  5. *"Mịt mù khói tỏa ngàn sương / Nhịp chày Yên Thái, mặt gương Tây Hồ"* (ca dao) `mit-mu`
+  6. *"Trăng bao nhiêu tuổi trăng già / Núi bao nhiêu tuổi gọi là núi non"* (ca dao) `trang-bao-nhieu`
+  7. *"Thạch lựu hiên còn phun thức đỏ / Hồng liên trì đã tiễn mùi hương"* (Bảo kính cảnh giới, Nguyễn Trãi) `thach-luu`
+  8. *"Chén rượu hương đưa say lại tỉnh / Vầng trăng bóng xế khuyết chưa tròn"* (Tự tình II, Hồ Xuân Hương) `chen-ruou`
+  9. *"Gương nga chênh chếch dòm song / Vàng gieo ngấn nước, cây lồng bóng sân"* (Truyện Kiều, Nguyễn Du) `guong-nga`
+  10. *"Ao thu lạnh lẽo nước trong veo / Một chiếc thuyền câu bé tẻo teo"* (Thu điếu, Nguyễn Khuyến) `ao-thu`
+  11. *"Lưng giậu phất phơ màu khói nhạt / Làn ao lóng lánh bóng trăng loe"* (Thu ẩm, Nguyễn Khuyến) `lung-giau`
+  12. *"Nước biếc trông như tầng khói phủ / Song thưa để mặc bóng trăng vào"* (Thu vịnh, Nguyễn Khuyến) `nuoc-biec`
+
+  Chữ của mười một mục đã đối chiếu với nguồn trên mạng lúc viết spec. Mục 9 (`guong-nga`) chưa tìm được bản để đối chiếu:
+  Bao kiểm lại chữ trước khi deploy, hoặc thay bằng một câu khác.
 
 ### Lượt màu (GĐ 3)
 Đo trên GPU thật, cùng khung 1280×800 (độ sáng trung bình / độ bão hòa / tỉ lệ điểm tối): poster 33 / 0,42 / 30%; bản GĐ 2 là
@@ -289,6 +345,10 @@ ngả nâu cánh gián như đáy poster. Mọi số là giá trị mặc địn
 
 **Số theo mức:** các con số phụ thuộc máy lấy từ bảng §10 qua `ctx.budget`, không viết cứng trong lớp.
 
+**Tên vật (GĐ 5):** mọi vật trong `layer.objects` có `name` (kebab-case không dấu, không trùng trong lớp), kể cả vật mà thí nghiệm
+thêm vào. Nhãn cho người xem nằm ở `content.layers[id].objects[name]`. Từng sợi (§7) hiện nhãn này; Inspector của `?debug` cũng
+hiện tên. Test hợp đồng giữ luật này (§12).
+
 **Kiểu núm** (`Knob.via`):
 - `uniform` (mặc định): không biên dịch lại.
 - `js`: đổi một thuộc tính JS qua `onKnob`, ví dụ `computeNode.count`, cường độ đèn, `resolutionScale`.
@@ -315,6 +375,8 @@ ngả nâu cánh gián như đáy poster. Mọi số là giá trị mặc địn
 - **Số đo:**
   - `leaves` (số lá) và `vertices`: số đỉnh tự tính (`position.count × số instance`), vì `renderer.info` không có bộ đếm đỉnh.
   - Số tam giác và draw calls lấy từ `renderer.info.render`, đọc ở cuối khung (xưởng thêm cho mọi lớp).
+- (GĐ 5) **Tên vật:** `la-noi` (lá nổi), `la-dung` (lá đứng), `canh-sen`, `guong-sen` (gương sen và nhị), `cuong`, `lau-say`; lá
+  rời của "Tắt instancing" là `la-rieng`.
 
 ### Lớp 2 · Ánh trăng: ánh sáng và chất liệu (`layers/l2-anh-trang.js`)
 - **Thấy gì:**
@@ -347,6 +409,26 @@ ngả nâu cánh gián như đáy poster. Mọi số là giá trị mặc địn
   - Cường độ ánh trăng giảm khi trăng thấp (lúc chạng vạng, lúc gần sáng). Ở giờ mặc định 21:00, ảnh vẫn giữ như GĐ 3.
   - Hướng trăng đổi thì bộ canh bóng sẵn có vẽ lại bóng một lần (`shadow.needsUpdate`). Việc này xảy ra cả khi vẽ lại lúc `?freeze`,
     vì xưởng gọi `update(0, t)` (§8.4).
+- (GĐ 5) **Hoa đăng** (§4.2). `parts/anh-trang-lantern.js` dựng và vẽ đèn; `parts/anh-trang-drift.js` là hàm thuần (đường trôi,
+  vòng đệm, thứ tự thơ), không import three.
+  - **Một InstancedMesh cho mọi đèn:** đèn ở bờ và mọi hoa đăng thả ra là MỘT `InstancedMesh` gồm `(1 + budget.lanterns) × 8`
+    cánh, tên `hoa-dang`, một draw call. 8 cánh đầu là đèn ở bờ: đứng yên, vẫn có `PointLight` như cũ. Ô hoa đăng trống có cỡ 0, và
+    `count` không bao giờ đổi.
+  - **Chung material:** núm `candleColor` và thí nghiệm "Đổi màu đèn" áp cho mọi đèn. Trọng số 0 thì mọi đèn là đất sét, không sáng.
+  - **Hoa đăng không có đèn thật:** số đèn nằm trong cache key, nên thêm đèn lúc chạy là mọi material biên dịch lại; mỗi đèn thật
+    còn làm mọi điểm ảnh có chiếu sáng tính thêm một lần. Hoa đăng chỉ tự phát sáng (emissive, nên có bloom). Vũng sáng trên nước do
+    lớp Mặt nước vẽ.
+  - **Đường trôi tính thẳng theo thời gian:** `lanternAt(ô, t)` trả vị trí, góc xoay, độ nở và độ sáng từ công thức, không cộng dồn
+    từng khung. Vì vậy `update(0, t)` lúc `?freeze` cho đúng khung N, và test kiểm được bằng số.
+  - **Mỗi khung:** khi có đèn đang trôi, CPU viết lại ma trận của các cánh đang trôi (tối đa 64) và thuộc tính instance
+    `lanternCenter` (tâm đèn, vec2) cho lớp Mặt nước. Không có đèn trôi thì không ghi gì.
+  - **Công bố** `shared.anhTrang.lantern = { material, pool, flame }`: material của đèn (lớp Sương và lớp Mặt nước sửa node của nó),
+    `pool` (một `uniformArray` 8 ô `vec4(x, z, độ sáng, 0)` cùng uniform số đèn đang trôi), `flame` (node màu nến, đã tính
+    "Đổi màu đèn").
+  - **Số đo:** `lanterns` (số hoa đăng đang trôi), nhãn "Hoa đăng đang trôi".
+  - **Hiểu:** viết lại để thêm ý "đèn thật và vật tự phát sáng", vẫn trong 150 chữ. "Bạn vừa học" thêm một dòng: đèn thật chiếu
+    sáng mọi thứ quanh nó nhưng thêm lúc chạy là biên dịch lại; vật tự phát sáng rẻ hơn nhiều nhưng không chiếu sáng gì.
+  - **Tên vật:** `trang`, `hoa-dang`.
 
 ### Lớp 3 · Sương: bầu trời, noise, sương mù (`layers/l3-suong.js`)
 - **Thấy gì:**
@@ -394,6 +476,8 @@ ngả nâu cánh gián như đáy poster. Mọi số là giá trị mặc địn
   trời, nên chân trời và sương đổi màu cùng nhau.
 - (GĐ 4) **Nấc `chi-tiet`:** chỉ đưa ra khi `budget.fogOctaves > 1`. Mức thấp vốn đã chạy 1 octave, nên ở đó nấc này không có tác dụng.
   Đưa ra một nấc không tác dụng là trái luật "lớp chỉ đưa nấc có tác dụng ở mức hiện tại".
+- (GĐ 5) **Hoa đăng trong sương:** nhân `emissiveNode` của đèn (`shared.anhTrang.lantern.material`) với `(1 − fogFactor)`, như đom
+  đóm: đèn ở xa không bloom xuyên sương. Đây đúng là cách lớp sau sửa node của lớp trước, trước khi biên dịch. Tên vật: `vom-troi`.
 
 ### Lớp 4 · Mặt nước: phản chiếu và gợn sóng (`layers/l4-mat-nuoc.js`)
 - **Thấy gì:**
@@ -426,6 +510,15 @@ ngả nâu cánh gián như đáy poster. Mọi số là giá trị mặc địn
 - (GĐ 3) **Trần núm theo mức** (§10): `reflectionResolution` tối đa 1 ở mức cao, 0,6 ở mức khác (vẽ cả cảnh lần hai ở độ phân giải đầy đủ là quá sức máy yếu).
 - **Núm:** `amplitude`, `speed`, `decay`, `wavelength`, `distortion`, `fresnelPower` (uniform), `reflectionResolution` (js, 0.1–1).
 - **Phá:** *"Độ phân giải 0.1"* (`lowRes`, phản chiếu vỡ hạt), *"Tắt fresnel"* (`noFresnel`), *"Xem heightfield"* (`heightfield`: ảnh xám của độ cao gợn). Hai thí nghiệm sau là uniform bên trong node, không biên dịch lại. Số đo: `reflectionScale`.
+- (GĐ 5) **Hoa đăng trên nước:**
+  - `positionNode` của đèn cộng độ cao gợn tại `lanternCenter`, nhân trọng số của lớp, giống lá. Đèn ở bờ cũng vậy; không có gợn
+    thì đèn đứng yên, nên poster không đổi.
+  - **Vũng sáng:** nước cộng vào `emissiveNode` một quầng ấm quanh mỗi đèn đang trôi: `Σ exp(−d²/r²) × độ sáng`, màu `flame`, nhân
+    trọng số của lớp Ánh trăng và của lớp này. Vòng lặp đọc `pool` bằng `Loop` 8 vòng và `Break` khi hết đèn đang trôi (như `fbm`
+    có số octave là node): không có đèn trôi thì shader không chạy vòng nào.
+  - Vũng sáng không vào kênh emissive (`mrtNode` giữ nguyên): chỉ ngọn đèn tỏa, mặt nước quanh nó thì không. Dựng thử mà thấy
+    nhạt thì cho phần vượt `GLINT` vào, như bóng trăng.
+  - Tên vật: `mat-nuoc`.
 
 ### Lớp 5 · Vàng lá: đom đóm tính trên GPU (`layers/l5-vang-la.js`)
 - **Thấy gì:**
@@ -472,6 +565,7 @@ ngả nâu cánh gián như đáy poster. Mọi số là giá trị mặc địn
 - (GĐ 3) **Đường lùi:** biến thể CPU hiện chỉ bật tay qua thí nghiệm. Tự phát hiện compute WebGL2 hỏng trên máy thật để sau (§16).
 - (GĐ 4) **Vẽ lại lúc `?freeze`:** `update(0, t)` không chạy compute và không bước đàn CPU. dt = 0 nghĩa là đồng bộ lại chứ không
   tiến mô phỏng (§8.4), nên khung N vẫn đúng là khung N.
+- (GĐ 5) **Tên vật:** `dom-dom` (sprite của GPU), `dom-dom-cpu` (sprite của biến thể CPU, có khi thí nghiệm "CPU vs GPU" bật).
 
 ### Lớp 6 · Phủ bóng: hậu kỳ (lớp dùng chung `src/engine/stock/phu-bong/`)
 Phủ bóng là bước cuối của nghề sơn mài, nên nó thuộc về kỹ thuật. Bức nào cũng lắp được, qua `post` của hợp đồng lớp (§8.4). Xưởng lo phần chuyển màu cuối: `renderer.toneMapping` luôn là `NoToneMapping`, `renderPipeline.outputColorTransform = false`, và `renderOutput` được chèn giữa hai chặng `build` và `display`.
@@ -581,6 +675,37 @@ Phủ bóng là bước cuối của nghề sơn mài, nên nó thuộc về k�
   - cả khung hiện view đang chọn (`uPeel` là chỉ số view; 0 là tắt overlay).
 - (GĐ 4) Lột lớp không giữ cử chỉ nào trên canvas: chạm vẫn tạo gợn sóng, để người xem thấy gợn sóng hiện ra trong ảnh Normal hay Depth.
 
+### Từng sợi (`engine/tools/tung-soi.js`, GĐ 5)
+Dệt lại khung hình từng sợi một. Mỗi sợi là một lần vẽ (draw call) của lượt vẽ cảnh (scene pass), theo đúng thứ tự GPU nhận. Lột lớp
+cho thấy các bước SAU lượt vẽ cảnh (bloom, tone); Từng sợi cho thấy chính lượt vẽ cảnh được làm ra thế nào.
+- **Chặn lần vẽ** (`engine/gpu/draws.js`): khi công cụ bật, xưởng gắn `renderer.setRenderObjectFunction(móc)`; khi tắt thì gỡ, nên
+  lúc không dùng cảnh không tốn thêm gì.
+  - Móc nhận mọi lần vẽ của `renderer.render()`. Bóng đổ, bloom và FXAA tự cất rồi trả lại móc; phản chiếu vẽ bằng camera ảo của
+    reflector (Phụ lục A.53). Móc chỉ chặn lần vẽ của **camera chính**; lần vẽ của camera khác được đếm riêng là "phản chiếu".
+  - Lần vẽ được phép thì móc gọi hàm vẽ trước đó (hàm `renderObject` của three, hay hàm mà ai đó đã đặt trước). Lần vẽ không được phép
+    thì bỏ qua. Không đụng vào `visible` hay thứ gì trong cache key, nên không biên dịch lại.
+  - **Ghi danh sách** của một khung vẽ đủ. Mỗi mục gồm: vật (và lớp của nó: vật nằm trong `layer.objects`, hay là con của một vật như
+    thế), nhãn, loại (`Mesh`, `InstancedMesh`, `Sprite`…), số bản (`count`), số tam giác, loại material, và số lần vẽ lồng bên trong.
+    Mặt nước kéo theo cả lượt phản chiếu, vì reflector vẽ lại cảnh ngay trước khi nước được vẽ.
+  - **`limit(k)`:** chỉ vẽ k lần đầu của danh sách đã ghi (so theo vật và material), bỏ qua phần còn lại. `limit(null)` vẽ đủ và ghi
+    lại danh sách ở mỗi khung.
+- **Thanh điều khiển** (trong thanh công cụ, như Lột lớp):
+  - Một `input type="range"` từ 0 tới N (N là số lần vẽ của lượt vẽ cảnh). Mở công cụ thì thanh ở N: ảnh không đổi gì. Nấc 0 là
+    chưa vẽ gì: chỉ còn màu nền xóa khung, vẫn qua hậu kỳ.
+  - Nút "Dệt lại" (`aria-pressed`) chạy từ 0 tới N, mỗi sợi khoảng 0,6 giây; cả lượt không quá chừng 12 giây, nên nhiều sợi thì đi
+    nhanh hơn. Bấm lại thì dừng; kéo thanh cũng dừng.
+  - Dòng mô tả sợi đang xem: nhãn vật (`content.layers[id].objects[name]`; thiếu thì dùng tên vật), tên lớp, loại, số bản, số tam
+    giác. Mặt nước thêm "trước đó vẽ lại {n} lần cho ảnh phản chiếu". `aria-valuetext` = "Sợi k trên N: nhãn vật".
+  - Dòng tóm tắt khung: lượt vẽ cảnh {a} · phản chiếu {b} · các lượt khác (bóng, bloom, hậu kỳ) {c} draw call. {c} = tổng của
+    `renderer.info` trừ hai số kia.
+- **Điều Từng sợi dạy được, nói ngay trong dòng mô tả:**
+  - Bóng đổ và ảnh phản chiếu là các lượt riêng, nên luôn đủ. Tới sợi của mặt nước, nước soi cả cảnh, dù các vật sau nó chưa được vẽ
+    ở lượt chính.
+  - Bật "Tắt instancing" thì lá nổi thành hàng trăm sợi: thấy ngay vì sao instancing quan trọng.
+- **Cử chỉ:** Từng sợi không giữ cử chỉ nào; chạm và chạm hai lần vẫn tới bức.
+- **`?freeze`:** mỗi lần đổi sợi thì vẽ lại đúng khung N (`api.redraw()`).
+- **Bức không biết gì:** Từng sợi chỉ nhìn `ToolApi.draws` (§8.4), chạy trên mọi bức, kể cả `_mau`.
+
 ### Núm của bức: thanh "giờ" của Bức 1 (`uHour`, 18.0 → 29.5, tức 05:30)
 Đây là **Dial** do `paintings/ao-sen-dem/shared.js` khai báo. Xưởng chỉ vẽ thanh trượt (`ui/dials.js`, GĐ 4).
 - **Điều khiển:**
@@ -638,7 +763,7 @@ son-mai-anh-sang/
   vite.config.js                     [0] base '/son-mai-anh-sang/'; input = các trang trong registry; tách chunk 'three'
   vitest.config.js playwright.config.js   [0]
   package.json .nvmrc .gitignore CLAUDE.md LICENSE   [0]
-  README.md                          [0→4] GĐ 4 thêm mục "Thêm một bức tranh mới"
+  README.md                          [0→5] GĐ 4 thêm mục "Thêm một bức tranh mới"; GĐ 5: tên vật + nhãn, chữ đi theo vật
   .github/workflows/deploy.yml       [0] test → build → e2e → deploy Pages
   public/
     favicon.svg                      [0]
@@ -651,20 +776,20 @@ son-mai-anh-sang/
     poster.js                        [4] Playwright chụp ?at&freeze=N&poster cho một slug (GPU thật); mã hóa WebP/JPEG ngay trong trang
   src/
     engine/                          XƯỞNG: không biết bức nào tồn tại
-      boot.js                        [0] khởi động một bức: cờ URL → tầng → tĩnh | import('./gpu/run.js')
+      boot.js                        [0→5] khởi động một bức: cờ URL → tầng → tĩnh | import('./gpu/run.js'); GĐ 5: báo mốc 'chunk' cho quầng trăng
       flags.js                       [0→3] đọc cờ URL (§8.7), hàm thuần; GĐ 3: ?level
       tier.js                        [0] dò tầng A/B/C, hàm thuần nhận env
       quality.js                     [0→4] GĐ 0: chọn mức, mức mặc định, isMobile; GĐ 3: bộ điều chỉnh có trễ; GĐ 4: bộ điều chỉnh tách ra tuner.js
       tuner.js                       [4] bộ điều chỉnh có trễ (hàm thuần, không three): nhịp rAF, và ms GPU/CPU khi đo được
       palette.js                     [0] 10 token; ghép phần ghi đè của bức (hàm thuần, không three)
       deadline.js                    [0] withDeadline(): hạn 10 s cho khởi động (hàm thuần)
-      sma.js                         [0→2] window.__sma: state, tier, backend, level, frames, reason; GĐ 2: expose() (GĐ 4 chỉ thêm hàm qua expose)
+      sma.js                         [0→5] window.__sma: state, tier, backend, level, frames, reason; GĐ 2: expose() (GĐ 4 chỉ thêm hàm qua expose); GĐ 5: readouts(layerId)
       static.js                      [0→2] tầng C theo lý do; GĐ 2: Sổ tay chỉ đọc (import() động ui/workshop.js)
-      contracts/painting.js          [0→4] JSDoc hợp đồng NHẸ; GĐ 4: Poster.capture
-      contracts/runtime.js           [0→4] JSDoc hợp đồng NẶNG; GĐ 4: update(0, t), Gesture 'hover'/pointer, ToolInstance.activate, Studio, Snapshot.dials
+      contracts/painting.js          [0→5] JSDoc hợp đồng NHẸ; GĐ 4: Poster.capture; GĐ 5: PaintingContent.captions, LayerContent.objects
+      contracts/runtime.js           [0→5] JSDoc hợp đồng NẶNG; GĐ 4: update(0, t), Gesture 'hover'/pointer, ToolInstance.activate, Studio, Snapshot.dials; GĐ 5: Gesture 'double-tap', EngineCtx.captions, ToolApi.draws
       gpu/                           PHẦN NẶNG: chỉ tải ở tầng A/B
-        run.js                       [0→4] vòng đời: dựng → compileAsync → khung ẩn → hòa dần → chạy → gỡ; GĐ 2: mất GPU lần đầu → dựng lại; GĐ 4: bộ điều chỉnh đo từ lúc live
-        scene.js                     [2→4] dựng MỘT cảnh trên một sân khấu (ctx → setup → lớp → pipeline → input → bàn thợ) + một khung; GĐ 4: đồ nghề, Dial, đo GPU, vẽ lại bằng update(0, t)
+        run.js                       [0→5] vòng đời: dựng → compileAsync → khung ẩn → hòa dần → chạy → gỡ; GĐ 2: mất GPU lần đầu → dựng lại; GĐ 4: bộ điều chỉnh đo từ lúc live; GĐ 5: báo mốc 'compiled'
+        scene.js                     [2→5] dựng MỘT cảnh trên một sân khấu (ctx → setup → lớp → pipeline → input → bàn thợ) + một khung; GĐ 4: đồ nghề, Dial, đo GPU, vẽ lại bằng update(0, t); GĐ 5: chữ đi theo vật, móc lần vẽ
         ladder.js                    [3] thang nấc cụ thể: 'dpr' nở thành nhiều nấc −0,25; '<lớp>.<nấc>' lấy từ layer.degrade
         stage.js                     [0→4] renderer, nền đặc, camera + OrbitControls theo CameraSpec, đồng hồ, resize, DPR, lỗi GPU; GĐ 4: trackTimestamp
         disposer.js                  [0] đăng ký mọi thứ đã tạo, gỡ theo thứ tự ngược
@@ -672,15 +797,17 @@ son-mai-anh-sang/
         views.js                     [4] danh sách view (kênh, tap, Normal lười), ghép overlay của công cụ, requireView
         gpu-timer.js                 [4] ms GPU mỗi khung: resolveTimestampsAsync (render + compute), không chờ, không gọi chồng
         meter.js                     [4] số đo của bàn thợ: draw call, tam giác, ms, ms CPU, ms GPU; hai bên "Tắt / Bật" của compare
-        toolbox.js                   [4] hộp đồ nghề: gắn công cụ, cử chỉ tới công cụ trước bức, mỗi lúc một công cụ, body[data-tool]
+        toolbox.js                   [4→5] hộp đồ nghề: gắn công cụ, cử chỉ tới công cụ trước bức, mỗi lúc một công cụ, body[data-tool]; GĐ 5: ToolApi.draws
+        draws.js                     [5] móc lần vẽ cho Từng sợi (setRenderObjectFunction): ghi danh sách lần vẽ của lượt vẽ cảnh, chỉ vẽ k lần đầu; tắt thì gỡ móc
+        caption-set.js               [5] chữ đi theo vật: tra content.captions, chiếu điểm neo ra màn hình mỗi khung, hết giờ theo đồng hồ của cảnh
         dial-set.js                  [4] Dial của bức: đọc/ghi (kẹp min/max/step), chữ giá trị, ghi chú, snapshot
         clock.js                     [3→4] đồng hồ + trần 60 khung/giây; GĐ 4: màn ≤ ~63 Hz không bị bỏ khung nào
-        layers.js                    [0→2] trọng số (GĐ 2: tween), createCtx, dựng lớp theo thứ tự + nối onKnob, lưới an toàn emissive
+        layers.js                    [0→5] trọng số (GĐ 2: tween), createCtx, dựng lớp theo thứ tự + nối onKnob, lưới an toàn emissive; GĐ 5: ctx.captions
         knob-set.js                  [2→4] bộ núm của một lớp: uniform có tên hợp lệ, giá trị đã chuẩn hóa, get/set/values, onKnob; GĐ 4: kiểm trần do max() trả
         studio.js                    [2→4] bàn thợ: API duy nhất cho Sổ tay và __sma (trọng số, núm, thí nghiệm, số đo, snapshot); GĐ 3: compare, ms CPU, nấc; GĐ 4: công cụ, Dial, ms GPU
         input.js                     [1→4] pointer → cử chỉ + tia; công cụ trước, bức sau; 'drag' cho camera; GĐ 4: 'hover' (chuột, chỉ công cụ), g.pointer
         debug.js                     [1→2] ?debug → Inspector; ?debug=stats → stats-gl (import động); GĐ 2: openDebug không bao giờ ném
-        gesture.js                   [1] phân loại cử chỉ (hàm thuần): tap / hold-* / swipe; kéo là của camera
+        gesture.js                   [1→5] phân loại cử chỉ (hàm thuần): tap / hold-* / swipe; kéo là của camera; GĐ 5: double-tap
         breath.js                    [1] camera "thở": breathAmplitude, breathOffset (hàm thuần)
       stock/phu-bong/                LỚP DÙNG CHUNG "Phủ bóng"
         meta.js                      [0] { id: 'phu-bong', name: 'Phủ bóng', files } (dữ liệu thuần)
@@ -689,37 +816,41 @@ son-mai-anh-sang/
         lut.js                       [4] LUT 32³ sinh từ bảng màu đã ghép (phần tính màu là hàm thuần)
         content.vi.js diagram.svg    [2] Hiểu/Phá/nhãn, viết trung tính; sơ đồ import '?raw'
       tools/
-        index.js                     [4] [kinhMai, lotLop]; thêm công cụ = thêm 1 dòng
+        index.js                     [4→5] [kinhMai, lotLop, tungSoi]; thêm công cụ = thêm 1 dòng
         kinh-mai.js lot-lop.js       [4] overlay (If trong Fn) + thanh điều khiển (ui/dom.js) + cử chỉ
         pick.js                      [4] chọn một view theo chỉ số bằng If/ElseIf (hai công cụ dùng chung)
+        tung-soi.js                  [5] Từng sợi: thanh trượt 0 → N lần vẽ, nút "Dệt lại", dòng mô tả sợi và tóm tắt khung; chỉ nhìn ToolApi.draws
     lib/                             HỘP MÀU: hàm "lá", chỉ trả SỐ
       random.js                      [0] PRNG có hạt giống (mulberry32)
       astro/lunar.js                 [0] âm lịch Hồ Ngọc Đức (tz tham số, mặc định +7); canChiIndex
       astro/moon.js                  [0] tuổi trăng, độ sáng, tonight(), hourOfNight(), sunDirection()
       tsl/noise.js                   [1] fbm; [3] thêm curl, và fbm nhận số octave là node (vòng lặp thật trong shader)
     ui/                              DOM thuần: không three, không import engine/; nhận t qua tham số
-      strings.vi.js                  [0→4] export default t: chữ của xưởng, bảng tên tháng/can/chi, formatSeal(); GĐ 4: t.tools, t.views, ms GPU, nấc khóa
-      shell.js                       [0→4] poster ↔ canvas, data-state, con dấu, hòa dần; [1]: gợi ý, lời mời "{n} lớp"; [4]: ?poster (body[data-poster])
+      strings.vi.js                  [0→5] export default t: chữ của xưởng, bảng tên tháng/can/chi, formatSeal(); GĐ 4: t.tools, t.views, ms GPU, nấc khóa; GĐ 5: t.tools['tung-soi']
+      shell.js                       [0→5] poster ↔ canvas, data-state, con dấu, hòa dần; [1]: gợi ý, lời mời "{n} lớp"; [4]: ?poster (body[data-poster]); [5]: progress(mốc) → quầng trăng
       badge.js                       [0→4] huy hiệu tầng + mức, data-backend; GĐ 3: "hạ {n} nấc", data-steps; GĐ 4: nấc bị khóa
       moon-svg.js                    [1] vẽ trăng đúng pha vào [data-moon] nếu trang có ô đó
+      moon-progress.js               [5] quầng trăng tiến độ trong [data-moon]: mốc → độ dài vòng quầng (CSS transition), tan khi hòa dần
+      captions.js                    [5] DOM của chữ đi theo vật: một vùng aria-live phủ lên canvas, mỗi lúc một dòng (câu + nguồn)
       workshop.js                    [2→4] thanh lớp + Sổ tay + chế độ mài; nhận studio() (null ở tầng tĩnh: chỉ đọc); GĐ 4: Đồ nghề + Dial, đóng thì tắt công cụ
       layer-rail.js notebook.js notebook-pages.js code-view.js dom.js   [2]; GĐ 3: notebook-pages.js vẽ hai cột "Tắt / Bật" của compare; GĐ 4: ms GPU
       knobs.js                       [2] Tweakpane; chỉ được import() động khi tab Chỉnh mở lần đầu
       dials.js                       [4] thanh trượt cho các Dial của bức
       rail-tools.js                  [4] mục "Đồ nghề" (nút aria-pressed của từng công cụ) + Dial, trong thanh lớp
-    styles/ tokens.css shell.css     [0]   notebook.css [2] (shell.css @import)   tools.css [4] thanh công cụ, kính, tay nắm gạt, Đồ nghề
+    styles/ tokens.css shell.css     [0]   notebook.css [2] (shell.css @import)   tools.css [4] thanh công cụ, kính, tay nắm gạt, Đồ nghề   captions.css [5] chữ đi theo vật (quầng trăng nằm trong shell.css, cạnh trăng)
     paintings/
       registry.js                    [0] SITE + [{ meta, page, lang }]. Node đọc được; trình duyệt KHÔNG import
-      _mau/                          [2] tranh mẫu 2 lớp (Cốt + Tô màu), KHÔNG deploy: fixture cho test + khuôn để copy
+      _mau/                          [2→5] tranh mẫu 2 lớp (Cốt + Tô màu), KHÔNG deploy: fixture cho test + khuôn để copy; GĐ 5: tên vật + nhãn
       ao-sen-dem/                    BỨC 1
-        meta.js                      [0→4] căn cước + fence (từ vựng của bức); GĐ 4: poster.webp, poster.capture, og
+        meta.js                      [0→5] căn cước + fence (từ vựng của bức); GĐ 4: poster.webp, poster.capture, og; GĐ 5: files của lớp Ánh trăng có thêm hai parts
         index.js                     [0] cửa vào nhẹ: export default { meta, load, content }
         painting.js                  [0→4] layers[], camera, quality, setup()
-        shared.js                    [1→4] giờ (Dial 'gio'), ripples[8], rippleHeight(), moonDir, wind, onGesture; GĐ 3: swirl (vuốt → sương xoáy); GĐ 4: dials
-        quality.js                   [3] bảng cao/vừa/thấp của bức + ladder
-        content.vi.js                [1→4] gợi ý (GĐ 1); Hiểu/Phá/Đọc thêm, nhãn tra theo id (GĐ 2); GĐ 4: dials.gio
+        shared.js                    [1→5] giờ (Dial 'gio'), ripples[8], rippleHeight(), moonDir, wind, onGesture; GĐ 3: swirl (vuốt → sương xoáy); GĐ 4: dials; GĐ 5: chạm hai lần → thả hoa đăng (vòng đệm) + chữ
+        quality.js                   [3→5] bảng cao/vừa/thấp của bức + ladder; GĐ 5: lanterns
+        content.vi.js                [1→5] gợi ý (GĐ 1); Hiểu/Phá/Đọc thêm, nhãn tra theo id (GĐ 2); GĐ 4: dials.gio; GĐ 5: gợi ý mới, nhãn vật, captions
+        content.captions.vi.js       [5] thơ của hoa đăng (content.vi.js import vào captions; tách riêng để content.vi.js dưới 300 dòng)
         layers/l1-cot.js             [0→1] GĐ 0: lá instanced thô + đèn xưởng
-        layers/l2-anh-trang.js       [1]
+        layers/l2-anh-trang.js       [1→5] GĐ 5: hoa đăng (parts/anh-trang-lantern.js dựng và vẽ, parts/anh-trang-drift.js hàm thuần)
         layers/l3-suong.js           [3] vòm trời + sương là là; parts/suong-{troi,mu}.js [3]
         layers/l4-mat-nuoc.js        [0→3] GĐ 0: đĩa nước + reflector thô; GĐ 3: phản chiếu giả ở mức thấp
         layers/l5-vang-la.js         [0→3] GĐ 0: sprite compute thô; GĐ 3: curl, biến thể CPU (parts/vang-la-cpu.js)
@@ -730,18 +861,19 @@ son-mai-anh-sang/
   tests/
     unit/                            [0] flags tier quality palette tokens-css random lunar moon strings deadline disposer layers source
                                      [4] tuner gpu-timer lut views toolbox kinh-mai lot-lop dial-set dials rail-tools poster
+                                     [5] gesture (double-tap) captions caption-set draws tung-soi moon-progress anh-trang-drift
     rules/imports.test.js            [0] luật ranh giới, đường nhẹ, hàng rào từ vựng
     rules/files.test.js              [0] dòng 1 là chú thích, số dòng, API cấm
-    paintings/contract.test.js       [0→4] lặp qua registry (+ _mau từ GĐ 2); GĐ 4: mức cùng bộ khóa, Dial, nhãn tap, poster/og
+    paintings/contract.test.js       [0→5] lặp qua registry (+ _mau từ GĐ 2); GĐ 4: mức cùng bộ khóa, Dial, nhãn tap, poster/og; GĐ 5: captions, tên vật + nhãn
     helpers/source.js                [0] phân tích mã bằng parseSync của vite
-    helpers/fake-ctx.js              [1→2] Scene/Camera/uniform thật, renderer giả (Proxy ghi lời gọi); dựng ctx bằng createCtx của xưởng
+    helpers/fake-ctx.js              [1→5] Scene/Camera/uniform thật, renderer giả (Proxy ghi lời gọi); dựng ctx bằng createCtx của xưởng; GĐ 5: captions giả (ghi lời gọi)
     helpers/svg.js                   [2] đọc mã màu trong SVG (poster, sơ đồ)
     helpers/image.js                 [4] đọc cỡ ảnh WebP, JPEG từ phần đầu file (poster, og)
   e2e/
     helpers.js                       [0] chờ trạng thái, đọc pixel canvas (screenshot), báo GPU
-    painting.spec.js                 [0→4] lặp qua registry: tĩnh, WebGL2, WebGPU; GĐ 3: hạ hết nấc rồi nâng lại; GĐ 4: mài về cốt, Kính mài, Lột lớp, ?poster
-    ao-sen-dem.spec.js               [1→4] chạm mặt nước thì ảnh đổi (so ở cùng ?freeze=N); GĐ 3: vuốt, draw call, ?level=thap, CPU vs GPU; GĐ 4: thanh giờ, vuốt → sương xoáy
-    a11y.spec.js                     [4] axe-core (@axe-core/playwright): tĩnh, 3D có thanh lớp + Sổ tay, công cụ đang bật; đi hết bằng bàn phím
+    painting.spec.js                 [0→5] lặp qua registry: tĩnh, WebGL2, WebGPU; GĐ 3: hạ hết nấc rồi nâng lại; GĐ 4: mài về cốt, Kính mài, Lột lớp, ?poster; GĐ 5: Từng sợi, quầng trăng
+    ao-sen-dem.spec.js               [1→5] chạm mặt nước thì ảnh đổi (so ở cùng ?freeze=N); GĐ 3: vuốt, draw call, ?level=thap, CPU vs GPU; GĐ 4: thanh giờ, vuốt → sương xoáy; GĐ 5: thả hoa đăng
+    a11y.spec.js                     [4→5] axe-core (@axe-core/playwright): tĩnh, 3D có thanh lớp + Sổ tay, công cụ đang bật; đi hết bằng bàn phím; GĐ 5: chữ đi theo vật, Từng sợi
 ```
 
 ### 8.2 Luật hướng phụ thuộc (test giữ)
@@ -758,6 +890,8 @@ son-mai-anh-sang/
 
 **Các luật kèm theo** (`tests/rules/imports.test.js`):
 - **Ngoại lệ glob:** `ui/code-view.js` (GĐ 2) được glob `?code` trên `paintings/*/` (trừ `_mau`) và `engine/stock/`. `import.meta.glob` chỉ được dùng ở đó, và luôn kèm `?code`.
+- **(GĐ 5) Móc lần vẽ:** chỉ `engine/gpu/draws.js` được gọi `setRenderObjectFunction` (`tests/rules/files.test.js` quét sau khi bỏ chú
+  thích). Một móc thứ hai ở chỗ khác sẽ âm thầm đè móc của Từng sợi, hay bị Từng sợi đè.
 - **`@fontsource/*`** chỉ được import từ file `.css`.
 - **Chữ giao diện:** không file nào trong `src/` import `ui/strings.*.js`.
   - Chỉ trang HTML import file đó, rồi truyền `{ lang, t }` vào `boot`.
@@ -823,6 +957,8 @@ son-mai-anh-sang/
  * @property {string} hint                              'Chạm vào mặt nước'
  * @property {Record<string, DialText>} [dials]         khóa = Dial.id
  * @property {Record<string, LayerContent>} [layers]    khóa = LayerMeta.id (bắt buộc từ GĐ 2)
+ * @property {Record<string, Poem>} [captions]          [5] chữ đi theo vật: khóa → { lines (1–2 dòng), source, author? };
+ *                                                     bức gọi ctx.captions.show(khóa, anchor). Khóa kebab-case không dấu
  */
 /** @typedef {{ label: string, notes?: Record<string, string> }} DialText */
 /** @typedef {Object} LayerContent
@@ -834,6 +970,7 @@ son-mai-anh-sang/
  * @property {Record<string, { label: string, explain: string }>} [experiments]
  * @property {Record<string, string>} [readouts]
  * @property {Record<string, string>} [taps]    nhãn các bước chụp của post (Lột lớp, Kính mài)
+ * @property {Record<string, string>} [objects] [5] nhãn cho MỌI vật trong layer.objects, khóa = object.name (Từng sợi)
  */
 ```
 
@@ -896,6 +1033,7 @@ son-mai-anh-sang/
 /** Thứ createLayer trả về. Trọng số và núm KHÔNG nằm ở đây: xưởng tạo sẵn, lớp chỉ đọc.
  * @typedef {Object} Layer
  * @property {any[]} [objects]            [0] mảng SỐNG các mesh/sprite của lớp; lớp sửa tại chỗ khi dựng lại
+ *                                       [5] mỗi vật có name (kebab-case, không trùng trong lớp); nhãn ở content.layers[id].objects
  * @property {(dt: number, t: number) => void} [update]   [0] lớp 5 gọi ctx.renderer.compute() ở đây
  *                                 [4] update(0, t): xưởng vẽ lại khung đứng yên (?freeze): đồng bộ theo uniform (hướng trăng, bóng),
  *                                 KHÔNG tiến mô phỏng (compute, hạt CPU)
@@ -946,7 +1084,9 @@ son-mai-anh-sang/
  * @property {() => string | null} [note]        khóa ghi chú trong content.dials[id].notes ('daytime')
  */
 /** @typedef {Object} Gesture   [1] xưởng giữ 'drag' để xoay camera
- * @property {'tap'|'hold-start'|'hold-move'|'hold-end'|'swipe'|'hover'} kind
+ * @property {'tap'|'hold-start'|'hold-move'|'hold-end'|'swipe'|'hover'|'double-tap'} kind
+ *                                 [5] 'double-tap': phát ngay sau 'tap' thứ hai, cùng chỗ, khi lần chạm xuống thứ hai đến trong vòng
+ *                                 300 ms sau lần nhấc ngón thứ nhất và cách chỗ chạm đầu ≤ 24 px. Hai lần chạm vẫn là hai 'tap'
  *                                 [4] 'hover': chuột di mà không bấm, mỗi khung tối đa một. CHỈ công cụ nhận; bức không bao giờ
  *                                 nhận 'hover' (onGesture của bức giữ nguyên nghĩa)
  * @property {{ x: number, y: number }} ndc
@@ -962,8 +1102,20 @@ son-mai-anh-sang/
  * @property {HTMLElement} el                      [4] ô của công cụ trong thanh công cụ; công cụ dựng thanh điều khiển ở đây
  * @property {Record<string, any>} t               chữ giao diện của trang (strings.<lang>.js)
  * @property {() => Promise<void>} redraw          [4] vẽ lại khung đứng yên (?freeze) sau khi công cụ đổi uniform
+ * @property {DrawProbe} [draws]                  [5] lần vẽ của lượt vẽ cảnh (Từng sợi): engine/gpu/draws.js
  */
 /** @typedef {{ id: string, label: string, ready: boolean }} ViewInfo */
+/** [5] Móc lần vẽ (renderer.setRenderObjectFunction). Chỉ gắn giữa start() và stop(); lúc khác cảnh không tốn thêm gì.
+ * @typedef {Object} DrawProbe
+ * @property {() => void} start                 gắn móc (công cụ bật); khung kế tiếp được ghi lại
+ * @property {() => void} stop                  gỡ móc, trả hàm vẽ trước đó; vẽ đủ như chưa có gì
+ * @property {() => DrawInfo[]} list            lần vẽ của camera chính ở khung vẽ đủ gần nhất, theo thứ tự GPU nhận
+ * @property {(k: number | null) => void} limit  chỉ vẽ k lần đầu của list() (so theo vật + material); null = vẽ đủ
+ * @property {() => { scene: number, reflection: number, other: number }} counts   draw call của khung vẽ đủ gần nhất, theo lượt
+ */
+/** @typedef {{ layerId: string | null, layer: string | null, name: string | null, label: string, kind: string,
+ *   instances: number, triangles: number, material: string, nested: number }} DrawInfo
+ *   layer: tên lớp (meta) · label: nhãn vật trong content (thiếu thì name, rồi kind) · nested: lần vẽ lồng bên trong (phản chiếu) */
 /** @typedef {Object} ToolInstance
  * @property {(final: any, view: (id: string) => any) => any} [overlay]  ghép sau display khi dựng pipeline; [4] ghép LẠI khi
  *                                 requireView đổi MRT, nên chỉ dựng node, không giữ trạng thái; đổi chế độ = đổi uniform
@@ -986,6 +1138,9 @@ son-mai-anh-sang/
  * @property {{ time: any, delta: any, resolution: any, pointer?: any }} u              [0] uniform chung (pointer: [1])
  * @property {(layerId: string) => any} weight [0] uniform trọng số; 'cot' luôn là 1; id lạ → ném lỗi
  * @property {boolean} debug                   [0]
+ * @property {{ keys: string[], show: (key: string, anchor: () => ({ x: number, y: number, z: number } | null)) => void }} [captions]
+ *                                            [5] chữ đi theo vật: keys = các khóa có trong content.captions (rỗng khi chữ tải hỏng);
+ *                                            show() thay dòng đang hiện; anchor() trả null thì chữ ẩn ở khung đó
  */
 /** @typedef {EngineCtx & { knob: (knobId: string) => any, knobValue: (knobId: string) => any }} LayerCtx
  *   [0] knob(): uniform của núm 'uniform' của CHÍNH lớp đang dựng
@@ -1061,6 +1216,33 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
 - **Vẽ lại khung đứng yên** (`?freeze`), ở nhịp rAF kế tiếp: `setup.update(0, t)` → `layer.update(0, t)` → `render()`. dt = 0 nghĩa là
   đồng bộ theo uniform (hướng trăng, bóng) mà không tiến mô phỏng, nên ảnh vẫn là khung N.
 
+**(GĐ 5) Mốc của quầng trăng:** `shell.setState` đã báo mọi trạng thái; quầng thêm hai mốc không phải trạng thái, báo qua
+`shell.progress(mốc)` (đi qua vỏ trang "bị khóa" của boot như các hàm khác, nên phần 3D đến muộn không vẽ lại quầng):
+
+| Lúc | Mốc | Quầng (phần vòng) | Rồi bò chậm dần tới |
+|---|---|---|---|
+| `setState('loading')` | trạng thái | 0,08 | 0,45 |
+| `loadRun()` xong (`boot.js`) | `'chunk'` | 0,45 | 0,62 |
+| `setState('compiling')` (`run.js`: bức, renderer, chữ đều đã có) | trạng thái | 0,65 | 0,9 |
+| `scene.compile()` xong (`run.js`) | `'compiled'` | 0,9 | 0,97 |
+| `setState('fading')` | trạng thái | 1 | (tan cùng hòa dần) |
+| `'live'` | trạng thái | ẩn | |
+| `'static'`, `'lost'` | trạng thái | ẩn ngay | |
+
+- Bò bằng CSS transition trên `stroke-dashoffset` (vòng có `pathLength="1"`), đường cong ease-out dài: nhanh lúc đầu rồi chậm dần,
+  không có vòng `requestAnimationFrame` nào. Mốc tới giữa chừng thì transition mới đi tiếp từ chỗ đang đứng.
+- Các số trong bảng và thời gian bò chốt khi dựng thử, đo trên máy thật (khởi động ấm khoảng 2 giây; lần đầu sau deploy đo được
+  9,2 giây) và trên SwiftShader.
+- "Dựng lại cảnh" đi lại từ `loading` (không có mốc `'chunk'`, vì code 3D đã tải).
+
+**(GĐ 5) Vòng lặp có thêm:**
+- **Chữ đi theo vật:** sau `controls.update()` và trước `render()`, `caption-set.js` gọi `anchor()` của dòng đang hiện, chiếu ra
+  màn hình bằng camera rồi đặt `transform` cho chữ. Hết giờ (theo `ctx.u.time`) thì gỡ chữ. Không có chữ thì không làm gì. Lúc
+  `?freeze` đã dừng, đồng hồ đứng nên chữ ở lại; vẽ lại khung đứng yên cũng chiếu lại chữ (camera có thể vừa bị kéo).
+- **Móc lần vẽ** (chỉ khi Từng sợi bật): `pipeline.render()` đi qua móc của `draws.js`. Móc ghi lại lần vẽ của khung vẽ đủ, và bỏ
+  các lần vẽ sau sợi đang xem.
+- **`setup.onGesture('double-tap')`:** cử chỉ mới đi đúng đường cũ: công cụ đang bật nhận trước, không công cụ nào dùng thì tới bức.
+
 ### 8.6 Mỗi mối quan tâm chung nằm ở đâu
 | Mối quan tâm | Nơi ở | Quy tắc |
 |---|---|---|
@@ -1079,6 +1261,9 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
 | Đo GPU (GĐ 4) | `gpu/gpu-timer.js` lấy số; `engine/tuner.js` dùng số (hàm thuần; tách từ `quality.js`); bàn thợ và Sổ tay hiện số | Máy không đo được thì mọi thứ chạy như GĐ 3 |
 | Công cụ học (GĐ 4) | `engine/tools/<id>.js` (overlay, thanh điều khiển, cử chỉ); `gpu/toolbox.js` (gắn, định tuyến, mỗi lúc một công cụ); `gpu/views.js` (danh sách view); `ui/rail-tools.js` (nút trong thanh lớp) | Công cụ chỉ nhìn `views()`, bức không biết có công cụ. Nhãn nằm ở `t.tools`, `t.views` và `content.layers[id].taps` |
 | Dial (GĐ 4) | Bức khai báo trong `setup().dials` (Bức 1: `shared.js`); `gpu/dial-set.js` đọc/ghi; `ui/dials.js` vẽ | Xưởng không biết Dial nghĩa là gì, chỉ biết uniform, khoảng giá trị và cách ghi chữ |
+| Chữ đi theo vật (GĐ 5) | Chữ ở `content.captions` của bức; bức gọi `ctx.captions.show(khóa, anchor)`; `gpu/caption-set.js` chiếu và tính giờ; `ui/captions.js` vẽ DOM | Code của bức không chứa chữ nào cho người xem, chỉ chứa khóa. Mỗi lúc một dòng |
+| Tiến độ tải (GĐ 5) | `ui/moon-progress.js` trong `[data-moon]`; `shell.js` nối với `setState` và `progress(mốc)`; `boot.js`, `run.js` báo mốc | Chỉ CSS, đường nhẹ, không three. Bức nào không có trăng thì không có quầng |
+| Lần vẽ (GĐ 5) | `gpu/draws.js` (móc của renderer); `ToolApi.draws`; `tools/tung-soi.js` vẽ thanh điều khiển; nhãn vật ở `content.layers[id].objects` | Móc chỉ gắn khi Từng sợi bật; chỉ `draws.js` được đặt móc (§8.2) |
 
 ### 8.7 Cờ URL, HTML, poster và chunk trên GitHub Pages
 **Cờ URL** (`engine/flags.js`). Query string là môi trường; hash là trạng thái tác phẩm (giữ chỗ `#r=…` cho link công thức ở GĐ 5).
@@ -1182,8 +1367,11 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
   - `quality().gpu` và `quality().locked`.
 
   Cờ `?poster` không đổi gì trong `__sma`.
+- GĐ 5 thêm `readouts(layerId)`: số đo riêng của một lớp, qua bàn thợ (e2e đọc số hoa đăng đang trôi; DevTools xem mọi số đo mà không
+  phải mở Sổ tay).
 
 ### Tranh tĩnh (tầng C) của một bức: `showStatic(entry, shell, { reason, error })`, gọi nhiều lần vẫn an toàn
+- (GĐ 5) Không có quầng trăng: tầng tĩnh không tải gì để chờ. Rơi về tĩnh giữa lúc tải thì quầng biến mất ngay.
 - Luôn có: poster, thơ và con dấu lấy từ HTML của chính bức đó. GĐ 1 thêm trăng SVG vào `[data-moon]` nếu trang có ô này. GĐ 2 thêm Sổ tay chỉ đọc: nút "Xem {n} lớp của bức tranh" trong ô ghi chú (trừ lý do `chunk-load`), tải `ui/workshop.js` và chữ của bức bằng `import()` động; vẫn không tải three.
 - Thêm theo lý do:
   - `'flag'`: không thêm gì.
@@ -1213,6 +1401,9 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
 | (GĐ 4) Một công cụ ném lỗi khi gắn (`mount`) hay khi ghép overlay | Cảnh báo và bỏ công cụ đó (không có nút của nó); cảnh và công cụ còn lại vẫn chạy |
 | (GĐ 4) `requireView` hỏng (biên dịch lại lỗi) | Thanh công cụ báo "không mài được view này" và quay về view trước; cảnh vẫn chạy |
 | (GĐ 4) `resolveTimestampsAsync` bị reject, hay trả số vô lý (≤ 0, không hữu hạn) | Bỏ mẫu đó. Hỏng 3 lần liền thì tắt đo GPU cho phiên này: bộ điều chỉnh và Sổ tay chạy như GĐ 3 |
+| (GĐ 5) `ctx.captions.show` với khóa không có trong `content.captions` (hay chữ tải hỏng) | Không hiện gì; có `?debug` thì cảnh báo. Đèn vẫn được thả |
+| (GĐ 5) `anchor()` ném lỗi hay trả số không hữu hạn | Ẩn chữ ở khung đó, cảnh báo một lần; không tính là khung lỗi |
+| (GĐ 5) Móc lần vẽ ném lỗi | Lỗi đi lên `render()` như mọi lỗi trong khung (3 khung lỗi liên tiếp thì tầng tĩnh). `stop()` luôn trả hàm vẽ cũ, kể cả khi công cụ bị gỡ vì lỗi |
 
 ## 10. Hiệu năng và chất lượng
 
@@ -1230,13 +1421,15 @@ tất định), và bắt đầu lại từ đầu sau "Dựng lại cảnh" (n�
 
 **Bảng của Bức 1** (`paintings/ao-sen-dem/quality.js`, GĐ 3; trước đó các lớp v0 dùng số ở cột mặc định):
 
-| Mức | DPR tối đa | Phản chiếu | Đom đóm | Lá | Bóng | Bloom (`resolutionScale`) | Octave sương (GĐ 3) |
-|---|---|---|---|---|---|---|---|
-| **cao** | 2 | 0.5 | 3.000 | 1.200 | 1024 | 0.5 (mặc định của BloomNode) | 3 |
-| **vừa** | 1.5 | 0.35 | 1.500 | 800 | 512 | 0.25 | 2 |
-| **thấp** | 1.25 | giả | 600 | 500 | tắt | 0.25 | 1 |
+| Mức | DPR tối đa | Phản chiếu | Đom đóm | Lá | Bóng | Bloom (`resolutionScale`) | Octave sương (GĐ 3) | Hoa đăng (GĐ 5) |
+|---|---|---|---|---|---|---|---|---|
+| **cao** | 2 | 0.5 | 3.000 | 1.200 | 1024 | 0.5 (mặc định của BloomNode) | 3 | 8 |
+| **vừa** | 1.5 | 0.35 | 1.500 | 800 | 512 | 0.25 | 2 | 6 |
+| **thấp** | 1.25 | giả | 600 | 500 | tắt | 0.25 | 1 | 4 |
 
 (GĐ 3) Khóa trong `quality.js`: `dpr`, `reflection` (0 = phản chiếu giả), `fireflies`, `leaves`, `shadow` (0 = tắt), `bloom`, `fogOctaves`.
+(GĐ 5) Thêm `lanterns`: số hoa đăng trôi tối đa. Số này để ao không rối mắt hơn là để giữ nhịp khung: mọi đèn chung một draw call.
+Hoa đăng không có nấc hạ chất lượng.
 
 ### Bộ điều chỉnh tự động (xưởng, GĐ 3)
 - **Ngân sách khung:** 16,7 ms (60fps) trên desktop, 22,2 ms (45fps) trên điện thoại.
@@ -1371,6 +1564,15 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
     WebGL2; mức thấp không có phản chiếu nên đo được 24. Mục tiêu chính là **tổng ≤ 45** (e2e đo ở mức cao).
   - (GĐ 4) FXAA vẽ chuỗi display ra một RTT, thêm 1 lượt vẽ: mức cao đo được 35 ở 1280×800 và 33 ở 390×844; e2e vẫn giữ ≤ 45. Overlay của công cụ nằm trong
     lượt cuối nên không thêm lượt vẽ. View Normal (`requireView`) thêm một target MRT, cũng không thêm lượt vẽ.
+  - (GĐ 5) Hoa đăng gộp vào InstancedMesh của đèn ở bờ, nên draw call không đổi: mức cao vẫn 35. Từng sợi không thêm lượt vẽ; khi
+    xem sợi k < N, khung còn ít lượt vẽ hơn.
+- (GĐ 5) **Chi phí lúc chưa dùng tính năng mới:**
+  - Từng sợi: không có móc nào khi công cụ tắt.
+  - Chữ đi theo vật: không chiếu gì khi không có chữ.
+  - Quầng trăng: chỉ CSS, và chỉ trong lúc tải.
+  - Hoa đăng: không có đèn trôi thì CPU không ghi ma trận nào, và vòng lặp vũng sáng trong shader của nước `Break` ngay. Shader của
+    đèn chỉ thêm độ cao gợn (như lá) và hệ số sương; số pipeline không đổi.
+  - JS: ước thêm vài KB gzip cho đường 3D; số đo thật ghi vào README như các giai đoạn trước.
 - **Poster:** WebP 150 KB trở xuống (GĐ 4). `og.jpg` 1200×630, 200 KB trở xuống.
 - **JS:**
   - Chunk `three` đo được khoảng 243 KB gzip. Con số này gần như cố định, vì `three/tsl` kéo cả namespace nên không tree-shake được.
@@ -1481,6 +1683,27 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
   - Sương không đưa nấc `chi-tiet` ở mức thấp;
   - Vàng lá không chạy compute khi `update(0, t)`;
   - Ánh trăng vẽ lại bóng khi giờ đổi lúc đứng yên.
+- (GĐ 5) **`gesture`:** hai lần chạm trong 300 ms và 24 px ra `tap`, `tap`, `double-tap` (cùng chỗ với lần chạm hai); quá 300 ms hay
+  quá 24 px thì chỉ là hai `tap`; chạm ba lần liền chỉ ra một `double-tap` (cặp tính lại từ đầu); lần chạm hai mà thành giữ hay kéo
+  thì không có `double-tap`.
+- (GĐ 5) **`ui/captions`** (jsdom): mỗi lúc một dòng; câu và nguồn đúng; vùng live không bao giờ `hidden`, rỗng khi không có chữ;
+  điểm neo ra ngoài khung thì chữ ẩn mà vùng live vẫn còn. **`caption-set`:** khóa lạ không hiện gì; hết giờ theo đồng hồ của cảnh
+  (đồng hồ đứng thì chữ ở lại); `anchor()` ném lỗi thì chỉ ẩn chữ; `keys` rỗng khi không có chữ.
+- (GĐ 5) **`draws`** (renderer giả): `start()` gắn móc và `stop()` trả đúng hàm cũ (kể cả khi đã có hàm khác trước đó); chỉ ghi lần
+  vẽ của camera chính; lần vẽ lồng (camera khác, giữa lúc vẽ một vật) cộng vào `nested` của vật đó; `limit(k)` bỏ đúng các lần vẽ sau
+  k, so theo vật + material; `limit(null)` vẽ đủ; vật là con của một vật trong `layer.objects` thì nhận lớp và nhãn của vật đó.
+- (GĐ 5) **`tung-soi`** (jsdom): thanh từ 0 tới N, mở công cụ thì ở N; `aria-valuetext` có nhãn vật; "Dệt lại" đi hết 0 → N rồi dừng
+  (đồng hồ giả); kéo thanh thì dừng; tắt công cụ thì `limit(null)` rồi `stop()`.
+- (GĐ 5) **`moon-progress`** (jsdom): không có quầng trước `loading`; mỗi mốc đặt đúng phần vòng; `static`/`lost` ẩn ngay; giảm
+  chuyển động thì không có transition; trang không có `[data-moon]` thì không làm gì. **`boot`:** báo mốc `'chunk'` sau `loadRun()`.
+- (GĐ 5) **Lớp của Bức 1:**
+  - `anh-trang-drift` (hàm thuần): `lanternAt` ở lúc thả là đúng chỗ thả và búp còn khép; 1,5 giây sau nở đủ; đi theo hướng trôi; ở
+    trong ao tới lúc chìm; sau khi chìm thì độ sáng 0; vòng đệm thả lần thứ `lanterns + 1` thì đèn cũ nhất chìm; thứ tự thơ là một hoán
+    vị của các khóa, cùng ngày thì như nhau, khác ngày thì khác (ít nhất ở một cặp ngày đã chọn).
+  - Ánh trăng: InstancedMesh `hoa-dang` có `(1 + lanterns) × 8` bản ở cả ba mức và `count` không đổi; số đo `lanterns` là 0, rồi 1 sau
+    một cử chỉ `double-tap` trên ao (tia giả); `ctx.captions.show` được gọi với một khóa có trong `keys`, và `anchor()` trả điểm gần
+    chỗ chạm; `double-tap` ngoài ao thì không có gì.
+  - Sương và Mặt nước sửa node của material hoa đăng (emissive, positionNode); Mặt nước có vòng vũng sáng.
 - **`palette`, `tokens-css`, `random`, `deadline`, `disposer`.**
 - **`layers`:** mọi tên uniform khớp `/^[A-Za-z_][A-Za-z0-9_]*$/`; `weight('cot')` bằng 1; id lạ thì ném lỗi.
 - **`source`:** các helper chạy trên chuỗi mẫu.
@@ -1502,6 +1725,7 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
     - `ShaderMaterial`, `RawShaderMaterial`, `onBeforeCompile`, `EffectComposer`;
     - `Math.random` (ngẫu nhiên phải có hạt giống);
     - import `time` hoặc `deltaTime` từ `three/tsl`.
+  - (GĐ 5) `setRenderObjectFunction` ở bất cứ file nào ngoài `engine/gpu/draws.js` (§8.2).
 
 ### Hợp đồng (`tests/paintings/contract.test.js`, lặp qua registry; từ GĐ 2 lặp cả `_mau`)
 - **GĐ 0:**
@@ -1539,6 +1763,12 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
   - `meta.poster.capture` (nếu có): `at` đọc được bằng `parseAt`, `freeze` là số nguyên dương.
   - File poster đúng `width × height` (đọc header WebP) và ≤ 150 KB.
   - `meta.og` trỏ tới một file có trong `public/`, kích thước 1200×630.
+- **GĐ 5:**
+  - `content.captions` (nếu có): khóa kebab-case không dấu; mỗi mục có `lines` gồm 1–2 dòng không rỗng, mỗi dòng ≤ 60 ký tự, và
+    `source` không rỗng.
+  - Tên vật: dựng ở mức cao và mức thấp, và trong lúc mỗi thí nghiệm đang bật, mọi vật trong `layer.objects` có `name` kebab-case
+    không dấu, không trùng trong lớp, và có nhãn ở `content.layers[id].objects[name]`. Mọi khóa trong `objects` của content ứng với
+    một vật có thật ở một trong các lần dựng đó (không có nhãn thừa).
 
 ### E2E (Playwright 1.63, Chromium headless shell, chạy trên bản build qua `vite preview`)
 - **Cấu hình chung:**
@@ -1593,6 +1823,19 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
   - **Bức 1 · thanh giờ:** `__sma.setDial('gio', 27)` ở cùng khung thì ảnh khác; về giá trị cũ thì đúng ảnh cũ.
   - **Bức 1 · vuốt:** chứng minh được sương xoáy. Chỉ bật Cốt + Sương, rồi so hai ảnh có vuốt và không vuốt (thay test GĐ 3 vốn chỉ
     so cả khung).
+- **GĐ 5:**
+  - **Mọi bức · Từng sợi** (cùng khung `?freeze`): bật công cụ thì ảnh không đổi; thanh về 0 thì ảnh gần như một màu (độ lệch chuẩn
+    độ sáng thấp); mỗi nấc có dòng mô tả không rỗng; "Dệt lại" chạy tới N; tắt công cụ thì về đúng ảnh cũ; không có lỗi console.
+  - **Mọi bức · quầng trăng:** chặn chunk `three` 1,5 giây bằng `page.route`; trong lúc `data-state` là `loading`, quầng có mặt với
+    phần vòng giữa 0 và 1; lúc `live` thì quầng đã ẩn. `?static`: không có quầng.
+  - **Bức 1 · thả hoa đăng** (`?at=…&freeze=N`): chạm hai lần lên nước bằng sự kiện con trỏ phát ngay trong trang (`page.evaluate`),
+    không dùng chuột của Playwright, vì mỗi sự kiện của nó phải đợi một nhịp khung (Phụ lục A.51); rồi:
+    - `__sma.readouts('anh-trang')` có `lanterns` = 1; vùng chữ có một cặp câu thuộc `content.captions` cùng nguồn của nó;
+    - ảnh quanh chỗ chạm khác ảnh trước khi thả;
+    - thả lần hai ở chỗ khác thì `lanterns` = 2 và chữ đổi sang cặp câu khác;
+    - chạm hai lần lên trời thì không có gì.
+  - **Mức cao:** `__sma.stats().drawCalls` vẫn ≤ 45 khi có đèn trôi.
+  - **A11y:** quét thêm hai trạng thái: lúc có chữ đi theo vật, và lúc Từng sợi đang bật. Bàn phím đi được tới thanh và nút của Từng sợi.
 - Ảnh chụp và trace lưu vào `e2e/.results/`.
 
 ### Kiểm tra thủ công
@@ -1612,6 +1855,10 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
   - máy Windows hay Linux có GPU thật (NVIDIA, AMD, Intel) trên Chrome: ms GPU trong Sổ tay nhỏ hơn ms mỗi khung và đổi theo mức;
     từ đó chốt ba ngưỡng 0,5 / 0,6 / 0,85 (§10);
   - GPU Apple trên Chrome: vài giây sau khi live, `__sma.quality().gpu` là `false` và Sổ tay ghi "—" kèm lời giải thích.
+- (GĐ 5) Bao đọc lại mười hai cặp câu thơ của hoa đăng trên trang (chữ, dấu, nguồn), nhất là mục `guong-nga` (§5).
+- (GĐ 5) Điện thoại thật: chạm hai lần thả được đèn, không làm trình duyệt phóng to; chữ không tràn ra ngoài màn hình.
+- (GĐ 5) VoiceOver đọc cặp câu và nguồn khi đèn được thả, và đọc được thanh của Từng sợi.
+- (GĐ 5) Mạng chậm (DevTools › Network › Slow 4G): quầng trăng nhích đều tới lúc hòa dần, không đứng hẳn ở mốc nào.
 
 ## 13. Repo, CI, deploy
 
@@ -1682,7 +1929,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | **2 · Sổ tay** | Hoàn thiện `contracts/runtime.js`; núm `js`/`rebuild` + `onKnob`; thanh lớp, chế độ mài; Sổ tay 3 tab; Tweakpane (import động); code sống; nhãn chuyển sang content; tween trọng số; `snapshot`/`restore` + "Dựng lại cảnh"; `sma.expose()`; Phủ bóng chọn tone bằng `If` + đủ núm; tranh mẫu `_mau`; contract test đầy đủ; Phá cho lớp 1/2/4; e2e `setWeight` và Sổ tay | Bật/tắt lớp không khựng; test marker và hợp đồng qua |
 | **3 · Sương + Vàng lá GPU** | Lớp 3 hoàn chỉnh; lớp 5 compute + biến thể CPU; `degrade`, `quality.js` của bức và `ladder`; bộ điều chỉnh chất lượng chạy thật. Kèm theo (chốt khi lập kế hoạch GĐ 3): trần 60 khung/giây, trần núm theo mức, bộ điều chỉnh canh cả khi Sổ tay mở; vuốt → sương xoáy; curl noise; thí nghiệm `compare` + ms CPU; `?level`; huy hiệu "hạ {n} nấc"; `__sma.quality/degrade/upgrade/stats`; mục hoãn của GĐ 2 (phản chiếu giả ở mức thấp, bóng tĩnh + khung bóng ôm sát, bỏ compute khi `w5 = 0`, đo draw call); Phụ lục A.29+; lượt màu cả bức so với poster | Điện thoại từ 45fps trở lên; mức cao ≤ 45 draw call; đã deploy |
 | **4 · Phủ bóng + Kính mài** | Phủ bóng hoàn chỉnh (chặng `display`: LUT từ bảng màu, grain, vignette, FXAA; `tap`); `Tool` + Kính mài + Lột lớp dựng từ `views()`; `Dial` + `ui/dials.js` + thanh giờ; `?poster` + poster thật + og (`scripts/poster.js`); e2e "mài về cốt"; kiểm tra a11y; README gồm mục "Thêm một bức tranh mới". Kèm theo (chốt khi lập kế hoạch GĐ 4): bộ điều chỉnh đo thời gian GPU thật (chẩn đoán theo máy, `engine/tuner.js`) và ms GPU trong Sổ tay; Kính mài có hai hình (tròn, gạt trước/sau); đồ nghề và thanh giờ nằm trong thanh lớp; a11y bằng axe-core; og dạng JPEG; các mục còn nợ của GĐ 3 (trần khung trên màn 60,0x Hz, nấc `suong.chi-tiet` ở mức thấp, `update(0, t)` khi vẽ lại lúc `?freeze`, kiểm trần do `max()` trả, ba mức cùng bộ khóa, e2e vuốt chứng minh sương xoáy, tách e2e WebGPU ra job riêng, sửa lời spec) | Mọi e2e qua; đã deploy; README đầy đủ |
-| 5 · *(tùy chọn)* | Thả hoa đăng mang một dòng thơ; link "công thức" (`#r=`); "Từng sợi"; "Xem bản dịch" (WGSL/GLSL); tiếng đàn bầu tổng hợp (chỉ khi người xem bật); trăng làm thanh tiến độ | tùy |
+| **5 · Hoa đăng + Từng sợi** *(tùy chọn)* | Trong sáu mục dự kiến, Bao chọn ba: **trăng tiến độ** (quầng trong `[data-moon]`, mốc từ `boot`/`run`), **Từng sợi** (`engine/gpu/draws.js` + `tools/tung-soi.js`, `ToolApi.draws`, tên vật + nhãn), **thả hoa đăng** (cử chỉ `double-tap`, `ctx.captions` + `ui/captions.js`, đèn gộp InstancedMesh của lớp Ánh trăng, vũng sáng trên nước, 12 cặp câu thơ). Kèm theo: `__sma.readouts`, luật móc lần vẽ, gợi ý mới. Ba mục còn lại (link công thức, Xem bản dịch, đàn bầu) để sau (§16) | Mọi test và e2e qua; mức cao vẫn ≤ 45 draw call (đèn không thêm draw call); Bao duyệt chữ của thơ; đã deploy |
 | 6 · *(mở rộng)* | Bức mới theo luật 7: Đèn kéo quân (shadow map vs gobo `atan(y, x)`), Đông Hồ (hạt compute), Cung Quế (SDF raymarch) | tùy |
 
 **GĐ 0 · Nền móng gồm:**
@@ -1716,6 +1963,8 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 2. Viết `layers/lN-*.js` (mỗi file có `id`, `knobs`, `createLayer`), `shared.js` nếu cần, rồi `painting.js` (layers, camera, quality, setup) và `content.vi.js`.
    - Lớp cuối thường là Phủ bóng dùng chung: import `meta` của nó trong meta, `layer` trong painting, `content` trong content.
    - Muốn đổi mặc định của lớp dùng chung thì ghi đè trong `painting.js`: `{ ...phuBong, knobs: phuBong.knobs.map((k) => k.id === 'bloomStrength' ? { ...k, value: 0.3 } : k) }`. Chỉ đổi `value`, `min`, `max`, không đổi `id`.
+   - (GĐ 5) Đặt `name` cho mọi vật trong `objects` của từng lớp, và nhãn ở `content.layers[id].objects`. Muốn chữ hiện cạnh một vật
+     (thơ, chú thích) thì ghi vào `content.captions` rồi gọi `ctx.captions.show(khóa, anchor)` (§4.1 mục 10).
 3. Copy `index.html` sang `tranh/den-keo-quan/index.html`. Sửa `data-painting`, title, thơ, poster, og và dòng import. Bỏ `<svg data-moon>` nếu bức không có trăng.
 4. Thêm một dòng vào `paintings/registry.js`: `{ meta, page: 'tranh/den-keo-quan/index.html', lang: 'vi' }`.
 5. Đặt poster vào `public/paintings/den-keo-quan/`, hoặc chạy `node scripts/poster.js den-keo-quan`.
@@ -1727,6 +1976,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
    - Màu nào cũng đi qua `mix(datSet, màu, ctx.weight(id))`.
    - Mọi material gán `emissiveNode`.
    - Thứ lớp sau cần thì ghi vào `shared.<id>`.
+   - (GĐ 5) Mọi vật trong `objects` có `name`; nhãn ở `content.layers[<id>].objects`.
 2. Với mỗi núm `uniform`: lấy uniform bằng `ctx.knob('<id>')` và ghi `// @knob <id>` ở dòng dùng nó. Núm `js`/`rebuild` thì đặt `via` và thêm `onKnob[id]`, với marker ở dòng xử lý.
 3. Thêm `{ id, name, files }` vào `meta.layers`, và thêm module vào `painting.layers`, ở cùng vị trí.
 4. Thêm `content.vi.js › layers[<id>]`.
@@ -1740,7 +1990,8 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
      Đổi chế độ bằng uniform, dùng `If` trong `Fn`.
    - (GĐ 4) Thanh điều khiển dựng trong `api.el` bằng `ui/dom.js`. `activate(on)` hiện/giấu thanh và đổi uniform; đổi uniform
      xong thì gọi `api.redraw()`.
-   - Công cụ soi (ví dụ "Từng sợi") cần các trường tùy chọn `ToolApi.layers()`/`stats()`, thêm khi làm công cụ đó (§16).
+   - (GĐ 5) Công cụ soi lần vẽ dùng `api.draws` (`start`, `stop`, `list`, `limit`, `counts`; §8.4), như Từng sợi. Thay cho dự định
+     cũ (`ToolApi.layers()`/`stats()`): danh sách lần vẽ đã có lớp, nhãn và số tam giác của từng vật.
 2. Thêm một dòng vào `tools/index.js`; thêm chữ vào `ui/strings.vi.js` (`t.tools[id]`). Nút trong mục "Đồ nghề" tự có.
 3. Cần buffer mới thì có hai cách: lớp gọi `tap()` trong `post`, hoặc xưởng thêm một kênh (biên dịch lại một lần, hiện "đang mài…").
 4. Thêm một kiểm tra vào `e2e/painting.spec.js`. Kiểm tra đó tự chạy trên mọi bức.
@@ -1764,10 +2015,10 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 |---|---|---|
 | Trình sinh HTML | Khi có Bức 3 hoặc bản tiếng Anh | `plugins/vite-plugin-paintings.js` sinh trang từ template, meta và content; test HTML giữ nguyên vai trò |
 | Phòng tranh `/tranh/` | Khi có từ 2 bức hoàn chỉnh | Trang tĩnh đọc registry, không có three. URL gốc vẫn là Bức 1 |
-| Link công thức `#r=` | GĐ 5 | `engine/recipe.js` (hàm thuần) mã hóa `snapshot()` = `{ weights, knobs: {'layerId.knobId': v}, dials }`. Giải mã trước `createLayer`; chỉ ghi các giá trị khác mặc định, kẹp theo `max` của tầng |
-| Xem bản dịch | GĐ 5 | `renderer.debug.getShaderAsync(scene, camera, obj)` cho từng `layer.objects`. Tên đặt bằng `setName` giúp đọc được mã sinh ra |
-| Công cụ soi ("Từng sợi") | GĐ 5 | Trường tùy chọn `ToolApi.layers() → {id, objects, weight}[]` và `stats() → {drawCalls, triangles, ms}` (số của khung trước) |
-| Đàn bầu | GĐ 5 | Trường tùy chọn `Painting.sound` cùng `lib/audio/`, chỉ phát khi người xem bật |
+| Link công thức `#r=` | Khi Bao chọn (GĐ 5 không chọn) | `engine/recipe.js` (hàm thuần) mã hóa `snapshot()` = `{ weights, knobs: {'layerId.knobId': v}, dials }`. Giải mã trước `createLayer`; chỉ ghi các giá trị khác mặc định, kẹp theo `max` của tầng |
+| Xem bản dịch | Khi Bao chọn (GĐ 5 không chọn) | `renderer.debug.getShaderAsync(scene, camera, obj)` cho từng `layer.objects`. Tên đặt bằng `setName` giúp đọc được mã sinh ra |
+| ~~Công cụ soi ("Từng sợi")~~ | Làm ở GĐ 5 | §7 Từng sợi: `ToolApi.draws` thay cho `layers()`/`stats()` dự định trước đây |
+| Đàn bầu | Khi Bao chọn (GĐ 5 không chọn) | Trường tùy chọn `Painting.sound` cùng `lib/audio/`, chỉ phát khi người xem bật |
 | Đông Hồ | GĐ 6 | `CameraSpec.kind: 'ortho'` (trường tùy chọn); rút hạt compute lên `lib/tsl/particles.js`; `meta.palette` |
 | Cung Quế | GĐ 6 | Mesh toàn màn hình dùng `vertexNode`/`depthNode`; nấc đầu tiên là `maxSteps`; trường tùy chọn `meta.requires` (tầng tối thiểu) |
 | Wrap lighting cho cánh sen | Khi làm lighting model riêng (GĐ 5+) | `LightingModel` tự viết cho cánh; hiện viền fresnel + `translucency` đã cho cảm giác cánh mỏng |
@@ -1780,6 +2031,11 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | Các mục nhỏ còn lại từ PR #3: đổi cỡ khung vẽ lại bóng một lần thừa; Inspector ném lỗi trong hook khi có `?debug`; `onKnob` ném lỗi giữa chừng để lại trạng thái dở | Khi gặp | Ghi trong PR #3, phần "Để sau" |
 | Tự lùi về đom đóm CPU khi compute WebGL2 hỏng | Khi gặp máy thật lỗi | Đếm lỗi của `renderer.onError` trong vài khung đầu; quá ngưỡng thì bật biến thể CPU làm mặc định cho lần dựng đó |
 | Rút `curl`, noise JS sang dùng chung | Luật hai lần | `curl` đã ở `lib/tsl/noise.js` (spec đặt từ đầu); noise JS của biến thể CPU ở lại `parts/vang-la-cpu.js` tới khi bức thứ hai cần |
+| ~~Trăng làm thanh tiến độ~~ | Làm ở GĐ 5 | §4.1 mục 1, §8.5: quầng trăng |
+| Từng sợi cho mọi lượt vẽ (phản chiếu, bloom, hậu kỳ) | Khi người xem cần | `DrawProbe` đã đếm lần vẽ của camera khác; bloom và FXAA tự cất móc (Phụ lục A.53), nên phải móc ở chỗ khác hay dùng Inspector |
+| Tô sáng sợi vừa vẽ | Khi người xem cần | Vẽ thêm một lượt mặt nạ cho vật của sợi k, rồi overlay trộn viền vàng lá như Kính mài |
+| Hoa đăng tránh lá, hay bị gợn đẩy đi | Khi thấy cần | Đường trôi hiện tính thẳng theo thời gian (tất định với `?freeze`); bị đẩy thì phải tích phân từng khung, và `update(0, t)` phải giữ đúng khung N |
+| Hoa đăng chiếu sáng thật | Không làm | Mỗi `PointLight` thêm lúc chạy là biên dịch lại mọi material và tốn thêm ở mọi điểm ảnh; vũng sáng trên nước đã cho cảm giác đèn soi nước |
 
 **Không làm**, và lý do:
 - **npm workspaces:** một repo, một người đọc; thư mục cộng test ranh giới là đủ.
@@ -1826,6 +2082,19 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
   này chỉ xảy ra một lần mỗi phiên, khi người xem chọn Normal.
 - **(GĐ 4) Poster chụp trên GPU của Bao.** Người xem nhận một file ảnh tĩnh, nên không phụ thuộc máy của họ. Nhưng chạy lại script
   trên máy khác sẽ ra ảnh hơi khác, vì vậy chụp lại poster là việc có chủ ý và cần Bao duyệt.
+- **(GĐ 5) Móc `setRenderObjectFunction` là API ít người dùng.** Bản sau của three có thể đổi cách gọi nó.
+  - Ghim r186; Phụ lục A.53 ghi đúng chỗ three gọi, cất và trả móc. Chỉ `draws.js` đặt móc (luật §8.2), móc gọi lại hàm trước đó, và
+    `stop()` luôn trả hàm cũ.
+  - Unit test dùng renderer giả; e2e giữ hai đầu: sợi 0 gần như một màu, sợi N đúng bằng ảnh không có công cụ.
+- **(GĐ 5) E2e chạm hai lần phụ thuộc thời gian.** Hai lần chạm phải trong 300 ms, mà mỗi sự kiện chuột của Playwright đợi một nhịp
+  khung (Phụ lục A.51). E2e phát `pointerdown`/`pointerup` ngay trong trang (`page.evaluate`), liền nhau trong cùng một tác vụ;
+  `gesture.js` đo bằng `performance.now()` lúc xử lý sự kiện, nên hai lần chạm cách nhau chưa tới 1 ms. Unit test giữ các ngưỡng.
+- **(GĐ 5) Chạm hai lần trên điện thoại có thể làm trình duyệt phóng to.** OrbitControls đặt `touch-action: none` cho canvas, nên
+  trình duyệt không phóng to khi chạm vào cảnh. Kiểm trên điện thoại thật (§12).
+- **(GĐ 5) Thơ in sai chữ.** Mười một cặp câu đã đối chiếu nguồn lúc viết spec; mục `guong-nga` chưa. Bao đọc lại cả mười hai trước
+  khi deploy (§12, kiểm tra thủ công). Chữ nằm trong `content.captions.vi.js`, sửa không đụng tới code.
+- **(GĐ 5) Đèn trôi xuyên qua lá.** Đèn nổi cao hơn lá và đi về phía lối trăng, nơi Cốt chừa trống, nên chỉ lướt qua lá một lúc ngắn.
+  Tránh lá thật sự để sau (§16).
 
 ---
 
@@ -2009,3 +2278,14 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     `ColorManagement` đổi nó từ sRGB sang không gian làm việc (tuyến tính). Màu trộn ở không gian hiển thị (overlay của công cụ, sau
     `renderOutput`) phải là số sRGB: `new Color('#D4A94A').convertLinearToSRGB()`. Viền Kính mài của GĐ 4 dùng thẳng
     `color('#D4A94A')`, nên hiện màu cam đất (168, 101, 17) thay vì vàng lá.
+53. **`renderer.setRenderObjectFunction(fn)`** (đọc mã nguồn r186, GĐ 5; dựng thử kiểm lại bằng e2e): `_renderObjects` gọi
+    `_currentRenderObjectFunction(object, scene, camera, geometry, material, group, lightsNode, clippingContext, passId)` cho từng mục
+    của render list, theo đúng thứ tự đã sắp (đục trước, trong suốt sau). Mỗi lần `render()` đặt hàm hiện tại là `fn ?? renderObject`.
+    - `compileAsync` luôn dùng `renderObject` gốc, nên biên dịch trước không đi qua móc.
+    - `ShadowNode` cất móc, đặt hàm riêng cho lượt vẽ bóng, rồi trả lại. `RendererUtils.resetRendererState` (BloomNode, RTTNode của
+      FXAA, và các pass có sẵn khác) đặt móc về `null` rồi trả lại. Vì vậy móc không thấy lượt vẽ bóng, bloom hay quad.
+    - Reflector gọi `renderer.render(scene, camera ảo)` ngay trong lúc vẽ mặt nước (từ `updateBefore` của node), không đặt lại móc: móc
+      thấy các lần vẽ đó với camera ảo, lồng bên trong lần vẽ của mặt nước. `_renderScene` cất và trả hàm hiện tại quanh lượt lồng này.
+    - Không gọi hàm vẽ cho một mục là mục đó không được vẽ, và `renderer.info` không đếm nó. Mặt nước bị bỏ qua thì reflector cũng không
+      vẽ lại ở khung đó.
+    - Inspector của `?debug` không dùng móc này (không file nào của inspector gọi nó).
