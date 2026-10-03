@@ -90,7 +90,9 @@ WebGL2 trên điện thoại là **thấp** (phản chiếu giả, không bóng,
 - **Đo thời gian GPU thật** khi máy cho phép (Chrome, Edge trên máy tính): bộ điều chỉnh phân biệt được máy yếu (hạ nấc) với
   trình duyệt đang khóa 30 khung/giây để tiết kiệm pin (không hạ gì). Sổ tay có thêm dòng mili giây GPU. Safari và nhiều
   điện thoại chưa đo được; GPU Apple trên Chrome báo các lượt vẽ chồng lên nhau (số lớn hơn cả nhịp khung) nên cũng bị coi là
-  không đo được. Khi đó dòng ms GPU ghi "—", bộ điều chỉnh đoán theo nhịp khung như trước.
+  không đo được. Khi đó dòng ms GPU ghi "—", bộ điều chỉnh đoán theo nhịp khung. Trước lần hạ đầu, nó ngừng vẽ chừng 0,2 giây để
+  thử: không vẽ gì mà nhịp vẫn chậm thì trình duyệt đang khóa nhịp để tiết kiệm pin, và nó không hạ gì (trước đây, trên Mac để chế độ
+  tiết kiệm pin, ảnh mờ dần chừng 20 giây rồi mới nét lại).
 - **Núm có trần theo mức:** trên máy yếu, núm không kéo được số đom đóm, độ phân giải phản chiếu hay số tầng noise của
   sương lên quá sức máy.
 - Xem trước mức khác ngay trên máy tính: thêm `?level=thap` (hoặc `vua`, `cao`) vào địa chỉ.

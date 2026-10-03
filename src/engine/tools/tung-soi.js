@@ -5,6 +5,7 @@ export const id = 'tung-soi';
 export const STEP_MS = 600; // mỗi sợi khi "Dệt lại"
 export const MAX_PLAY_MS = 12000; // cả lượt không quá chừng này: nhiều sợi thì đi nhanh hơn
 export const POLL_MS = 250; // đọc lại danh sách lần vẽ khi đang xem đủ khung
+export const STALL_MS = 3000; // đếm chừng này (tab đang hiện) mà chưa thấy lần vẽ nào thì báo, không để "Đang đếm…" đứng mãi
 const FRAME_MS = 16; // một bước không nhanh hơn một khung
 
 /**
@@ -39,11 +40,9 @@ export function mount(api) {
   const text = t.tools[id];
   const doc = api.el.ownerDocument;
   const win = doc.defaultView;
-  // Xưởng chưa có móc lần vẽ: một ô trống không làm gì; không ném lỗi, để các công cụ khác vẫn gắn được.
-  if (!draws) {
-    api.el.append(h(doc, 'div', { class: 'tool-panel', role: 'group', 'aria-label': text.name }));
-    return { dispose() {} };
-  }
+  // Xưởng chưa có móc lần vẽ: ném lỗi. toolbox.js bắt lỗi của từng mount(), bỏ riêng công cụ này kèm cảnh báo, nên các công cụ
+  // khác vẫn gắn được và thanh lớp không có nút Từng sợi mở ra một bảng trống.
+  if (!draws) throw new Error('Từng sợi cần móc lần vẽ của xưởng (ToolApi.draws), mà hộp đồ nghề không có: không gắn công cụ này.');
 
   const range = h(doc, 'input', { type: 'range', id: 'tung-soi-range', min: '0', max: '0', step: '1', value: '0' });
   // <output> ngầm là role status (aria-live polite): "Dệt lại" ghi k/N mỗi bước (40 ms với 300 sợi) sẽ làm ngập hàng đợi của
@@ -63,6 +62,8 @@ export function mount(api) {
   let snap = { draws: [], counts: null }; // khung đang hiện trên thanh
   let k = 0; // nấc: chỉ k lần vẽ đầu của snap được vẽ
   let play = null; // lượt "Dệt lại" đang chạy ({ timer }); null là không chạy
+  let idle = 0; // số lượt đọc liền nhau (tab đang hiện) mà danh sách vẫn rỗng
+  let warned = false; // đã cảnh báo trong console ở lần bật này
 
   const total = () => snap.draws.length;
   const following = () => play === null && k >= total(); // đang xem đủ khung: thanh theo khung mới
@@ -77,13 +78,14 @@ export function mount(api) {
   const sync = () => {
     const n = total();
     const info = snap.draws[k - 1]; // sợi đang xem là lần vẽ thứ k: lần vẽ CUỐI trong k lần đầu
+    const waiting = idle * POLL_MS >= STALL_MS ? text.stalled : text.counting;
     if (range.max !== String(n)) range.max = String(n); // max trước value: trình duyệt kẹp value theo max
     if (range.value !== String(k)) range.value = String(k);
-    const valuetext = n === 0 ? text.counting : text.valuetext(k, n, info?.label);
+    const valuetext = n === 0 ? waiting : text.valuetext(k, n, info?.label);
     if (range.getAttribute('aria-valuetext') !== valuetext) range.setAttribute('aria-valuetext', valuetext);
     if (button.disabled !== (n === 0)) button.disabled = n === 0; // đang đếm: chưa có sợi nào để dệt
     put(shown, n === 0 ? '' : text.step(k, n));
-    put(detail, n === 0 ? text.counting : k === 0 ? text.empty : describe(info));
+    put(detail, n === 0 ? waiting : k === 0 ? text.empty : describe(info));
     put(summary, n === 0 ? '' : text.summary(snap.counts));
   };
   /** Xem v sợi đầu: móc chỉ vẽ v lần đầu (nấc N: vẽ đủ, móc ghi lại mỗi khung); ?freeze thì vẽ lại đúng khung N. */
@@ -93,10 +95,21 @@ export function mount(api) {
     sync();
     return api.redraw();
   };
-  const refresh = () => {
+  /**
+   * Chụp lại (đang xem đủ khung) rồi vẽ thanh. tick = true là một nhịp của lượt đọc (mỗi POLL_MS): chỉ nhịp ấy được canh giờ.
+   * Đang đếm dựa vào chỗ của scene pass trong lượt cuối (views.js, Phụ lục A.53); thứ tự ấy mà hỏng (một bản three sau, một chuỗi
+   * hậu kỳ khác) thì móc không bao giờ thấy lượt vẽ cảnh. Tab ẩn không vẽ khung nào, nên không tính.
+   */
+  const refresh = (tick = false) => {
     if (following()) {
       take();
       k = total();
+    }
+    if (total() > 0 || doc.hidden) idle = 0;
+    else if (tick && (idle += 1) * POLL_MS >= STALL_MS && !warned) {
+      warned = true;
+      console.warn(`Từng sợi: đếm ${STALL_MS} ms mà móc chưa thấy lần vẽ nào của lượt vẽ cảnh. Scene pass còn là updateBefore `
+        + 'đầu tiên của lượt cuối không (views.js, Phụ lục A.53)?');
     }
     sync();
   };
@@ -162,8 +175,10 @@ export function mount(api) {
       draws.start(); // khung vẽ kế tiếp được ghi; tới lúc đó list() còn rỗng
       snap = { draws: [], counts: null };
       k = 0;
+      idle = 0;
+      warned = false;
       sync(); // "Đang đếm các lần vẽ…"
-      poll = win.setInterval(refresh, POLL_MS);
+      poll = win.setInterval(() => refresh(true), POLL_MS);
       // ?freeze: vòng lặp đã dừng, chỉ có khung vẽ lại này đi qua móc. Thanh hiện danh sách ngay khi khung đó được ghi.
       api.redraw().then(() => on && refresh(), warn);
     },

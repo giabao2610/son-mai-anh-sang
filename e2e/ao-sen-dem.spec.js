@@ -270,6 +270,33 @@ test.describe('Ao Sen Đêm · thả hoa đăng (GĐ 5)', () => {
     expect(await shownVerse(page)).toEqual(verseOf(verses[1]));
     expect(log.errors).toEqual([]);
   });
+
+  test('ngón tay chạm hai lần (pointerType touch): Kính mài hình tròn đang bật thì không thả đèn nào; tắt kính thì thả một đèn', async ({
+    page,
+  }, testInfo) => {
+    // Lỗi "thả đèn ngoài ý muốn": kính tròn giữ 'tap' của ngón tay nên phải giữ cả 'double-tap' ghép từ chúng (hợp đồng [5]).
+    // Chuột thì kính không giữ cú bấm nào (nhấp đúp vẫn thả đèn), nên cú chạm phải đúng là của ngón tay.
+    test.setTimeout(180_000); // TAP_AFTER khung, rồi vài lần vẽ lại khung đứng yên (chừng 0,8 giây mỗi khung trên WebGPU SwiftShader)
+    const { query } = testInfo.project.metadata;
+    await page.goto(`./?${query.replace(/^\?/, '')}&at=${NIGHT}&freeze=${TAP_AFTER}`);
+    const settled = await waitForSettled(page, { timeout: 60_000 });
+    expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+    await waitForFrames(page, TAP_AFTER, { timeout: 120_000 });
+    await page.evaluate(() => window.__sma.setTool('kinh-mai')); // hình tròn là mặc định
+    await doubleTapAt(page, WATER.x, WATER.y, { pointerType: 'touch' });
+    // Khung đứng yên vẽ lại ở nhịp rAF kế tiếp, và cử chỉ qua công cụ trước bức ngay lúc đó: hai nhịp là đã xử lý xong.
+    await twoFrames(page);
+    expect(await lanternCount(page), 'kính tròn để lọt cú chạm hai lần của ngón tay').toBe(0);
+    await expect(page.locator('[data-captions] .caption')).toHaveCount(0);
+    // Phép so: cùng cú chạm ấy khi kính đã tắt là của bức. Đúng một đèn: cú chạm lúc kính còn bật không tới bức muộn.
+    await page.evaluate(() => window.__sma.setTool(null));
+    await doubleTapAt(page, WATER.x, WATER.y, { pointerType: 'touch' });
+    await expect.poll(() => lanternCount(page)).toBe(1);
+    await twoFrames(page);
+    expect(await lanternCount(page)).toBe(1);
+    await expect(page.locator('[data-captions] .caption')).toHaveCount(1);
+    expect(log.errors).toEqual([]);
+  });
 });
 
 test.describe('Ao Sen Đêm · thanh giờ (GĐ 4)', () => {

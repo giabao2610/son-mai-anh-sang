@@ -75,9 +75,9 @@ export function createDrawProbe({ renderer, camera, layers, meta, content = null
   let reflection = 0;
   let callsAtBegin = 0;
   let current = null; // lần vẽ của camera chính đang chạy: lần vẽ lồng bên trong cộng vào nested của nó
-  let last = null; // khung vẽ đủ gần nhất: { draws, keys, counts }
+  let last = null; // khung vẽ đủ gần nhất: { records, draws (null tới lần list() đầu), counts }
 
-  /** Vật → id lớp, dựng lại ở mỗi khung được ghi từ các mảng objects SỐNG. */
+  /** Vật → id lớp, dựng lại cho mỗi khung được hỏi từ các mảng objects SỐNG. */
   const ownerMap = () => {
     const owners = new Map();
     for (const { id, layer } of layers) for (const o of layer.objects ?? []) owners.set(o, id);
@@ -144,13 +144,17 @@ export function createDrawProbe({ renderer, camera, layers, meta, content = null
       prev = renderer.getRenderObjectFunction();
       renderer.setRenderObjectFunction(hook);
     },
-    /** Gỡ móc, trả hàm vẽ trước đó (kể cả khi công cụ bị gỡ vì lỗi), bỏ limit: vẽ đủ như chưa có gì. Gọi hai lần vẫn an toàn. */
+    /**
+     * Gỡ móc, trả hàm vẽ trước đó (kể cả khi công cụ bị gỡ vì lỗi), bỏ limit: vẽ đủ như chưa có gì. Thả khung đã ghi: bản ghi thô
+     * giữ vật, hình và material của nó. Gọi hai lần vẫn an toàn.
+     */
     stop() {
       if (!started) return;
       started = false;
       allowed = null;
       recording = false;
       current = null;
+      last = null;
       renderer.setRenderObjectFunction(prev);
       prev = null;
     },
@@ -163,26 +167,35 @@ export function createDrawProbe({ renderer, camera, layers, meta, content = null
       current = null;
       callsAtBegin = renderer.info.render.drawCalls;
     },
-    /** scene.js gọi ngay sau pipeline.render(). render() ném lỗi thì không tới đây: list() giữ khung đủ trước đó. */
+    /**
+     * scene.js gọi ngay sau pipeline.render(). render() ném lỗi thì không tới đây: list() giữ khung đủ trước đó. Chỉ cất bản
+     * ghi thô: xem đủ khung thì khung nào cũng được ghi, mà Từng sợi chỉ hỏi list() mỗi 250 ms.
+     */
     end() {
       if (!started || !recording) return;
       recording = false;
-      const owners = ownerMap();
       const scene = records.length;
       const total = renderer.info.render.drawCalls - callsAtBegin;
-      last = {
-        draws: Object.freeze(records.map((r) => toInfo(r, owners))),
-        keys: records.map((r) => r.key),
-        counts: { scene, reflection, other: Math.max(0, total - scene - reflection) },
-      };
+      last = { records, draws: null, counts: { scene, reflection, other: Math.max(0, total - scene - reflection) } };
       records = [];
     },
-    list: () => last?.draws ?? NONE,
+    /**
+     * DrawInfo dựng lúc được hỏi lần đầu, rồi giữ tới khung ghi kế tiếp. Chủ, tên và số bản của vật đọc lúc hỏi, không phải lúc
+     * vẽ: Từng sợi luôn hỏi khung mới nhất, nên hai lúc chênh nhau chừng một khung.
+     */
+    list() {
+      if (!last) return NONE;
+      if (!last.draws) {
+        const owners = ownerMap();
+        last.draws = Object.freeze(last.records.map((r) => toInfo(r, owners)));
+      }
+      return last.draws;
+    },
     limit(k) {
       if (k !== null && !(Number.isInteger(k) && k >= 0)) {
         throw new Error(`draws.limit(k): k phải là số nguyên ≥ 0 hoặc null, nhận ${String(k)} (${typeof k})`);
       }
-      const keys = last?.keys ?? [];
+      const keys = last ? last.records.map((r) => r.key) : [];
       allowed = k === null || k >= keys.length ? null : new Set(keys.slice(0, k));
     },
     counts: () => ({ ...(last?.counts ?? { scene: 0, reflection: 0, other: 0 }) }),

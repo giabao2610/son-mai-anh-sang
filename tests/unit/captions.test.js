@@ -159,6 +159,31 @@ describe('mountCaptions', () => {
     expect(caption().style.transform).toBe('translate(320px, 60px) translate(-50%, -100%)');
   });
 
+  it('bảng của công cụ đang bật cũng là chân khung: chữ dừng trên bảng, không nằm dưới nó; công cụ tắt (ô hidden, cao 0) thì thôi', () => {
+    // Thanh lớp mở (gợi ý trống, cao 0), Từng sợi bật: chân trang chỉ ẩn bằng visibility (vẫn có khung), còn bảng của công cụ
+    // (z-index 1, trên tranh và lớp chữ) nằm ở dải dưới, cao hơn chân trang. Ô của công cụ do toolbox.js dựng ([data-tool-slot]).
+    document.body.insertAdjacentHTML('beforeend', '<main class="frame"><p class="hint" data-hint aria-live="polite"></p>'
+      + '<footer class="foot"><figure class="poem"><blockquote data-poem><p>Công cha như núi Thái Sơn</p></blockquote></figure>'
+      + '<div class="marks"><span class="dau" data-seal>18 tháng Tám · Bính Ngọ</span></div></footer></main>'
+      + '<div class="toolbar" data-toolbar><div class="tool" data-tool-slot="tung-soi"><div class="tool-panel" role="group">'
+      + '<input type="range"></div></div></div>');
+    const rect = (top, height) => () => ({ top, height, bottom: top + height, left: 0, right: 640, width: 640, x: 0, y: top });
+    const spy = (sel, top, height) => vi.spyOn(document.querySelector(sel), 'getBoundingClientRect').mockImplementation(rect(top, height));
+    spy('[data-poem]', 574, 70);
+    spy('[data-seal]', 564, 104);
+    const slot = spy('[data-tool-slot]', 480, 150);
+    vi.spyOn(region(), 'getBoundingClientRect').mockImplementation(rect(20, 800));
+
+    captions.show(KIEU);
+    captions.place(320, 700, true); // điểm neo dưới bảng: đáy chữ dừng ở mép trên của bảng (480 − 20 trong vùng)
+    expect(caption().style.transform).toBe('translate(320px, 460px) translate(-50%, -100%)');
+
+    slot.mockImplementation(rect(0, 0)); // tắt công cụ: ô hidden (display none) nên khung cao 0; chân khung lại là con dấu
+    captions.show(CA_DAO);
+    captions.place(320, 700, true);
+    expect(caption().style.transform).toBe('translate(320px, 544px) translate(-50%, -100%)');
+  });
+
   it('fade gắn data-fading; clear làm rỗng vùng mà vùng vẫn còn; chưa có chữ thì place, fade, clear không làm gì', () => {
     captions.place(10, 10, true);
     captions.fade();

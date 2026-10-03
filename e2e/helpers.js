@@ -146,21 +146,22 @@ export function twoFrames(page) {
  * evaluate, hai lần chạm cách nhau `gapMs` theo đồng hồ tường; gapMs quá doubleMs thì là hai lần chạm thường (phép so).
  * Trong lúc chờ gapMs, trang vẫn chạy tiếp: luồng chính kẹt quá doubleMs − gapMs (chừng 260 ms) giữa hai lần chạm thì cử chỉ thành
  * hai lần chạm thường, và test hỏng (không có đèn, không có chữ) chứ không qua oan.
- * pointerId 1, pointerType 'mouse': OrbitControls gọi setPointerCapture(pointerId) lúc chạm xuống, và hàm đó ném lỗi với id
- * không phải con trỏ đang có; con trỏ chuột (id 1) thì Chromium luôn có.
+ * pointerId luôn là 1: OrbitControls gọi setPointerCapture(pointerId) lúc chạm xuống, và hàm đó ném lỗi với id không phải
+ * con trỏ đang có; con trỏ chuột (id 1) thì Chromium luôn có. pointerType mặc định 'mouse'; 'touch' là cú chạm của ngón tay
+ * (input.js đọc pointerType cho cử chỉ: kính tròn của Kính mài giữ cú chạm hai lần của ngón tay, không giữ của chuột), vẫn id 1.
  * Trả `__sma.frames` ngay sau lần chạm hai: cử chỉ được xử lý ở khung kế tiếp (hay ở lần vẽ lại, khi ?freeze đã dừng).
  * @param {import('@playwright/test').Page} page
  * @param {number} fx
  * @param {number} fy
- * @param {{ gapMs?: number }} [opts]
+ * @param {{ gapMs?: number, pointerType?: 'mouse' | 'touch' | 'pen' }} [opts]
  * @returns {Promise<number | null>}
  */
-export function doubleTapAt(page, fx, fy, { gapMs = 40 } = {}) {
-  return page.evaluate(async ({ x, y, gap }) => {
+export function doubleTapAt(page, fx, fy, { gapMs = 40, pointerType = 'mouse' } = {}) {
+  return page.evaluate(async ({ x, y, gap, type }) => {
     const canvas = document.querySelector('[data-stage] canvas');
     const box = canvas.getBoundingClientRect();
     const at = {
-      pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, bubbles: true, cancelable: true, composed: true,
+      pointerId: 1, pointerType: type, isPrimary: true, button: 0, bubbles: true, cancelable: true, composed: true,
       clientX: box.left + box.width * x, clientY: box.top + box.height * y,
     };
     const tap = () => {
@@ -171,7 +172,7 @@ export function doubleTapAt(page, fx, fy, { gapMs = 40 } = {}) {
     await new Promise((resolve) => setTimeout(resolve, gap));
     tap();
     return window.__sma?.frames ?? null;
-  }, { x: fx, y: fy, gap: gapMs });
+  }, { x: fx, y: fy, gap: gapMs, type: pointerType });
 }
 
 /** Hỏi thẳng trình duyệt nó có GPU gì (để bỏ qua test WebGPU khi không có adapter). */

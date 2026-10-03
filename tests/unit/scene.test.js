@@ -98,6 +98,22 @@ function build({ backend = 'webgpu', reducedMotion = false, flags = {}, setup, t
   return { stage, disposer, scene, frames, flush, renders, win, doc };
 }
 
+/**
+ * Máy giả chậm vì chính nó: vẽ một khung mất `gap` ms. Khung bị bỏ (bộ điều chỉnh đang thử ngừng vẽ, tuner.js) thì máy rảnh, và
+ * trình duyệt gọi rAF theo màn hình 60 Hz. Trả hàm chạy n khung, nhớ thời điểm giữa các lần gọi.
+ */
+function slowMachine({ scene, renders }) {
+  let ms = 0;
+  let idle = false;
+  return (n, gap) => {
+    for (let i = 0; i < n; i++) {
+      const before = renders();
+      scene.step((ms += idle ? 1000 / 60 : gap));
+      idle = renders() === before;
+    }
+  };
+}
+
 /** Cảnh có một dòng chữ trong content.captions; setup của bức giữ ctx.captions lại cho test. */
 function buildWithCaptions() {
   let captions = null;
@@ -187,29 +203,41 @@ describe('buildScene', () => {
   });
 
   it('bộ điều chỉnh: 40 fps thì hạ nấc dpr, huy hiệu được báo; thanh lớp mở (guard) thì chậm vừa phải không hạ nữa', () => {
-    const { scene, stage } = build();
+    const built = build();
+    const { scene, stage } = built;
+    const run = slowMachine(built);
     scene.quality.start();
     const seen = [];
     scene.quality.onChange((q) => seen.push(q.steps.length));
-    let ms = 0;
-    for (let i = 0; i < 280; i++) scene.step((ms += 25)); // 7 giây ở 40 fps
+    run(280, 25); // 7 giây ở 40 fps
     expect(stage.setDpr.mock.calls.map((c) => c[0])).toEqual([2, 1.75]);
     expect(scene.studio.quality()).toMatchObject({ level: 'cao', steps: ['dpr=1.75'], guarding: false });
     expect(seen).toEqual([1]);
     scene.quality.guard(true);
-    for (let i = 0; i < 400; i++) scene.step((ms += 25));
+    run(400, 25);
     expect(scene.studio.quality()).toMatchObject({ steps: ['dpr=1.75'], guarding: true });
-    for (let i = 0; i < 160; i++) scene.step((ms += 50)); // 20 fps: quá tải nặng, vẫn hạ
+    run(160, 50); // 20 fps: quá tải nặng, vẫn hạ
     expect(scene.studio.quality().steps.slice(0, 2)).toEqual(['dpr=1.75', 'dpr=1.5']);
   });
 
-  it('bộ điều chỉnh chỉ đo từ lúc live (run.js gọi start() sau hòa dần): trước đó 40 fps cũng không hạ', () => {
-    const { scene, stage } = build();
+  it('khóa 30 fps mà không đo được GPU (tiết kiệm pin trên GPU Apple): thử ngừng vẽ 6 khung (không vẽ, đồng hồ đứng), rồi "bị khóa nhịp", không hạ nấc nào', () => {
+    const { scene, stage, renders } = build();
+    scene.quality.start();
     let ms = 0;
-    for (let i = 0; i < 400; i++) scene.step((ms += 25)); // 10 giây chưa live (khung ẩn, hòa dần)
+    for (let i = 0; i < 240; i++) scene.step((ms += 1000 / 30)); // 8 giây; trình duyệt gọi rAF mỗi 33 ms, vẽ hay không cũng vậy
+    expect([renders(), stage.tick.mock.calls.length]).toEqual([234, 234]); // 6 khung không vẽ, không tiến đồng hồ
+    expect(scene.studio.quality()).toMatchObject({ capped: true, steps: [] });
+    expect(stage.setDpr.mock.calls).toEqual([[2]]);
+  });
+
+  it('bộ điều chỉnh chỉ đo từ lúc live (run.js gọi start() sau hòa dần): trước đó 40 fps cũng không hạ', () => {
+    const built = build();
+    const { scene, stage } = built;
+    const run = slowMachine(built);
+    run(400, 25); // 10 giây chưa live (khung ẩn, hòa dần)
     expect(stage.setDpr.mock.calls).toEqual([[2]]);
     scene.quality.start();
-    for (let i = 0; i < 280; i++) scene.step((ms += 25));
+    run(280, 25);
     expect(scene.studio.quality().steps).toEqual(['dpr=1.75']);
   });
 

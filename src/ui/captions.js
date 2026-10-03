@@ -13,9 +13,10 @@ export const CAPTION_FADE = 1.2;
  * xuống tới đó là hai lớp chữ in chồng lên nhau, không đọc được dòng nào. Điểm neo ở phần ba dưới màn hình (chỗ ngón cái chạm
  * tới trên điện thoại) thì nằm ngay dưới thơ. Tìm bằng các ô data-* mà tests/paintings/html.test.js giữ ở mọi trang, không
  * bằng class của CSS: thơ, trăng (nếu có) và con dấu là con của chân trang, nên mép trên cao nhất của chúng cũng là mép trên
- * của chân trang.
+ * của chân trang. Thêm ô của công cụ học ([data-tool-slot], engine/gpu/toolbox.js dựng): bảng của công cụ đang bật nằm ở dải
+ * dưới và vẽ đè lên vùng chữ; ô của công cụ đang tắt thì hidden, cao 0, không tính.
  */
-const FLOOR = '[data-hint], [data-poem], [data-seal], [data-moon]';
+const FLOOR = '[data-hint], [data-poem], [data-seal], [data-moon], [data-tool-slot]';
 
 /**
  * Vùng chữ nằm trong [data-stage], ngay trên canvas và cùng cỡ với nó, nên toạ độ px tính từ góc trái trên của canvas

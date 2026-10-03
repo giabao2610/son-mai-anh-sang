@@ -19,7 +19,8 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
 - Phần nhẹ của xưởng (`src/engine/*.js`: boot, flags, tier, quality, palette, deadline, sma, static) chạy khi poster
   đang hiện và **không kéo theo three**. Phần nặng (`src/engine/gpu/`) chỉ được tải bằng `import()` động ở tầng 3D.
 - Chất lượng: `engine/quality.js` chọn mức; `engine/tuner.js` QUYẾT định hạ/nâng nấc (hàm thuần, test bằng chuỗi khung giả;
-  GĐ 4: máy đo được ms GPU thì chẩn đoán theo tải); `engine/gpu/ladder.js` ÁP nấc (`'dpr'` và `layer.degrade`);
+  GĐ 4: máy đo được ms GPU thì chẩn đoán theo tải; sau GĐ 5: đường nhịp thử ngừng vẽ 6 khung trước lần hạ đầu, để tách trình duyệt
+  khóa nhịp khỏi máy không kịp); `engine/gpu/ladder.js` ÁP nấc (`'dpr'` và `layer.degrade`);
   `engine/gpu/gpu-timer.js` đo ms GPU. Bảng số và thứ tự nấc của Bức 1: `paintings/ao-sen-dem/quality.js`.
 - Lớp dùng chung (thuộc kỹ thuật, bức nào cũng lắp được): `src/engine/stock/<id>/`, hiện có Phủ bóng.
 - `src/paintings/registry.js`: danh sách các bức. Node đọc (vite.config, test, e2e); trình duyệt không import.
@@ -124,6 +125,9 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   không đo được (Sổ tay ghi "—"). Mẻ không có nhịp để so (lần hỏi đầu, mẻ dài hơn một lần nghẽn) thì bỏ mẫu mà không tính là hỏng:
   số chưa kiểm được không bao giờ vào Sổ tay.
 - Số lượng theo máy (số lá, số hạt, độ phân giải…) đọc từ `ctx.budget` (bảng `quality.js` của bức), không viết cứng.
+- `tuner.sample()` trả `'skip'` (thử ngừng vẽ, sau GĐ 5) thì `scene.step()` bỏ hết phần sau `quality.sample()`: không vẽ, không tiến
+  đồng hồ, ảnh cũ ở lại. Việc thêm vào `step()` đặt sau dòng đó. Sổ tay mở thì không thử (`tests/unit/tuner.test.js` giữ luật thử,
+  `scene.test.js` giữ chuyện bỏ khung).
 - Phần nhẹ (bao đóng import tĩnh của `engine/boot.js` và `paintings/*/index.js`: `engine/*.js`, các file `ui/` mà boot kéo theo,
   `lib/astro/`, `lib/random.js`) chạy cả trên trình duyệt cũ của tầng tĩnh (Safari 14): không dùng built-in ES2022 trở lên (như
   `Object.hasOwn`, `Array.prototype.at`) và `structuredClone` ở đó (phần nặng thì được; `tests/rules/imports.test.js` giữ).
@@ -151,14 +155,17 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - Chữ đi theo vật: chữ chỉ ở `content.captions` (dạng `Poem`: 1–2 dòng ≤ 60 ký tự, có `source`); bức gọi
   `ctx.captions.show(khóa, anchor)` và không viết chữ nào trong code. `anchor()` trả `null` khi khung đó không có điểm neo (chữ ẩn,
   không cảnh báo); `undefined` hay số không hữu hạn là lỗi (cảnh báo một lần).
+- Công cụ cần móc lần vẽ mà `api.draws` là `null` thì ném lỗi trong `mount()`: `toolbox.js` bỏ riêng công cụ đó kèm cảnh báo, không
+  gắn một bảng trống.
 - Chỉ `engine/gpu/draws.js` được gọi `setRenderObjectFunction` (`tests/rules/files.test.js` giữ). Scene pass phải là `updateBefore`
   ĐẦU TIÊN của lượt cuối (`views.js`: `Fn(() => { scenePass.toVar(); … })`), vì three chạy `updateBefore` theo hậu thứ tự (con trước
   cha) và RTT/bloom gọi `resetRendererState` (gỡ móc) trong lúc vẽ: scene pass vẽ lần đầu từ bên trong RTT thì móc không thấy lượt
   vẽ cảnh (`tests/unit/pipeline.test.js` giữ).
 - Cử chỉ `'double-tap'` đến ngay sau `'tap'` thứ hai (hai `'tap'` vẫn tới như thường); công cụ giữ `'tap'` thì giữ cả `'double-tap'`
   (Kính mài ở hình tròn giữ cả hai khi là ngón tay hay bút; hình gạt không giữ cử chỉ nào trên canvas, nên chạm hai lần vẫn tới
-  bức), không thì bức nhận `'double-tap'` mà không có hai `'tap'` làm nên nó.
-- E2e cần chạm hai lần thì phát sự kiện con trỏ ngay trong trang (`e2e/helpers.js#doubleTapAt`: pointerId 1, `pointerType: 'mouse'`),
+  bức), không thì bức nhận `'double-tap'` mà không có hai `'tap'` làm nên nó (`tests/unit/tools.test.js` giữ cho mọi công cụ).
+- E2e cần chạm hai lần thì phát sự kiện con trỏ ngay trong trang (`e2e/helpers.js#doubleTapAt`: pointerId 1, `pointerType` mặc định
+  `'mouse'`, `{ pointerType: 'touch' }` cho đường của ngón tay),
   không dùng chuột của Playwright (mỗi sự kiện của nó đợi một nhịp khung); id khác thì `setPointerCapture` của OrbitControls ném lỗi.
 
 ### Bố cục và vòng đời (GĐ 5)

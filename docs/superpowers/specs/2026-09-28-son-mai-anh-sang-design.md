@@ -255,7 +255,8 @@ Ao Sen Đêm là **Bức 1**. Đèn kéo quân, Đông Hồ, Cung Quế về sau
       - Điểm neo sát mép thì chữ dừng ở mép mà vẫn ở trên điểm: cả khung chữ (kể cả lề 16 px hai bên, bằng lề của khung trên điện
         thoại) luôn ở trong màn hình. Chữ rộng tối đa `min(26rem, 90vw)`: một câu lục bát vừa một hàng ở 360 px.
       - Điểm neo thấp hơn mép trên của chân khung (gợi ý hay lời mời, thơ, trăng, con dấu: `[data-hint], [data-poem], [data-seal],
-        [data-moon]`, ô cao 0 thì bỏ qua) thì chữ dừng ở mép đó, vẫn đi theo điểm neo sang ngang. `main.frame` vẽ đè lên vùng chữ:
+        [data-moon]`; sau GĐ 5 cả bảng của công cụ đang bật, `[data-tool-slot]`: bảng nằm ở dải dưới và vẽ đè lên vùng chữ; ô cao 0
+        thì bỏ qua) thì chữ dừng ở mép đó, vẫn đi theo điểm neo sang ngang. `main.frame` vẽ đè lên vùng chữ:
         xuống thấp hơn là hai lớp chữ in chồng lên nhau. Màn thấp quá, không đủ chỗ cho cả hai, thì giữ cả câu (mép trên thắng).
         Bao chọn cách này thay cho làm mờ thơ khi có chữ (mục 2: thơ luôn hiện).
       - Giới hạn đã biết: cỡ chữ và chân khung chỉ đo một lần cho mỗi dòng (lúc `show`, một lần tính bố cục). Gợi ý đổi hay xoay
@@ -842,6 +843,12 @@ cho thấy các bước SAU lượt vẽ cảnh (bloom, tone); Từng sợi cho 
       có danh sách thì nút mở và thanh đứng ở nấc N. Đang xem đủ khung thì cứ 250 ms (`POLL_MS`) đọc lại danh sách, thanh theo N mới
       (camera kéo làm vật ra khỏi khung, thí nghiệm thêm hàng trăm Mesh); chỉ ghi vào DOM khi có gì đổi, để trình đọc màn hình không
       đọc lại.
+    - (Sau GĐ 5) Đếm quá 3 giây (`STALL_MS`: 12 nhịp đọc liền lúc tab đang hiện; tab ẩn không vẽ khung nào nên không tính) mà vẫn chưa
+      thấy lần vẽ nào thì dòng mô tả và `aria-valuetext` đổi sang `t.tools['tung-soi'].stalled` ("Chưa thấy lần vẽ nào của cảnh. Tắt
+      rồi bật lại Từng sợi, hoặc tải lại trang."), console cảnh báo một lần. Đang đếm dựa vào thứ tự `updateBefore` của lượt cuối
+      (Phụ lục A.53): thứ tự ấy mà hỏng thì người xem không phải nhìn một dòng đứng mãi. Danh sách tới thì về như thường.
+    - (Sau GĐ 5) Hộp đồ nghề không có móc (`api.draws` là `null`) thì `mount()` ném lỗi; `toolbox.js` bỏ riêng công cụ này kèm cảnh
+      báo, nên thanh lớp không có nút Từng sợi mở ra một bảng trống.
   - Ô số "k/N" (`<output>`) đặt `aria-live="off"`: `<output>` ngầm là `role="status"` (vùng live polite), mà "Dệt lại" ghi số ở
     mỗi bước (40 ms với 300 sợi) sẽ làm ngập hàng đợi của trình đọc màn hình (Phụ lục A.68). Tiến độ tới người nghe qua
     `aria-valuetext` của thanh.
@@ -1278,7 +1285,8 @@ son-mai-anh-sang/
  * @property {() => Promise<void>} redraw          [4] vẽ lại khung đứng yên (?freeze) sau khi công cụ đổi uniform
  * @property {DrawProbe | null} [draws]           [5] lần vẽ của lượt vẽ cảnh (Từng sợi): engine/gpu/draws.js. Chỉ năm hàm của
  *                                                DrawProbe: begin()/end() ở lại scene.js, công cụ không tự mở hay đóng khung ghi.
- *                                                null khi hộp đồ nghề được dựng không có móc: công cụ cần móc thì kiểm trước khi dùng
+ *                                                null khi hộp đồ nghề được dựng không có móc: công cụ cần móc thì ném lỗi trong
+ *                                                mount() (như Từng sợi), và toolbox.js bỏ riêng công cụ đó
  */
 /** @typedef {{ id: string, label: string, ready: boolean }} ViewInfo */
 /** [5] Móc lần vẽ (renderer.setRenderObjectFunction), phần công cụ thấy (ToolApi.draws). Chỉ gắn giữa start() và stop(); lúc khác
@@ -1668,9 +1676,18 @@ Hoa đăng không có nấc hạ chất lượng.
    dài ấy thành "rớt khung" ở mọi cửa sổ và các màn đó không bao giờ nâng lại được (review GĐ 3 tìm ra).
    Chống dao động: nâng một nấc mà trong 3 cửa sổ sau lại phải hạ đúng nấc đó thì khóa nấc ấy, không nâng nó nữa trong phiên.
 2. **Trình duyệt khóa ở 30 fps** (Energy Saver của Chrome khi chạy pin, Low Power Mode của iPhone): hạ nấc nào cũng không nhanh hơn.
-   Mốc "lúc bắt đầu hạ" là trung bình của cửa sổ khiến hạ nấc đầu tiên, ghi cả khi Sổ tay đang mở, và bỏ đi khi đã nâng về hết
+   (Sau GĐ 5) **Thử ngừng vẽ:** lần hạ đầu của một đợt hạ (lúc mới live, sau một lần nâng, hay sau khi hết khóa nhịp) được thay bằng
+   một lần thử. Xưởng
+   không vẽ gì trong 6 nhịp rAF (`tuner.sample()` trả `'skip'`; `scene.js` bỏ cả khung: không vẽ, không tiến đồng hồ, ảnh cũ ở lại),
+   bỏ 2 khoảng đầu (GPU làm nốt các khung đã gửi) rồi lấy trung vị phần còn lại. Không vẽ gì mà nhịp vẫn chậm hơn 1,2 × ngân sách
+   thì trình duyệt đang khóa nhịp: vào "bị khóa nhịp" ngay, với mốc "nhịp bị khóa" là chính nhịp đo được lúc không vẽ. Máy vẽ chậm
+   hơn cả nhịp ấy (tiết kiệm pin còn hạ xung nhịp GPU) thì luật "quá tải thật" ở dưới vẫn hạ về lại nhịp ấy; không thì không hạ nấc
+   nào. Nhanh lên thì máy là nút cổ chai: hạ như cũ, không thử lại tới lần nâng sau. Sổ tay mở thì không thử (người xem đang nhìn cảnh); khoảng lạ (tab ẩn, debugger) thì bỏ lần thử, đo lại hai
+   cửa sổ rồi thử lại. Đo trên GPU Apple, rAF giả 30 Hz: luật cũ hạ 5 nấc từ giây 6 tới giây 22 rồi mới trả lại hết; giờ "bị khóa
+   nhịp" ở giây 6,4, không hạ nấc nào (Phụ lục A.76).
+   **Lưới an toàn** (GĐ 3, vẫn giữ cho máy mà lần thử nói "không kịp" nhưng hạ nấc không giúp gì): mốc "lúc bắt đầu hạ" là trung bình của cửa sổ khiến hạ nấc đầu tiên, ghi cả khi Sổ tay đang mở, và bỏ đi khi đã nâng về hết
    nấc (lần hạ sau đo mốc mới; dùng lại mốc cũ thì có thể trả nấc sai lúc, review GĐ 3 tìm ra).
-   Vì vậy khi đã hạ hết thang (từ lúc chưa hạ nấc nào) mà trung bình vẫn không nhanh hơn 10% so với lúc bắt đầu hạ, thì đó là nhịp
+   Khi đã hạ hết thang (từ lúc chưa hạ nấc nào) mà trung bình vẫn không nhanh hơn 10% so với lúc bắt đầu hạ, thì đó là nhịp
    bị khóa, không phải GPU yếu: trả lại mọi nấc và thôi hạ ("bị khóa nhịp"). Hết khóa khi nhịp nhanh hẳn lên: trung bình
    ≤ 1,05 × ngân sách (cùng dung sai với "dư vừa", nên màn 59,94 Hz hay một khung rớt lẻ vẫn thoát được), hoặc nhanh hơn nhịp
    bị khóa ÷ 1,25. Còn khóa mà chậm hẳn hơn nhịp bị khóa (× 1,25, 2 cửa sổ liền: người xem kéo 200.000 đom đóm) là quá tải
@@ -1889,6 +1906,12 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
   - cửa sổ dưới 3 mẫu GPU: đi đường nhịp;
   - chế độ canh dùng tải;
   - `state()` có `locked` và `gpu`.
+- (Sau GĐ 5) **`tuner`, thử ngừng vẽ** (helper `run()` có `idleFor`: nhịp rAF khi không vẽ): khóa 30 fps (không vẽ vẫn 33 ms) thì
+  6 khung `'skip'` rồi "bị khóa nhịp", không hạ nấc nào, không thử lại, cả trên điện thoại; khóa 30 fps mà nấc 0 vẽ mất 50 ms thì
+  vẫn hạ một nấc về lại 33 ms (mốc là nhịp đo lúc không vẽ), trả thử rồi khóa nấc ấy; máy là nút cổ chai (không vẽ thì 60 Hz)
+  thì hạ như cũ, hạ hết mà không nhanh hơn thì vẫn trả lại hết (lưới an toàn); thử trước lần hạ đầu của mỗi đợt hạ (lúc mới live,
+  sau mỗi lần nâng); Sổ tay mở thì không thử; khoảng > 250 ms giữa lần thử thì bỏ, đo lại rồi thử lại. **`scene`:** khung `'skip'`
+  không vẽ, không tiến đồng hồ; khóa 30 fps mà không đo được GPU thì không hạ nấc nào.
 - (GĐ 4) **Trần khung:** màn 60,02 / 60,05 / 60,1 Hz không bỏ khung nào trong 60 giây; màn 72/75/90/120/144 Hz vẫn khoảng 60 khung
   mỗi giây.
 - (GĐ 4) **`gpu-timer`** (renderer giả): không gọi resolve chồng; cộng render + compute; bỏ số vô lý; mẻ không có nhịp để so (lần
@@ -1910,6 +1933,8 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
   - (GĐ 5) `toolbox`: `api.draws` là đúng năm hàm của móc của cảnh (không có `begin`/`end`), không có móc thì `null`; thanh công cụ
     gắn cuối `body` khi chưa có thanh lớp, gắn NGAY SAU thanh lớp khi đã có ("Dựng lại cảnh"), trước Sổ tay. `kinh-mai`: kính tròn
     giữ cả cú chạm hai lần của ngón tay; chuột thì không.
+  - (Sau GĐ 5) **`tools`:** luật "giữ `'tap'` thì giữ cả `'double-tap'`" (hợp đồng [5]) kiểm cho MỌI công cụ của
+    `engine/tools/index.js`: ngón tay, bút, chuột; trước và sau khi bật; mọi hình chọn bằng nút `[data-shape]`.
   - (GĐ 5) `workshop` (thứ tự trong trang, WCAG 2.4.3): Sổ tay mở lần đầu khi cảnh đã có thanh công cụ thì thanh lớp đứng ngay trước
     nó, Sổ tay ngay sau; chưa có thanh công cụ (tầng tĩnh, bức không có công cụ) thì thanh lớp rồi Sổ tay ở cuối `body`; cả vòng đời
     (mở trang → mở Sổ tay → "Dựng lại cảnh", với `createToolbox` thật) luôn là thanh lớp → thanh công cụ → Sổ tay.
@@ -1942,7 +1967,8 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
 - (GĐ 5) **`ui/captions`** (jsdom): vùng `aria-live="polite"` nằm trong `[data-stage]` sau canvas, không bao giờ `hidden`, rỗng lúc
   đầu; mỗi lúc một dòng, câu và nguồn (` · tác giả` khi có) như thơ của Sổ tay; hiện mờ dần (đọc style khi chữ đã vào trang rồi mới
   gắn `data-shown`); ra ngoài khung thì chữ mang `data-away`, chỉ ghi khi đổi; sát mép thì chữ dừng ở mép mà vẫn ở trên điểm neo;
-  không xuống dưới chân khung (mép trên cao nhất của `[data-hint], [data-poem], [data-seal], [data-moon]`, ô cao 0 bỏ qua), màn
+  không xuống dưới chân khung (mép trên cao nhất của `[data-hint], [data-poem], [data-seal], [data-moon]` và, sau GĐ 5, bảng của
+  công cụ đang bật `[data-tool-slot]`; ô cao 0 bỏ qua), màn
   quá thấp thì mép trên thắng; cỡ chữ và chân khung chỉ đo lúc `show`. **`caption-set`:** khóa lạ không hiện gì (chỉ `?debug` mới
   cảnh báo); `show` đặt chữ ngay; chữ đi theo điểm neo; sau camera, ngoài khung, xa hơn far hay sát hơn near thì ẩn, theo cả quy ước
   độ sâu của WebGL lẫn WebGPU; `anchor()` trả `null` thì ẩn, không cảnh báo; ném lỗi, `undefined` hay số không hữu hạn thì ẩn và
@@ -1958,6 +1984,8 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
   lỗi; `limit(null)` vẽ đủ; vật là con của một vật trong `layer.objects` thì nhận lớp và nhãn của vật đó; chữ của bức tải hỏng thì
   nhãn rơi về tên vật, rồi về loại; số tam giác theo `drawRange` và nhóm, như three; Points, Line không có tam giác;
   `InstancedBufferGeometry` lấy số bản ở `instanceCount`; lần vẽ ném lỗi thì `list()` giữ khung đủ trước đó và `stop()` vẫn trả hàm cũ.
+  (Sau GĐ 5) Khung vẽ đủ chỉ cất bản ghi thô: không ai hỏi `list()` thì không duyệt `layer.objects`; hỏi lại cùng khung thì trả đúng
+  danh sách đã dựng, khung mới thì dựng lại; `stop()` thả khung đã ghi (bản ghi thô giữ vật, hình, material).
 - (GĐ 5) **`tung-soi`** (jsdom, đồng hồ giả): Đồ nghề có Từng sợi sau Kính mài và Lột lớp; bật thì `draws.start()`, đang đếm thì
   "Dệt lại" bị khóa, có danh sách thì thanh ở N; `aria-valuetext` và dòng mô tả nói về sợi đang xem (sợi k là lần vẽ thứ k), nấc 0
   nói chưa vẽ gì; ô số k/N có `aria-live="off"`; kéo về k < N gọi `limit(k)`, về N gọi `limit(null)`; "Dệt lại" đi 0 → N theo
@@ -1965,7 +1993,10 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
   chừng `MAX_PLAY_MS`; `?freeze`: bước kế chỉ hẹn giờ khi vẽ lại xong, vẽ lại hỏng thì dừng; số sợi đổi giữa chừng: đang xem đủ khung
   thì theo N mới, đang dừng ở k < N hay đang dệt thì giữ nguyên; danh sách co lại rồi người xem kéo quá N mới thì kẹp về N, không
   ném; nhịp đọc mà khung không đổi thì không ghi gì vào DOM; với móc thật (`draws.js`, renderer giả) nấc k chỉ vẽ k vật đầu; tắt
-  công cụ thì `limit(null)` rồi `stop()`, gọi hai lần vẫn an toàn; `api.draws` là `null` thì ô trống, không ném.
+  công cụ thì `limit(null)` rồi `stop()`, gọi hai lần vẫn an toàn. (Sau GĐ 5) `api.draws` là `null` thì `mount()` ném lỗi tiếng Việt
+  và hộp đồ nghề thật bỏ công cụ này (không còn ô nào trong trang); đếm tới `STALL_MS` lúc tab đang hiện thì dòng mô tả và thanh báo
+  `stalled`, console cảnh báo một lần, danh sách tới thì về như thường, rỗng lại thì đếm lại từ đầu, tắt rồi bật là phiên mới; tab ẩn
+  không tính.
 - (GĐ 5) **`moon-progress`** (jsdom): chưa tới `loading` thì không có quầng; `loading` tạo vòng `pathLength` 1, dashoffset đích 0,55,
   transition 10 s (bằng hạn của boot); các mốc sau đi đúng đích (`chunk` 0,38 → `compiling` 0,1 → `fading` 0); mốc tới muộn không kéo
   vòng lùi; `fading` đầy rồi tan cùng lúc hòa dần, `live` gỡ; `static`, `lost` gỡ ngay; chỉ `loading` vẽ vòng mới (mốc tới muộn sau
@@ -2180,6 +2211,8 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
       SwiftShader, mức vừa), 927 (WebGPU SwiftShader), 937 (GPU thật); hai lần chạm thường 18–43. Phần lớn số điểm là vũng sáng;
     - thả lần hai ở chỗ khác thì `lanterns` = 2 và chữ đổi sang câu `[1]`; chạm hai lần lên trời thì vẫn 2 và chữ không đổi; không lỗi
       console.
+  - (Sau GĐ 5) **Bức 1 · ngón tay chạm hai lần** (`?at=2026-10-25T21:00&freeze=15`, `doubleTapAt(…, { pointerType: 'touch' })`): Kính
+    mài hình tròn đang bật thì không có đèn nào, không có chữ; tắt kính rồi chạm lại thì đúng một đèn và một dòng chữ.
   - **Bức 1 · draw call có hoa đăng** (chỉ WebGPU, `?level=cao&freeze=90`): thả hai đèn khi vòng lặp còn chạy; `__sma.stats().drawCalls`
     đúng bằng số trước khi thả (35 → 35) và ≤ 45: đèn chung InstancedMesh với đèn ở bờ.
   - **A11y:**
@@ -2399,6 +2432,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | Từng sợi tách hai lần vẽ của vật trong suốt DoubleSide | Khi một bức có material như thế | three vẽ cả hai mặt trong MỘT lần gọi móc (§7, Phụ lục A.53): đặt `forceSinglePass`, hay chia thành hai material |
 | Chữ đi theo vật đo lại khi bố cục đổi giữa chừng | Khi thấy chữ lệch sau khi xoay máy | Hiện cỡ chữ và chân khung chỉ đo lúc `show` (§4.1 mục 10). Đo lại khi `resize`, hay `ResizeObserver` trên các ô của chân khung |
 | Tô sáng sợi vừa vẽ | Khi người xem cần | Vẽ thêm một lượt mặt nạ cho vật của sợi k, rồi overlay trộn viền vàng lá như Kính mài |
+| Tách `engine/tuner.js` (gần 290 dòng sau gói sửa sau GĐ 5, quá mức mềm 250) | Lần sửa bộ điều chỉnh kế tiếp | Đưa đường tải (GĐ 4: `byLoad`, ngưỡng `busy`/`idle`/`light`) ra file riêng; trạng thái hai đường dùng chung (`overRun`, `capped`, `down`/`up`…) đi qua một object |
 | Hoa đăng tránh lá, hay bị gợn đẩy đi | Khi thấy cần | Đường trôi hiện tính thẳng theo thời gian (tất định với `?freeze`); bị đẩy thì phải tích phân từng khung, và `update(0, t)` phải giữ đúng khung N |
 | Hoa đăng chiếu sáng thật | Không làm | Mỗi `PointLight` thêm lúc chạy là biên dịch lại mọi material và tốn thêm ở mọi điểm ảnh; vũng sáng trên nước đã cho cảm giác đèn soi nước |
 
@@ -2430,6 +2464,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 - **Phạm vi phình to.** Chưa đạt ngân sách FPS thì không thêm lớp; giai đoạn nào xong cũng phải deploy; giai đoạn 5 và 6 là tùy chọn.
 - **(GĐ 3) Bộ điều chỉnh đoán sai.** Nhịp rAF không phải thời gian GPU: nó bị khóa theo màn hình và theo chế độ tiết kiệm pin.
   - Luật "dư" tính cả trường hợp không rớt khung; nâng rồi phải hạ ngay thì khóa nấc; hạ hết mà không nhanh hơn thì trả lại hết (§10).
+    (Sau GĐ 5) Trước lần hạ đầu của một đợt hạ, ngừng vẽ chừng 0,2 giây để biết trình duyệt có đang khóa nhịp không.
   - Logic nằm trong một hàm thuần, test bằng chuỗi khung giả cho từng tình huống; chỉ canh quá tải nặng khi Sổ tay mở; tắt khi `?freeze`.
   - Huy hiệu và `__sma.quality()` cho thấy máy đang hạ gì, nên người xem và Bao biết khi nó hạ.
 - **Máy của Bao đang tắt WebGL và dùng Node 20.** Kiểm tra `chrome://gpu`; cài Node 24 bằng fnm (§13). Tầng C giải thích cách bật lại tăng tốc phần cứng.
@@ -2456,7 +2491,8 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 - **(GĐ 5) E2e chạm hai lần phụ thuộc thời gian.** Hai lần chạm phải trong 300 ms, mà mỗi sự kiện chuột của Playwright đợi một nhịp
   khung (Phụ lục A.51), có khi vài trăm ms trên GPU phần mềm. E2e phát sự kiện ngay trong trang, trong một lần `page.evaluate`:
   `e2e/helpers.js#doubleTapAt(page, fx, fy, { gapMs = 40 })` phát `pointerdown`/`pointerup`, chờ `gapMs` ngay trong trang
-  (`setTimeout`), rồi `pointerdown`/`pointerup` lần nữa, với `pointerId: 1`, `pointerType: 'mouse'`: OrbitControls gọi
+  (`setTimeout`), rồi `pointerdown`/`pointerup` lần nữa, với `pointerId: 1`, `pointerType: 'mouse'` (sau GĐ 5,
+  `{ pointerType: 'touch' }` cho đường của ngón tay, vẫn id 1): OrbitControls gọi
   `setPointerCapture(pointerId)` lúc chạm xuống, mà hàm đó ném lỗi với id không phải con trỏ đang có (Phụ lục A.66); con trỏ chuột
   (id 1) thì Chromium luôn có. Hàm trả `__sma.frames` ngay sau lần chạm hai.
   - Trong lúc chờ `gapMs`, trang vẫn chạy tiếp: luồng chính kẹt quá chừng 260 ms (300 − 40) giữa hai lần chạm thì cử chỉ thành hai
@@ -2718,7 +2754,9 @@ Các mục dưới đây đã được kiểm bằng ba cách:
       mã (`tests/helpers/nodes.js#compileMaterial`), hay dựng bằng builder thật rồi đọc stack của thân (`getOutputNode(builder)`,
       `tests/helpers/final-pass.js`).
     - Một `.toVar()` không ai đọc vẫn được dựng, theo đúng thứ tự trong thân `Fn` (A.53 dựa vào điều này), nhưng `StackNode` bỏ qua
-      nó lúc sinh code: shader y hệt khi không có biến.
+      nó lúc sinh code: shader y hệt khi không có biến. Kiểm lại sau GĐ 5 (review cuối GĐ 5 nghĩ `toVar()` là `createVar(node).toStack()`
+      nên phải sinh một dòng `var`): ở bước generate, `StackNode.build` bỏ qua VarNode chỉ có chính stack làm cha; dịch một material
+      có và không có biến đọc texture ấy ra WGSL và GLSL cho hai đoạn y hệt từng byte.
     - `NodeBuilder.addStack()` đặt stack hiện tại của TSL, một biến toàn cục: dựng xong phải `removeStack()`.
       `ShaderCallNodeInternal.setupOutput` tự `addStack()` và chỉ `removeStack()` khi thân `Fn` không ném lỗi, nên dựng hỏng giữa
       chừng thì trả HẾT stack của builder (`while (builder.stacks.length > 0) builder.removeStack()`), không thì stack rò sang test sau.
@@ -2751,6 +2789,8 @@ Các mục dưới đây đã được kiểm bằng ba cách:
 66. **`setPointerCapture` ném lỗi với pointerId không có thật** (kiểm bằng Playwright, GĐ 5): OrbitControls gọi
     `domElement.setPointerCapture(event.pointerId)` lúc chạm xuống. Sự kiện con trỏ tự phát (`dispatchEvent`) với id không phải con trỏ
     đang có thì hàm đó ném `NotFoundError`. Con trỏ chuột (id 1) thì Chromium luôn có, nên e2e phát `pointerId: 1, pointerType: 'mouse'`.
+    Sau GĐ 5: `pointerType: 'touch'` với id 1 cũng được (OrbitControls đi nhánh chạm, `setPointerCapture(1)` không ném), nên e2e thử
+    được đường của ngón tay.
 67. **Trình duyệt cắt phần lẻ của thời gian `setTimeout`** (WebIDL `long`, GĐ 5): `setTimeout(fn, 16.8)` hẹn 16 ms. "Dệt lại" với 5.000
     sợi có bước 16,8 ms nên chạy 16 ms một bước, cả lượt chừng 11,4 giây (vẫn dưới 12). Đồng hồ giả của Vitest cũng cắt (`parseInt`),
     nên test chọn N có bước tròn (1.200 → 20 ms, 2.000 → 18 ms).
@@ -2787,3 +2827,14 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     Safari 14). Built-in từ ES2022 trở đi chưa có ở đó: `Object.hasOwn` (Safari 15.4, Chrome 93), `Array.prototype.at` (Safari 15.4),
     `findLast`…; `structuredClone` cũng chưa có (API của trình duyệt, không thuộc ES). Gọi tới là ném lỗi trước khi tầng tĩnh kịp vẽ
     huy hiệu và ghi chú. `tests/rules/imports.test.js` quét bao đóng tĩnh của đường nhẹ (§8.2).
+76. **Thử ngừng vẽ** (đo trên GPU thật, Chrome headless trên Mac M2, sau GĐ 5):
+    - Trình duyệt khóa nhịp thì rAF vẫn tới theo nhịp bị khóa dù trang không vẽ gì; máy chậm vì việc vẽ thì khung không vẽ tới theo
+      màn 60 Hz sau một, hai khung (GPU làm nốt việc đã gửi). Giả khóa 30 Hz: mỗi `requestAnimationFrame` đợi hai nhịp. Giả máy chậm:
+      nhịp rAF sau mỗi khung có lệnh vẽ trễ thêm 25 ms.
+    - Khung không vẽ thì canvas giữ ảnh cũ: screencast quanh lần thử không có khung đen nào (độ sáng 51–54), chỉ 0,24 giây không có
+      khung mới. Bộ chặn 60 khung/giây (`createFrameCap`) vốn bỏ khung theo cùng cách trên màn 90/120/144 Hz.
+    - Trên cùng máy, WebGPU không đo được ms GPU (A.48), còn WebGL2 (`?webgl`) và SwiftShader thì đo được
+      (`EXT_disjoint_timer_query_webgl2`): muốn thử đường nhịp trên WebGL2 thì giấu phần mở rộng ấy.
+    - Hệ quả nhỏ, tự hết sau vài khung: `__sma.frames` đếm cả các nhịp không vẽ (`run.js` đếm nhịp của vòng lặp); khung đầu sau lần
+      thử có `dt` bị kẹp ở 0,1 giây, nên số ms của `__sma.stats()` nhích lên một khung, và một mẻ của `gpu-timer` có nhịp khung dài
+      hơn (Sổ tay mở thì không có lần thử, nên số đo "Tắt / Bật" không bị ảnh hưởng).
