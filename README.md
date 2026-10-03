@@ -17,9 +17,24 @@ Dự án dùng lại đúng ý đó cho đồ họa 3D trên web:
 Cốt (lá, hoa, lau sậy bằng đất sét, dựng bằng instancing), Ánh trăng (trăng đúng pha đêm nay, ánh trăng và bóng,
 chất liệu), Sương (vòm trời có sao, quầng trăng, Ngân Hà; sương là là trên mặt nước), Mặt nước (phản chiếu, gợn sóng),
 Vàng lá (đom đóm tính trên GPU, trôi theo curl noise) và Phủ bóng (bloom chọn lọc, tone mapping AgX/ACES, LUT "sơn mài"
-sinh từ bảng màu, hạt, tối góc, FXAA). Chạm mặt nước để thấy gợn sóng xẻ bóng trăng; giữ tay để đom đóm tụ lại; vuốt để
-sương xoáy; kéo thanh giờ để trăng đi qua đêm.
+sinh từ bảng màu, hạt, tối góc, FXAA). Chạm mặt nước để thấy gợn sóng xẻ bóng trăng; chạm hai lần để thả một ngọn hoa đăng
+mang một cặp câu thơ; giữ tay để đom đóm tụ lại; vuốt để sương xoáy; kéo thanh giờ để trăng đi qua đêm.
 Các bức sau sẽ dùng chung kỹ thuật và chung một "xưởng".
+
+Trong lúc tải cảnh 3D, trăng cạnh con dấu có một vòng quầng mảnh vẽ dần theo từng bước tải (tải code, dựng cảnh, hòa dần), nên
+mạng chậm vẫn thấy trang đang nhích (giai đoạn 5).
+
+## Thả hoa đăng
+
+Chạm hai lần lên mặt nước (giai đoạn 5): hai lần chạm vẫn tạo hai vòng gợn, và giữa vòng gợn hiện một búp hoa đăng, nở đủ 8 cánh
+trong khoảng 1,5 giây. Một cặp câu thơ (ca dao hay thơ cổ điển, có ghi nguồn) hiện phía trên ngọn đèn và đi theo nó.
+
+- Đèn trôi chậm về phía lối trăng, nhấp nhô khi gợn đi qua, hắt một vũng sáng ấm trên nước, hiện trong ảnh phản chiếu và mờ dần
+  trong sương. Tới gần bờ, hoặc sau 90 giây, đèn chìm dần rồi tắt.
+- Ao giữ tối đa 8 đèn trôi ở mức cao (6 ở mức vừa, 4 ở mức thấp); thả thêm thì đèn cũ nhất chìm sớm.
+- Mười hai cặp câu, mỗi đêm một thứ tự khác (cùng `?at` thì cùng thứ tự).
+- Mọi đèn chung một InstancedMesh với đèn ở bờ, nên thả bao nhiêu đèn cũng không thêm draw call nào. Đèn thả ra chỉ tự phát sáng
+  (thêm đèn thật lúc chạy là mọi chất liệu biên dịch lại). Đường trôi tính thẳng từ thời gian, nên `?freeze=N` vẫn cho đúng khung N.
 
 ## Sổ tay: mài từng lớp
 
@@ -36,7 +51,8 @@ Sau lần chạm đầu tiên (hoặc phím đầu tiên, với người dùng b
 - Trong DevTools: `__sma.layers()`, `__sma.setWeight('mat-nuoc', 0)` (mài một lớp ngay), `__sma.snapshot()`,
   `__sma.restore(s)`, `__sma.stats()` (draw call, ms, ms CPU, ms GPU), `__sma.quality()` (mức, nấc đang hạ, máy có đo được
   GPU không, nấc bị khóa), `__sma.degrade()` / `__sma.upgrade()` (hạ/nâng tay một nấc), `__sma.tools()` /
-  `__sma.setTool('kinh-mai')` (công cụ học), `__sma.dials()` / `__sma.setDial('gio', 27)` (thanh giờ).
+  `__sma.setTool('kinh-mai')` (công cụ học; `'tung-soi'` là Từng sợi), `__sma.dials()` / `__sma.setDial('gio', 27)` (thanh giờ),
+  `__sma.readouts('anh-trang')` (số đo riêng của một lớp, như Sổ tay đọc: ở lớp Ánh trăng có số hoa đăng đang trôi).
 - Mất GPU (máy ngủ, đổi card đồ họa): lần đầu trang hiện poster và nút "Dựng lại cảnh", dựng lại đúng trạng thái cũ;
   lần hai thì về tranh tĩnh.
 
@@ -49,9 +65,17 @@ Trong thanh lớp có mục **Đồ nghề** (mỗi lúc bật một công cụ;
   (cả bằng bàn phím): bên trái là ảnh đang soi, bên phải là ảnh cuối. Chọn *Normal* lần đầu thì xưởng phải biên dịch lại một lần
   ("đang mài…").
 - **Lột lớp:** một thanh trượt lột dần ảnh cuối về từng bước, từ ảnh cuối tới depth.
+- **Từng sợi** (giai đoạn 5): dệt lại khung hình từng lần vẽ (draw call) một, theo đúng thứ tự GPU nhận. Thanh trượt đi từ 0 (chưa
+  vẽ gì, chỉ còn màu nền) tới N (ảnh đủ); nút "Dệt lại" chạy hết 0 → N, mỗi sợi chừng 0,6 giây, cả lượt không quá chừng 12 giây
+  (nhiều sợi thì đi nhanh hơn). Dòng mô tả cho biết sợi đang xem vẽ vật gì (nhãn, lớp, số bản, số tam giác), và dòng tóm tắt đếm
+  lượt vẽ cảnh, phản chiếu, các lượt khác. Bật "Tắt instancing" là thấy mỗi lá nổi thành một sợi: hơn nghìn sợi ở mức cao (tối
+  đa 1.200). Xưởng chỉ gắn móc lần vẽ (`renderer.setRenderObjectFunction`) khi công cụ bật.
 - **Thanh giờ:** kéo từ 18:00 tới 05:30; trăng, lối trăng, bóng, màu trời và sương đi theo; trăng thấp thì ánh trăng yếu.
 
-Công cụ chạy trên mọi bức: chúng chỉ nhìn các "view" mà xưởng liệt kê, bức không biết có công cụ nào.
+Công cụ chạy trên mọi bức: chúng chỉ nhìn các "view" (và Từng sợi chỉ nhìn danh sách lần vẽ) mà xưởng đưa cho, bức không biết có
+công cụ nào. Trên máy tính, bảng của công cụ nằm giữa thanh lớp và Sổ tay; màn hẹp hơn 1240 px thì Sổ tay thu lại khi một công cụ
+bật. Từ nút công cụ trên thanh lớp, phím Tab đi hết phần còn lại của thanh lớp (các nút Đồ nghề sau nó, thanh giờ, "Phủ lớp
+tiếp theo", nút đóng) rồi mới vào bảng của công cụ; sau bảng là Sổ tay.
 
 ## Chất lượng: hợp với nhiều loại máy
 
@@ -101,11 +125,15 @@ npx playwright install chromium    # chỉ cần lần đầu, trước khi ch�
 npm run e2e                        # build rồi chạy e2e (tranh tĩnh, WebGL2, WebGPU)
 ```
 
+Số test (giai đoạn 5): `npm test` chạy 73 file, 860 test. E2e liệt kê 40 test cho mỗi project: `static` chạy 6, mỗi project 3D
+(`webgl2-swiftshader`, `webgpu-swiftshader`, `webgpu-real-gpu`) chạy 33; còn lại Playwright ghi "skipped" vì chúng thuộc project
+khác.
+
 **WebGPU e2e trên CI (ubuntu):** với headless shell của Playwright, mọi test WebGPU rơi về tranh tĩnh vì
 `device-lost: "A valid external Instance reference no longer exists"`. Project `webgpu-swiftshader` vì vậy dùng Chromium
 đầy đủ (`channel: 'chromium'`) và, chỉ khi chạy trên CI, thêm cờ Vulkan của SwiftShader
 (`--enable-features=Vulkan --use-vulkan=swiftshader --use-webgpu-adapter=swiftshader`). Từ giai đoạn 4, e2e WebGPU chạy ở một job
-riêng (`e2e-webgpu`, không chặn deploy, trần 25 phút), song song với job `build` (chặn: unit, build, e2e tĩnh + WebGL2 kèm a11y).
+riêng (`e2e-webgpu`, không chặn deploy, trần 40 phút), song song với job `build` (chặn: unit, build, e2e tĩnh + WebGL2 kèm a11y).
 
 **E2E trên GPU thật của máy mình** (nhanh, bắt được lỗi của driver mà SwiftShader che mất):
 `npm run build && E2E_REAL_GPU=1 npx playwright test --project=webgpu-real-gpu`.
@@ -150,12 +178,18 @@ Không phải sửa xưởng, trừ khi bức cần một khả năng mới.
    (từ vựng riêng của bức, để test cấm xưởng nhắc tới).
 2. Viết các lớp `layers/lN-<id>.js` (mỗi file `export const id`, `knobs`, `createLayer`); lớp đầu luôn là Cốt, lớp cuối thường
    là Phủ bóng dùng chung. Thêm `painting.js` (lớp, camera, `quality`, `setup`) và `content.vi.js` (chữ của Sổ tay).
+   - Mọi vật trong `objects` của lớp có `name` (kebab-case không dấu, không trùng trong lớp), và nhãn ở
+     `content.layers[id].objects[name]`: Từng sợi hiện nhãn này. Test tên vật kiểm cả vật mà thí nghiệm thêm vào.
+   - `meta.layers[].files` kê mọi file trong `parts/` mà lớp import (thẳng hay qua part khác); lớp khác cần gì thì nhận qua
+     `shared`, không import part của lớp khác.
+   - Tùy chọn: muốn một dòng chữ (thơ, chú thích) hiện cạnh một vật và đi theo nó thì ghi chữ vào `content.captions`
+     (`{ lines, source, author? }`, 1–2 dòng) rồi gọi `ctx.captions.show(khóa, anchor)`; code của bức chỉ cầm khóa.
 3. Copy `index.html` thành `tranh/<slug>/index.html`, sửa `data-painting`, tiêu đề, thơ, poster, thẻ og và dòng import.
 4. Thêm `{ meta, page: 'tranh/<slug>/index.html', lang: 'vi' }` vào `src/paintings/registry.js`.
 5. Chụp poster từ chính cảnh: `npm run build && node scripts/poster.js <slug>` (máy có GPU thật). Ảnh ghi vào
    `public/paintings/<slug>/`.
-6. `npm test` rồi sửa theo từng lỗi tiếng Việt; `npm run e2e`. E2e chung (mài lớp, hạ nấc, Kính mài, Lột lớp, a11y…) tự chạy
-   trên bức mới.
+6. `npm test` rồi sửa theo từng lỗi tiếng Việt; `npm run e2e`. E2e chung (mài lớp, hạ nấc, Kính mài, Lột lớp, Từng sợi, quầng
+   trăng, a11y…) tự chạy trên bức mới.
 
 Công thức đầy đủ (thêm lớp, thêm công cụ học, thêm ngôn ngữ): spec §15.
 
@@ -175,27 +209,29 @@ CI không chạy script này: ảnh được commit vào repo.
 
 ## Kích thước bundle
 
-Số gzip do `npm run build` (Vite 8) in ra, đo ngày 2026-10-01 (giai đoạn 4). Tên file đã bỏ phần hash.
+Số gzip do `npm run build` (Vite 8) in ra, đo ngày 2026-10-03 (giai đoạn 5). Tên file đã bỏ phần hash.
 
 | File | Kích thước | gzip |
 |---|---:|---:|
-| `assets/ao-sen-dem-*.css` | 36.73 kB | 13.03 kB |
-| `assets/ao-sen-dem-*.js` (chunk vào) | 21.38 kB | 9.91 kB |
-| `assets/run-*.js` (kèm đồ nghề, view, bộ điều chỉnh) | 54.05 kB | 18.31 kB |
-| `assets/workshop-*.js` (thanh lớp + Sổ tay + Đồ nghề) | 15.73 kB | 5.86 kB |
-| `assets/painting-*.js` (kèm LUT, FXAA của Phủ bóng) | 45.66 kB | 17.59 kB |
-| `assets/content.vi-*.js` (chữ + sơ đồ của Sổ tay) | 30.42 kB | 9.25 kB |
+| `assets/ao-sen-dem-*.css` (kèm chữ đi theo vật, quầng trăng) | 38.44 kB | 13.41 kB |
+| `assets/ao-sen-dem-*.js` (chunk vào, kèm quầng trăng) | 23.71 kB | 10.86 kB |
+| `assets/run-*.js` (kèm đồ nghề, Từng sợi, móc lần vẽ, chữ đi theo vật, view, bộ điều chỉnh) | 62.35 kB | 21.53 kB |
+| `assets/workshop-*.js` (thanh lớp + Sổ tay + Đồ nghề) | 16.05 kB | 5.93 kB |
+| `assets/painting-*.js` (kèm hoa đăng, LUT, FXAA của Phủ bóng) | 50.60 kB | 19.68 kB |
+| `assets/content.vi-*.js` (chữ + sơ đồ của Sổ tay, thơ của hoa đăng) | 32.95 kB | 10.32 kB |
 | `assets/three-*.js` | 898.07 kB | 245.65 kB |
-| **Tổng đường 3D** (chunk vào + run + workshop + painting + content + three) | | **306.57 kB** |
+| **Tổng đường 3D** (chunk vào + run + workshop + painting + content + three) | | **313.97 kB** |
 | `assets/knobs-*.js` (Tweakpane, chỉ tải khi mở tab Chỉnh lần đầu) | 149.30 kB | 30.96 kB |
-| 20 chunk `?code` (code đã tô màu của từng file lớp, tải theo lớp) | | 1.6–6.2 kB mỗi file |
+| 22 chunk `?code` (code đã tô màu của từng file lớp, tải theo lớp) | | 1.6–8.0 kB mỗi file |
 | `assets/Inspector-*.js` (chỉ tải khi có `?debug`) | 172.83 kB | 38.67 kB |
 | `assets/main-*.js` (stats-gl, chỉ tải khi có `?debug=stats`) | 33.10 kB | 8.95 kB |
 
 Tầng tĩnh chỉ tải CSS (kèm font), poster và chunk vào của trang; mở Sổ tay chỉ đọc thì tải thêm `workshop` và `content`.
 Chunk `three-*.js` và phần 3D chỉ tải khi máy dùng được GPU.
-Mục tiêu của spec (§10): cả đường 3D ≤ 450 KB gzip (kể cả Tweakpane: 337.53 kB).
+Mục tiêu của spec (§10): cả đường 3D ≤ 450 KB gzip (kể cả Tweakpane: 344.93 kB). Giai đoạn 5 thêm 7.40 kB gzip cho đường 3D
+(giai đoạn 4: 306.57 kB).
 
 ## Giấy phép
 
-MIT, xem [LICENSE](LICENSE). Mọi hình ảnh đều sinh bằng code. Thơ: ca dao; Truyện Kiều (Nguyễn Du).
+MIT, xem [LICENSE](LICENSE). Mọi hình ảnh đều sinh bằng code. Thơ: ca dao; Truyện Kiều (Nguyễn Du); thơ của hoa đăng là ca dao
+và thơ cổ điển đã hết bản quyền (Nguyễn Trãi, Hồ Xuân Hương, Nguyễn Du, Nguyễn Khuyến).
