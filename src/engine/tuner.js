@@ -46,8 +46,8 @@ const median = (xs) => {
  * - ĐƯỜNG NHỊP (GĐ 3, máy không đo được GPU): ba luật sinh từ nhịp bị khóa.
  *   1. "Dư" gồm cả "không rớt khung nào mà trung bình không vượt ngân sách": màn 60 Hz mới nâng lại được.
  *   2. Nhịp bị khóa (tiết kiệm pin) thì hạ nấc nào cũng không nhanh hơn. Sau GĐ 5: lần hạ đầu của một đợt hạ (lúc mới live,
- *      sau một lần nâng) thì THỬ NGỪNG VẼ trước (probeStep). Không vẽ gì mà nhịp rAF vẫn chậm hơn ngân sách × 1,2 thì trình
- *      duyệt khóa nhịp: vào "bị khóa nhịp" ngay, không hạ nấc nào; nhanh lên thì máy là nút cổ chai: hạ như cũ. Lưới an toàn
+ *      sau một lần nâng, sau khi hết khóa nhịp) thì THỬ NGỪNG VẼ trước (probeStep). Không vẽ gì mà nhịp rAF vẫn chậm hơn ngân
+ *      sách × 1,2 thì trình duyệt khóa nhịp: vào "bị khóa nhịp" ngay; nhanh lên thì máy là nút cổ chai: hạ như cũ. Lưới an toàn
  *      (GĐ 3): hạ hết thang mà không nhanh hơn lúc bắt đầu hạ thì cũng là nhịp bị khóa: trả lại hết ('reset') rồi thôi hạ.
  *      Mốc "lúc bắt đầu hạ" đo ở lần hạ đầu tiên sau mỗi lần nâng (GĐ 4; GĐ 3 chỉ đo lại khi đã nâng về hết), ghi cả khi
  *      đang canh. Hết khóa khi nhịp nhanh hẳn lên (≤ 1,05 × ngân sách, hay nhanh hơn nhịp bị khóa ÷ 1,25). Còn khóa mà
@@ -216,8 +216,11 @@ export function createTuner({ budgetMs, ...options }) {
     const { avg, gaps } = probe;
     probe = null;
     clear();
-    if (median(gaps.slice(o.probeDrain)) > budgetMs * o.over) {
-      enterCap(avg); // không vẽ gì mà vẫn chậm: trình duyệt khóa nhịp, hạ nấc nào cũng vô ích
+    const idle = median(gaps.slice(o.probeDrain));
+    if (idle > budgetMs * o.over) {
+      // Không vẽ gì mà vẫn chậm: trình duyệt khóa nhịp. Mốc là chính nhịp ấy (đo lúc không vẽ), không phải nhịp lúc vẽ: máy còn
+      // chậm hơn nhịp bị khóa (tiết kiệm pin cũng hạ xung nhịp GPU) thì luật "quá tải thật" vẫn hạ về lại nhịp ấy.
+      enterCap(idle);
       return null;
     }
     return applied < steps ? down(applied, avg) : null;

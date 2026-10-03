@@ -114,6 +114,19 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
     expect([kinds(again.actions), again.skips]).toEqual([['down'], 6]);
   });
 
+  it('khóa 30 fps mà máy còn chậm hơn nhịp ấy (50 ms): mốc "nhịp bị khóa" là nhịp đo lúc không vẽ (33 ms), nên vẫn hạ về lại nhịp ấy', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 0, steps: 3 };
+    const cap = 1000 / 30;
+    // Tiết kiệm pin còn hạ xung nhịp GPU: ở nấc 0 khung mất 50 ms, chậm hơn cả nhịp bị khóa; hạ một nấc là về lại 33 ms.
+    const gapFor = (k) => (k === 0 ? 50 : cap);
+    const first = run(tuner, { seconds: 14, gapFor, idleFor: () => cap, ladder });
+    expect([kinds(first.actions), first.skips, tuner.state().capped, ladder.applied]).toEqual([['down'], 6, true, 1]);
+    // Về lại đúng nhịp bị khóa 5 cửa sổ: trả thử nấc ấy; quá tải lại ngay thì hạ lại và khóa nó (như lúc bị khóa ở GĐ 3).
+    const later = run(tuner, { seconds: 30, gapFor, idleFor: () => cap, ladder, from: first.end });
+    expect([kinds(later.actions), later.skips, ladder.applied, tuner.state().locked]).toEqual([['up', 'down'], 0, 1, [0]]);
+  });
+
   it('điện thoại (ngân sách 22,2 ms) ở Low Power Mode của iPhone (khóa 30 fps): cũng vào "bị khóa nhịp" sau lần thử, không hạ nấc nào', () => {
     const tuner = createTuner({ budgetMs: FRAME_BUDGET_MS.mobile });
     const ladder = { applied: 0, steps: 3 };
