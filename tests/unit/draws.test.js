@@ -377,13 +377,15 @@ describe('createDrawProbe', () => {
     ]);
   });
 
-  it('stop sau khi đang limit thì vẽ đủ như chưa có gì; start lại là phiên mới (chưa có list, không còn limit cũ)', () => {
+  it('stop sau khi đang limit thì vẽ đủ như chưa có gì, và thả khung đã ghi; start lại là phiên mới (chưa có list, không còn limit cũ)', () => {
     const { r, probe, frame } = pond();
     probe.start();
     frame();
     probe.limit(0);
     probe.stop();
     expect(r._fn).toBeNull();
+    // Bản ghi thô giữ vật, hình và material của khung cuối: tắt công cụ thì thả ra (thí nghiệm gỡ vật thì vật được thu hồi).
+    expect([probe.list(), probe.counts()]).toEqual([[], { scene: 0, reflection: 0, other: 0 }]);
     r.renderObject.mockClear();
     frame();
     expect(r.renderObject).toHaveBeenCalledTimes(5);

@@ -144,13 +144,17 @@ export function createDrawProbe({ renderer, camera, layers, meta, content = null
       prev = renderer.getRenderObjectFunction();
       renderer.setRenderObjectFunction(hook);
     },
-    /** Gỡ móc, trả hàm vẽ trước đó (kể cả khi công cụ bị gỡ vì lỗi), bỏ limit: vẽ đủ như chưa có gì. Gọi hai lần vẫn an toàn. */
+    /**
+     * Gỡ móc, trả hàm vẽ trước đó (kể cả khi công cụ bị gỡ vì lỗi), bỏ limit: vẽ đủ như chưa có gì. Thả khung đã ghi: bản ghi thô
+     * giữ vật, hình và material của nó. Gọi hai lần vẫn an toàn.
+     */
     stop() {
       if (!started) return;
       started = false;
       allowed = null;
       recording = false;
       current = null;
+      last = null;
       renderer.setRenderObjectFunction(prev);
       prev = null;
     },
