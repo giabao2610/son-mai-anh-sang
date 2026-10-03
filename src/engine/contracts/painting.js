@@ -59,6 +59,7 @@
  * @property {Record<string, { label: string, explain: string }>} [experiments]   cho MỌI thí nghiệm của lớp
  * @property {Record<string, string>} [readouts]   nhãn cho MỌI số đo riêng của lớp
  * @property {Record<string, string>} [taps]    nhãn các bước chụp của post (Lột lớp, Kính mài)
+ * @property {Record<string, string>} [objects] [5] nhãn cho MỌI vật trong layer.objects, khóa = object.name (Từng sợi)
  */
 
 export {};

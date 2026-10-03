@@ -16,6 +16,7 @@ export const LOOSE_MAX = { cao: 1200, vua: 600, thap: 300 };
  */
 export function createLooseLeaves(scene, leaves, max) {
   const group = new Group();
+  group.name = 'la-rieng'; // các Mesh rời không cần tên riêng: Từng sợi gán chúng cho Group này
   for (let i = 0; i < max; i++) {
     const mesh = new Mesh(leaves.geometry, leaves.material);
     mesh.matrixAutoUpdate = false; // ma trận chép sẵn từ instance, không tính lại từ position/rotation/scale

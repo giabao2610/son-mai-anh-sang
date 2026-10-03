@@ -87,8 +87,10 @@ export function createLayer(ctx, shared) {
   // để cả chiếc lá nhấp nhô cùng nhịp sóng thay vì từng đỉnh lệch nhau.
   leafGeometry.setAttribute('instanceCenter', new InstancedBufferAttribute(new Float32Array(LEAF_MAX * 2), 2));
   const leaves = new InstancedMesh(leafGeometry, leafMaterial, LEAF_MAX);
+  leaves.name = 'la-noi'; // tên vật: Từng sợi tra nhãn ở content.layers.cot.objects; Inspector của ?debug hiện tên này
   // Lá đứng dùng hình riêng: thuộc tính instance gắn với geometry, không chia được với lá nổi.
   const standingLeaves = new InstancedMesh(makeLeafGeometry(), standingMaterial, STANDING_MAX);
+  standingLeaves.name = 'la-dung';
   const petalGeometry = makePetalGeometry(); // hình cánh để lớp sau dùng lại (đèn hoa đăng)
   const petals = makePetals({ geometry: makePetalGeometry(), material: petalMaterial, openness: ctx.knob('openness') }); // @knob openness
   const cores = makeCores(coreMaterial);

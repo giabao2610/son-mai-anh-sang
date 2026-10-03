@@ -12,6 +12,7 @@ export default {
       knobs: { detail: 'Độ chi tiết của nút thắt' },
       experiments: { flat: { label: 'Normal phẳng', explain: 'Mỗi tam giác sáng một màu: thấy rõ hình được ghép từ mặt phẳng.' } },
       readouts: { triangles: 'Số tam giác' },
+      objects: { khoi: 'Nút thắt', be: 'Bệ' },
     },
     'to-mau': {
       understand: 'Lớp này sơn màu lên đất sét và thắp một ngọn đèn. Màu đi qua mix(đất sét, màu, trọng số), '

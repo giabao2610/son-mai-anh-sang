@@ -3,10 +3,10 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { paintings } from '../../src/paintings/registry.js';
-import mau from '../../src/paintings/_mau/meta.js';
 import { mergePalette } from '../../src/engine/palette.js';
 import { hasCode } from '../../src/ui/code-view.js';
 import { NOW, buildPainting } from '../helpers/fake-ctx.js';
+import { ALL } from '../helpers/paintings.js';
 import { svgColors } from '../helpers/svg.js';
 import { jpegSize, webpSize } from '../helpers/image.js';
 import { KEBAB } from '../helpers/kebab.js';
@@ -18,14 +18,6 @@ import { buildFinalNode, makeMRT } from '../../src/engine/gpu/pipeline.js';
 const SRC = resolve(import.meta.dirname, '../../src');
 const MARKER = /\/\/\s*@knob\s+([A-Za-z0-9_]+)/g;
 const MAX_WORDS = 150;
-
-/** Bức đã deploy (registry) và tranh mẫu. Tranh mẫu không có trang HTML và không bị kiểm HTML (spec §12). */
-const ROWS = [...paintings.map((p) => ({ ...p, deployed: true })), { meta: mau, page: null, lang: 'vi', deployed: false }];
-// Nạp trước cửa vào của mọi bức (top-level await): danh sách ngôn ngữ của content phải có trước khi khai báo test.
-const ALL = await Promise.all(ROWS.map(async (row) => {
-  const { default: entry } = await import(`../../src/paintings/${row.meta.slug}/index.js`);
-  return { ...row, entry, langs: Object.keys(entry.content ?? {}) };
-}));
 
 /** Tập id núm có marker `// @knob <id>` trong các file (đường dẫn tính từ src/). */
 function markersIn(files) {

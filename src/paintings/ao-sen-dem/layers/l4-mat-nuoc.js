@@ -130,6 +130,7 @@ export function createLayer(ctx, shared) {
 
   const geometry = new CircleGeometry(POND_RADIUS, 96).rotateX(-Math.PI / 2); // đĩa nước thuộc lớp này
   const water = new Mesh(geometry, material);
+  water.name = 'mat-nuoc';
   ctx.scene.add(water);
 
   // Lá nổi của Cốt nhấp nhô theo cùng hàm sóng, đọc TÂM lá (positionNode chạy sau instancing).

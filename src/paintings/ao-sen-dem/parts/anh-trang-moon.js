@@ -38,6 +38,7 @@ export function createMoon(ctx, w, phase) {
   material.colorNode = mix(color(hex.datSet), vec3(0), w);
   material.emissiveNode = light.mul(w);
   const moon = new Mesh(new SphereGeometry(MOON.radius, 48, 24), material);
+  moon.name = 'trang';
   return {
     moon,
     /** Mỗi khung: đặt trăng theo hướng của bức (giờ đêm), cập nhật pha từ núm. */

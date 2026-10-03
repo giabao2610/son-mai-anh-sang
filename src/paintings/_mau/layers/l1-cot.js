@@ -21,7 +21,9 @@ export function createLayer(ctx, shared) {
   material.colorNode = color(ctx.palette.hex.datSet);
   material.emissiveNode = vec3(0);
   const shape = new Mesh(knot(ctx.knobValue('detail')), material);
+  shape.name = 'khoi'; // mọi vật trong objects có name kebab-case; nhãn ở content.layers.cot.objects (Từng sợi hiện nhãn)
   const plinth = new Mesh(new CylinderGeometry(1.2, 1.3, 0.3, 48).translate(0, 0.15, 0), material);
+  plinth.name = 'be';
   const hemi = new HemisphereLight(STUDIO.sky, STUDIO.ground, STUDIO.intensity);
 
   const objects = [shape, plinth];

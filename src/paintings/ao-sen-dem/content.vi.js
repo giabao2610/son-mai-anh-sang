@@ -7,7 +7,7 @@ import matNuocDiagram from './diagrams/mat-nuoc.svg?raw';
 import vangLaDiagram from './diagrams/vang-la.svg?raw';
 
 /**
- * Mọi nhãn tra theo id (lớp, núm, thí nghiệm, số đo): đổi chữ không đụng tới code của lớp.
+ * Mọi nhãn tra theo id (lớp, núm, thí nghiệm, số đo, tên vật): đổi chữ không đụng tới code của lớp.
  * understand ≤ 150 chữ (đếm theo khoảng trắng); đường dẫn "Đọc thêm" chỉ https. Test hợp đồng giữ các luật này.
  * @type {import('../../engine/contracts/painting.js').PaintingContent}
  */
@@ -61,6 +61,10 @@ export default {
         },
       },
       readouts: { leaves: 'Số lá', vertices: 'Số đỉnh mỗi lần vẽ' },
+      objects: {
+        'la-noi': 'Lá nổi', 'la-dung': 'Lá đứng', 'canh-sen': 'Cánh sen', 'guong-sen': 'Gương sen và nhị',
+        cuong: 'Cuống hoa và lá', 'lau-say': 'Lau sậy', 'la-rieng': 'Lá nổi, mỗi lá một Mesh',
+      },
     },
 
     'anh-trang': {
@@ -111,6 +115,7 @@ export default {
         },
       },
       readouts: { shadowMap: 'Cỡ shadow map' },
+      objects: { trang: 'Trăng', 'hoa-dang': 'Đèn hoa đăng' },
     },
 
     suong: {
@@ -154,6 +159,7 @@ export default {
         },
       },
       readouts: { octaves: 'Số octave đang chạy' },
+      objects: { 'vom-troi': 'Vòm trời' },
     },
 
     'mat-nuoc': {
@@ -202,6 +208,7 @@ export default {
         },
       },
       readouts: { reflectionScale: 'Độ phân giải phản chiếu (so với màn hình)' },
+      objects: { 'mat-nuoc': 'Mặt nước' },
     },
 
     'vang-la': {
@@ -246,6 +253,7 @@ export default {
         },
       },
       readouts: { count: 'Số con đang vẽ' },
+      objects: { 'dom-dom': 'Đom đóm (GPU)', 'dom-dom-cpu': 'Đom đóm (CPU)' },
     },
 
     // Lớp dùng chung: chữ viết trung tính cho mọi bức. Muốn ví dụ riêng của ao sen thì ghi đè bằng spread ở đây.

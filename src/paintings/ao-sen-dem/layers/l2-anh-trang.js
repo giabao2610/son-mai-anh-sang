@@ -66,6 +66,7 @@ function createLantern(ctx, cot, w) {
   // Giấy dó sáng từ trong ra: sáng ở gốc cánh (gần nến), nhạt dần lên mép.
   material.emissiveNode = flame.mul(mix(1.6, 0.3, uv().y)).mul(w);
   const mesh = new InstancedMesh(cot.petalGeometry, material, 8);
+  mesh.name = 'hoa-dang';
   const dummy = new Object3D();
   dummy.rotation.order = 'YXZ';
   for (let k = 0; k < 8; k++) {
