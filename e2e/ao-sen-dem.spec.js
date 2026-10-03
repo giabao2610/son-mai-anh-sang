@@ -1,8 +1,13 @@
-// e2e/ao-sen-dem.spec.js — tương tác riêng của Bức 1: chạm, giữ, vuốt (sương xoáy) mặt nước; thanh giờ; chế độ mài; chất lượng; CPU vs GPU; trăng SVG.
+// e2e/ao-sen-dem.spec.js — tương tác riêng của Bức 1: chạm, giữ, vuốt (sương xoáy) mặt nước; thả hoa đăng; thanh giờ; chế độ mài; chất lượng; CPU vs GPU; trăng SVG.
 import { test, expect } from '@playwright/test';
-import { DARK, waitForSettled, waitForFrames, canvasStats, gpuReport, collectConsole, readSma, twoFrames } from './helpers.js';
+import {
+  DARK, waitForSettled, waitForFrames, canvasStats, canvasRegions, gpuReport, collectConsole, readSma, twoFrames, doubleTapAt,
+} from './helpers.js';
 import meta from '../src/paintings/ao-sen-dem/meta.js';
+import captions from '../src/paintings/ao-sen-dem/content.captions.vi.js';
+import { DRIFT, verseOrder } from '../src/paintings/ao-sen-dem/parts/anh-trang-drift.js';
 import { GESTURE } from '../src/engine/gpu/gesture.js';
+import { parseAt } from '../src/engine/flags.js';
 
 const AT = 'at=2026-09-28T21:00';
 const N = 90; // số khung của mỗi lần chạy; vòng gợn kịp lan trong ~1 giây đồng hồ của cảnh
@@ -10,8 +15,12 @@ const TAP_AFTER = 15; // chạm sau khung này
 const HOLD_FRAMES = 25; // giữ tay chừng này khung (rồi thêm 400 ms) trước khi thả
 // Điểm chạm: giữa ngang, 80% chiều cao khung — mặt nước ngay trước camera, trên lối trăng.
 const WATER = { x: 0.5, y: 0.8 };
+// Chỗ thả hoa đăng thứ hai (GĐ 5): vẫn trên mặt nước, lệch trái về phía đèn ở bờ.
+const ELSEWHERE = { x: 0.35, y: 0.78 };
+/** Số hoa đăng đang trôi (số đo 'lanterns' của lớp Ánh trăng, như Sổ tay đọc). */
+const lanternCount = (page) => page.evaluate(() => window.__sma.readouts('anh-trang').find((r) => r.id === 'lanterns')?.value);
 // Gợi ý của Bức 1 (content.hint, GĐ 5). Chép lại ở đây vì content.vi.js import sơ đồ bằng ?raw, mà Node của Playwright không
-// đọc được; tests/paintings/ao-sen-dem/shared.test.js giữ content.hint đúng bằng chuỗi này.
+// đọc được; tests/paintings/ao-sen-dem/tha-hoa-dang.test.js giữ content.hint đúng bằng chuỗi này.
 const HINT = 'Chạm vào mặt nước · chạm hai lần để thả hoa đăng';
 
 let log;
@@ -170,6 +179,98 @@ test.describe('Ao Sen Đêm · chạm mặt nước', () => {
   });
 });
 
+test.describe('Ao Sen Đêm · thả hoa đăng (GĐ 5)', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  // Đêm 16 tháng Chín âm lịch, trăng gần tròn (sáng 99,6%): đêm của poster (meta.poster.capture). Dáng đèn tính thẳng theo tuổi
+  // của nó trên đồng hồ CẢNH (?freeze: khung j là giây j/60). Chạm hai lần khi đã vẽ k khung thì đèn ra đời ở khung k + 1, nên tới
+  // khung LANTERN_N nó đã (LANTERN_N − k − 1)/60 giây tuổi, mà búp cần DRIFT.open (1,5 giây) để nở đủ; nến sáng đủ sau DRIFT.glowIn
+  // (0,5 giây). Nên chạm muộn nhất ở khung LATEST_TAP. Chạm sau khi ?freeze đã dừng thì đồng hồ không chạy nữa: đèn mãi là búp khép.
+  // LANTERN_N chỉ vừa đủ, vì trên CI mỗi khung đắt (xem release()). Chạm rơi vào khung 15–16 (SwiftShader), 17–18 (GPU thật).
+  const NIGHT = '2026-10-25T21:00';
+  const LANTERN_N = 120;
+  const LATEST_TAP = LANTERN_N - 1 - DRIFT.open * 60; // 29: tới khung LANTERN_N đèn vừa đúng DRIFT.open giây tuổi
+  const SKY = { x: 0.5, y: 0.12 };
+  // Quanh chỗ thả: tới khung LANTERN_N đèn mới trôi chưa tới nửa đơn vị (vài px), vũng sáng của nó loang trên nước bên dưới.
+  const AROUND = { x0: WATER.x - 0.06, y0: WATER.y - 0.1, x1: WATER.x + 0.06, y1: WATER.y + 0.08 };
+  // Số điểm sáng ấm (canvasRegions().warm: R > 150, G > 110, R − B > 40) trong AROUND ở khung 640×400, đo lúc viết test: có đèn
+  // 1384 (WebGL2 SwiftShader, mức vừa), 1469 (WebGPU SwiftShader), 1468–1475 (GPU thật, Apple M2); hai lần chạm thường 19–44 (đom
+  // đóm, ánh trăng trên gợn). Ánh nến và vũng sáng màu ngà: R − B của các điểm có đèn từ 41 tới 60 (giữa 53–54), nên ngưỡng
+  // R − B > 60 không bắt được điểm nào. Phải hơn phép so WARM_MARGIN điểm: 500 chừa dư cả hai phía (số có đèn hạ chừng 60% vẫn
+  // qua; số không đèn phải tăng hơn hai mươi lần mới làm hỏng).
+  const WARM_MARGIN = 500;
+  // Thứ tự thơ của đêm (shared.js): lần thả đầu mang câu [0], lần hai câu [1]. Hai file này không import gì nặng, Node đọc được.
+  const verses = verseOrder(Object.keys(captions), parseAt(NIGHT));
+
+  /** Chữ một mục của content.captions sẽ hiện ra: mỗi câu một .caption-line, rồi dòng nguồn "tên bài · tác giả" (ui/captions.js). */
+  const verseOf = (key) => {
+    const { lines, source, author } = captions[key];
+    return { lines: lines.map((l) => l.normalize('NFC')), cite: (author ? `${source} · ${author}` : source).normalize('NFC') };
+  };
+  /** Chữ đang hiện trong vùng chữ; textContent của cả dòng dính các câu vào nhau, nên đọc từng phần. */
+  const shownVerse = (page) => page.evaluate(() => {
+    const caption = document.querySelector('[data-captions] .caption');
+    if (!caption) return null;
+    const lines = [...caption.querySelectorAll('.caption-line')].map((el) => el.textContent.normalize('NFC'));
+    return { lines, cite: caption.querySelector('.caption-cite').textContent.normalize('NFC') };
+  });
+
+  /**
+   * Mở cảnh đêm NIGHT ở ?freeze=LANTERN_N, chạm hai lần lên nước sau khung TAP_AFTER, chờ đủ khung rồi đo vùng quanh chỗ chạm.
+   * gapMs mặc định là hai lần chạm sát nhau (thả một hoa đăng); 600 ms (quá GESTURE.doubleMs) là hai lần chạm thường.
+   * Trần chờ tính theo máy chậm nhất: WebGPU SwiftShader trên CI vẽ một khung mất 0,75–0,82 giây (WebGL2 SwiftShader chừng 0,33),
+   * nên từ lúc chạm tới khung LANTERN_N (chừng 105 khung) mất chừng 85 giây, cả một lần release() chừng 105 giây. Trần gấp đôi.
+   */
+  async function release(page, testInfo, { gapMs } = {}) {
+    const { query } = testInfo.project.metadata;
+    await page.goto(`./?${query.replace(/^\?/, '')}&at=${NIGHT}&freeze=${LANTERN_N}`);
+    const settled = await waitForSettled(page, { timeout: 60_000 });
+    expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+    await page.waitForFunction((n) => window.__sma.frames >= n, TAP_AFTER, { timeout: 60_000 });
+    const tappedAt = await doubleTapAt(page, WATER.x, WATER.y, { gapMs });
+    const sma = await waitForFrames(page, LANTERN_N, { timeout: 180_000 });
+    expect(sma.frames).toBe(LANTERN_N);
+    return { tappedAt, around: (await canvasRegions(page, { around: AROUND })).around };
+  }
+
+  test('chạm hai lần lên nước (phát ngay trong trang): hoa đăng sáng ở chỗ chạm, câu đầu của đêm; lần hai chỗ khác: hai đèn, câu kế; trên trời: không gì', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(420_000); // hai lần release() (chừng 105 giây mỗi lần trên CI) và ba lần vẽ lại khung đứng yên: trần gấp đôi
+    // Phép so: cùng hai lần chạm mà cách nhau 600 ms là hai lần chạm thường: có gợn, không có đèn, không có chữ.
+    const plain = await release(page, testInfo, { gapMs: 600 });
+    expect(await lanternCount(page), 'hai lần chạm cách 600 ms mà vẫn thả đèn').toBe(0);
+    await expect(page.locator('[data-captions] .caption')).toHaveCount(0);
+    const lit = await release(page, testInfo);
+    await page.screenshot({ path: testInfo.outputPath('hoa-dang.png') });
+    // Ghi trước mọi phép kiểm: hỏng ở đâu cũng còn số để so với các số đo ở WARM_MARGIN.
+    testInfo.annotations.push({
+      type: 'hoa-dang',
+      description: `chạm ở khung ${lit.tappedAt}; điểm sáng ấm quanh chỗ chạm: có đèn ${lit.around.warm}, không đèn ${plain.around.warm}`,
+    });
+    expect(lit.tappedAt, 'chạm hai lần quá muộn: tới khung cuối búp chưa kịp nở đủ').toBeLessThanOrEqual(LATEST_TAP);
+    expect(await lanternCount(page)).toBe(1);
+    const caption = page.locator('[data-captions] .caption');
+    await expect(caption).toBeVisible();
+    await expect(caption).toHaveAttribute('data-shown', '');
+    await expect(caption, 'điểm neo của chữ (ngọn đèn) phải ở trong khung').not.toHaveAttribute('data-away');
+    expect(await shownVerse(page)).toEqual(verseOf(verses[0]));
+    expect(lit.around.warm, 'quanh chỗ thả không thấy đèn sáng').toBeGreaterThan(plain.around.warm + WARM_MARGIN);
+    // Lần hai ở chỗ khác (khung đã dừng: cử chỉ tới thì vẽ lại khung LANTERN_N).
+    await doubleTapAt(page, ELSEWHERE.x, ELSEWHERE.y);
+    await expect.poll(() => lanternCount(page)).toBe(2);
+    await expect.poll(() => shownVerse(page)).toEqual(verseOf(verses[1]));
+    // Trên trời: tia từ camera không cắt mặt nước, bức bỏ qua cử chỉ.
+    await doubleTapAt(page, SKY.x, SKY.y);
+    await twoFrames(page);
+    expect(await lanternCount(page)).toBe(2);
+    expect(await shownVerse(page)).toEqual(verseOf(verses[1]));
+    expect(log.errors).toEqual([]);
+  });
+});
+
 test.describe('Ao Sen Đêm · thanh giờ (GĐ 4)', () => {
   test.beforeEach(({}, testInfo) => {
     test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
@@ -250,6 +351,34 @@ test.describe('Ao Sen Đêm · chất lượng', () => {
     const { stats } = await atLevel(page, testInfo, 'cao');
     expect(stats.drawCalls).toBeGreaterThan(10);
     expect(stats.drawCalls).toBeLessThanOrEqual(45);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('mức cao có hoa đăng (GĐ 5): hai đèn trôi không thêm draw call nào (chung InstancedMesh với đèn ở bờ), vẫn ≤ 45', async ({
+    page,
+  }, testInfo) => {
+    const { query, backend } = testInfo.project.metadata;
+    test.skip(backend !== 'webgpu', 'spec §12: draw call của mức cao đo trên WebGPU');
+    test.setTimeout(180_000); // N khung ở mức cao: chừng 85 giây trên WebGPU SwiftShader của CI
+    await page.goto(`./?${query.replace(/^\?/, '')}&${AT}&level=cao&freeze=${N}`);
+    const settled = await waitForSettled(page, { timeout: 60_000 });
+    expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+    await page.waitForFunction((n) => window.__sma.frames >= n, TAP_AFTER, { timeout: 60_000 });
+    const before = (await page.evaluate(() => window.__sma.stats())).drawCalls;
+    await doubleTapAt(page, WATER.x, WATER.y);
+    // Thả cả hai đèn khi vòng lặp còn chạy: stats() là số đo của khung vòng lặp vẽ sau cùng (vẽ lại lúc đứng yên không đo).
+    const tappedAt = await doubleTapAt(page, ELSEWHERE.x, ELSEWHERE.y);
+    expect(tappedAt, 'thả đèn sau khi ?freeze đã dừng: khung cuối không có đèn').toBeLessThan(N - 5);
+    const sma = await waitForFrames(page, N, { timeout: 120_000 });
+    expect(sma.level).toBe('cao');
+    expect(await lanternCount(page)).toBe(2);
+    const { drawCalls } = await page.evaluate(() => window.__sma.stats());
+    testInfo.annotations.push({ type: 'draw-call', description: `trước khi thả ${before}, có hai đèn ${drawCalls}` });
+    expect(drawCalls).toBeGreaterThan(10);
+    expect(drawCalls).toBeLessThanOrEqual(45);
+    // Khung TAP_AFTER và khung N vẽ cùng những vật (bóng tĩnh chỉ vẽ ở khung đầu; ?freeze không có bộ điều chỉnh hạ nấc), chỉ khác
+    // hai đèn: mỗi đèn là một instance nữa của InstancedMesh đèn ở bờ (đổi count), vũng sáng nằm trong shader của mặt nước.
+    expect(drawCalls, 'đèn thả ra thêm draw call: đèn phải chung InstancedMesh với đèn ở bờ').toBe(before);
     expect(log.errors).toEqual([]);
   });
 

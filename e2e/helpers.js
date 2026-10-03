@@ -1,4 +1,4 @@
-// e2e/helpers.js — Tiện ích e2e: chờ __sma ổn định, chờ khung, đọc pixel canvas (cả khung và từng vùng), báo GPU, gom lỗi console.
+// e2e/helpers.js — Tiện ích e2e: chờ __sma ổn định, chờ khung, đọc pixel canvas (cả khung và từng vùng), chạm hai lần trong trang, báo GPU, gom lỗi console.
 
 /** Cảnh báo API cũ mà three in ra lúc chạy (spec §3: e2e bắt các cảnh báo này). */
 export const DEPRECATION = /deprecated|renamed|has been removed/i;
@@ -82,8 +82,9 @@ export const FULL = { x0: 0, y0: 0, x1: 1, y1: 1 };
  * Số đo của từng VÙNG canvas (GĐ 4, công cụ học): vùng là hình chữ nhật { x0, y0, x1, y1 } theo tỉ lệ khung (0–1), có thể
  * kèm `ring: { r, inside }` để chỉ lấy điểm trong (inside: true) hay ngoài một vòng tròn giữa khung bán kính r × cạnh ngắn.
  * Mỗi vùng: checksum, độ sáng trung bình (0–1), độ lệch chuẩn độ sáng, sắc độ trung bình (chroma = (max − min) / 255: đo
- * theo tuyệt đối, vì độ bão hòa (max − min) / max thổi phồng những điểm gần đen như nền đen then), và `transparent`: số
- * điểm canvas trong suốt. Lúc chụp, nền trang tô màu hồng sen (#ff00ff): điểm trong suốt để lộ nền ấy ra.
+ * theo tuyệt đối, vì độ bão hòa (max − min) / max thổi phồng những điểm gần đen như nền đen then), `transparent`: số
+ * điểm canvas trong suốt (lúc chụp, nền trang tô màu hồng sen #ff00ff: điểm trong suốt để lộ nền ấy ra), và `warm` (GĐ 5): số
+ * điểm sáng màu ấm (R > 150, G > 110, R − B > 40), như ánh nến của hoa đăng và vũng sáng nó hắt xuống nước.
  * @param {import('@playwright/test').Page} page
  * @param {Record<string, { x0: number, y0: number, x1: number, y1: number, ring?: { r: number, inside: boolean } }>} regions
  */
@@ -107,6 +108,7 @@ export async function canvasRegions(page, regions = { all: FULL }, selector = '[
       let sumL2 = 0;
       let sumS = 0;
       let transparent = 0;
+      let warm = 0;
       const radius = r.ring ? r.ring.r * Math.min(w, h) : 0;
       for (let y = Math.floor(r.y0 * h); y < Math.floor(r.y1 * h); y++) {
         for (let x = Math.floor(r.x0 * w); x < Math.floor(r.x1 * w); x++) {
@@ -122,10 +124,11 @@ export async function canvasRegions(page, regions = { all: FULL }, selector = '[
           sumL2 += l * l;
           sumS += (max - min) / 255;
           if (R > 240 && G < 20 && B > 240) transparent += 1;
+          if (R > 150 && G > 110 && R - B > 40) warm += 1;
         }
       }
       const mean = sumL / n;
-      out[name] = { checksum: sum, mean, std: Math.sqrt(Math.max(sumL2 / n - mean * mean, 0)), chroma: sumS / n, transparent };
+      out[name] = { checksum: sum, mean, std: Math.sqrt(Math.max(sumL2 / n - mean * mean, 0)), chroma: sumS / n, transparent, warm };
     }
     return out;
   }, { b64: png.toString('base64'), regions });
@@ -134,6 +137,41 @@ export async function canvasRegions(page, regions = { all: FULL }, selector = '[
 /** Chờ hai nhịp requestAnimationFrame: vẽ lại khung đứng yên (?freeze) xảy ra ở nhịp kế tiếp sau thay đổi. */
 export function twoFrames(page) {
   return page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+}
+
+/**
+ * Chạm hai lần lên canvas ở (fx, fy) (tỉ lệ 0–1 của khung canvas) bằng PointerEvent phát NGAY TRONG TRANG (spec §17, Phụ lục
+ * A.51). Mỗi sự kiện chuột của Playwright phải đợi một nhịp khung mới tới trang, mà trên GPU phần mềm một nhịp có khi vài trăm
+ * ms: hai lần chạm của page.mouse dễ cách nhau quá GESTURE.doubleMs (300 ms). Ở đây xuống/lên rồi xuống/lên đi trong một lần
+ * evaluate, hai lần chạm cách nhau `gapMs` theo đồng hồ tường; gapMs quá doubleMs thì là hai lần chạm thường (phép so).
+ * Trong lúc chờ gapMs, trang vẫn chạy tiếp: luồng chính kẹt quá doubleMs − gapMs (chừng 260 ms) giữa hai lần chạm thì cử chỉ thành
+ * hai lần chạm thường, và test hỏng (không có đèn, không có chữ) chứ không qua oan.
+ * pointerId 1, pointerType 'mouse': OrbitControls gọi setPointerCapture(pointerId) lúc chạm xuống, và hàm đó ném lỗi với id
+ * không phải con trỏ đang có; con trỏ chuột (id 1) thì Chromium luôn có.
+ * Trả `__sma.frames` ngay sau lần chạm hai: cử chỉ được xử lý ở khung kế tiếp (hay ở lần vẽ lại, khi ?freeze đã dừng).
+ * @param {import('@playwright/test').Page} page
+ * @param {number} fx
+ * @param {number} fy
+ * @param {{ gapMs?: number }} [opts]
+ * @returns {Promise<number | null>}
+ */
+export function doubleTapAt(page, fx, fy, { gapMs = 40 } = {}) {
+  return page.evaluate(async ({ x, y, gap }) => {
+    const canvas = document.querySelector('[data-stage] canvas');
+    const box = canvas.getBoundingClientRect();
+    const at = {
+      pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, bubbles: true, cancelable: true, composed: true,
+      clientX: box.left + box.width * x, clientY: box.top + box.height * y,
+    };
+    const tap = () => {
+      canvas.dispatchEvent(new PointerEvent('pointerdown', { ...at, buttons: 1 }));
+      canvas.dispatchEvent(new PointerEvent('pointerup', { ...at, buttons: 0 }));
+    };
+    tap();
+    await new Promise((resolve) => setTimeout(resolve, gap));
+    tap();
+    return window.__sma?.frames ?? null;
+  }, { x: fx, y: fy, gap: gapMs });
 }
 
 /** Hỏi thẳng trình duyệt nó có GPU gì (để bỏ qua test WebGPU khi không có adapter). */
