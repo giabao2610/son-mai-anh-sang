@@ -105,6 +105,8 @@ const t = {
       label: 'Sợi',
       play: 'Dệt lại',
       counting: 'Đang đếm các lần vẽ…',
+      /** Đếm quá 3 giây (tab đang hiện) mà móc chưa thấy lần vẽ nào: không để "Đang đếm…" đứng mãi. */
+      stalled: 'Chưa thấy lần vẽ nào của cảnh. Tắt rồi bật lại Từng sợi, hoặc tải lại trang.',
       empty: 'Chưa vẽ sợi nào: chỉ còn màu nền xóa khung, vẫn qua hậu kỳ.',
       step: (k, n) => `${num(k)}/${num(n)}`,
       valuetext: (k, n, label) => (k === 0 ? `Sợi 0 trên ${num(n)}: chưa vẽ gì` : `Sợi ${num(k)} trên ${num(n)}: ${label}`),

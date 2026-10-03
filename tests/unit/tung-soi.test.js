@@ -8,7 +8,7 @@ import { createDrawProbe } from '../../src/engine/gpu/draws.js';
 import { createToolbox } from '../../src/engine/gpu/toolbox.js';
 import t from '../../src/ui/strings.vi.js';
 
-const { POLL_MS, STEP_MS, MAX_PLAY_MS, playStepMs, playStride } = tungSoi;
+const { POLL_MS, STEP_MS, MAX_PLAY_MS, STALL_MS, playStepMs, playStride } = tungSoi;
 const text = t.tools['tung-soi'];
 
 /** Ba lần vẽ của lượt vẽ cảnh, như draws.js ghi: mặt nước kéo theo hai lần vẽ lồng (phản chiếu); một vật không thuộc lớp nào. */
@@ -419,6 +419,58 @@ describe('Từng sợi', () => {
     expect([range.max, range.value]).toEqual(['4', '4']);
     tool.activate(false);
     expect(renderer.fn).toBeNull(); // trả hàm vẽ cũ
+  });
+
+  it('đếm mãi không thấy lần vẽ nào (tab đang hiện): tới STALL_MS thì dòng mô tả và thanh báo, console cảnh báo một lần; danh sách tới thì như thường', async () => {
+    // Đang đếm dựa vào chỗ của scene pass trong lượt cuối (views.js, Phụ lục A.53). Bản three sau đổi thứ tự updateBefore thì móc
+    // không bao giờ thấy lượt vẽ cảnh: người xem không được nhìn một dòng "Đang đếm…" đứng mãi mà không biết làm gì.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const api = fakeApi();
+    api.setList([]);
+    const { tool, range, play, detail } = await opened(api); // đã đếm POLL_MS
+    await vi.advanceTimersByTimeAsync(STALL_MS - 2 * POLL_MS);
+    expect([detail.textContent, range.getAttribute('aria-valuetext')]).toEqual([text.counting, text.counting]); // chưa tới hạn
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect([detail.textContent, range.getAttribute('aria-valuetext'), play.disabled]).toEqual([text.stalled, text.stalled, true]);
+    await vi.advanceTimersByTimeAsync(STALL_MS);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(1); // canh giờ đi theo lượt đọc, không thêm đồng hồ nào
+    api.setList(DRAWS);
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect([range.max, range.getAttribute('aria-valuetext'), play.disabled]).toEqual(['3', 'Sợi 3 trên 3: Sprite', false]);
+    expect(detail.textContent).toBe(text.detail(DRAWS[2]));
+    await vi.advanceTimersByTimeAsync(2 * STALL_MS); // xem lâu khi đã có danh sách: không đếm
+    api.setList([]);
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect(detail.textContent).toBe(text.counting); // rỗng lại thì đếm lại từ đầu, không báo ngay
+    // Tắt rồi bật lại là phiên mới: đếm lại từ đầu, và kẹt lần nữa thì lại cảnh báo.
+    tool.activate(false);
+    api.setList([]);
+    tool.activate(true);
+    await vi.advanceTimersByTimeAsync(STALL_MS - POLL_MS);
+    expect(detail.textContent).toBe(text.counting);
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect(detail.textContent).toBe(text.stalled);
+    expect(warn).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
+  });
+
+  it('tab ẩn không tính vào lúc đếm (không có khung nào được vẽ): hiện lại thì đếm lại từ đầu', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const api = fakeApi();
+    api.setList([]);
+    const { detail } = await opened(api);
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    await vi.advanceTimersByTimeAsync(4 * STALL_MS);
+    expect(detail.textContent).toBe(text.counting);
+    expect(warn).not.toHaveBeenCalled();
+    hidden.mockReturnValue(false);
+    await vi.advanceTimersByTimeAsync(STALL_MS - POLL_MS);
+    expect(detail.textContent).toBe(text.counting);
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect(detail.textContent).toBe(text.stalled);
+    hidden.mockRestore();
+    warn.mockRestore();
   });
 
   it('xưởng chưa có móc (api.draws null): gắn hỏng bằng lỗi tiếng Việt, hộp đồ nghề bỏ công cụ này (không còn nút mở ra bảng trống)', () => {
