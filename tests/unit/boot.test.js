@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { boot } from '../../src/engine/boot.js';
+import { HALO_STEPS } from '../../src/ui/moon-progress.js';
 import t from '../../src/ui/strings.vi.js';
 import { mountPage } from '../helpers/page.js';
 
@@ -183,5 +184,49 @@ describe('boot', () => {
     await boot(entry, { t, win, doc, loadRun: async () => ({ run }) });
     expect(win.__sma).toMatchObject({ state: 'static', reason: 'error', error: 'createLayer hỏng' });
     expect(page.note.querySelector('pre').textContent).toContain('createLayer hỏng');
+  });
+});
+
+describe('boot · quầng trăng tiến độ (GĐ 5)', () => {
+  const halo = () => page.moon.querySelector('.moon-halo');
+  const offset = () => Number(halo().style.strokeDashoffset);
+
+  it("báo mốc 'chunk' sau khi loadRun xong và trước khi run chạy", async () => {
+    let whileLoading;
+    let whenRunning;
+    const run = vi.fn(async () => {
+      whenRunning = offset();
+      return { dispose() {} };
+    });
+    const loadRun = vi.fn(async () => {
+      whileLoading = offset();
+      return { run };
+    });
+    await boot(entry, { t, win: webglWin(), doc, loadRun });
+    expect(whileLoading).toBeCloseTo(1 - HALO_STEPS.loading.to, 4); // đang tải code 3D: quầng bò tới mốc loading
+    expect(whenRunning).toBeCloseTo(1 - HALO_STEPS.chunk.to, 4);
+  });
+
+  it('quá hạn (late) thì progress của vỏ trang bị khóa như các hàm khác: tầng tĩnh không có quầng', async () => {
+    vi.useFakeTimers();
+    const win = webglWin();
+    let finishLoad;
+    const loadRun = () => new Promise((resolve) => {
+      finishLoad = resolve;
+    });
+    const run = vi.fn(async (_entry, shell) => {
+      // Dò khóa: quầng đã gỡ thì chỉ 'loading' vẽ được vòng mới (ui/moon-progress.js), nên quầng còn trống là nhờ khóa của boot.
+      shell.progress('loading');
+      return { dispose() {} };
+    });
+    const booted = boot(entry, { t, win, doc, loadRun });
+    await vi.advanceTimersByTimeAsync(10_000);
+    await booted;
+    expect(win.__sma).toMatchObject({ state: 'static', reason: 'timeout' });
+    expect(halo()).toBeNull(); // về tĩnh giữa lúc tải: quầng biến mất ngay
+    finishLoad({ run }); // code 3D tải xong sau hạn: mốc 'chunk' của boot cũng bị chặn
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(halo()).toBeNull();
   });
 });

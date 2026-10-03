@@ -55,7 +55,8 @@ img[data-poster] {
 
 /* ── Lớp 1: sân khấu 3D ───────────────────────────────────────────────────────────────── */
 /* Canvas được gắn vào đây với opacity 0, nên xưởng vẽ được một khung ẩn sau poster.
-   ui/shell.js thêm data-visible → opacity chuyển 0 → 1: poster "hòa" sang cảnh 3D. */
+   ui/shell.js thêm data-visible → opacity chuyển 0 → 1: poster "hòa" sang cảnh 3D. Ở JS, con số 900 ms này là
+   CROSSFADE_MS của ui/moon-progress.js: quầng trăng tan cùng lúc, lưới an toàn của ui/shell.js cũng tính từ đó. */
 [data-stage] { position: fixed; inset: 0; }
 [data-stage] canvas {
   display: block;
@@ -299,6 +300,18 @@ header h1 {
 [data-moon]:empty { display: none; }
 .moon-dark { fill: color-mix(in srgb, var(--cham) 80%, var(--den-then)); }
 .moon-lit { fill: var(--nga); }
+/* Quầng tiến độ lúc tải phần 3D (GĐ 5): ui/moon-progress.js đặt dashoffset đích và transition inline. */
+.moon-halo {
+  fill: none;
+  stroke: var(--vang-la-sang);
+  stroke-width: 7; /* toạ độ riêng của vòng lớn gấp 100 (ui/moon-progress.js nói vì sao): trên trăng là 0,07 */
+  stroke-linecap: round;
+  /* Vòng có pathLength="1": nét 1 dài đúng cả vòng, nên dashoffset 1 là vòng rỗng, 0 là vòng đầy. Khoảng trống 2 dài hơn
+     cả vòng, nên lúc rỗng không có nét nào của chu kỳ sau ló ra ở cuối, trình duyệt nào cũng vậy. */
+  stroke-dasharray: 1 2;
+}
+/* Giảm chuyển động: quầng nhảy thẳng tới từng mốc. !important thắng transition inline mà JS đặt. */
+@media (prefers-reduced-motion: reduce) { .moon-halo { transition: none !important; } }
 
 /* ── ?poster (GĐ 4): chỉ còn canvas, để scripts/poster.js chụp poster từ chính cảnh (không chữ, không huy hiệu, không UI) ── */
 body[data-poster] :is(.frame, .rail, .notebook, .toolbar) { display: none !important; }
