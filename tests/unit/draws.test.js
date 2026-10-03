@@ -185,6 +185,38 @@ describe('createDrawProbe', () => {
     expect(r.info.render.drawCalls).toBe(18); // renderer giả đếm dồn: 2 × (4 + 3 vật + 2 lần vẽ phản chiếu)
   });
 
+  it('khung vẽ đủ chỉ cất bản ghi thô: không ai hỏi list() thì không duyệt layer.objects; hỏi lại cùng khung thì không dựng lại', () => {
+    // Từng sợi xem đủ khung thì mọi khung đều được ghi (60 lần/giây), mà công cụ chỉ hỏi list() 4 lần/giây. Duyệt mọi vật để tìm
+    // chủ (ownerMap) và đông cứng một DrawInfo cho từng lần vẽ chỉ đáng làm khi có người hỏi.
+    const r = fakeRenderer();
+    const clay = Object.assign(new Mesh(new BoxGeometry(), mat()), { name: 'khoi' });
+    const objects = [clay];
+    let reads = 0;
+    const layer = {
+      get objects() {
+        reads += 1;
+        return objects;
+      },
+    };
+    const probe = createDrawProbe({ renderer: r, camera, layers: [{ id: 'cot', layer }], meta: META, content: CONTENT });
+    const frame = () => {
+      probe.begin();
+      render(r, [clay], camera);
+      probe.end();
+    };
+    probe.start();
+    for (let i = 0; i < 60; i++) frame();
+    expect(reads).toBe(0);
+    const first = probe.list();
+    expect(first.map((d) => d.label)).toEqual(['Khối đất']);
+    expect(reads).toBe(1);
+    expect(probe.list()).toBe(first); // cùng khung: cùng một danh sách đông cứng
+    expect(reads).toBe(1);
+    frame();
+    expect(probe.list()).not.toBe(first); // khung mới: dựng lại, nhận vật mà thí nghiệm vừa thêm hay bớt
+    expect(reads).toBe(2);
+  });
+
   it('limit(k) chỉ vẽ k lần đầu của list (so theo vật + material + lượt, không theo thứ tự), list giữ nguyên; limit(null) vẽ đủ và ghi lại', () => {
     const { r, probe, clay, glass, grains, frame } = pond();
     probe.start();
