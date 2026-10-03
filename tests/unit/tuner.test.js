@@ -11,14 +11,24 @@ const DESKTOP = FRAME_BUDGET_MS.desktop;
  * hạ nấc thì khung nhanh lên. Thang giả có `steps` nấc; 'down' / 'up' / 'reset' đổi `applied` như ladder.js.
  * GĐ 4: gpuFor(k, i) là ms GPU của khung i, nhưng cứ `gpuEvery` khung mới có một mẫu về (gpu-timer không chờ, mẫu đến
  * trễ và thưa); cpuFor(k, i) là ms CPU của khung i. Thiếu thì máy "không đo được": đường nhịp như GĐ 3.
- * Trả mọi quyết định kèm thời điểm (giây).
+ * Sau GĐ 5: 'skip' là khung không được vẽ (bộ điều chỉnh đang thử ngừng vẽ): thang giữ nguyên, không có ms CPU hay GPU, và khoảng
+ * tới khung sau lấy từ idleFor(k, i), nhịp rAF khi máy không có việc gì. Mặc định 60 Hz: máy là nút cổ chai, không vẽ thì
+ * trình duyệt gọi rAF theo màn hình. Trình duyệt khóa nhịp (tiết kiệm pin) thì idleFor là chính nhịp bị khóa.
+ * Trả mọi quyết định (trừ 'skip') kèm thời điểm (giây), và số khung bị bỏ.
  */
-function run(tuner, { seconds, gapFor, ladder, from = 0, gpuFor = null, cpuFor = null, gpuEvery = 4 }) {
+function run(tuner, { seconds, gapFor, idleFor = () => DESKTOP, ladder, from = 0, gpuFor = null, cpuFor = null, gpuEvery = 4 }) {
   const actions = [];
   let t = from;
+  let skips = 0;
+  let skipped = false;
   for (let i = 0; t < from + seconds * 1000; i++) {
-    t += gapFor(ladder.applied, i);
+    t += skipped ? idleFor(ladder.applied, i) : gapFor(ladder.applied, i);
     const action = tuner.sample(t, ladder);
+    skipped = action === 'skip';
+    if (skipped) {
+      skips += 1;
+      continue;
+    }
     if (action) {
       actions.push({ at: +(t / 1000).toFixed(2), action });
       if (action === 'down') ladder.applied += 1;
@@ -29,7 +39,7 @@ function run(tuner, { seconds, gapFor, ladder, from = 0, gpuFor = null, cpuFor =
     if (cpuFor) tuner.cpu(cpuFor(ladder.applied, i));
     if (gpuFor && i % gpuEvery === 0) tuner.gpu(gpuFor(ladder.applied, i));
   }
-  return { actions, end: t };
+  return { actions, end: t, skips };
 }
 const kinds = (actions) => actions.map((a) => a.action);
 
@@ -50,10 +60,11 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
     const tuner = createTuner({ budgetMs: DESKTOP });
     const ladder = { applied: 0, steps: 4 };
     // Máy giả: mỗi nấc bớt 4,5 ms; 2 nấc là về 16 ms (đủ 60 fps, không rớt khung nên trông như còn dư).
-    const { actions } = run(tuner, { seconds: 60, gapFor: (k) => Math.max(25 - k * 4.5, 16), ladder });
+    const { actions, skips } = run(tuner, { seconds: 60, gapFor: (k) => Math.max(25 - k * 4.5, 16), ladder });
     expect(kinds(actions)).toEqual(['down', 'down', 'up', 'down']);
     expect(actions[0].at).toBeGreaterThanOrEqual(5.9);
-    expect(actions[0].at).toBeLessThan(6.2);
+    expect(actions[0].at).toBeLessThan(6.2); // sau lần thử ngừng vẽ: 6 khung ở 60 Hz, chừng 0,1 giây
+    expect(skips, 'thử trước lần hạ đầu của mỗi đợt hạ (lúc mới live, và sau lần nâng)').toBe(12);
     expect(ladder.applied).toBe(2);
     expect(tuner.state().locked).toEqual([1]);
   });
@@ -84,20 +95,54 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
     expect(ladder.applied).toBe(1);
   });
 
-  it('khóa nhịp 30 fps (tiết kiệm pin): hạ hết thang, không nhanh hơn → trả lại hết, thôi hạ; hết khóa thì chạy lại', () => {
+  it('khóa nhịp 30 fps (tiết kiệm pin): trước lần hạ đầu thử ngừng vẽ 6 khung; không vẽ mà vẫn 33 ms → "bị khóa nhịp" ngay, không hạ nấc nào', () => {
     const tuner = createTuner({ budgetMs: DESKTOP });
     const ladder = { applied: 0, steps: 3 };
     let gap = 1000 / 30;
-    const first = run(tuner, { seconds: 60, gapFor: () => gap, ladder });
-    expect(kinds(first.actions)).toEqual(['down', 'down', 'down', 'reset']);
+    // 2 giây khởi động + 2 cửa sổ quá tải, rồi 6 khung không vẽ (0,2 giây): trình duyệt vẫn gọi rAF mỗi 33 ms.
+    const early = run(tuner, { seconds: 6.5, gapFor: () => gap, idleFor: () => gap, ladder });
+    expect([early.actions, early.skips, tuner.state().capped]).toEqual([[], 6, true]);
+    const rest = run(tuner, { seconds: 60, gapFor: () => gap, idleFor: () => gap, ladder, from: early.end });
+    expect([rest.actions, rest.skips], 'đã biết nhịp bị khóa: không hạ, không thử lại').toEqual([[], 0]);
     expect(ladder.applied).toBe(0);
-    expect(tuner.state().capped).toBe(true);
-    // Cắm sạc: về 60 fps, hết khóa (không còn nấc nào để nâng). Rồi máy thật sự chậm (40 fps): lại hạ được.
+    // Cắm sạc: về 60 fps, hết khóa. Rồi máy thật sự chậm (40 fps, không vẽ thì về 60 Hz): thử, rồi hạ được.
     gap = DESKTOP;
-    expect(run(tuner, { seconds: 10, gapFor: () => gap, ladder, from: first.end }).actions).toEqual([]);
+    const plugged = run(tuner, { seconds: 10, gapFor: () => gap, ladder, from: rest.end });
+    expect(plugged.actions).toEqual([]);
     expect(tuner.state().capped).toBe(false);
-    const again = run(tuner, { seconds: 6, gapFor: () => 25, ladder, from: first.end + 10_000 });
-    expect(kinds(again.actions)).toEqual(['down']);
+    const again = run(tuner, { seconds: 6, gapFor: () => 25, ladder, from: plugged.end });
+    expect([kinds(again.actions), again.skips]).toEqual([['down'], 6]);
+  });
+
+  it('điện thoại (ngân sách 22,2 ms) ở Low Power Mode của iPhone (khóa 30 fps): cũng vào "bị khóa nhịp" sau lần thử, không hạ nấc nào', () => {
+    const tuner = createTuner({ budgetMs: FRAME_BUDGET_MS.mobile });
+    const ladder = { applied: 0, steps: 3 };
+    const { actions, skips } = run(tuner, { seconds: 30, gapFor: () => 1000 / 30, idleFor: () => 1000 / 30, ladder });
+    expect([actions, skips, tuner.state().capped]).toEqual([[], 6, true]);
+  });
+
+  it('thử ngừng vẽ mà nhịp nhanh lên (máy là nút cổ chai) thì hạ; hạ hết thang mà không nhanh hơn thì vẫn trả lại hết (lưới an toàn của luật 2)', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 0, steps: 3 };
+    // Khung nào cũng 33 ms dù hạ nấc nào (phần việc chậm không nằm trong thang), mà không vẽ thì rAF về 60 Hz: lần thử nói "máy
+    // không kịp", nên hạ như cũ; hạ hết rồi vẫn không nhanh hơn 10% thì luật cũ trả lại hết.
+    const { actions, skips } = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, ladder });
+    expect(kinds(actions)).toEqual(['down', 'down', 'down', 'reset']);
+    expect(skips, 'chỉ thử trước lần hạ đầu của đợt hạ').toBe(6);
+    expect(tuner.state().capped).toBe(true);
+  });
+
+  it('lần thử bị ngắt (khoảng > 250 ms giữa chừng: tab ẩn, debugger) thì bỏ, không kết luận; đo lại hai cửa sổ rồi thử lại', () => {
+    const tuner = createTuner({ budgetMs: DESKTOP });
+    const ladder = { applied: 0, steps: 3 };
+    const cap = 1000 / 30;
+    let idleTicks = 0;
+    // Khung thứ ba sau khi ngừng vẽ tới trễ 400 ms: lần thử đầu bỏ dở (3 khung đã bỏ), khung ấy vẽ như thường.
+    const idleFor = () => ((idleTicks += 1) === 3 ? 400 : cap);
+    const first = run(tuner, { seconds: 7, gapFor: () => cap, idleFor, ladder });
+    expect([first.actions, first.skips, tuner.state().capped]).toEqual([[], 3, false]);
+    const later = run(tuner, { seconds: 6, gapFor: () => cap, idleFor, ladder, from: first.end });
+    expect([later.actions, later.skips, tuner.state().capped]).toEqual([[], 6, true]);
   });
 
   it('hết khóa nhịp trên màn 59,94 Hz, hay khi mỗi cửa sổ rớt một khung: thoát "bị khóa nhịp", rồi chậm thật thì lại hạ', () => {
@@ -105,8 +150,8 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
     for (const [name, idle] of Object.entries(idles)) {
       const tuner = createTuner({ budgetMs: DESKTOP });
       const ladder = { applied: 0, steps: 3 };
-      const locked = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, ladder });
-      expect(kinds(locked.actions), name).toEqual(['down', 'down', 'down', 'reset']);
+      const locked = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, idleFor: () => 1000 / 30, ladder });
+      expect([locked.actions, tuner.state().capped], name).toEqual([[], true]);
       const unlocked = run(tuner, { seconds: 10, gapFor: idle, ladder, from: locked.end });
       expect(unlocked.actions, name).toEqual([]);
       expect(tuner.state().capped, name).toBe(false);
@@ -119,7 +164,7 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
     for (const guarding of [false, true]) {
       const tuner = createTuner({ budgetMs: DESKTOP });
       const ladder = { applied: 0, steps: 3 };
-      const locked = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, ladder });
+      const locked = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, idleFor: () => 1000 / 30, ladder });
       expect(tuner.state().capped).toBe(true);
       tuner.guard(guarding);
       // Người xem kéo 200.000 đom đóm: khung 50 ms (20 fps). Hạ một nấc là về lại nhịp bị khóa 33 ms: dừng ở đó.
@@ -133,7 +178,7 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
   it('đang "bị khóa nhịp": hạ vì quá tải thật, người xem trả núm về thì trả lại nấc (vẫn khóa); Sổ tay còn mở thì chờ', () => {
     const tuner = createTuner({ budgetMs: DESKTOP });
     const ladder = { applied: 0, steps: 3 };
-    const locked = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, ladder });
+    const locked = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, idleFor: () => 1000 / 30, ladder });
     expect(tuner.state().capped).toBe(true);
     tuner.guard(true);
     const heavy = run(tuner, { seconds: 8, gapFor: (k) => (k === 0 ? 100 : 1000 / 30), ladder, from: locked.end });
@@ -151,7 +196,7 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
   it('đang "bị khóa nhịp": trả lại nấc mà quá tải lại ngay thì hạ lại và khóa nấc ấy (không dao động)', () => {
     const tuner = createTuner({ budgetMs: DESKTOP });
     const ladder = { applied: 0, steps: 3 };
-    const locked = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, ladder });
+    const locked = run(tuner, { seconds: 60, gapFor: () => 1000 / 30, idleFor: () => 1000 / 30, ladder });
     const heavy = run(tuner, { seconds: 60, gapFor: (k) => (k === 0 ? 100 : 1000 / 30), ladder, from: locked.end });
     expect(kinds(heavy.actions)).toEqual(['down', 'up', 'down']);
     expect(tuner.state().locked).toEqual([0]);
@@ -187,9 +232,11 @@ describe('createTuner (bộ điều chỉnh có trễ)', () => {
     tuner.guard(true);
     const open = run(tuner, { seconds: 16, gapFor: () => 50, ladder });
     expect(kinds(open.actions)).toEqual(['down', 'down', 'down']);
+    expect(open.skips, 'Sổ tay mở: người xem đang xem cảnh, không ngừng vẽ để thử').toBe(0);
     tuner.guard(false);
     const closed = run(tuner, { seconds: 10, gapFor: () => 50, ladder, from: open.end });
     expect(kinds(closed.actions)).toEqual(['reset']);
+    expect(closed.skips).toBe(0);
     expect(tuner.state().capped).toBe(true);
   });
 

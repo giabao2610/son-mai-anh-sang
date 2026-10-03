@@ -51,11 +51,13 @@ function createQuality({ level, ladder, tuner, timer }) {
     start() {
       live = true;
     },
-    /** Mỗi khung, trước khi vẽ: bộ quyết định nói hạ / nâng / trả lại hết thì áp ngay. */
+    /** Mỗi khung, trước khi vẽ: bộ quyết định nói hạ / nâng / trả lại hết thì áp ngay. true = đang thử ngừng vẽ: bỏ khung này. */
     sample(ms) {
-      if (!live) return;
+      if (!live) return false;
       const action = tuner?.sample(ms, ladder);
+      if (action === 'skip') return true;
       if (action) act(action);
+      return false;
     },
     /** ms CPU của khung vừa vẽ, và mỗi mẫu ms GPU: "tải" của máy (tuner.js, đường tải). */
     cpu: (ms) => tuner?.cpu(ms),
@@ -223,7 +225,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     /** Một khung: nấc → đồng hồ → cử chỉ → setup.update → layer.update → tween trọng số → camera → chữ → render → ms GPU → số đo. */
     step(ms) {
       const start = win.performance.now();
-      quality.sample(ms ?? start);
+      if (quality.sample(ms ?? start)) return; // thử ngừng vẽ (tuner.js, luật 2): không vẽ, không tiến đồng hồ; ảnh cũ ở lại
       const { t, dt } = stage.tick(ms);
       route();
       setup?.update?.(dt, t);
