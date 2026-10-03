@@ -69,7 +69,8 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     onFail(reason, error);
   };
   // Sau mỗi await, trang có thể đã về tầng tĩnh: do fail(), hoặc do boot hết hạn 10 s (showStatic đặt
-  // sma.state = 'static'). Khi đó dừng êm: gỡ hết và KHÔNG đụng vào shell nữa.
+  // sma.state = 'static'). Khi đó dừng êm: gỡ hết và KHÔNG đụng vào shell nữa. Mất GPU hay lỗi GPU đến sau lúc đó cũng bỏ
+  // qua (onLost, onError): boot đã về tĩnh mà còn fail() thì showStatic chạy lần hai, đổi lý do (vd. 'timeout' → 'device-lost').
   const stopped = () => failed || sma.state === 'static';
 
   const hex = mergePalette(meta.palette);
@@ -97,7 +98,7 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
 
   /** Mất GPU trước khi live, hoặc lần thứ hai: tầng tĩnh. Lần đầu sau khi live: poster + nút "Dựng lại cảnh". */
   const onLost = (d, info) => {
-    if (failed || d.closed) return;
+    if (stopped() || d.closed) return;
     const error = new Error(`Mất thiết bị ${info?.api ?? 'GPU'}: ${info?.message ?? ''}`);
     losses += 1;
     if (!studio || losses > 1) {
@@ -110,26 +111,31 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     shell.showLost(() => rebuild(snapshot));
   };
 
-  /** Dựng cảnh trên `stage` rồi đưa lên 'live'. Trả false nếu trang đã về tĩnh (hoặc lần dựng bị gỡ) giữa chừng. */
+  /** Dựng cảnh trên `stage` rồi đưa lên 'live'. Trả false nếu trang đã về tĩnh (hoặc lần dựng bị gỡ) trước hay giữa chừng. */
   const bringUp = async (stage, d, snapshot) => {
+    // Trang đã về tĩnh, hoặc lần dựng này đã bị gỡ (mất GPU, quá hạn): chỉ tự dọn (d.closeAll() gỡ sân khấu và cảnh của
+    // lần dựng này) rồi thôi, không đụng gì khác. Kiểm trước việc đầu tiên (hạn 10 s, của boot hay của "Dựng lại cảnh", có
+    // thể tới lúc createStage còn dở) và sau MỖI lần chờ: vỏ trang lúc dựng lại không bị boot khóa, run.js phải tự dừng.
+    const gone = () => {
+      if (!stopped() && !d.closed) return false;
+      d.closeAll();
+      return true;
+    };
+    if (gone()) return false;
     stage.onLost((info) => onLost(d, info));
     const gpuErrors = createBurstCounter({ limit: 3, windowMs: 1000 });
     stage.onError((info) => {
+      if (stopped()) return;
       console.error(`Lỗi GPU ${info?.type ?? ''}: ${info?.message ?? ''}`);
       if (gpuErrors.hit(win.performance.now())) fail('gpu-error', new Error(info?.message ?? 'Lỗi GPU'));
     });
     const scene = buildScene({ stage, disposer: d, painting, meta, flags, now, reducedMotion, win, tools, t, content });
     sma.set({ backend: stage.backend, level: scene.level });
     if (snapshot) await scene.studio.restore(snapshot);
+    if (gone()) return false;
 
     shell.setState('compiling');
     await scene.compile();
-    // Trang đã về tĩnh, hoặc lần dựng này đã bị gỡ (mất GPU, quá hạn): dọn nốt rồi thôi.
-    const gone = () => {
-      if (!stopped() && !d.closed) return false;
-      d.closeAll();
-      return true;
-    };
     if (gone()) return false;
 
     const limit = typeof flags.freeze === 'number' ? flags.freeze : Infinity;
@@ -231,11 +237,7 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     // Song song: tải module nặng của bức, dựng renderer, tải chữ của bức (hỏng thì cảnh vẫn chạy, chỉ thiếu chữ).
     let stage;
     [painting, stage, content] = await Promise.all([entry.load(), newStage(disposer), loadContent(entry, lang)]);
-    if (stopped()) {
-      disposer.closeAll();
-      return handle;
-    }
-    await bringUp(stage, disposer, null);
+    await bringUp(stage, disposer, null); // boot đã hết hạn 10 s lúc đang chờ thì bringUp chỉ tự dọn
     return handle;
   } catch (err) {
     disposer.closeAll();
