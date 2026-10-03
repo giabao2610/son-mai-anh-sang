@@ -13,8 +13,9 @@
 
 /* Góc trái trên của chữ ở (0, 0); JS dời bằng transform: translate(x, y) translate(-50%, -100%), nên chữ đứng ngay TRÊN
    điểm neo, căn giữa. transform không đụng tới bố cục, nên đổi mỗi khung vẫn rẻ. padding-bottom chừa một khoảng hở để
-   chữ không đè lên chính vật. JS giữ cả khung chữ (gồm padding) trong vùng, nên padding hai bên và trên là khoảng cách tới
-   mép màn hình của chữ đang bị giữ ở mép. Font và bóng chữ như thơ của chân trang (shell.css), để chữ đọc được trên cảnh tối. */
+   chữ không đè lên chính vật, và lên gợi ý hay thơ khi JS dừng chữ ở chân khung (điểm neo nằm thấp hơn mép trên của chúng).
+   JS giữ cả khung chữ (gồm padding) trong vùng, nên padding hai bên và trên là khoảng cách tới mép màn hình của chữ đang
+   bị giữ ở mép. Font và bóng chữ như thơ của chân trang (shell.css), để chữ đọc được trên cảnh tối. */
 .caption {
   position: absolute;
   left: 0;

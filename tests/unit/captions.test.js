@@ -115,6 +115,50 @@ describe('mountCaptions', () => {
     expect(caption().style.transform).toBe('translate(75px, 200px) translate(-50%, -100%)');
   });
 
+  it('chữ không xuống dưới chân khung (gợi ý / lời mời, rồi thơ): main.frame vẽ đè lên vùng chữ; chân khung chỉ đo lúc show', () => {
+    // Chân khung như index.html: gợi ý ở hàng giữa, rồi footer.foot với thơ, trăng và con dấu. jsdom không tính bố cục: giả khung
+    // của từng ô (toạ độ của trang); vùng chữ bắt đầu ở y 20 của trang, nên đáy chữ tính trong vùng là top − 20. Đáy các ô của
+    // chân trang thẳng hàng (align-items: flex-end): thơ hai câu thấp hơn con dấu, nên mép trên của chân trang là của con dấu.
+    document.body.insertAdjacentHTML('beforeend', '<main class="frame">'
+      + '<p class="hint" data-hint aria-live="polite">Bức tranh này có 6 lớp — mài thử?</p>'
+      + '<footer class="foot"><figure class="poem"><blockquote data-poem><p>Công cha như núi Thái Sơn</p>'
+      + '<p>Nghĩa mẹ như nước trong nguồn chảy ra</p></blockquote><figcaption><cite>Ca dao</cite></figcaption></figure>'
+      + '<div class="marks"><svg data-moon viewBox="-1.1 -1.1 2.2 2.2" aria-hidden="true"></svg>'
+      + '<span class="dau" data-seal>18 tháng Tám · Bính Ngọ</span></div></footer></main>');
+    const rect = (top, height) => () => ({ top, height, bottom: top + height, left: 0, right: 640, width: 640, x: 0, y: top });
+    const spy = (sel, top, height) => vi.spyOn(document.querySelector(sel), 'getBoundingClientRect').mockImplementation(rect(top, height));
+    const hint = spy('[data-hint]', 520, 28);
+    const poem = spy('[data-poem]', 574, 70);
+    const moon = spy('[data-moon]', 628, 40);
+    const seal = spy('[data-seal]', 564, 104);
+    vi.spyOn(region(), 'getBoundingClientRect').mockImplementation(rect(20, 800));
+
+    captions.show(KIEU); // chữ 200 × 60 px
+    captions.place(320, 700, true); // điểm neo dưới thơ: đáy chữ dừng ở mép trên của lời mời, chữ vẫn ở trên điểm neo
+    expect(caption().style.transform).toBe('translate(320px, 500px) translate(-50%, -100%)');
+    captions.place(100, 520, true); // vẫn đi theo điểm neo sang ngang
+    expect(caption().style.transform).toBe('translate(100px, 500px) translate(-50%, -100%)');
+    captions.place(320, 300, true); // điểm neo trên chân khung: chữ đứng ngay trên nó như thường
+    expect(caption().style.transform).toBe('translate(320px, 300px) translate(-50%, -100%)');
+    // Đo cả bốn ô, mỗi ô một lần; place() chạy mỗi khung: không đo lại.
+    expect([hint, poem, moon, seal].map((s) => s.mock.calls.length)).toEqual([1, 1, 1, 1]);
+
+    // Gợi ý trống (thanh lớp đang mở) hay bị gỡ khỏi bố cục (?poster: display none) thì cao 0: không tính. Còn lại chân trang:
+    // chân khung là mép trên cao nhất (của con dấu), không phải mép trên của ô gặp đầu tiên trong trang (thơ).
+    hint.mockImplementation(rect(0, 0));
+    captions.show(CA_DAO);
+    captions.place(320, 700, true);
+    expect(caption().style.transform).toBe('translate(320px, 544px) translate(-50%, -100%)');
+
+    // Màn quá thấp (chân khung còn cao hơn chính chữ): giữ cả câu trong vùng, dù chữ phải đè lên chân khung.
+    seal.mockImplementation(rect(60, 104));
+    poem.mockImplementation(rect(70, 70));
+    moon.mockImplementation(rect(124, 40));
+    captions.show(KIEU);
+    captions.place(320, 700, true);
+    expect(caption().style.transform).toBe('translate(320px, 60px) translate(-50%, -100%)');
+  });
+
   it('fade gắn data-fading; clear làm rỗng vùng mà vùng vẫn còn; chưa có chữ thì place, fade, clear không làm gì', () => {
     captions.place(10, 10, true);
     captions.fade();
