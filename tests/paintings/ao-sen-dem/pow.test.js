@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import meta from '../../../src/paintings/ao-sen-dem/meta.js';
 import * as painting from '../../../src/paintings/ao-sen-dem/painting.js';
 import { buildPainting } from '../../helpers/fake-ctx.js';
+import { nodesOf } from '../../helpers/nodes.js';
 
 /**
  * Bỏ lớp VarNode mà TSL tự bọc quanh abs(), oneMinus(), pow()… (biến "intent", r186) hoặc .toConst(): giá trị
@@ -32,37 +33,28 @@ function nonNegative(input) {
   return false;
 }
 
-/** Duyệt đồ thị node một lần mỗi node (đồ thị dùng chung nhánh, có thể lặp lại). */
-function* walk(root) {
-  const seen = new Set();
-  const stack = [root];
-  while (stack.length > 0) {
-    const node = stack.pop();
-    if (!node?.isNode || seen.has(node)) continue;
-    seen.add(node);
-    yield node;
-    for (const child of node.getChildren()) stack.push(child);
-  }
-}
-
 describe('pow trong vật liệu của Bức 1', () => {
-  it('cơ số của mọi pow chắc chắn không âm (saturate, abs, exp…): GLSL/WGSL không định nghĩa pow của số âm', () => {
-    const { ctx } = buildPainting(painting, meta, { until: 'vang-la' });
+  it('cơ số của mọi pow chắc chắn không âm (saturate, abs, exp…), ở mức cao và mức thấp: GLSL/WGSL không định nghĩa pow của số âm', () => {
     const errors = [];
-    let pows = 0;
-    ctx.scene.traverse((object) => {
-      for (const material of [object.material].flat().filter(Boolean)) {
-        for (const [slot, root] of Object.entries(material)) {
-          if (!slot.endsWith('Node') || !root?.isNode) continue;
-          for (const node of walk(root)) {
-            if (!node.isMathNode || node.method !== 'pow') continue;
-            pows += 1;
-            if (!nonNegative(node.aNode)) errors.push(`${object.name || object.type} · ${material.type}.${slot}: pow(${unwrap(node.aNode).method ?? unwrap(node.aNode).type}(…), …)`);
+    // Mức thấp dựng vật liệu khác mức cao: phản chiếu giả (parts/mat-nuoc-gia.js) có pow(…, SHARPNESS) của riêng nó.
+    for (const options of [{}, { level: 'thap', budget: { reflection: 0 } }]) {
+      const level = options.level ?? 'cao';
+      const { ctx } = buildPainting(painting, meta, { until: 'vang-la', ...options });
+      let pows = 0;
+      ctx.scene.traverse((object) => {
+        for (const material of [object.material].flat().filter(Boolean)) {
+          for (const [slot, root] of Object.entries(material)) {
+            if (!slot.endsWith('Node') || !root?.isNode) continue;
+            for (const node of nodesOf(root)) {
+              if (!node.isMathNode || node.method !== 'pow') continue;
+              pows += 1;
+              if (!nonNegative(node.aNode)) errors.push(`${level} · ${object.name || object.type} · ${material.type}.${slot}: pow(${unwrap(node.aNode).method ?? unwrap(node.aNode).type}(…), …)`);
+            }
           }
         }
-      }
-    });
-    expect(pows, 'không tìm thấy pow nào: test sẽ đúng rỗng').toBeGreaterThan(0);
+      });
+      expect(pows, `${level}: không tìm thấy pow nào, test sẽ đúng rỗng`).toBeGreaterThan(0);
+    }
     expect([...new Set(errors)]).toEqual([]);
   });
 });

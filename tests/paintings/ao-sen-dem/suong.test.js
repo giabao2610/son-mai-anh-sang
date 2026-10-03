@@ -1,4 +1,4 @@
-// tests/paintings/ao-sen-dem/suong.test.js — Lớp 3 · Sương: vòm trời, sương gán MỘT lần vào scene.fogNode, octave là uniform, nấc, thí nghiệm.
+// tests/paintings/ao-sen-dem/suong.test.js — Lớp 3 · Sương: vòm trời, sương gán MỘT lần vào scene.fogNode, hoa đăng mờ trong sương, octave là uniform, nấc, thí nghiệm.
 import { describe, it, expect } from 'vitest';
 import { BackSide } from 'three/webgpu';
 import { vec3 } from 'three/tsl';
@@ -8,6 +8,7 @@ import * as suong from '../../../src/paintings/ao-sen-dem/layers/l3-suong.js';
 import { SKY_RADIUS } from '../../../src/paintings/ao-sen-dem/parts/suong-troi.js';
 import { knobMax, knobValue } from '../../../src/engine/gpu/knob-set.js';
 import { buildPainting } from '../../helpers/fake-ctx.js';
+import { attributeNames, nodesOf, uniformNames } from '../../helpers/nodes.js';
 
 const build = (options) => buildPainting(painting, meta, { until: 'suong', ...options });
 const octaves = (layer) => layer.readouts.find((r) => r.id === 'octaves').get();
@@ -41,6 +42,18 @@ describe('l3-suong', () => {
     expect(ctx.scene.fogNode?.isNode).toBe(true);
     expect(shared.suong.fogFactor.isNode).toBe(true);
     expect(shared.suong.sky(vec3(0, 1, 0)).isNode).toBe(true);
+  });
+
+  it('hoa đăng trong sương (GĐ 5): emissiveNode của đèn được bọc thêm (1 − hệ số sương), vì sương không chạm kênh emissive', () => {
+    // Trước lớp Sương: độ sáng của đèn chưa dính gì tới sương.
+    const before = buildPainting(painting, meta, { until: 'anh-trang' }).shared.anhTrang.lantern.material.emissiveNode;
+    expect(uniformNames(before)).not.toContain('suong_density');
+    const { shared } = build();
+    const emissive = shared.anhTrang.lantern.material.emissiveNode;
+    const factorId = shared.suong.fogFactor.id;
+    // Lớp Sương sửa node của lớp trước lúc dựng: node mới có (1 − hệ số sương) và vẫn giữ độ sáng riêng của từng đèn.
+    expect(nodesOf(emissive).some((n) => n.isMathNode && n.method === 'oneMinus' && n.aNode?.id === factorId)).toBe(true);
+    expect(attributeNames(emissive)).toContain('lanternGlow');
   });
 
   it('thí nghiệm chỉ đổi uniform: fogNode giữ nguyên (không biên dịch lại mọi material)', () => {

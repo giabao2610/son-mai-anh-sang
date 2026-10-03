@@ -12,6 +12,7 @@ import { moonDirection } from '../../../src/paintings/ao-sen-dem/shared.js';
 import { moonPhase } from '../../../src/lib/astro/moon.js';
 import { knobValue } from '../../../src/engine/gpu/knob-set.js';
 import { NOW, buildPainting } from '../../helpers/fake-ctx.js';
+import { nodesOf } from '../../helpers/nodes.js';
 
 const build = (options) => buildPainting(painting, meta, { until: 'anh-trang', ...options });
 const lights = (scene, flag) => scene.children.filter((o) => o[flag]);
@@ -47,18 +48,6 @@ function lean(mesh, i, center) {
   return new Vector3().setFromMatrixColumn(m, 1).normalize().dot(out);
 }
 
-/** Mọi node trong đồ thị của root, mỗi node một lần (đồ thị dùng chung nhánh). */
-function nodesOf(root) {
-  const seen = new Set();
-  const stack = [root];
-  while (stack.length > 0) {
-    const node = stack.pop();
-    if (!node?.isNode || seen.has(node)) continue;
-    seen.add(node);
-    stack.push(...node.getChildren());
-  }
-  return [...seen];
-}
 const uniformIn = (root, name) => nodesOf(root).find((n) => n.isUniformNode && n.name === name);
 
 describe('l2-anh-trang', () => {
