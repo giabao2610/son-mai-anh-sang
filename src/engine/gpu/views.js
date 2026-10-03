@@ -63,7 +63,8 @@ export function createViews({ scenePass, renderPipeline, mrtFor, final, taps, co
     // Scene pass vẽ ĐẦU TIÊN trong lượt cuối (Phụ lục A.53), để móc lần vẽ của Từng sợi (draws.js) thấy lượt vẽ cảnh. three gọi
     // updateBefore theo thứ tự node dựng xong, con trước cha; RTT của FXAA nằm sâu trong c nên tới lượt trước, mà RTT gỡ móc
     // (resetRendererState) rồi vẽ quad của nó, và chính quad ấy vẽ scene pass lần đầu trong khung. scenePass.toVar() ở đầu Fn
-    // được dựng trước c. Không ai đọc biến này nên shader không có thêm dòng nào.
+    // được dựng trước c. Không ai đọc biến này nên shader không có thêm dòng nào: lúc sinh code, StackNode bỏ qua biến chỉ có
+    // chính stack làm cha (WGSL và GLSL y hệt khi không có biến; Phụ lục A.60).
     // Alpha luôn 1: canvas có alpha, và renderOutput "bỏ nhân trước" alpha; chỗ nào alpha 0 sẽ trong suốt (luật 3).
     renderPipeline.outputNode = Fn(() => {
       scenePass.toVar();
