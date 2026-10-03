@@ -83,7 +83,7 @@ export function mountCaptions(doc, parent) {
         // lại bố cục giữa khung.
         const room = region.clientWidth;
         const half = box.width / 2;
-        // Vùng hẹp hơn chữ (max-width 80vw nên không xảy ra) thì đặt chữ giữa vùng: hai bên bị cắt như nhau.
+        // Vùng hẹp hơn chữ (max-width 90vw nên không xảy ra) thì đặt chữ giữa vùng: hai bên bị cắt như nhau.
         const cx = room > box.width ? Math.min(Math.max(x, half), room - half) : room / 2;
         // Dưới chân khung thì dừng ở chân khung; sát mép trên thì giữ cả câu, kể cả khi màn thấp tới mức chân khung còn cao
         // hơn chính chữ: chữ đè lên điểm neo hay lên chân khung còn hơn mất nửa câu.

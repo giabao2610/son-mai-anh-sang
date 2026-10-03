@@ -12,11 +12,43 @@ const EASE_OUT = 'cubic-bezier(0.15, 0.6, 0.25, 1)';
  */
 export const CROSSFADE_MS = 900;
 
-/** Mốc → phần vòng quầng đích và số giây bò tới đó (đường cong ease-out: nhanh lúc đầu, chậm dần). */
+/**
+ * Mốc → phần vòng quầng đích và số giây bò tới đó (đường cong ease-out: nhanh lúc đầu, chậm dần; đi được 90% đường sau
+ * nửa số giây). Số giây chốt theo thời gian đo được của từng chặng (GĐ 5, Mac M2 có GPU thật, rồi SwiftShader thay cho máy
+ * yếu), tính từ mốc này tới mốc sau:
+ *
+ *   chặng (ms)                    M2 ấm   M2 lạnh   Fast 4G   Slow 4G   WebGPU SwiftShader   WebGL2 SwiftShader
+ *   loading → chunk             24 – 45   30 – 60       700      3390                   30              35 – 60
+ *   chunk → compiling           33 – 44        45       265       820          1840 – 1950          1320 – 1360
+ *   compiling: compileAsync   137 – 154       155       150       160            840 – 910            360 – 390
+ *   khung ẩn, rồi 'fading'    115 – 127       125       125       130                  135                  940
+ *
+ * ("ấm": trình duyệt đã có cache, mở lại trong cùng tab hay ở tab mới; "lạnh": trình duyệt mới, không cache;
+ * SwiftShader đo ở lần mở trang đầu của trình duyệt. Fast/Slow 4G: hai mức giả lập mạng của DevTools, trên M2.) Trang
+ * thật lần đầu sau deploy (CDN chưa có file) mất 9,2 giây, gần hết ở chặng đầu. Nên chặng đầu bò lâu bằng hạn 10 giây
+ * của boot (BOOT_DEADLINE_MS của engine/boot.js; tests/unit/boot.test.js giữ hai số khớp nhau), để quầng không đứng hẳn
+ * trước lúc quá hạn. Có điều ease-out dồn quãng vào nửa đầu: từ giây thứ 7 tới lúc rơi về tranh tĩnh, quầng chỉ nhích
+ * thêm chừng 0,012 vòng (1,5px trên trăng 40px), mắt gần như không thấy. 'chunk' bò 4 giây và 'compiling' bò 3 giây,
+ * gấp 2 và 3,3 lần chặng chậm nhất đo được, nên mốc sau tới khi quầng còn đang bò. Máy nhanh thì cả vòng chạy chưa tới
+ * một giây.
+ *
+ * Số giây chỉ có tác dụng khi trình duyệt còn vẽ khung. Transition của stroke-dashoffset tính trên luồng chính
+ * (compositor chỉ chạy hộ vài thuộc tính như opacity, transform): luồng chính bận thì quầng đứng yên, rảnh ra mới nhảy
+ * tới chỗ đáng lẽ đã tới. Quầng bò khi trang chỉ đang chờ: chờ mạng (loading, chunk), chờ GPU (xin adapter WebGPU,
+ * compileAsync). Nó đứng yên trong việc đồng bộ. Máy nào cũng có hai việc như vậy: dựng cảnh (40–60 ms, trên M2 cũng
+ * như SwiftShader) và khung ẩn (dòng cuối của bảng). WebGL2 còn tạo context ngay sau 'chunk': trên WebGL2
+ * SwiftShader getContext chặn 1,25 giây, quầng nằm gần 0 (0,003 – 0,012) rồi nhảy lên gần nửa vòng (0,475 – 0,486).
+ * Mốc 'chunk' được đặt trong cùng tác vụ đó, và transition của nó lấy giờ bắt đầu từ khung trước lúc chặn, nên khung đầu
+ * tiên sau đó coi như nó đã bò 1,25 trong 4 giây: 31% thời gian là 77% quãng theo đường ease-out, 0,01 + 0,61 · 0,77 ≈ 0,48.
+ * Rồi compileAsync chặn chừng 0,2 giây và khung ẩn chừng 0,95 giây: quầng đứng ở chừng 0,59 gần 1,2 giây trước 'fading'.
+ * Trên WebGPU SwiftShader, lúc xin adapter (1,8 giây) luồng chính rảnh mà khung vẫn thưa, có khi cách nhau 0,4 giây:
+ * quầng đi giật. Cũng vì vậy mà không có mốc nào giữa compileAsync và 'fading': run.js vẽ khung ẩn rồi đặt 'fading' liền
+ * trong một tác vụ, nên một đích đặt trước khung ẩn bị 'fading' thay trước khi trình duyệt kịp vẽ khung nào.
+ */
 export const HALO_STEPS = Object.freeze({
-  loading: Object.freeze({ to: 0.45, seconds: 6 }),
-  chunk: Object.freeze({ to: 0.62, seconds: 3 }),
-  compiling: Object.freeze({ to: 0.9, seconds: 4 }),
+  loading: Object.freeze({ to: 0.45, seconds: 10 }),
+  chunk: Object.freeze({ to: 0.62, seconds: 4 }),
+  compiling: Object.freeze({ to: 0.9, seconds: 3 }),
   fading: Object.freeze({ to: 1, seconds: 0.3 }),
 });
 
@@ -56,11 +88,11 @@ export function createMoonProgress(svg) {
     remove();
     halo = doc.createElementNS(NS, 'circle');
     halo.setAttribute('class', 'moon-halo');
-    // Trên trăng, bán kính là 1,04: ngay ngoài đĩa trăng (bán kính 1), nét vẫn nằm trong viewBox ±1,1. Chrome đo pathLength
-    // của hình rất nhỏ quá thô (mỗi phần tư vòng thành một dây cung, chu vi 4·r·√2 ≈ 0,9·2πr): vòng r 1,04 không bao giờ
-    // khép, lúc rỗng vẫn ló một cung. Vẽ ở toạ độ riêng lớn gấp 100 rồi thu lại thì đo đúng. Nét cũng tính theo toạ độ
-    // riêng: shell.css đặt stroke-width 7, trên trăng còn 0,07.
-    halo.setAttribute('r', '104');
+    // Trên trăng, bán kính là 1,05 và nét dày 0,09: mép trong 1,005 ngay ngoài đĩa trăng (bán kính 1), mép ngoài 1,095 vẫn
+    // trong viewBox ±1,1. Chrome đo pathLength của hình rất nhỏ quá thô (mỗi phần tư vòng thành một dây cung, chu vi
+    // 4·r·√2 ≈ 0,9·2πr): vòng r 1,05 không bao giờ khép, lúc rỗng vẫn ló một cung. Vẽ ở toạ độ riêng lớn gấp 100 rồi thu
+    // lại thì đo đúng. Nét cũng tính theo toạ độ riêng: shell.css đặt stroke-width 9, trên trăng còn 0,09.
+    halo.setAttribute('r', '105');
     halo.setAttribute('pathLength', '1');
     // Vòng tròn SVG bắt đầu ở 3 giờ: xoay để nét mọc từ đỉnh, theo chiều kim đồng hồ; scale thu toạ độ riêng về lại.
     halo.setAttribute('transform', 'rotate(-90) scale(0.01)');

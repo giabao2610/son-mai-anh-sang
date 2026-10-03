@@ -103,8 +103,8 @@ describe('shell.css · quầng trăng tiến độ (GĐ 5)', () => {
     expect(halo).toMatch(/stroke-dasharray: 1 2(;|\s|$)/);
   });
 
-  it('nét 7: vòng vẽ ở toạ độ riêng gấp 100 rồi scale(0.01) (ui/moon-progress.js), trên trăng nét còn 0,07', () => {
-    expect(declarations('.moon-halo')).toMatch(/stroke-width: 7(;|\s|$)/);
+  it('nét 9: vòng vẽ ở toạ độ riêng gấp 100 rồi scale(0.01) (ui/moon-progress.js), trên trăng nét còn 0,09', () => {
+    expect(declarations('.moon-halo')).toMatch(/stroke-width: 9(;|\s|$)/);
   });
 
   it('giảm chuyển động thì không có transition: !important thắng transition inline của ui/moon-progress.js', () => {

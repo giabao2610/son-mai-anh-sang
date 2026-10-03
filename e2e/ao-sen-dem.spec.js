@@ -195,12 +195,13 @@ test.describe('Ao Sen Đêm · thả hoa đăng (GĐ 5)', () => {
   const SKY = { x: 0.5, y: 0.12 };
   // Quanh chỗ thả: tới khung LANTERN_N đèn mới trôi chưa tới nửa đơn vị (vài px), vũng sáng của nó loang trên nước bên dưới.
   const AROUND = { x0: WATER.x - 0.06, y0: WATER.y - 0.1, x1: WATER.x + 0.06, y1: WATER.y + 0.08 };
-  // Số điểm sáng ấm (canvasRegions().warm: R > 150, G > 110, R − B > 40) trong AROUND ở khung 640×400, đo lúc viết test: có đèn
-  // 1384 (WebGL2 SwiftShader, mức vừa), 1469 (WebGPU SwiftShader), 1468–1475 (GPU thật, Apple M2); hai lần chạm thường 19–44 (đom
-  // đóm, ánh trăng trên gợn). Ánh nến và vũng sáng màu ngà: R − B của các điểm có đèn từ 41 tới 60 (giữa 53–54), nên ngưỡng
-  // R − B > 60 không bắt được điểm nào. Phải hơn phép so WARM_MARGIN điểm: 500 chừa dư cả hai phía (số có đèn hạ chừng 60% vẫn
-  // qua; số không đèn phải tăng hơn hai mươi lần mới làm hỏng).
-  const WARM_MARGIN = 500;
+  // Số điểm sáng ấm (canvasRegions().warm: R > 150, G > 110, R − B > 40) trong AROUND ở khung 640×400, đo sau khi chốt bán kính
+  // vũng sáng 1,1 trên GPU thật (l4-mat-nuoc.js, POOL): có đèn 843 (WebGL2 SwiftShader, mức vừa), 927 (WebGPU SwiftShader), 937
+  // (GPU thật, Apple M2); hai lần chạm thường 18–43 (đom đóm, ánh trăng trên gợn). Bán kính 1,6 cũ cho 1384–1475: phần lớn số
+  // điểm là vũng sáng, nên số này đi theo diện tích vũng. Ánh nến và vũng sáng màu ngà: R − B của các điểm có đèn từ 35 tới 60
+  // (giữa chừng 55), nên ngưỡng R − B > 60 không bắt được điểm nào. Phải hơn phép so WARM_MARGIN điểm: 300 chừa dư cả hai phía
+  // (số có đèn hạ chừng 60% vẫn qua; số không đèn phải tăng hơn mười lần mới làm hỏng).
+  const WARM_MARGIN = 300;
   // Thứ tự thơ của đêm (shared.js): lần thả đầu mang câu [0], lần hai câu [1]. Hai file này không import gì nặng, Node đọc được.
   const verses = verseOrder(Object.keys(captions), parseAt(NIGHT));
 

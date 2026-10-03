@@ -110,7 +110,7 @@ describe('mountCaptions', () => {
     captions.place(320, 20, true); // sát mép trên: đáy chữ dừng ở đúng chiều cao của chữ, đầu chữ chạm mép
     expect(caption().style.transform).toBe('translate(320px, 60px) translate(-50%, -100%)');
     expect(layout.width.mock.calls.length + layout.height.mock.calls.length).toBe(reads); // place() chạy mỗi khung: không đo chữ lại
-    layout.room.mockReturnValue(150); // vùng hẹp hơn chữ (max-width 80vw nên không xảy ra): đặt chữ giữa vùng
+    layout.room.mockReturnValue(150); // vùng hẹp hơn chữ (max-width 90vw nên không xảy ra): đặt chữ giữa vùng
     captions.place(30, 200, true);
     expect(caption().style.transform).toBe('translate(75px, 200px) translate(-50%, -100%)');
   });

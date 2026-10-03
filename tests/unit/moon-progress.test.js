@@ -42,25 +42,25 @@ describe('createMoonProgress', () => {
     expect(svg.childElementCount).toBe(2); // chỉ có trăng: đĩa tối + phần sáng
   });
 
-  it("'loading' tạo vòng có pathLength 1, dashoffset đích 0,55 và transition 6s", () => {
+  it("'loading' tạo vòng có pathLength 1, dashoffset đích 0,55 và transition 10s (bằng hạn 10 giây của boot)", () => {
     const flushed = watchFlush();
     progress.step('loading');
     const ring = halo();
     expect(ring.getAttribute('pathLength')).toBe('1');
-    // Bán kính 1,04 trên trăng, vẽ ở toạ độ riêng gấp 100 rồi thu lại (ui/moon-progress.js nói vì sao).
-    expect(ring.getAttribute('r')).toBe('104');
+    // Bán kính 1,05 trên trăng, vẽ ở toạ độ riêng gấp 100 rồi thu lại (ui/moon-progress.js nói vì sao).
+    expect(ring.getAttribute('r')).toBe('105');
     expect(ring.getAttribute('transform')).toBe('rotate(-90) scale(0.01)'); // nét bắt đầu ở đỉnh, đi theo chiều kim đồng hồ
     expect(svg.lastElementChild).toBe(ring); // vẽ sau trăng, nằm trên cùng
     // Vòng mới được chốt ở trạng thái rỗng TRƯỚC khi đặt đích, nên mốc đầu tiên cũng bò chứ không nhảy.
     expect(flushed).toEqual(['1']);
     expect(offset()).toBeCloseTo(0.55, 4);
-    expect(ring.style.transition).toBe('stroke-dashoffset 6s cubic-bezier(0.15, 0.6, 0.25, 1)');
+    expect(ring.style.transition).toBe('stroke-dashoffset 10s cubic-bezier(0.15, 0.6, 0.25, 1)');
   });
 
   it('các mốc sau đi tiếp đúng đích: chunk 0,38 → compiling 0,1 → fading 0', () => {
     progress.step('loading');
     const ring = halo();
-    for (const [name, target, seconds] of [['chunk', 0.38, 3], ['compiling', 0.1, 4], ['fading', 0, 0.3]]) {
+    for (const [name, target, seconds] of [['chunk', 0.38, 4], ['compiling', 0.1, 3], ['fading', 0, 0.3]]) {
       progress.step(name);
       expect(halo(), name).toBe(ring); // vẫn vòng cũ: transition mới đi tiếp từ chỗ đang đứng
       expect(offset(), name).toBeCloseTo(target, 4);
@@ -73,7 +73,7 @@ describe('createMoonProgress', () => {
     progress.step('compiling');
     progress.step('chunk');
     expect(offset()).toBeCloseTo(0.1, 4);
-    expect(halo().style.transition).toMatch(/^stroke-dashoffset 4s /); // transition của compiling không bị thay
+    expect(halo().style.transition).toMatch(/^stroke-dashoffset 3s /); // transition của compiling không bị thay
   });
 
   it("'fading' làm quầng đầy rồi tan cùng lúc hòa dần; 'live' gỡ quầng; 'loading' sau đó vẽ lại từ vòng rỗng", () => {

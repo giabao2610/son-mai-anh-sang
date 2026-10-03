@@ -10,7 +10,10 @@ import { mulberry32 } from '../../../lib/random.js';
 
 /** Luật trôi của hoa đăng: đơn vị cảnh, giây theo đồng hồ của cảnh (ctx.u.time). */
 export const DRIFT = Object.freeze({
-  speed: 0.6, // đơn vị/giây khi đã trôi đều: đèn thả trước mặt đi được nửa đường tới lối trăng trong một đời đèn
+  // Đơn vị/giây khi đã trôi đều. Đo trên màn hình (1280×800 và 390×844): đèn thả trước mặt (cách camera ~19 đơn vị) đi
+  // ~7 px/giây lúc đầu, ~3,5 px/giây ở giây 30 (đã vào lối trăng), ~1 px/giây khi đã xa. Đèn càng xa càng chậm trên màn
+  // hình (phối cảnh), nên tăng tốc độ gần như không làm đèn xa nhanh thêm, chỉ làm lúc mới thả vội hơn.
+  speed: 0.6,
   ease: 4, // giây để đạt tốc độ đều (khởi đầu mềm)
   sway: 0.6, // biên độ lượn ngang
   swayRate: 0.35, // rad/giây

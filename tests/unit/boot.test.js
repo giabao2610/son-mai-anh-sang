@@ -3,7 +3,7 @@
 // nên import('./gpu/run.js') trong boot.js được phép trỏ tới file chưa có (Task 15 mới tạo). DOM tự dựng bằng JSDOM.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JSDOM } from 'jsdom';
-import { boot } from '../../src/engine/boot.js';
+import { boot, BOOT_DEADLINE_MS } from '../../src/engine/boot.js';
 import { HALO_STEPS } from '../../src/ui/moon-progress.js';
 import t from '../../src/ui/strings.vi.js';
 import { mountPage } from '../helpers/page.js';
@@ -190,6 +190,10 @@ describe('boot', () => {
 describe('boot · quầng trăng tiến độ (GĐ 5)', () => {
   const halo = () => page.moon.querySelector('.moon-halo');
   const offset = () => Number(halo().style.strokeDashoffset);
+
+  it('chặng đầu của quầng bò đúng bằng hạn của boot (ui/ không import được engine/, nên test giữ hai số khớp nhau)', () => {
+    expect(HALO_STEPS.loading.seconds * 1000).toBe(BOOT_DEADLINE_MS);
+  });
 
   it("báo mốc 'chunk' sau khi loadRun xong và trước khi run chạy", async () => {
     let whileLoading;

@@ -6,8 +6,11 @@ import { createSma } from './sma.js';
 import { showStatic, isChunkError } from './static.js';
 import { mountShell } from '../ui/shell.js';
 
-/** Hạn cho cả phần 3D: tải chunk, dựng cảnh, biên dịch shader, vẽ khung ẩn. Quá hạn thì về tranh tĩnh. */
-const BOOT_DEADLINE_MS = 10_000;
+/**
+ * Hạn cho cả phần 3D: tải chunk, dựng cảnh, biên dịch shader, vẽ khung ẩn. Quá hạn thì về tranh tĩnh. Chặng đầu của quầng
+ * trăng (HALO_STEPS.loading, ui/moon-progress.js) bò đúng bằng hạn này; tests/unit/boot.test.js giữ hai số khớp nhau.
+ */
+export const BOOT_DEADLINE_MS = 10_000;
 
 /**
  * Cửa vào của mọi trang: script inline trong HTML gọi `boot(entry, { lang: 'vi', t })`.

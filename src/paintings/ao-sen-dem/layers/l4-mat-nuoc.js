@@ -55,8 +55,9 @@ const RES_FLOOR = 0.15; // nấc 'phan-chieu' chia đôi độ phân giải ph�
 const BOB = 0.6; // lá và hoa đăng nhô lên bằng 60% độ cao sóng
 const GLINT = 0.8; // phần phản chiếu sáng hơn mức này mới vào kênh emissive (bloom)
 // Vũng sáng quanh mỗi hoa đăng đang trôi (GĐ 5): exp(−d²/r²) còn 37% ở cách tâm đèn một bán kính, 2% ở hai bán kính.
-// Hai số này là số phỏng: dựng thử trên GPU thật sẽ chỉnh.
-const POOL = { radius: 1.6, intensity: 0.6 };
+// Chốt trên GPU thật: bán kính 1,6 trải một vệt vàng rộng gấp chục lần ngọn đèn, mặt nước quanh đèn bạc thành màu be;
+// 1,1 giữ ánh nến quanh chân đèn, cách đèn chừng hai đơn vị nước lại đen như sơn mài.
+const POOL = { radius: 1.1, intensity: 0.6 };
 
 /**
  * Vũng sáng của các hoa đăng đang trôi (GĐ 5): Σ exp(−d²/r²) × độ sáng, với d là khoảng cách trên mặt nước từ điểm đang vẽ

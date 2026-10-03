@@ -313,7 +313,7 @@ header h1 {
 .moon-halo {
   fill: none;
   stroke: var(--vang-la-sang);
-  stroke-width: 7; /* toạ độ riêng của vòng lớn gấp 100 (ui/moon-progress.js nói vì sao): trên trăng là 0,07 */
+  stroke-width: 9; /* toạ độ riêng của vòng lớn gấp 100 (ui/moon-progress.js nói vì sao): trên trăng là 0,09, chừng 1,6px ở trăng 40px */
   stroke-linecap: round;
   /* Vòng có pathLength="1": nét 1 dài đúng cả vòng, nên dashoffset 1 là vòng rỗng, 0 là vòng đầy. Khoảng trống 2 dài hơn
      cả vòng, nên lúc rỗng không có nét nào của chu kỳ sau ló ra ở cuối, trình duyệt nào cũng vậy. */
