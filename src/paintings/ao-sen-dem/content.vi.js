@@ -1,5 +1,6 @@
-// paintings/ao-sen-dem/content.vi.js — chữ tiếng Việt của Bức 1: gợi ý tương tác; Hiểu/Chỉnh/Phá của từng lớp trong Sổ tay.
+// paintings/ao-sen-dem/content.vi.js — chữ tiếng Việt của Bức 1: gợi ý tương tác, thơ của hoa đăng; Hiểu/Chỉnh/Phá của từng lớp trong Sổ tay.
 import phuBong from '../../engine/stock/phu-bong/content.vi.js';
+import captions from './content.captions.vi.js';
 import cotDiagram from './diagrams/cot.svg?raw';
 import anhTrangDiagram from './diagrams/anh-trang.svg?raw';
 import suongDiagram from './diagrams/suong.svg?raw';
@@ -12,7 +13,9 @@ import vangLaDiagram from './diagrams/vang-la.svg?raw';
  * @type {import('../../engine/contracts/painting.js').PaintingContent}
  */
 export default {
-  hint: 'Chạm vào mặt nước',
+  hint: 'Chạm vào mặt nước · chạm hai lần để thả hoa đăng',
+  // Thơ của hoa đăng (chữ đi theo vật): mỗi lần thả một cặp câu; shared.js chỉ cầm khóa. Tách file riêng để file này dưới 300 dòng.
+  captions,
   // Thanh giờ (Dial 'gio' của shared.js). Ghi chú 'daytime' chỉ hiện khi đang là ban ngày và thanh chưa bị kéo đi.
   dials: {
     gio: {

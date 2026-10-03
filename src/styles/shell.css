@@ -276,6 +276,10 @@ header h1 {
   font: italic 500 clamp(16px, 0.6vw + 12px, 20px) / 1.4 var(--serif);
   color: var(--vang-la-sang);
   letter-spacing: 0.02em;
+  /* Màn hẹp (360px) thì gợi ý xuống hai dòng: justify-self chỉ đặt KHUNG vào giữa, các dòng trong khung phải tự canh
+     giữa; balance chia hai dòng dài gần bằng nhau, như một cặp câu. */
+  text-align: center;
+  text-wrap: balance;
   animation: hint-in 1.2s ease-out both;
 }
 .hint[data-kind='invite'] { color: var(--nga); pointer-events: auto; }

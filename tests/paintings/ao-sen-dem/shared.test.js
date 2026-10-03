@@ -13,10 +13,9 @@ import {
   setup,
 } from '../../../src/paintings/ao-sen-dem/shared.js';
 import { NOW, makeEngineCtx } from '../../helpers/fake-ctx.js';
+import { down } from '../../helpers/rays.js';
 
 const vn = (s) => new Date(`${s}+07:00`);
-/** Tia thẳng đứng từ trên cao xuống điểm (x, z) của mặt nước. */
-const down = (x, z) => new Ray(new Vector3(x, 10, z), new Vector3(0, -1, 0));
 
 describe('defaultHour: chính sách giờ của Bức 1', () => {
   it('đêm dùng giờ thật trên thang 18 → 29,5', () => {

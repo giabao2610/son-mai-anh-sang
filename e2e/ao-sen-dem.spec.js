@@ -10,6 +10,9 @@ const TAP_AFTER = 15; // chạm sau khung này
 const HOLD_FRAMES = 25; // giữ tay chừng này khung (rồi thêm 400 ms) trước khi thả
 // Điểm chạm: giữa ngang, 80% chiều cao khung — mặt nước ngay trước camera, trên lối trăng.
 const WATER = { x: 0.5, y: 0.8 };
+// Gợi ý của Bức 1 (content.hint, GĐ 5). Chép lại ở đây vì content.vi.js import sơ đồ bằng ?raw, mà Node của Playwright không
+// đọc được; tests/paintings/ao-sen-dem/shared.test.js giữ content.hint đúng bằng chuỗi này.
+const HINT = 'Chạm vào mặt nước · chạm hai lần để thả hoa đăng';
 
 let log;
 test.beforeEach(async ({ page }, testInfo) => {
@@ -155,12 +158,12 @@ test.describe('Ao Sen Đêm · chạm mặt nước', () => {
     expect(log.errors).toEqual([]);
   });
 
-  test('gợi ý "Chạm vào mặt nước" khi live; chạm lần đầu thì thành lời mời mài lớp', async ({ page }, testInfo) => {
+  test('gợi ý của bức (content.hint) khi live; chạm lần đầu thì thành lời mời mài lớp', async ({ page }, testInfo) => {
     const { query } = testInfo.project.metadata;
     await page.goto(`./?${query.replace(/^\?/, '')}&${AT}`);
     expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
     const hint = page.locator('[data-hint]');
-    await expect(hint).toHaveText('Chạm vào mặt nước');
+    await expect(hint).toHaveText(HINT);
     const box = await page.locator('[data-stage] canvas').boundingBox();
     await page.mouse.click(box.x + box.width * WATER.x, box.y + box.height * WATER.y);
     await expect(hint).toHaveText(/^Bức tranh này có \d+ lớp — mài thử\?$/);
