@@ -1,10 +1,11 @@
-// tests/rules/files.test.js — luật cho từng file nguồn (src/**/*.js, plugins/*.js): dòng 1 là chú thích, số dòng, API cấm.
+// tests/rules/files.test.js — luật cho từng file nguồn (src/**/*.js, plugins/*.js): dòng 1 là chú thích, số dòng, API cấm, chỗ đặt móc lần vẽ.
 import { afterAll, describe, expect, it } from 'vitest';
 import { importedNames, listSrc, read, stripComments } from '../helpers/source.js';
 
 const FILES = listSrc();
 const SOFT_LIMIT = 250; // mục tiêu: mỗi file đọc được trong một lần
 const HARD_LIMIT = 300; // quá mức này thì test hỏng
+const DRAW_HOOK_FILE = 'src/engine/gpu/draws.js'; // nơi DUY NHẤT đặt móc lần vẽ của renderer (GĐ 5, Từng sợi)
 const nearLimit = [];
 
 /** Số dòng vật lý, đếm như `wc -l` (số ký tự xuống dòng). */
@@ -119,5 +120,18 @@ describe('luật file', () => {
     // GLSL ES và WGSL không định nghĩa pow(x, y) khi x < 0: SwiftShader vẫn ra số, còn Metal/D3D/GPU thật thường ra NaN.
     // pow2(x) = x·x đúng với mọi dấu và nhanh hơn.
     expect(errors, report('Dùng pow2/pow3/pow4 thay cho pow(…, 2|3|4):', errors)).toEqual([]);
+  });
+
+  it(`chỉ ${DRAW_HOOK_FILE} được đặt móc lần vẽ (setRenderObjectFunction, §8.2)`, () => {
+    // Tự kiểm: file được miễn phải còn đó và còn đặt móc, không thì luật này im lặng đúng với một đường dẫn cũ.
+    expect(FILES, `${DRAW_HOOK_FILE} không còn: sửa DRAW_HOOK_FILE theo chỗ móc mới`).toContain(DRAW_HOOK_FILE);
+    expect(stripComments(read(DRAW_HOOK_FILE), DRAW_HOOK_FILE)).toMatch(/\bsetRenderObjectFunction\b/);
+    const errors = [];
+    for (const file of FILES.filter((f) => f !== DRAW_HOOK_FILE)) {
+      const code = stripComments(read(file), file);
+      for (const m of code.matchAll(/\bsetRenderObjectFunction\b/g)) errors.push(`${file}:${lineOf(code, m.index)} — setRenderObjectFunction`);
+    }
+    // three chỉ giữ MỘT hàm vẽ: móc thứ hai ở chỗ khác sẽ âm thầm đè móc của Từng sợi, hay bị Từng sợi đè.
+    expect(errors, report(`Chỉ ${DRAW_HOOK_FILE} được gọi setRenderObjectFunction:`, errors)).toEqual([]);
   });
 });

@@ -1,4 +1,4 @@
-// tests/unit/scene.test.js — dựng một cảnh trên sân khấu giả (không GPU): mức theo backend thật, vòng một khung, vẽ lại khi ?freeze, chữ đi theo vật.
+// tests/unit/scene.test.js — dựng một cảnh trên sân khấu giả (không GPU): mức theo backend thật, vòng một khung, vẽ lại khi ?freeze, chữ đi theo vật, móc lần vẽ.
 import { describe, it, expect, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { BoxGeometry, Mesh, MeshStandardNodeMaterial, NoToneMapping, PerspectiveCamera, SRGBColorSpace, Scene, Vector2 } from 'three/webgpu';
@@ -22,7 +22,7 @@ const painting = {
         const material = new MeshStandardNodeMaterial();
         material.colorNode = color(ctx.palette.hex.datSet);
         material.emissiveNode = vec3(0);
-        const mesh = new Mesh(new BoxGeometry(), material);
+        const mesh = Object.assign(new Mesh(new BoxGeometry(), material), { name: 'khoi' });
         ctx.scene.add(mesh);
         shared.cot = { material };
         return { objects: [mesh], dispose: () => ctx.scene.remove(mesh) };
@@ -368,6 +368,43 @@ describe('buildScene', () => {
     expect(captionX(caption)).toBeLessThan(320);
     disposer.closeAll();
     expect(doc.querySelector('[data-captions]')).toBeNull();
+  });
+
+  it('móc lần vẽ (GĐ 5): công cụ nhận api.draws; begin/end bọc render ở cả step() lẫn vẽ lại khung đứng yên; disposer gỡ móc', async () => {
+    let api = null;
+    const soi = { id: 'soi', mount: (a) => ((api = a), { dispose() {} }) };
+    const content = { layers: { cot: { objects: { khoi: 'Khối đất' } } } };
+    const { stage, scene, disposer, flush } = build({ tools: [soi], content });
+    // Renderer giả có hàm vẽ như three: setRenderObjectFunction ghi lại hàm; mỗi render() của pipeline vẽ các vật của cảnh bằng
+    // camera chính qua hàm vẽ hiện tại (_renderObjects), mỗi lần vẽ một draw call.
+    const r = stage.renderer;
+    let fn = null;
+    r.setRenderObjectFunction.mockImplementation((f) => {
+      fn = f;
+    });
+    r.getRenderObjectFunction.mockImplementation(() => fn);
+    r.renderObject.mockImplementation(() => {
+      r.info.render.drawCalls += 1;
+    });
+    r.render.mockImplementation(() => {
+      for (const o of stage.scene.children.filter((c) => c.isMesh)) {
+        (fn ?? r.renderObject).call(r, o, stage.scene, stage.camera, o.geometry, o.material, null, null, null, null);
+      }
+    });
+    api.draws.start();
+    expect(fn).not.toBeNull();
+    scene.step(1000);
+    // Tên lớp từ meta, nhãn vật từ content.layers[id].objects: scene.js đưa cả hai cho móc.
+    expect(api.draws.list().map((d) => [d.layerId, d.layer, d.label])).toEqual([['cot', 'Cốt', 'Khối đất']]);
+    // Đứng yên ở ?freeze: Từng sợi đổi sợi rồi gọi api.redraw(); khung N vẽ lại cũng được ghi (vật mới không thuộc lớp nào).
+    scene.freeze();
+    stage.scene.add(new Mesh(new BoxGeometry(), new MeshStandardNodeMaterial()));
+    const done = api.redraw();
+    flush();
+    await done;
+    expect(api.draws.list().map((d) => d.layerId)).toEqual(['cot', null]);
+    disposer.closeAll();
+    expect(fn).toBeNull(); // gỡ cảnh thì trả hàm vẽ cũ, kể cả khi công cụ không tự stop()
   });
 
   it('ms CPU của khung đi vào số đo của bàn thợ', () => {

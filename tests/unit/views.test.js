@@ -4,9 +4,15 @@ import { NoToneMapping, PerspectiveCamera, Scene, Vector4 } from 'three/webgpu';
 import { pass, uniform } from 'three/tsl';
 import { BUILTIN_VIEWS, createViews } from '../../src/engine/gpu/views.js';
 import { makeMRT } from '../../src/engine/gpu/pipeline.js';
+import { buildFinalPass } from '../helpers/final-pass.js';
 
 const marker = () => uniform(new Vector4());
 const unwrap = (node) => (node.isVarNode && node.intent ? node.node : node);
+/** Ảnh cuối đã ghép là một Fn: thân của nó (dựng như three dựng lượt cuối) mở đầu bằng scenePass.toVar(), trả vec4(rgb, 1). */
+const composed = (outputNode) => {
+  const { stack } = buildFinalPass(outputNode);
+  return { first: stack.nodes[0], join: unwrap(stack.outputNode) };
+};
 
 function setup({ taps = [] } = {}) {
   const scenePass = pass(new Scene(), new PerspectiveCamera());
@@ -80,8 +86,8 @@ describe('createViews', () => {
     expect([ready(), setMRT.mock.calls.length, compile.mock.calls.length]).toEqual([true, 1, 2]);
   });
 
-  it('setOverlays: ảnh cuối → overlay theo thứ tự → vec4(rgb, 1); pipeline dựng lại đồ thị', () => {
-    const { views, final, renderPipeline } = setup();
+  it('setOverlays: ảnh cuối → overlay theo thứ tự → vec4(rgb, 1), scene pass đứng đầu; pipeline dựng lại đồ thị', () => {
+    const { views, final, renderPipeline, scenePass } = setup();
     const a = marker();
     const b = marker();
     const order = [];
@@ -90,7 +96,9 @@ describe('createViews', () => {
       { id: 'hai', fn: (c) => { order.push(['hai', c]); return b; } },
     ]);
     expect(order).toEqual([['mot', final, true], ['hai', a]]);
-    const join = unwrap(renderPipeline.outputNode);
+    const { first, join } = composed(renderPipeline.outputNode);
+    expect(first.isVarNode).toBe(true);
+    expect(first.node).toBe(scenePass); // scene pass dựng trước mọi thứ của lượt cuối (Phụ lục A.53)
     expect(join.nodes[0].node).toBe(b);
     expect(join.nodes[1].value).toBe(1);
     expect(renderPipeline.needsUpdate).toBe(true);
@@ -105,7 +113,7 @@ describe('createViews', () => {
       { id: 'tot', fn: () => ok },
     ]);
     expect(broken).toEqual(['hong']);
-    expect(unwrap(renderPipeline.outputNode).nodes[0].node).toBe(ok);
+    expect(composed(renderPipeline.outputNode).join.nodes[0].node).toBe(ok);
     expect(warn.mock.calls[0][0]).toBe('Công cụ "hong" ghép overlay không được, bỏ công cụ này:');
     warn.mockRestore();
   });

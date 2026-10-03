@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// tests/unit/toolbox.test.js — hộp đồ nghề: gắn công cụ, nhãn view, mỗi lúc một công cụ, cử chỉ tới công cụ trước bức, công cụ hỏng thì bỏ.
+// tests/unit/toolbox.test.js — hộp đồ nghề: gắn công cụ, nhãn view, móc lần vẽ, mỗi lúc một công cụ, cử chỉ tới công cụ trước bức, công cụ hỏng thì bỏ.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createToolbox } from '../../src/engine/gpu/toolbox.js';
 
@@ -73,6 +73,33 @@ describe('createToolbox', () => {
     expect([kinh.api.t, kinh.api.redraw]).toEqual([t, redraw]);
     expect(views.setOverlays.mock.calls[0][0].map((e) => e.id)).toEqual(['kinh', 'lot']);
     expect(toolbox.list()).toEqual([{ id: 'kinh', on: false }, { id: 'lot', on: false }]);
+  });
+
+  it('api.draws (GĐ 5): mount nhận đúng móc lần vẽ của cảnh, chỉ năm hàm (không có begin/end); không có móc thì api.draws là null', () => {
+    // Móc như scene.js giữ (draws.js): năm hàm của DrawProbe, cộng begin/end mà scene.js gọi quanh mỗi pipeline.render().
+    const list = [];
+    const counts = { scene: 3, reflection: 2, other: 24 };
+    const draws = {
+      start: vi.fn(), stop: vi.fn(), list: vi.fn(() => list), limit: vi.fn(), counts: vi.fn(() => counts), begin: vi.fn(), end: vi.fn(),
+    };
+    const soi = fakeTool('soi');
+    createToolbox({ tools: [soi], views: fakeViews(), doc: document, t, content, draws });
+    const probe = soi.api.draws;
+    // Công cụ không bao giờ tự mở hay đóng một khung ghi, và không thay được hàm nào của móc.
+    expect(Object.keys(probe).sort()).toEqual(['counts', 'limit', 'list', 'start', 'stop']);
+    expect(Object.isFrozen(probe)).toBe(true);
+    probe.start();
+    probe.limit(2);
+    expect(probe.list()).toBe(list);
+    expect(probe.counts()).toBe(counts);
+    probe.stop();
+    expect([draws.start, draws.stop, draws.list, draws.counts].map((f) => f.mock.calls.length)).toEqual([1, 1, 1, 1]);
+    expect(draws.limit.mock.calls).toEqual([[2]]);
+    expect(draws.begin).not.toHaveBeenCalled();
+    expect(draws.end).not.toHaveBeenCalled();
+    const kinh = fakeTool('kinh');
+    createToolbox({ tools: [kinh], views: fakeViews(), doc: document, t, content });
+    expect(kinh.api.draws).toBeNull();
   });
 
   it('chữ của bức tải hỏng (content = null): nhãn tap rơi về id của tap, công cụ vẫn gắn và dùng được', () => {

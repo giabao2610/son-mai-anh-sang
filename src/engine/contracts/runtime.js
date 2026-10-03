@@ -125,12 +125,33 @@
  * @property {HTMLElement} el                      ô của công cụ trong thanh công cụ; công cụ dựng thanh điều khiển ở đây
  * @property {Record<string, any>} t               chữ giao diện của trang (strings.<lang>.js)
  * @property {() => Promise<void>} redraw          vẽ lại khung đứng yên (?freeze) sau khi công cụ đổi uniform
+ * @property {DrawProbe | null} [draws]            [5] lần vẽ của lượt vẽ cảnh (Từng sợi): engine/gpu/draws.js. Chỉ năm hàm của
+ *                                                 DrawProbe: begin()/end() ở lại scene.js, công cụ không tự mở hay đóng khung ghi.
+ *                                                 null khi hộp đồ nghề được dựng không có móc: công cụ cần móc thì kiểm trước khi dùng
  */
 /** @typedef {{ id: string, label: string, ready: boolean }} ViewInfo */
+/** [5] Móc lần vẽ (renderer.setRenderObjectFunction), phần công cụ thấy (ToolApi.draws). Chỉ gắn giữa start() và stop(); lúc khác
+ * cảnh không tốn thêm gì. Móc mà scene.js giữ (createDrawProbe) còn có begin()/end(), gọi quanh mỗi pipeline.render().
+ * @typedef {Object} DrawProbe
+ * @property {() => void} start                 gắn móc (công cụ bật); khung kế tiếp được ghi lại
+ * @property {() => void} stop                  gỡ móc, trả hàm vẽ trước đó; vẽ đủ như chưa có gì
+ * @property {() => DrawInfo[]} list            lần vẽ của camera chính ở khung vẽ đủ gần nhất, theo thứ tự GPU nhận
+ * @property {(k: number | null) => void} limit  chỉ vẽ k lần đầu của list() (so theo vật + material + lượt: khóa
+ *                                              object.id:material.id:passId); null = vẽ đủ.
+ *                                              k là số nguyên ≥ 0 (giá trị khác thì ném lỗi); đang limit thì list() đứng yên
+ * @property {() => { scene: number, reflection: number, other: number }} counts   draw call của khung vẽ đủ gần nhất, theo lượt.
+ *                                              reflection: lần vẽ của camera khác LỒNG trong lần vẽ một vật (phản chiếu);
+ *                                              other: phần còn lại của renderer.info (bóng, bloom, quad của hậu kỳ)
+ */
+/** @typedef {{ layerId: string | null, layer: string | null, name: string | null, label: string, kind: string,
+ *   instances: number, triangles: number, material: string, nested: number }} DrawInfo
+ *   layer: tên lớp (meta) · label: nhãn vật trong content (thiếu thì name, rồi kind) · nested: lần vẽ lồng bên trong (phản chiếu) */
 /** @typedef {Object} ToolInstance
  * @property {(final: any, view: (id: string) => any) => any} [overlay]  ghép sau display khi dựng pipeline; ghép LẠI khi
  *                                 requireView đổi MRT, nên chỉ dựng node, không giữ trạng thái; đổi chế độ = đổi uniform
- * @property {(g: Gesture) => boolean} [onGesture]  true = đã dùng, không chuyển cho bức
+ * @property {(g: Gesture) => boolean} [onGesture]  true = đã dùng, không chuyển cho bức. [5] Giữ 'tap' thì giữ cả 'double-tap'
+ *                                 (kính tròn của Kính mài giữ cả hai; hình gạt không giữ cử chỉ nào): không thì bức nhận
+ *                                 'double-tap' mà không có hai 'tap' làm nên nó
  * @property {(on: boolean) => void} [activate]     bật/tắt: đổi uniform, hiện/giấu thanh điều khiển
  * @property {() => void} dispose
  */

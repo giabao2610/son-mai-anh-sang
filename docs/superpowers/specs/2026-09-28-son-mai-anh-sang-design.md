@@ -680,18 +680,23 @@ Dệt lại khung hình từng sợi một. Mỗi sợi là một lần vẽ (dr
 cho thấy các bước SAU lượt vẽ cảnh (bloom, tone); Từng sợi cho thấy chính lượt vẽ cảnh được làm ra thế nào.
 - **Chặn lần vẽ** (`engine/gpu/draws.js`): khi công cụ bật, xưởng gắn `renderer.setRenderObjectFunction(móc)`; khi tắt thì gỡ, nên
   lúc không dùng cảnh không tốn thêm gì.
-  - Móc nhận mọi lần vẽ của `renderer.render()`. Bóng đổ, bloom và FXAA tự cất rồi trả lại móc; phản chiếu vẽ bằng camera ảo của
-    reflector (Phụ lục A.53). Móc chỉ chặn lần vẽ của **camera chính**; lần vẽ của camera khác được đếm riêng là "phản chiếu".
+  - Móc nhận mọi lần vẽ của `renderer.render()`. Bóng đổ, bloom và RTT của FXAA tự cất rồi trả lại móc; phản chiếu vẽ bằng camera ảo
+    của reflector (Phụ lục A.53). Móc chỉ chặn lần vẽ của **camera chính**. Lần vẽ của camera khác **lồng** trong lần vẽ một vật được
+    đếm riêng là "phản chiếu". Lần vẽ của camera khác ở ngoài cùng (quad của hậu kỳ) nằm trong "các lượt khác".
+  - Scene pass phải vẽ **đầu tiên** trong lượt cuối. RTT của FXAA gỡ móc trong lượt của nó: scene pass vẽ lần đầu từ bên trong RTT
+    thì móc không thấy lượt vẽ cảnh. `views.js` bọc ảnh cuối bằng một `Fn` mở đầu bằng `scenePass.toVar()` (Phụ lục A.53).
   - Lần vẽ được phép thì móc gọi hàm vẽ trước đó (hàm `renderObject` của three, hay hàm mà ai đó đã đặt trước). Lần vẽ không được phép
     thì bỏ qua. Không đụng vào `visible` hay thứ gì trong cache key, nên không biên dịch lại.
   - **Ghi danh sách** của một khung vẽ đủ. Mỗi mục gồm: vật (và lớp của nó: vật nằm trong `layer.objects`, hay là con của một vật như
     thế), nhãn, loại (`Mesh`, `InstancedMesh`, `Sprite`…), số bản (`count`), số tam giác, loại material, và số lần vẽ lồng bên trong.
-    Mặt nước kéo theo cả lượt phản chiếu, vì reflector vẽ lại cảnh ngay trước khi nước được vẽ.
+    Mặt nước kéo theo cả lượt phản chiếu, vì reflector vẽ lại cảnh ngay trước khi nước được vẽ. Mesh nhiều material vẽ mỗi nhóm một
+    lần, và vật trong suốt có transmission vẽ hai lượt: mỗi lần là một sợi.
   - **`limit(k)`:** chỉ vẽ k lần đầu của danh sách đã ghi (so theo vật và material), bỏ qua phần còn lại. `limit(null)` vẽ đủ và ghi
-    lại danh sách ở mỗi khung.
+    lại danh sách ở mỗi khung. k là số nguyên ≥ 0, giá trị khác thì ném lỗi. Đang limit thì danh sách đứng yên (không ghi lại), để
+    thanh không nhảy khi người xem dừng ở một sợi.
 - **Thanh điều khiển** (trong thanh công cụ, như Lột lớp):
   - Một `input type="range"` từ 0 tới N (N là số lần vẽ của lượt vẽ cảnh). Mở công cụ thì thanh ở N: ảnh không đổi gì. Nấc 0 là
-    chưa vẽ gì: chỉ còn màu nền xóa khung, vẫn qua hậu kỳ.
+    chưa vẽ gì: chỉ còn màu nền xóa khung (màu xóa của sân khấu, đen then), vẫn qua hậu kỳ.
   - Nút "Dệt lại" (`aria-pressed`) chạy từ 0 tới N, mỗi sợi khoảng 0,6 giây; cả lượt không quá chừng 12 giây, nên nhiều sợi thì đi
     nhanh hơn. Bấm lại thì dừng; kéo thanh cũng dừng.
   - Dòng mô tả sợi đang xem: nhãn vật (`content.layers[id].objects[name]`; thiếu thì dùng tên vật), tên lớp, loại, số bản, số tam
@@ -794,7 +799,7 @@ son-mai-anh-sang/
         stage.js                     [0→4] renderer, nền đặc, camera + OrbitControls theo CameraSpec, đồng hồ, resize, DPR, lỗi GPU; GĐ 4: trackTimestamp
         disposer.js                  [0] đăng ký mọi thứ đã tạo, gỡ theo thứ tự ngược
         pipeline.js                  [0→4] scene pass + MRT; build → renderOutput → display; alpha 1; views(); overlay
-        views.js                     [4] danh sách view (kênh, tap, Normal lười), ghép overlay của công cụ, requireView
+        views.js                     [4→5] danh sách view (kênh, tap, Normal lười), ghép overlay của công cụ, requireView; GĐ 5: scene pass đứng đầu lượt cuối (móc lần vẽ thấy lượt vẽ cảnh)
         gpu-timer.js                 [4] ms GPU mỗi khung: resolveTimestampsAsync (render + compute), không chờ, không gọi chồng
         meter.js                     [4] số đo của bàn thợ: draw call, tam giác, ms, ms CPU, ms GPU; hai bên "Tắt / Bật" của compare
         toolbox.js                   [4→5] hộp đồ nghề: gắn công cụ, cử chỉ tới công cụ trước bức, mỗi lúc một công cụ, body[data-tool]; GĐ 5: ToolApi.draws
@@ -863,12 +868,13 @@ son-mai-anh-sang/
                                      [4] tuner gpu-timer lut views toolbox kinh-mai lot-lop dial-set dials rail-tools poster
                                      [5] gesture (double-tap) captions caption-set draws tung-soi moon-progress anh-trang-drift
     rules/imports.test.js            [0] luật ranh giới, đường nhẹ, hàng rào từ vựng
-    rules/files.test.js              [0] dòng 1 là chú thích, số dòng, API cấm
+    rules/files.test.js              [0→5] dòng 1 là chú thích, số dòng, API cấm; GĐ 5: chỉ draws.js đặt móc lần vẽ
     paintings/contract.test.js       [0→5] lặp qua registry (+ _mau từ GĐ 2); GĐ 4: mức cùng bộ khóa, Dial, nhãn tap, poster/og; GĐ 5: captions, tên vật + nhãn
     helpers/source.js                [0] phân tích mã bằng parseSync của vite
     helpers/fake-ctx.js              [1→5] Scene/Camera/uniform thật, renderer giả (Proxy ghi lời gọi); dựng ctx bằng createCtx của xưởng; GĐ 5: captions giả (ghi lời gọi)
     helpers/svg.js                   [2] đọc mã màu trong SVG (poster, sơ đồ)
     helpers/image.js                 [4] đọc cỡ ảnh WebP, JPEG từ phần đầu file (poster, og)
+    helpers/final-pass.js            [5] dựng ảnh cuối như three dựng lượt cuối (WGSLNodeBuilder thật, chặng setup): thứ tự updateBefore, thân Fn của views.js
   e2e/
     helpers.js                       [0] chờ trạng thái, đọc pixel canvas (screenshot), báo GPU
     painting.spec.js                 [0→5] lặp qua registry: tĩnh, WebGL2, WebGPU; GĐ 3: hạ hết nấc rồi nâng lại; GĐ 4: mài về cốt, Kính mài, Lột lớp, ?poster; GĐ 5: Từng sợi, quầng trăng
@@ -1102,16 +1108,22 @@ son-mai-anh-sang/
  * @property {HTMLElement} el                      [4] ô của công cụ trong thanh công cụ; công cụ dựng thanh điều khiển ở đây
  * @property {Record<string, any>} t               chữ giao diện của trang (strings.<lang>.js)
  * @property {() => Promise<void>} redraw          [4] vẽ lại khung đứng yên (?freeze) sau khi công cụ đổi uniform
- * @property {DrawProbe} [draws]                  [5] lần vẽ của lượt vẽ cảnh (Từng sợi): engine/gpu/draws.js
+ * @property {DrawProbe | null} [draws]           [5] lần vẽ của lượt vẽ cảnh (Từng sợi): engine/gpu/draws.js. Chỉ năm hàm của
+ *                                                DrawProbe: begin()/end() ở lại scene.js, công cụ không tự mở hay đóng khung ghi.
+ *                                                null khi hộp đồ nghề được dựng không có móc: công cụ cần móc thì kiểm trước khi dùng
  */
 /** @typedef {{ id: string, label: string, ready: boolean }} ViewInfo */
-/** [5] Móc lần vẽ (renderer.setRenderObjectFunction). Chỉ gắn giữa start() và stop(); lúc khác cảnh không tốn thêm gì.
+/** [5] Móc lần vẽ (renderer.setRenderObjectFunction), phần công cụ thấy (ToolApi.draws). Chỉ gắn giữa start() và stop(); lúc khác
+ * cảnh không tốn thêm gì. Móc mà scene.js giữ (createDrawProbe) còn có begin()/end(), gọi quanh mỗi pipeline.render().
  * @typedef {Object} DrawProbe
  * @property {() => void} start                 gắn móc (công cụ bật); khung kế tiếp được ghi lại
  * @property {() => void} stop                  gỡ móc, trả hàm vẽ trước đó; vẽ đủ như chưa có gì
  * @property {() => DrawInfo[]} list            lần vẽ của camera chính ở khung vẽ đủ gần nhất, theo thứ tự GPU nhận
- * @property {(k: number | null) => void} limit  chỉ vẽ k lần đầu của list() (so theo vật + material); null = vẽ đủ
- * @property {() => { scene: number, reflection: number, other: number }} counts   draw call của khung vẽ đủ gần nhất, theo lượt
+ * @property {(k: number | null) => void} limit  chỉ vẽ k lần đầu của list() (so theo vật + material); null = vẽ đủ.
+ *                                              k là số nguyên ≥ 0 (giá trị khác thì ném lỗi); đang limit thì list() đứng yên
+ * @property {() => { scene: number, reflection: number, other: number }} counts   draw call của khung vẽ đủ gần nhất, theo lượt.
+ *                                              reflection: lần vẽ của camera khác LỒNG trong lần vẽ một vật (phản chiếu);
+ *                                              other: phần còn lại của renderer.info (bóng, bloom, quad của hậu kỳ)
  */
 /** @typedef {{ layerId: string | null, layer: string | null, name: string | null, label: string, kind: string,
  *   instances: number, triangles: number, material: string, nested: number }} DrawInfo
@@ -1669,7 +1681,9 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
 - (GĐ 4) **`views`:**
   - thứ tự và nhãn: tap của lớp, `t.views`;
   - `ready` của Normal là false cho tới khi `requireView`;
-  - `requireView` không gọi lại `build`/`display`.
+  - `requireView` không gọi lại `build`/`display`;
+  - (GĐ 5) lượt cuối dựng bằng `WGSLNodeBuilder` thật (chặng setup, `tests/helpers/final-pass.js`): scene pass là `updateBefore` đầu
+    tiên, cả khi display vẽ ra RTT và overlay đọc texture của scene pass (Phụ lục A.53).
 - (GĐ 4) **`toolbox`, `kinh-mai`, `lot-lop`** (jsdom):
   - mỗi lúc một công cụ; đóng thanh lớp thì công cụ tắt;
   - `hover` không tới bức; kính chỉ giữ chạm của ngón tay;
@@ -1690,8 +1704,10 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
   điểm neo ra ngoài khung thì chữ ẩn mà vùng live vẫn còn. **`caption-set`:** khóa lạ không hiện gì; hết giờ theo đồng hồ của cảnh
   (đồng hồ đứng thì chữ ở lại); `anchor()` ném lỗi thì chỉ ẩn chữ; `keys` rỗng khi không có chữ.
 - (GĐ 5) **`draws`** (renderer giả): `start()` gắn móc và `stop()` trả đúng hàm cũ (kể cả khi đã có hàm khác trước đó); chỉ ghi lần
-  vẽ của camera chính; lần vẽ lồng (camera khác, giữa lúc vẽ một vật) cộng vào `nested` của vật đó; `limit(k)` bỏ đúng các lần vẽ sau
-  k, so theo vật + material; `limit(null)` vẽ đủ; vật là con của một vật trong `layer.objects` thì nhận lớp và nhãn của vật đó.
+  vẽ của camera chính; lần vẽ lồng (camera khác, giữa lúc vẽ một vật) cộng vào `nested` của vật đó, lần vẽ của camera khác ở ngoài
+  cùng vào `other`; `limit(k)` bỏ đúng các lần vẽ sau k, so theo vật + material + lượt (nhóm của Mesh nhiều material, lượt `backSide`);
+  `limit(null)` vẽ đủ; vật là con của một vật trong `layer.objects` thì nhận lớp và nhãn của vật đó; số tam giác theo `drawRange` và
+  nhóm, như three.
 - (GĐ 5) **`tung-soi`** (jsdom): thanh từ 0 tới N, mở công cụ thì ở N; `aria-valuetext` có nhãn vật; "Dệt lại" đi hết 0 → N rồi dừng
   (đồng hồ giả); kéo thanh thì dừng; tắt công cụ thì `limit(null)` rồi `stop()`.
 - (GĐ 5) **`moon-progress`** (jsdom): không có quầng trước `loading`; mỗi mốc đặt đúng phần vòng; `static`/`lost` ẩn ngay; giảm
@@ -2283,9 +2299,23 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     của render list, theo đúng thứ tự đã sắp (đục trước, trong suốt sau). Mỗi lần `render()` đặt hàm hiện tại là `fn ?? renderObject`.
     - `compileAsync` luôn dùng `renderObject` gốc, nên biên dịch trước không đi qua móc.
     - `ShadowNode` cất móc, đặt hàm riêng cho lượt vẽ bóng, rồi trả lại. `RendererUtils.resetRendererState` (BloomNode, RTTNode của
-      FXAA, và các pass có sẵn khác) đặt móc về `null` rồi trả lại. Vì vậy móc không thấy lượt vẽ bóng, bloom hay quad.
+      FXAA, và các pass có sẵn khác) đặt móc về `null` rồi trả lại. Vì vậy móc không thấy lượt vẽ bóng, bloom hay quad của RTT.
     - Reflector gọi `renderer.render(scene, camera ảo)` ngay trong lúc vẽ mặt nước (từ `updateBefore` của node), không đặt lại móc: móc
       thấy các lần vẽ đó với camera ảo, lồng bên trong lần vẽ của mặt nước. `_renderScene` cất và trả hàm hiện tại quanh lượt lồng này.
+    - `RenderPipeline` vẽ quad cuối bằng `renderer.render()` mà không gỡ móc: móc thấy quad (camera trực giao) ở ngoài cùng, và scene
+      pass được vẽ từ BÊN TRONG lần vẽ quad ấy (`updateBefore` của node). Quad không phải phản chiếu: nó vào "các lượt khác".
+    - **Thứ tự `updateBefore`** (phát hiện khi review GĐ 5, kiểm bằng `WGSLNodeBuilder` với đồ thị thật của Bức 1): three gọi
+      `updateBefore` của một material theo thứ tự node dựng xong, con trước cha (`Node.build` gọi `addSequentialNode` sau khi dựng các
+      con; `buildUpdateNodes` giữ thứ tự đó). Ảnh cuối của Bức 1 có RTT của FXAA nằm sâu bên trong, nên RTT tới lượt trước: nó gỡ móc
+      rồi vẽ quad của nó, và `updateBefore` của quad ấy vẽ scene pass lần đầu trong khung bằng `renderObject` gốc. Scene pass cập nhật
+      mỗi `frameId` một lần (FRAME), nên lượt cuối không vẽ lại nó; không có công cụ thì scene pass còn không nằm trong lượt cuối. Lượt
+      cuối thật đo được `[RTTNode, FXAANode, PassNode, BloomNode]` khi có Kính mài và Lột lớp. Vì vậy `views.js` bọc ảnh cuối bằng
+      `Fn(() => { scenePass.toVar(); return vec4(c.rgb, 1); })()`: stack của `Fn` dựng `scenePass.toVar()` trước giá trị trả về, nên
+      scene pass luôn là `updateBefore` đầu tiên của lượt cuối (`[PassNode, RTTNode, FXAANode, BloomNode]`) và chạy khi móc còn gắn.
+      Biến không ai đọc thì `StackNode` bỏ qua lúc sinh code: WGSL y hệt khi không có biến. Hệ quả: scene pass xóa ảnh `output` bằng
+      màu xóa của sân khấu (đen then, alpha 1) chứ không phải màu đen của RTT, như trước GĐ 4. Ảnh `emissive` và `normal` vẫn xóa về đen:
+      cả hai backend chỉ dùng màu xóa của renderer cho ảnh đầu của MRT. Vòm trời của Bức 1 (lớp Sương, luôn hiện) che kín nền, nên chỉ
+      các sợi trước vòm trời của Từng sợi mới thấy màu xóa.
     - Không gọi hàm vẽ cho một mục là mục đó không được vẽ, và `renderer.info` không đếm nó. Mặt nước bị bỏ qua thì reflector cũng không
       vẽ lại ở khung đó.
     - Inspector của `?debug` không dùng móc này (không file nào của inspector gọi nó).
