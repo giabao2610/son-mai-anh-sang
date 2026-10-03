@@ -349,8 +349,8 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
   đã hết bản quyền (Nguyễn Trãi thế kỷ 15, Hồ Xuân Hương và Nguyễn Du đầu thế kỷ 19, Nguyễn Khuyến mất năm 1909). Thứ tự hiện xáo
   theo đêm (§4.2). Khóa trong ngoặc là id của mục. Chữ nằm ở `content.captions.vi.js` (`content.vi.js` gộp vào `captions`; tách
   riêng để `content.vi.js` dưới 300 dòng): ca dao ghi `source: 'Ca dao'`, mục khác ghi tên bài ở `source` và tác giả ở `author`.
-  1. *"Đèn khoe đèn tỏ hơn trăng / Đèn ra trước gió còn chăng hỡi đèn?"* (ca dao) `den-khoe`
-  2. *"Trăng khoe trăng tỏ hơn đèn / Cớ sao trăng lại chịu luồn đám mây?"* (ca dao) `trang-khoe`
+  1. *"Đèn khoe đèn tỏ hơn trăng / Đèn ra trước gió còn chăng, hỡi đèn?"* (ca dao) `den-khoe`
+  2. *"Trăng khoe trăng tỏ hơn đèn / Cớ sao trăng phải chịu luồn đám mây?"* (ca dao) `trang-khoe`
   3. *"Thuyền về có nhớ bến chăng? / Bến thì một dạ khăng khăng đợi thuyền"* (ca dao) `thuyen-ve`
   4. *"Gió đưa cành trúc la đà / Tiếng chuông Trấn Vũ, canh gà Thọ Xương"* (ca dao) `gio-dua`
   5. *"Mịt mù khói tỏa ngàn sương / Nhịp chày Yên Thái, mặt gương Tây Hồ"* (ca dao) `mit-mu`
@@ -362,8 +362,8 @@ Nguồn là trường bắt buộc `poem.source` trong meta.
   11. *"Lưng giậu phất phơ màu khói nhạt / Làn ao lóng lánh bóng trăng loe"* (Thu ẩm, Nguyễn Khuyến) `lung-giau`
   12. *"Nước biếc trông như tầng khói phủ / Song thưa để mặc bóng trăng vào"* (Thu vịnh, Nguyễn Khuyến) `nuoc-biec`
 
-  Chữ của mười một mục đã đối chiếu với nguồn trên mạng lúc viết spec. Mục 9 (`guong-nga`) chưa tìm được bản để đối chiếu:
-  Bao kiểm lại chữ trước khi deploy, hoặc thay bằng một câu khác.
+  Chữ của cả mười hai mục đã đối chiếu với nguồn trên mạng trước khi deploy GĐ 5 (mục 9 với bản Truyện Kiều trên Wikisource).
+  Ca dao có nhiều dị bản; mục 1 và 2 theo bản in phổ biến nhất.
 
 ### Lượt màu (GĐ 3)
 Đo trên GPU thật, cùng khung 1280×800 (độ sáng trung bình / độ bão hòa / tỉ lệ điểm tối): poster 33 / 0,42 / 30%; bản GĐ 2 là
@@ -2210,7 +2210,7 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
   - máy Windows hay Linux có GPU thật (NVIDIA, AMD, Intel) trên Chrome: ms GPU trong Sổ tay nhỏ hơn ms mỗi khung và đổi theo mức;
     từ đó chốt ba ngưỡng 0,5 / 0,6 / 0,85 (§10);
   - GPU Apple trên Chrome: vài giây sau khi live, `__sma.quality().gpu` là `false` và Sổ tay ghi "—" kèm lời giải thích.
-- (GĐ 5) Bao đọc lại mười hai cặp câu thơ của hoa đăng trên trang (chữ, dấu, nguồn), nhất là mục `guong-nga` (§5).
+- (GĐ 5) Bao đọc lại mười hai cặp câu thơ của hoa đăng trên trang (chữ, dấu, nguồn; §5).
 - (GĐ 5) Điện thoại thật: chạm hai lần thả được đèn, không làm trình duyệt phóng to; chữ không tràn ra ngoài màn hình.
 - (GĐ 5) VoiceOver đọc cặp câu và nguồn khi đèn được thả, và đọc được thanh của Từng sợi.
 - (GĐ 5) Mạng chậm (DevTools › Network › Slow 4G): quầng trăng nhích đều tới lúc hòa dần, không đứng hẳn ở mốc nào.
@@ -2464,8 +2464,10 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
   - Phép so của test hoa đăng dùng `gapMs: 600` (quá 300 ms): hai lần chạm thường. Unit test của `gesture` giữ các ngưỡng.
 - **(GĐ 5) Chạm hai lần trên điện thoại có thể làm trình duyệt phóng to.** OrbitControls đặt `touch-action: none` cho canvas, nên
   trình duyệt không phóng to khi chạm vào cảnh. Kiểm trên điện thoại thật (§12).
-- **(GĐ 5) Thơ in sai chữ.** Mười một cặp câu đã đối chiếu nguồn lúc viết spec; mục `guong-nga` chưa. Bao đọc lại cả mười hai trước
-  khi deploy (§12, kiểm tra thủ công). Chữ nằm trong `content.captions.vi.js`, sửa không đụng tới code.
+- **(GĐ 5) Thơ in sai chữ.** Lúc viết spec, mười một cặp câu đã ghi là đối chiếu rồi, nhưng lần đối chiếu lại trước khi deploy vẫn bắt
+  được một chữ khác bản phổ biến (`trang-khoe` ghi "lại" thay vì "phải"). Ca dao có nhiều dị bản: thêm câu nào thì đối chiếu với vài
+  nguồn và chọn bản in phổ biến nhất. Bao đọc lại thơ trên trang thật (§12). Chữ nằm trong `content.captions.vi.js`, sửa không đụng
+  tới code.
 - **(GĐ 5) Đèn trôi xuyên qua lá.** Đèn nổi cao hơn lá và đi về phía lối trăng, nơi Cốt chừa trống, nên chỉ lướt qua lá một lúc ngắn.
   Tránh lá thật sự để sau (§16).
 
