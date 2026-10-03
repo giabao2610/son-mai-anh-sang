@@ -172,6 +172,23 @@ describe('đường nhẹ (§8.2)', () => {
       .map((t) => `${root} ⇒ ${t}${t.startsWith('src/') ? '' : ' (gói npm hoặc file ngoài src/)'}`));
     expect(errors, report('Đường nhẹ kéo theo thứ nặng (three chỉ được tải bằng import() động):', errors)).toEqual([]);
   });
+
+  // Tầng tĩnh là chỗ dựa của máy cũ: phần nhẹ phải chạy cả trên Safari 14 (phần nhẹ đã cần replaceChildren, có từ Safari 14).
+  // Built-in từ ES2022 trở đi (và structuredClone) thì Safari 14 chưa có: gọi tới là ném lỗi trước khi tầng tĩnh kịp vẽ huy
+  // hiệu và ghi chú. Phần nặng chỉ chạy trên trình duyệt có WebGPU/WebGL2 đời mới, nên được dùng.
+  const MODERN = /\bObject\s*\.\s*hasOwn\s*\(|\.\s*at\s*\(|\bstructuredClone\s*\(|\.\s*(?:findLast|findLastIndex|toSorted|toReversed|toSpliced)\s*\(|\b(?:Object|Map)\s*\.\s*groupBy\s*\(|\bPromise\s*\.\s*withResolvers\s*\(/g;
+  it('phần nhẹ không gọi built-in ES2022 trở lên (Object.hasOwn, .at(), findLast…): tầng tĩnh chạy cả trên Safari 14', () => {
+    const files = [...new Set(LIGHT_ROOTS.flatMap((root) => [root, ...staticClosure(root)]))]
+      .filter((f) => f.startsWith('src/') && f.endsWith('.js'));
+    const errors = [];
+    for (const file of files) {
+      const code = stripComments(read(file), file);
+      for (const m of code.matchAll(MODERN)) {
+        errors.push(`${file}:${code.slice(0, m.index).split('\n').length} — ${m[0].replace(/\s+/g, '')}`);
+      }
+    }
+    expect(errors, report('Phần nhẹ gọi built-in mà trình duyệt cũ của tầng tĩnh chưa có (dùng cách cũ, vd. hasOwnProperty.call):', errors)).toEqual([]);
+  });
 });
 
 // ─── Hàng rào từ vựng: xưởng không nói tiếng của bức ─────────────────────

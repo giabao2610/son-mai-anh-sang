@@ -3,28 +3,22 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { paintings } from '../../src/paintings/registry.js';
-import mau from '../../src/paintings/_mau/meta.js';
 import { mergePalette } from '../../src/engine/palette.js';
 import { hasCode } from '../../src/ui/code-view.js';
 import { NOW, buildPainting } from '../helpers/fake-ctx.js';
+import { ALL } from '../helpers/paintings.js';
 import { svgColors } from '../helpers/svg.js';
 import { jpegSize, webpSize } from '../helpers/image.js';
+import { KEBAB } from '../helpers/kebab.js';
+import { captionErrors } from '../helpers/caption-rules.js';
+import { read, staticClosure } from '../helpers/source.js';
 import { parseAt } from '../../src/engine/flags.js';
 import { pass } from 'three/tsl';
 import { buildFinalNode, makeMRT } from '../../src/engine/gpu/pipeline.js';
 
 const SRC = resolve(import.meta.dirname, '../../src');
-const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const MARKER = /\/\/\s*@knob\s+([A-Za-z0-9_]+)/g;
 const MAX_WORDS = 150;
-
-/** Bức đã deploy (registry) và tranh mẫu. Tranh mẫu không có trang HTML và không bị kiểm HTML (spec §12). */
-const ROWS = [...paintings.map((p) => ({ ...p, deployed: true })), { meta: mau, page: null, lang: 'vi', deployed: false }];
-// Nạp trước cửa vào của mọi bức (top-level await): danh sách ngôn ngữ của content phải có trước khi khai báo test.
-const ALL = await Promise.all(ROWS.map(async (row) => {
-  const { default: entry } = await import(`../../src/paintings/${row.meta.slug}/index.js`);
-  return { ...row, entry, langs: Object.keys(entry.content ?? {}) };
-}));
 
 /** Tập id núm có marker `// @knob <id>` trong các file (đường dẫn tính từ src/). */
 function markersIn(files) {
@@ -74,6 +68,22 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
         owner.set(file, layer.id);
         // Tranh mẫu không deploy nên cố ý nằm ngoài glob của ui/code-view.js.
         if (row.deployed) expect(hasCode(file), `src/${file} nằm ngoài glob ?code của ui/code-view.js`).toBe(true);
+      }
+    }
+  });
+
+  it('files của lớp (GĐ 5) kê đủ mọi file trong parts/ mà file lớp import tĩnh, thẳng hay qua part khác: Sổ tay hiện đủ code', () => {
+    const parts = `src/paintings/${slug}/parts/`;
+    for (const layer of meta.layers) {
+      for (const file of layer.files.filter((f) => f.startsWith(`paintings/${slug}/layers/`))) {
+        // Chỉ đi qua parts/: shared.js cũng import part, nhưng nó là của cả bức, không thuộc lớp nào. Cùng với luật "mỗi
+        // file thuộc tối đa một lớp", part là của riêng một lớp: lớp khác cần gì của nó thì nhận qua shared.
+        const start = `src/${file}`;
+        const reached = staticClosure(start, (rel) => (rel === start || rel.startsWith(parts) ? read(rel) : null))
+          .filter((f) => f.startsWith(parts))
+          .map((f) => f.slice('src/'.length)); // đường dẫn tính từ src/, như files
+        const missing = reached.filter((f) => !layer.files.includes(f));
+        expect(missing, `lớp "${layer.id}": ${file} import (thẳng hay qua part khác) mà files chưa kê`).toEqual([]);
       }
     }
   });
@@ -263,6 +273,12 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
       for (const { layerId, tapId } of taps) {
         expect(content.layers?.[layerId]?.taps?.[tapId], `nhãn tap "${layerId}:${tapId}"`).toBeTruthy();
       }
+    });
+
+    it.each(langs)('%s: chữ đi theo vật (GĐ 5, nếu có): khóa kebab-case; mỗi mục 1–2 dòng không rỗng (≤ 60 ký tự), có nguồn', async (lang) => {
+      const { default: content } = await entry.content[lang]();
+      const errors = captionErrors(content.captions);
+      expect(errors, `content.captions (${lang}):\n${errors.join('\n')}`).toEqual([]);
     });
 
     it.each(langs)('%s: sơ đồ (nếu có) là SVG có <title>, chỉ dùng màu của bảng sơn mài', async (lang) => {

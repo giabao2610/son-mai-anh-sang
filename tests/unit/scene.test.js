@@ -1,10 +1,11 @@
-// tests/unit/scene.test.js — dựng một cảnh trên sân khấu giả (không GPU): mức theo backend thật, vòng một khung, vẽ lại khi ?freeze.
+// tests/unit/scene.test.js — dựng một cảnh trên sân khấu giả (không GPU): mức theo backend thật, vòng một khung, vẽ lại khi ?freeze, chữ đi theo vật, móc lần vẽ.
 import { describe, it, expect, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { BoxGeometry, Mesh, MeshStandardNodeMaterial, NoToneMapping, PerspectiveCamera, SRGBColorSpace, Scene, Vector2 } from 'three/webgpu';
 import { color, mix, uniform, vec3 } from 'three/tsl';
 import { buildScene } from '../../src/engine/gpu/scene.js';
 import { createDisposer } from '../../src/engine/gpu/disposer.js';
+import { CAPTION_SECONDS } from '../../src/ui/captions.js';
 import { fakeRenderer } from '../helpers/fake-ctx.js';
 
 /** Test gắn hàm vào đây để nghe update() của lớp tô màu. */
@@ -21,7 +22,7 @@ const painting = {
         const material = new MeshStandardNodeMaterial();
         material.colorNode = color(ctx.palette.hex.datSet);
         material.emissiveNode = vec3(0);
-        const mesh = new Mesh(new BoxGeometry(), material);
+        const mesh = Object.assign(new Mesh(new BoxGeometry(), material), { name: 'khoi' });
         ctx.scene.add(mesh);
         shared.cot = { material };
         return { objects: [mesh], dispose: () => ctx.scene.remove(mesh) };
@@ -38,11 +39,19 @@ const painting = {
   ],
 };
 
-/** Sân khấu giả: đủ những gì buildScene đọc; renderer là Proxy ghi lời gọi (render, compute…). Máy có DPR 2. */
-function fakeStage(backend) {
+/**
+ * Sân khấu giả: đủ những gì buildScene đọc; renderer là Proxy ghi lời gọi (render, compute…). Máy có DPR 2.
+ * Canvas 640 × 400 nằm trong [data-stage] của trang (vùng chữ đi theo vật gắn cạnh nó).
+ */
+function fakeStage(backend, doc) {
   const renderer = fakeRenderer();
   let dprMax = Infinity;
-  const canvas = Object.assign(new EventTarget(), { getBoundingClientRect: () => ({ left: 0, top: 0, width: 640, height: 400 }) });
+  const canvas = Object.assign(new EventTarget(), {
+    parentElement: doc.querySelector('[data-stage]'),
+    clientWidth: 640,
+    clientHeight: 400,
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 640, height: 400 }),
+  });
   Object.assign(renderer, { toneMapping: NoToneMapping, outputColorSpace: SRGBColorSpace, domElement: canvas });
   return {
     backend,
@@ -62,7 +71,7 @@ function fakeStage(backend) {
 }
 
 /** Cửa sổ giả: requestAnimationFrame xếp hàng, flush() chạy như một nhịp của trình duyệt. */
-function fakeWin() {
+function fakeWin(doc) {
   const frames = [];
   const win = Object.assign(new EventTarget(), {
     navigator: { userAgent: 'Mozilla/5.0 (Macintosh)', maxTouchPoints: 0 },
@@ -70,23 +79,39 @@ function fakeWin() {
     requestAnimationFrame: (cb) => frames.push(cb),
     setTimeout,
     clearTimeout,
-    document: Object.assign(new EventTarget(), { hidden: false }),
+    document: doc,
   });
   return { win, frames, flush: () => frames.splice(0).forEach((cb) => cb(16)) };
 }
 
-function build({ backend = 'webgpu', reducedMotion = false, flags = {}, setup, tools = [] } = {}) {
-  const stage = fakeStage(backend);
+function build({ backend = 'webgpu', reducedMotion = false, flags = {}, setup, tools = [], content = null } = {}) {
+  // Trang là DOM thật: [data-stage] chứa canvas và vùng chữ đi theo vật; thanh công cụ gắn vào body.
+  const doc = new JSDOM('<div data-stage></div>').window.document;
+  const stage = fakeStage(backend, doc);
   const disposer = createDisposer();
-  const { win, frames, flush } = fakeWin();
-  if (tools.length > 0) win.document = new JSDOM('').window.document; // thanh công cụ là DOM thật
+  const { win, frames, flush } = fakeWin(doc);
   const scene = buildScene({
     stage, disposer, painting: setup ? { ...painting, setup } : painting, meta, flags,
-    now: new Date('2026-09-28T14:00:00Z'), reducedMotion, win, tools,
+    now: new Date('2026-09-28T14:00:00Z'), reducedMotion, win, tools, content,
   });
   const renders = () => stage.renderer.render.mock.calls.length;
-  return { stage, disposer, scene, frames, flush, renders };
+  return { stage, disposer, scene, frames, flush, renders, win, doc };
 }
+
+/** Cảnh có một dòng chữ trong content.captions; setup của bức giữ ctx.captions lại cho test. */
+function buildWithCaptions() {
+  let captions = null;
+  const content = { hint: '', captions: { 'tram-nam': { lines: ['Trăm năm trong cõi người ta'], source: 'Truyện Kiều', author: 'Nguyễn Du' } } };
+  const built = build({ content, setup: (ctx) => {
+    captions = ctx.captions;
+    return {};
+  } });
+  // jsdom không tính bố cục: vùng chữ phủ kín [data-stage] nên rộng bằng canvas giả (ui/captions.js đọc để giữ chữ trong vùng).
+  Object.defineProperty(built.doc.querySelector('[data-captions]'), 'clientWidth', { value: 640 });
+  return { ...built, captions };
+}
+/** x (px trong canvas) mà chữ đang đứng, đọc từ transform của nó. */
+const captionX = (caption) => Number(/translate\(([-+\d.e]+)px/.exec(caption.style.transform)[1]);
 
 describe('buildScene', () => {
   it('mức theo backend THẬT: WebGPU máy tính → cao (dpr 2), WebGL2 → vừa (dpr 1.5); camera theo CameraSpec của bức', () => {
@@ -252,7 +277,7 @@ describe('buildScene', () => {
       id: 'kinh',
       mount: () => ({ onGesture: (g) => { seen.push(g.kind); return g.kind === 'tap'; }, dispose() {} }),
     };
-    const { stage, scene } = build({ setup: () => ({ onGesture }), tools: [lens] });
+    const { stage, scene, win } = build({ setup: () => ({ onGesture }), tools: [lens] });
     const canvas = stage.renderer.domElement;
     const event = (type, extra) => Object.assign(new Event(type), { clientX: 320, clientY: 200, pointerId: 1, button: 0, ...extra });
     const tap = () => {
@@ -265,6 +290,8 @@ describe('buildScene', () => {
     expect(onGesture.mock.calls.map(([g]) => g.kind)).toEqual(['tap']); // chưa bật công cụ: bức nhận chạm, không nhận hover
     await scene.studio.setTool('kinh');
     expect(scene.studio.tools()).toEqual([{ id: 'kinh', on: true }]);
+    // Người xem bật công cụ mất vài giây: lần chạm sau không ghép với lần trước thành chạm hai lần (GĐ 5).
+    win.performance.now = () => 5000;
     canvas.dispatchEvent(event('pointermove', { pointerType: 'mouse', buttons: 0 }));
     tap();
     scene.step(1016);
@@ -302,6 +329,82 @@ describe('buildScene', () => {
     flush();
     expect(seen).toEqual(['hover']);
     expect(renders()).toBe(before + 1);
+  });
+
+  it('chữ đi theo vật (GĐ 5): setup nhận ctx.captions (keys từ content.captions); mỗi khung chữ theo camera của CHÍNH khung đó; hết giờ thì gỡ', () => {
+    const { stage, scene, doc, captions } = buildWithCaptions();
+    expect(captions.keys).toEqual(['tram-nam']);
+    captions.show('tram-nam', () => ({ x: 0, y: 0, z: -5 })); // trước camera (camera giả ở gốc, nhìn về −z)
+    const region = doc.querySelector('[data-stage] > [data-captions]');
+    expect(region.getAttribute('aria-live')).toBe('polite');
+    const caption = region.querySelector('.caption');
+    expect(caption.textContent).toBe('Trăm năm trong cõi người taTruyện Kiều · Nguyễn Du');
+    expect(caption.hasAttribute('data-away')).toBe(false); // điểm neo trong khung
+    expect(caption.style.transform).toBe('translate(320px, 200px) translate(-50%, -100%)'); // giữa canvas 640 × 400
+    // Người xem kéo: controls.update() của khung này mới dời camera sang phải. Chữ được chiếu SAU nó, nên trôi về bên trái
+    // ngay trong khung này, không trễ một khung.
+    stage.controls.update.mockImplementation(() => {
+      stage.camera.position.x = 1;
+    });
+    scene.step(1000);
+    expect(captionX(caption)).toBeLessThan(320);
+    // Hết CAPTION_SECONDS theo đồng hồ của cảnh (stage.tick giả không ghi uniform, nên test ghi thẳng): khung sau gỡ chữ.
+    stage.u.time.value = CAPTION_SECONDS;
+    scene.step(1016);
+    expect(region.childElementCount).toBe(0);
+    expect(region.isConnected).toBe(true); // vùng live vẫn còn, chỉ rỗng
+  });
+
+  it('chữ đi theo vật, đứng yên ở ?freeze: vẽ lại khung đang giữ thì chiếu lại chữ (camera vừa bị kéo); disposer gỡ vùng chữ', async () => {
+    const { stage, scene, flush, disposer, doc, captions } = buildWithCaptions();
+    scene.freeze();
+    captions.show('tram-nam', () => ({ x: 0, y: 0, z: -5 })); // vòng lặp đã dừng: show() tự đặt chữ ngay
+    const caption = doc.querySelector('[data-captions] .caption');
+    expect(captionX(caption)).toBe(320);
+    stage.camera.position.x = 1; // camera dời sang phải: điểm neo trôi về bên trái
+    const done = scene.studio.setWeight('to-mau', 0);
+    flush();
+    await done;
+    expect(captionX(caption)).toBeLessThan(320);
+    disposer.closeAll();
+    expect(doc.querySelector('[data-captions]')).toBeNull();
+  });
+
+  it('móc lần vẽ (GĐ 5): công cụ nhận api.draws; begin/end bọc render ở cả step() lẫn vẽ lại khung đứng yên; disposer gỡ móc', async () => {
+    let api = null;
+    const soi = { id: 'soi', mount: (a) => ((api = a), { dispose() {} }) };
+    const content = { layers: { cot: { objects: { khoi: 'Khối đất' } } } };
+    const { stage, scene, disposer, flush } = build({ tools: [soi], content });
+    // Renderer giả có hàm vẽ như three: setRenderObjectFunction ghi lại hàm; mỗi render() của pipeline vẽ các vật của cảnh bằng
+    // camera chính qua hàm vẽ hiện tại (_renderObjects), mỗi lần vẽ một draw call.
+    const r = stage.renderer;
+    let fn = null;
+    r.setRenderObjectFunction.mockImplementation((f) => {
+      fn = f;
+    });
+    r.getRenderObjectFunction.mockImplementation(() => fn);
+    r.renderObject.mockImplementation(() => {
+      r.info.render.drawCalls += 1;
+    });
+    r.render.mockImplementation(() => {
+      for (const o of stage.scene.children.filter((c) => c.isMesh)) {
+        (fn ?? r.renderObject).call(r, o, stage.scene, stage.camera, o.geometry, o.material, null, null, null, null);
+      }
+    });
+    api.draws.start();
+    expect(fn).not.toBeNull();
+    scene.step(1000);
+    // Tên lớp từ meta, nhãn vật từ content.layers[id].objects: scene.js đưa cả hai cho móc.
+    expect(api.draws.list().map((d) => [d.layerId, d.layer, d.label])).toEqual([['cot', 'Cốt', 'Khối đất']]);
+    // Đứng yên ở ?freeze: Từng sợi đổi sợi rồi gọi api.redraw(); khung N vẽ lại cũng được ghi (vật mới không thuộc lớp nào).
+    scene.freeze();
+    stage.scene.add(new Mesh(new BoxGeometry(), new MeshStandardNodeMaterial()));
+    const done = api.redraw();
+    flush();
+    await done;
+    expect(api.draws.list().map((d) => d.layerId)).toEqual(['cot', null]);
+    disposer.closeAll();
+    expect(fn).toBeNull(); // gỡ cảnh thì trả hàm vẽ cũ, kể cả khi công cụ không tự stop()
   });
 
   it('ms CPU của khung đi vào số đo của bàn thợ', () => {

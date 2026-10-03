@@ -6,8 +6,11 @@ import { createSma } from './sma.js';
 import { showStatic, isChunkError } from './static.js';
 import { mountShell } from '../ui/shell.js';
 
-/** Hạn cho cả phần 3D: tải chunk, dựng cảnh, biên dịch shader, vẽ khung ẩn. Quá hạn thì về tranh tĩnh. */
-const BOOT_DEADLINE_MS = 10_000;
+/**
+ * Hạn cho cả phần 3D: tải chunk, dựng cảnh, biên dịch shader, vẽ khung ẩn. Quá hạn thì về tranh tĩnh. Chặng đầu của quầng
+ * trăng (HALO_STEPS.loading, ui/moon-progress.js) bò đúng bằng hạn này; tests/unit/boot.test.js giữ hai số khớp nhau.
+ */
+export const BOOT_DEADLINE_MS = 10_000;
 
 /**
  * Cửa vào của mọi trang: script inline trong HTML gọi `boot(entry, { lang: 'vi', t })`.
@@ -43,12 +46,13 @@ export async function boot(entry, { lang = 'vi', t, win = window, doc = document
   const onFail = (reason, error) => showStatic(entry, shell, { reason, error, debug, t, sma });
 
   // Quá hạn thì run() vẫn có thể chạy nốt (máy yếu biên dịch shader lâu). Vỏ trang đưa cho run bị "khóa"
-  // từ lúc đó, để phần 3D đến muộn không kéo được poster đi hay đổi data-state; onLate sẽ gỡ nó.
+  // từ lúc đó, để phần 3D đến muộn không kéo được poster đi, đổi data-state hay vẽ lại quầng trăng; onLate sẽ gỡ nó.
   let late = false;
   const unlessLate = (fn) => (...args) => (late ? undefined : fn(...args));
   const runShell = {
     stageEl: shell.stageEl,
     setState: unlessLate(shell.setState),
+    progress: unlessLate(shell.progress),
     crossfade: (canvas) => (late ? Promise.resolve() : shell.crossfade(canvas)),
     showBadge: unlessLate(shell.showBadge),
     showNote: unlessLate(shell.showNote),
@@ -59,7 +63,10 @@ export async function boot(entry, { lang = 'vi', t, win = window, doc = document
 
   try {
     await withDeadline(
-      loadRun().then(({ run }) => run(entry, runShell, { tier, flags, now, lang, t, sma, onFail })),
+      loadRun().then(({ run }) => {
+        runShell.progress('chunk'); // mốc của quầng trăng: code 3D đã tải xong
+        return run(entry, runShell, { tier, flags, now, lang, t, sma, onFail });
+      }),
       BOOT_DEADLINE_MS,
       { onLate: (handle) => handle?.dispose?.() },
     );

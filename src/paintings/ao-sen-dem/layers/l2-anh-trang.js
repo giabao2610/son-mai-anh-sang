@@ -1,15 +1,8 @@
 // paintings/ao-sen-dem/layers/l2-anh-trang.js — Lớp 2 · Ánh trăng: trăng đúng pha, ánh trăng + một shadow map, chất liệu, đèn hoa đăng.
-import {
-  DirectionalLight,
-  DoubleSide,
-  HemisphereLight,
-  InstancedMesh,
-  MeshStandardNodeMaterial,
-  Object3D,
-  PointLight,
-} from 'three/webgpu';
-import { color, cos, mix, oneMinus, uniform, uv, vec3 } from 'three/tsl';
+import { DirectionalLight, HemisphereLight, PointLight } from 'three/webgpu';
+import { cos, oneMinus } from 'three/tsl';
 import { moonPhase } from '../../../lib/astro/moon.js';
+import { SHORE, createLanterns } from '../parts/anh-trang-lantern.js';
 import { createMoon } from '../parts/anh-trang-moon.js';
 import { paintCot } from '../parts/anh-trang-paint.js';
 import { LIGHT_DISTANCE, createShadowWatch } from '../parts/anh-trang-shadow.js';
@@ -49,44 +42,11 @@ export function moonStrength(y) {
   return 0.35 + 0.65 * s * s * (3 - 2 * s);
 }
 const SKY_FILL = 4; // trời chàm hắt xuống, nước đen hắt lên
-const CANDLE = { distance: 14, position: [-5, 0.08, 13] };
-
-/**
- * Đèn hoa đăng: 8 cánh quây một ngọn nến là PointLight ấm. Cánh dùng lại HÌNH cánh sen của Cốt (shared.cot.petalGeometry)
- * nhưng mesh và material là của lớp này: tắt lớp Ánh trăng thì đèn cũng về đất sét, không kéo theo hoa của Cốt.
- */
-function createLantern(ctx, cot, w) {
-  const hex = ctx.palette.hex;
-  const candle = ctx.knob('candleColor'); // @knob candleColor
-  // Thí nghiệm "Đổi màu đèn": 0 = màu nến của núm, 1 = đỏ son. Cùng một ánh sáng, mỗi chất liệu đáp lại một kiểu.
-  const swap = uniform(0).setName('anh_trang_swap');
-  const flame = mix(candle, color(hex.doSon), swap);
-  const material = new MeshStandardNodeMaterial({ roughness: 0.8, side: DoubleSide });
-  material.colorNode = mix(color(hex.datSet), color(hex.nga), w);
-  // Giấy dó sáng từ trong ra: sáng ở gốc cánh (gần nến), nhạt dần lên mép.
-  material.emissiveNode = flame.mul(mix(1.6, 0.3, uv().y)).mul(w);
-  const mesh = new InstancedMesh(cot.petalGeometry, material, 8);
-  const dummy = new Object3D();
-  dummy.rotation.order = 'YXZ';
-  for (let k = 0; k < 8; k++) {
-    const yaw = (k / 8) * Math.PI * 2;
-    dummy.position.set(CANDLE.position[0] + Math.cos(yaw) * 0.12, CANDLE.position[1], CANDLE.position[2] + Math.sin(yaw) * 0.12);
-    dummy.rotation.set(-0.45, -yaw - Math.PI / 2, 0);
-    dummy.scale.setScalar(0.55);
-    dummy.updateMatrix();
-    mesh.setMatrixAt(k, dummy.matrix);
-  }
-  const light = new PointLight(candle.value, 0, CANDLE.distance, 2);
-  light.position.set(CANDLE.position[0], CANDLE.position[1] + 0.3, CANDLE.position[2]);
-  const red = ctx.palette.color('doSon');
-  // Màu của đèn thật (CPU) đi theo cùng công thức với màu của giấy (GPU).
-  const sync = () => light.color.copy(candle.value).lerp(red, swap.value);
-  return { mesh, light, swap, sync };
-}
+const CANDLE = { distance: 14, lift: 0.3 }; // ngọn nến của đèn ở bờ: tầm chiếu, độ cao trên đáy đèn
 
 /**
  * @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx
- * @param {object} shared  đọc shared.cot (lớp trước) và shared.moon (setup của bức)
+ * @param {object} shared  đọc shared.cot (lớp trước), shared.moon và shared.lanterns (setup của bức); ghi shared.anhTrang
  */
 export function createLayer(ctx, shared) {
   const w = ctx.weight(id);
@@ -143,14 +103,26 @@ export function createLayer(ctx, shared) {
     watch = createShadowWatch({ shadow: moonlight.shadow, dir: shared.moon.dir, cot });
   }
 
-  const lantern = createLantern(ctx, cot, w);
+  // Đèn hoa đăng: đèn ở bờ và mọi hoa đăng thả ra chung MỘT InstancedMesh (parts/anh-trang-lantern.js). Cánh dùng lại
+  // HÌNH cánh sen của Cốt (shared.cot.petalGeometry) nhưng mesh và material là của lớp này: tắt lớp Ánh trăng thì đèn
+  // cũng về đất sét, không kéo theo hoa của Cốt.
+  const candle = ctx.knob('candleColor'); // @knob candleColor
+  const lanterns = createLanterns(ctx, { geometry: cot.petalGeometry, w, candle, slots: shared.lanterns });
+  shared.anhTrang.lantern = { material: lanterns.material, pool: lanterns.pool, flame: lanterns.flame };
+  // Chỉ đèn ở bờ có đèn thật: PointLight ấm chiếu lên lá và cánh sen quanh nó. Số đèn nằm trong cache key của mọi material
+  // có chiếu sáng, nên thêm đèn lúc chạy là biên dịch lại tất cả: hoa đăng thả ra chỉ tự phát sáng (emissive → bloom).
+  const light = new PointLight(candle.value, 0, CANDLE.distance, 2);
+  light.position.set(SHORE.position[0], SHORE.position[1] + CANDLE.lift, SHORE.position[2]);
+  const red = ctx.palette.color('doSon');
+  // Màu của đèn thật (CPU) đi theo cùng công thức với màu của giấy (GPU).
+  const syncLight = () => light.color.copy(candle.value).lerp(red, lanterns.swap.value);
   let candleIntensity = ctx.knobValue('candleIntensity');
-  const added = [moon.moon, moonlight, moonlight.target, fill, lantern.mesh, lantern.light];
+  const added = [moon.moon, moonlight, moonlight.target, fill, lanterns.mesh, light];
   ctx.scene.add(...added);
 
   let disposed = false;
   return {
-    objects: [moon.moon, lantern.mesh],
+    objects: [moon.moon, lanterns.mesh],
     update(dt, t) {
       const k = w.value;
       const dir = shared.moon.dir.value;
@@ -161,9 +133,11 @@ export function createLayer(ctx, shared) {
       fill.intensity = SKY_FILL * k;
       // Đèn xưởng lui dần khi trăng lên: ở trọng số 1 chỉ còn ánh sáng của bức.
       cot.hemi.intensity = cot.hemiIntensity * (1 - k);
+      // Hoa đăng tính thẳng từ t: update(0, t) lúc ?freeze vẽ lại đúng khung đó.
+      lanterns.write(t);
       // Nến lung linh: hai sóng sin lệch nhịp, theo đồng hồ của xưởng (tất định với ?freeze).
-      lantern.sync();
-      lantern.light.intensity = candleIntensity * k * (0.85 + 0.15 * Math.sin(t * 13 + Math.sin(t * 7)));
+      syncLight();
+      light.intensity = candleIntensity * k * (0.85 + 0.15 * Math.sin(t * 13 + Math.sin(t * 7)));
     },
     onKnob: {
       candleIntensity: (v) => { candleIntensity = v; }, // @knob candleIntensity
@@ -187,9 +161,12 @@ export function createLayer(ctx, shared) {
         },
       },
       { id: 'noRim', toggle: (on) => { paint.rimOn.value = on ? 0 : 1; } },
-      { id: 'redCandle', toggle: (on) => { lantern.swap.value = on ? 1 : 0; } },
+      { id: 'redCandle', toggle: (on) => { lanterns.swap.value = on ? 1 : 0; } }, // mọi đèn chung uniform này
     ],
-    readouts: [{ id: 'shadowMap', get: () => (shadowOn ? moonlight.shadow.mapSize.x : 0), unit: 'px' }],
+    readouts: [
+      { id: 'shadowMap', get: () => (shadowOn ? moonlight.shadow.mapSize.x : 0), unit: 'px' },
+      { id: 'lanterns', get: () => lanterns.alive(ctx.u.time.value) }, // đang nổi và đang chìm
+    ],
     // Nấc của bộ điều chỉnh: chia đôi cỡ shadow map (không dưới 256). Mức thấp tắt bóng nên không có nấc này.
     degrade: shadowOn ? [halveShadow] : [],
     dispose() {
@@ -197,11 +174,10 @@ export function createLayer(ctx, shared) {
       disposed = true;
       ctx.scene.remove(...added);
       moon.dispose();
-      lantern.mesh.dispose();
-      lantern.mesh.material.dispose();
+      lanterns.dispose();
       moonlight.dispose();
       fill.dispose();
-      lantern.light.dispose();
+      light.dispose();
     },
   };
 }

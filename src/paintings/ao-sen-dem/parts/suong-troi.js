@@ -96,6 +96,7 @@ export function createSkyDome(skyColor) {
   material.colorNode = skyColor(normalize(positionWorld.sub(cameraPosition)));
   material.emissiveNode = vec3(0);
   const dome = new Mesh(new SphereGeometry(SKY_RADIUS, 48, 24), material);
+  dome.name = 'vom-troi';
   dome.renderOrder = -1;
   return dome;
 }

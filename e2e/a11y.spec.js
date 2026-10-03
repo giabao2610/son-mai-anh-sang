@@ -1,8 +1,8 @@
-// e2e/a11y.spec.js — trợ năng (axe-core, WCAG 2 A/AA): tranh tĩnh; cảnh 3D có thanh lớp + Sổ tay (ba tab); khi một công cụ bật; đi hết bằng bàn phím.
+// e2e/a11y.spec.js — trợ năng (axe-core, WCAG 2 A/AA): tranh tĩnh; cảnh 3D có thanh lớp + Sổ tay, công cụ đang bật, chữ đi theo vật; bàn phím.
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { paintings } from '../src/paintings/registry.js';
-import { waitForSettled, gpuReport, collectConsole, readSma } from './helpers.js';
+import { waitForSettled, waitForFrames, gpuReport, collectConsole, readSma, doubleTapAt } from './helpers.js';
 
 /** Luật WCAG 2.0 và 2.1, mức A và AA (spec §12). */
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
@@ -85,6 +85,11 @@ for (const { meta, page: htmlPage } of paintings) {
           await expect(page.locator('body')).toHaveAttribute('data-tool', id);
           errors.push(...await audit(page, `công cụ ${id}`));
         }
+        // Từng sợi (GĐ 5) khi đã có danh sách lần vẽ: thanh đủ N nấc, "Dệt lại" bấm được, dòng mô tả và tóm tắt đã có chữ.
+        await page.evaluate(() => window.__sma.setTool('tung-soi'));
+        await expect.poll(async () => Number(await page.locator('#tung-soi-range').getAttribute('max')), { timeout: 30_000 })
+          .toBeGreaterThan(0);
+        errors.push(...await audit(page, 'Từng sợi'));
         const wipe = page.locator('[data-toolbar] [data-shape="gat"]');
         await page.locator('[data-rail] [data-tool="kinh-mai"]').click();
         await wipe.click();
@@ -93,7 +98,7 @@ for (const { meta, page: htmlPage } of paintings) {
         expect(log.errors).toEqual([]);
       });
 
-      test('bàn phím: Tab tới lời mời, Enter vào chế độ mài; đi hết thanh lớp, Đồ nghề, thanh giờ, Sổ tay; Escape đóng Sổ tay', async ({
+      test('bàn phím: Tab tới lời mời, Enter vào chế độ mài; đi hết thanh lớp, Đồ nghề, thanh giờ, Sổ tay; Escape đóng Sổ tay; từ nút Từng sợi, Tab qua phần còn lại của thanh lớp rồi tới thanh và nút của nó (khung hẹp, máy tính)', async ({
         page,
       }, testInfo) => {
         test.setTimeout(120_000);
@@ -102,7 +107,8 @@ for (const { meta, page: htmlPage } of paintings) {
         const focused = () => page.evaluate(() => {
           const el = document.activeElement;
           return el ? `${el.tagName.toLowerCase()}${el.closest('[data-rail]') ? '@rail' : ''}${el.closest('[data-notebook]') ? '@nb' : ''}`
-            + `${el.closest('[data-hint]') ? '@hint' : ''}${el.getAttribute('role') ? `[${el.getAttribute('role')}]` : ''}`
+            + `${el.closest('[data-hint]') ? '@hint' : ''}${el.closest('[data-toolbar]') ? '@tool' : ''}`
+            + `${el.getAttribute('role') ? `[${el.getAttribute('role')}]` : ''}`
             + `${el.dataset.tool ? `:${el.dataset.tool}` : ''}${el.type === 'range' ? ':range' : ''}`
             + `${el.classList.contains('dial-chip') ? ':chip' : ''}` : 'none';
         });
@@ -144,8 +150,83 @@ for (const { meta, page: htmlPage } of paintings) {
         await page.keyboard.press('Escape');
         await expect(page.locator('[data-notebook]')).toBeHidden();
         await expect(page.locator('[data-rail]')).toBeVisible();
+        // Từng sợi (GĐ 5): Enter trên nút Đồ nghề bật công cụ. Thanh công cụ đứng ngay sau thanh lớp trong trang, nên Tab đi qua
+        // phần còn lại của thanh lớp rồi vào thẳng thanh và nút "Dệt lại" (WCAG 2.4.3): không vòng về đầu trang, không qua Sổ tay.
+        // "Dệt lại" bị khóa tới khi có danh sách lần vẽ, mà Tab bỏ qua nút bị khóa: chờ danh sách trước khi đi.
+        const weave = page.locator('[data-rail] [data-tool="tung-soi"]');
+        await weave.focus();
+        await page.keyboard.press('Enter');
+        await expect(page.locator('body')).toHaveAttribute('data-tool', 'tung-soi');
+        const range = page.locator('#tung-soi-range');
+        await expect.poll(async () => Number(await range.getAttribute('max')), { timeout: 30_000 }).toBeGreaterThan(0);
+        /** Các điểm dừng của n lần Tab, tính từ nút Từng sợi trên thanh lớp. */
+        const tabsFromWeave = async (n) => {
+          await weave.focus();
+          const stops = [];
+          for (let i = 0; i < n; i += 1) {
+            await page.keyboard.press('Tab');
+            stops.push(await focused());
+          }
+          return stops;
+        };
+        // Phần còn lại của thanh lớp sau nút Từng sợi: nút Đồ nghề đứng sau nó (nếu có), thanh giờ, "Phủ lớp tiếp theo" (chế độ
+        // mài: các lớp còn ở 0), nút đóng × (đứng đầu thanh trên máy tính nhưng cuối thanh trong trang).
+        const tools = (await page.evaluate(() => window.__sma.tools())).map((x) => x.id);
+        const laterTools = tools.slice(tools.indexOf('tung-soi') + 1).map((id) => `button@rail:${id}`);
+        const next = (await page.locator('[data-rail] .rail-next').isVisible()) ? ['button@rail'] : [];
+        const toolStops = ['input@tool:range', 'button@tool'];
+        // Khung hẹp (640px, như điện thoại): thanh giờ ở sau nút nhỏ "◷ 21:00", ô trượt đã mở ở lượt đi trên; Sổ tay thu lại.
+        if (dials.length > 0) await expect(page.locator('[data-rail] .dial-chip')).toHaveAttribute('aria-expanded', 'true');
+        const narrowDials = dials.length > 0 ? ['button@rail:chip', ...dials.map(() => 'input@rail:range')] : [];
+        const narrow = [...laterTools, ...narrowDials, ...next, 'button@rail', ...toolStops];
+        expect(await tabsFromWeave(narrow.length), 'khung hẹp: từ nút Từng sợi tới bảng của nó').toEqual(narrow);
+        // Máy tính: thanh giờ nằm thẳng trong thanh lớp, và Sổ tay (mở lại, đủ chỗ ở 1280px) đứng SAU bảng công cụ.
+        await page.setViewportSize({ width: 1280, height: 800 });
+        await page.locator(`[data-rail] [data-layer="${meta.layers[0].id}"] .rail-name`).click();
+        await expect(page.locator('[data-notebook]')).toBeVisible();
+        const wide = [...laterTools, ...dials.map(() => 'input@rail:range'), ...next, 'button@rail', ...toolStops, 'button@nb'];
+        expect(await tabsFromWeave(wide.length), 'máy tính: từ nút Từng sợi tới bảng của nó, rồi Sổ tay').toEqual(wide);
+        // Mũi tên trên thanh đổi sợi đang xem; trình đọc màn hình nghe qua aria-valuetext.
+        await range.focus();
+        const valuetext = await range.getAttribute('aria-valuetext');
+        await page.keyboard.press('ArrowLeft');
+        await expect(range).not.toHaveAttribute('aria-valuetext', valuetext);
         expect(log.errors).toEqual([]);
       });
     });
   });
 }
+
+/**
+ * Chữ đi theo vật (GĐ 5): Bức 1 hiện một cặp câu cạnh hoa đăng khi người xem chạm hai lần lên nước. Cảnh đứng yên ở khung 10
+ * (?freeze): giờ của chữ tính theo đồng hồ cảnh, nên chữ ở lại suốt lúc axe quét.
+ */
+test.describe('Ao Sen Đêm · a11y khi có chữ đi theo vật (GĐ 5)', () => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    const { kind, backend } = testInfo.project.metadata;
+    test.skip(kind !== '3d', 'chỉ chạy ở project 3D');
+    if (backend === 'webgpu') {
+      await page.goto('./?static');
+      test.skip(!(await gpuReport(page)).webgpu, 'Không có WebGPU adapter trong môi trường này');
+    }
+  });
+
+  test('thả hoa đăng: vùng chữ (aria-live) có cặp câu và nguồn; không lỗi serious/critical', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const { query } = testInfo.project.metadata;
+    await page.goto(`./?${query.replace(/^\?/, '')}&at=2026-09-28T21:00&freeze=10`);
+    const settled = await waitForSettled(page, { timeout: 60_000 });
+    expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+    await waitForFrames(page, 10, { timeout: 60_000 });
+    await doubleTapAt(page, 0.5, 0.8); // mặt nước ngay trước camera (WATER của ao-sen-dem.spec.js)
+    const caption = page.locator('[data-captions] .caption');
+    await expect(caption).toHaveAttribute('data-shown', '');
+    await expect(caption, 'điểm neo của chữ phải ở trong khung').not.toHaveAttribute('data-away');
+    // Chờ chữ hiện hẳn (mờ dần 0,8 s): axe đo độ tương phản của chữ đã hiện, không phải chữ đang mờ.
+    await expect.poll(() => caption.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+    await expect(caption.locator('.caption-line')).not.toHaveCount(0);
+    await expect(caption.locator('.caption-cite cite')).not.toBeEmpty();
+    expect(await audit(page, 'chữ đi theo vật')).toEqual([]);
+    expect(log.errors).toEqual([]);
+  });
+});

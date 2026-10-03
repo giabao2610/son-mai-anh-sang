@@ -1,12 +1,15 @@
-// paintings/ao-sen-dem/shared.js — setup() của Bức 1: giờ đêm nay (thanh giờ), hướng trăng, gợn sóng, điểm hút đom đóm, xoáy sương, cử chỉ.
+// paintings/ao-sen-dem/shared.js — setup() của Bức 1: giờ đêm nay (thanh giờ), hướng trăng, gợn sóng, điểm hút đom đóm, xoáy sương, hoa đăng kèm thơ, cử chỉ.
 import { Plane, Vector2, Vector3, Vector4 } from 'three/webgpu';
 import { Fn, Loop, exp, float, length, pow2, sin, step, uniform, uniformArray } from 'three/tsl';
 import { hourOfNight, tonight } from '../../lib/astro/moon.js';
+import { createLanternSlots, driftDirection, lanternAt, verseOrder } from './parts/anh-trang-drift.js';
 
 export const POND_RADIUS = 60; // bán kính mặt nước: đĩa nước của lớp 4 dùng đúng số này; chạm ngoài đĩa thì không gợn
 export const RIPPLE_SLOTS = 8;
 const NIGHT = { start: 18, end: 29.5, fallback: 21 }; // thang giờ của Bức 1: 18:00 → 05:30 sáng hôm sau
 const FLY_HEIGHT = 1.2; // điểm hút đom đóm nằm trên mặt nước một chút
+// Điểm neo của câu thơ: trên ngọn nến một chút (mũi cánh đèn nở cao chừng 0,55). ui/captions.js đặt chữ ngay trên điểm này.
+const VERSE_HEIGHT = 0.9;
 // Vuốt → sương xoáy: góc xoay (radian) ở tâm xoáy tăng theo tốc độ vuốt (NDC mỗi giây), kẹp trong [min, max].
 const SWIRL_SPIN = { min: 0.6, max: 2.4, perSpeed: 0.35 };
 
@@ -48,7 +51,9 @@ export function moonDirection(hour) {
 
 /**
  * Bộ đệm vòng 8 gợn sóng: mỗi ô vec4(x, z, lúc bắt đầu, biên độ). Chạm lần thứ 9 ghi đè gợn cũ nhất.
- * uniformArray tự tải lại cả mảng lên GPU mỗi khung (updateType RENDER), nên chỉ cần sửa slots[i].
+ * Chỉ cần sửa slots[i]: ở mỗi lượt vẽ có dùng mảng, uniformArray tự chép slots vào bộ đệm của nó (updateType RENDER).
+ * Trong r186 bộ đệm đó là một binding riêng trong nhóm uniform của từng vật (objectGroup), nên được tải lên GPU ở MỖI lần
+ * vẽ có dùng nó (nước, lá, hoa đăng), không phải một lần mỗi khung. Mảng chỉ 8 × 16 byte nên chép vậy vẫn rẻ.
  */
 export function createRipples() {
   const slots = Array.from({ length: RIPPLE_SLOTS }, () => new Vector4(0, 0, -1e4, 0));
@@ -107,13 +112,38 @@ export function setup(ctx) {
     spin: uniform(0).setName('swirlSpin'),
   };
   const rippleAmp = ctx.reducedMotion ? 0.5 : 1; // §10: giảm chuyển động thì gợn sóng (và xoáy sương) nhẹ hơn
+  // Vòng đệm hoa đăng (GĐ 5): lớp Ánh trăng vẽ mọi ô, mỗi khung tính lại từ đồng hồ của cảnh. Sức chứa theo mức.
+  const lanterns = createLanternSlots(ctx.budget.lanterns ?? 8, { pond: POND_RADIUS });
+  // Thơ của hoa đăng: bức chỉ cầm KHÓA, chữ nằm ở content.captions. Thứ tự xáo theo đêm của ctx.now (cùng ?at thì cùng thứ
+  // tự); hết danh sách thì quay lại đầu. Chữ tải hỏng thì không có khóa nào: đèn vẫn thả, chỉ không có chữ.
+  const order = verseOrder(ctx.captions?.keys ?? [], ctx.now);
+  let released = 0; // số đèn đã thả: chọn câu kế tiếp
+
+  /**
+   * Thả một hoa đăng tại (x, z) trên mặt nước, kèm câu kế tiếp của đêm nay. Hướng trôi lấy theo trăng LÚC THẢ (nhắm vào lối
+   * trăng nhìn từ chỗ đứng của camera, mặc định của driftDirection), nên kéo thanh giờ sau đó không làm đèn đổi đường.
+   * Ao đã đủ đèn thì vòng đệm tự cho đèn thả sớm nhất chìm sớm.
+   */
+  const releaseLantern = (x, z) => {
+    const key = order.length ? order[released % order.length] : null;
+    const i = lanterns.release({ x, z, t: ctx.u.time.value, dir: driftDirection(x, z, moonDir.value), key });
+    released += 1;
+    if (!key) return;
+    // Chữ đi theo đèn: điểm neo tính lại mỗi khung bằng đúng công thức mà lớp Ánh trăng dùng để vẽ đèn (lanternAt), nên chữ
+    // không bao giờ lệch khỏi đèn. Đèn chìm hẳn thì trả null: chữ ẩn đi. Ô i chỉ bị ghi đè bởi một lần thả sau, mà lần thả
+    // đó đã thay chữ này bằng câu của nó.
+    ctx.captions.show(key, () => {
+      const s = lanternAt(lanterns.slots[i], ctx.u.time.value);
+      return s.alive ? { x: s.x, y: VERSE_HEIGHT, z: s.z } : null;
+    });
+  };
 
   const water = new Plane(new Vector3(0, 1, 0), 0);
   const hit = new Vector3();
   let holding = false;
 
   return {
-    shared: { hour: uHour, hourNote: note, moon: { dir: moonDir }, ripples, attract, swirl },
+    shared: { hour: uHour, hourNote: note, moon: { dir: moonDir }, ripples, attract, swirl, lanterns },
     // Thanh giờ (GĐ 4): xưởng vẽ thanh trượt, kéo thì chỉ đổi uHour.value. Ban ngày mượn 21:00 và ghi chú, nhưng chỉ
     // tới khi người xem kéo thanh đi: lúc đó họ đã chọn giờ của mình. Nhãn và chữ ghi chú ở content.dials.gio.
     dials: [{
@@ -145,6 +175,12 @@ export function setup(ctx) {
         swirl.center.value.set(hit.x, hit.z);
         swirl.start.value = ctx.u.time.value;
         swirl.spin.value = (along < 0 ? -1 : 1) * spin * rippleAmp;
+        return;
+      }
+      // Chạm hai lần lên nước: thả một hoa đăng. Hai lần chạm làm nên cử chỉ này đã tới trước, là hai 'tap' (gợn sóng, đom
+      // đóm tản), nên đèn hiện giữa vòng gợn thứ hai. Ở đây không dời điểm hút, không thêm gợn.
+      if (g.kind === 'double-tap') {
+        if (onPond) releaseLantern(hit.x, hit.z);
         return;
       }
       // Chỉ chạm và giữ mới dời điểm hút.

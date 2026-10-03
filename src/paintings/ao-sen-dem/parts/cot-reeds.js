@@ -10,7 +10,9 @@ const RIM = { inner: 50, outer: 58, clumps: 14 };
  */
 export function makeStems(capacity, material) {
   const geometry = new CylinderGeometry(0.035, 0.05, 1, 6, 1, true).translate(0, 0.5, 0);
-  return new InstancedMesh(geometry, material, capacity);
+  const mesh = new InstancedMesh(geometry, material, capacity);
+  mesh.name = 'cuong';
+  return mesh;
 }
 
 /**
@@ -42,7 +44,9 @@ function makeBladeGeometry() {
 /** Lau sậy: `count` ngọn. Hai mặt đều vẽ (DoubleSide) vì dải lau rất mỏng. */
 export function makeReeds(count, material) {
   material.side = DoubleSide;
-  return new InstancedMesh(makeBladeGeometry(), material, count);
+  const mesh = new InstancedMesh(makeBladeGeometry(), material, count);
+  mesh.name = 'lau-say';
+  return mesh;
 }
 
 /** Rải lau thành khóm quanh rìa ao, mỗi ngọn cao thấp, nghiêng khác nhau. Cùng rng thì cùng kết quả. */

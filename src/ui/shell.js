@@ -1,11 +1,12 @@
-// ui/shell.js — vỏ trang của mọi bức: con dấu âm lịch, data-state, hòa dần poster → canvas, huy hiệu, ghi chú, gợi ý, lời mời, ?poster
+// ui/shell.js — vỏ trang của mọi bức: con dấu âm lịch, data-state, quầng trăng tiến độ, hòa dần poster → canvas, huy hiệu, ghi chú, gợi ý, lời mời, ?poster
 import { lunarFromDate, canChiIndex } from '../lib/astro/lunar.js';
 import { moonPhase } from '../lib/astro/moon.js';
 import { renderBadge } from './badge.js';
 import { drawMoon } from './moon-svg.js';
+import { createMoonProgress, CROSSFADE_MS } from './moon-progress.js';
 
-/** Transition CSS dài 900 ms. Lưới an toàn: quá 1200 ms mà chưa có transitionend thì coi như đã hòa xong. */
-const FADE_TIMEOUT_MS = 1200;
+/** Lưới an toàn khi transitionend không bao giờ tới: quá chừng này mà canvas chưa báo thì coi như đã hòa xong. */
+const FADE_TIMEOUT_MS = CROSSFADE_MS + 300;
 /** Trạng thái có poster phủ màn hình: tầng tĩnh, và lúc mất GPU chờ "Dựng lại cảnh". */
 const POSTER_STATES = ['static', 'lost'];
 
@@ -37,6 +38,8 @@ export function mountShell(doc, meta, { now, t, onState = () => {}, poster: post
   const lunar = lunarFromDate(now);
   $('[data-seal]').textContent = t.formatSeal({ ...lunar, ...canChiIndex(lunar.year) });
   if (moon) drawMoon(moon, moonPhase(now).phase);
+  // Quầng tiến độ quanh trăng (GĐ 5): đi theo trạng thái và mốc tải. Bức không có trăng thì không có quầng.
+  const halo = moon ? createMoonProgress(moon) : null;
 
   // title chỉ hiện khi rê chuột; điện thoại không có chuột, nên chạm vào huy hiệu thì mở/đóng ô giải thích.
   const badgeOpen = () => badge.getAttribute('aria-expanded') === 'true';
@@ -56,11 +59,22 @@ export function mountShell(doc, meta, { now, t, onState = () => {}, poster: post
   /** Đổi body[data-state] (CSS và e2e đọc) rồi báo cho boot để __sma.state luôn khớp. */
   function setState(state) {
     doc.body.dataset.state = state;
+    halo?.step(state);
     if (POSTER_STATES.includes(state)) {
       poster.hidden = false; // tầng tĩnh (và lúc mất GPU) luôn có poster, kể cả khi rơi xuống sau lúc đã live
       clearHint(); // "chạm vào…" vô nghĩa khi không còn cảnh 3D
     }
     onState(state);
+  }
+
+  /**
+   * Mốc tải cho quầng trăng (GĐ 5); data-state không đổi. Tên nào trong HALO_STEPS (ui/moon-progress.js) cũng được
+   * chuyển cho quầng. boot.js báo mốc duy nhất không phải trạng thái: 'chunk' (code 3D đã tải xong); test khóa của boot
+   * dò bằng 'loading'.
+   * @param {string} name  một tên trong HALO_STEPS
+   */
+  function progress(name) {
+    halo?.step(name);
   }
 
   /**
@@ -167,5 +181,5 @@ export function mountShell(doc, meta, { now, t, onState = () => {}, poster: post
     });
   }
 
-  return { stageEl, setState, crossfade, showBadge, showNote, showHint, invite, showLost };
+  return { stageEl, setState, progress, crossfade, showBadge, showNote, showHint, invite, showLost };
 }

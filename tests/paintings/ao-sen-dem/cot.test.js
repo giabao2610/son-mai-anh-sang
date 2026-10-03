@@ -187,7 +187,7 @@ describe('l1-cot · núm rebuild (GĐ 2): ghi lại InstancedMesh sẵn có, kh�
 describe('l1-cot · Phá (GĐ 2)', () => {
   const experiment = (layer, id) => layer.experiments.find((e) => e.id === id);
 
-  it('"Tắt instancing": lá nổi thành từng Mesh riêng (tối đa theo mức), giấu InstancedMesh; tắt thì như cũ', () => {
+  it('"Tắt instancing": lá nổi thành từng Mesh riêng (tối đa theo mức) trong Group "la-rieng", giấu InstancedMesh; tắt thì như cũ', () => {
     for (const level of ['cao', 'thap']) {
       const { ctx, layers } = build({ level });
       const [leaves] = layers.cot.objects;
@@ -195,6 +195,7 @@ describe('l1-cot · Phá (GĐ 2)', () => {
       experiment(layers.cot, 'noInstancing').toggle(true); // bật hai lần vẫn chỉ một Group
       const group = layers.cot.objects.at(-1);
       expect(group.isGroup).toBe(true);
+      expect(group.name).toBe('la-rieng'); // tên vật (GĐ 5): Từng sợi tra nhãn của mọi Mesh rời theo Group này
       expect(group.children.filter((m) => m.visible)).toHaveLength(Math.min(leaves.count, LOOSE_MAX[level]));
       expect(group.children[0].material).toBe(leaves.material);
       expect(ctx.scene.children).toContain(group);

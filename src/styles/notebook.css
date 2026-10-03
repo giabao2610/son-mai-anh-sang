@@ -1,5 +1,11 @@
 /* styles/notebook.css — thanh lớp, Sổ tay (ba tab), núm Tweakpane và code sống; màu từ bảng sơn mài (tokens.css). */
 
+/* Bề rộng của thanh lớp và Sổ tay trên máy tính. tools.css đọc lại hai biến này để bảng công cụ không bao giờ nằm dưới chúng. */
+:root {
+  --rail-w: 224px;
+  --notebook-w: min(440px, calc(100vw - 300px));
+}
+
 /* ── Khung chung của thanh lớp và Sổ tay: tấm sơn đen then mờ, viền vàng lá ─────────────── */
 .rail,
 .notebook {
@@ -31,7 +37,7 @@ body:is([data-state='lost'], [data-state='loading'], [data-state='compiling'], [
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: 224px;
+  width: var(--rail-w);
   max-height: calc(100vh - 2 * var(--gutter));
   padding: 14px 14px 12px;
   overflow: auto;
@@ -136,7 +142,7 @@ body:is([data-state='lost'], [data-state='loading'], [data-state='compiling'], [
   bottom: var(--gutter);
   display: flex;
   flex-direction: column;
-  width: min(440px, calc(100vw - 300px));
+  width: var(--notebook-w);
   overflow: hidden;
 }
 .nb-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 16px 8px 20px; }

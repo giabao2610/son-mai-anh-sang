@@ -1,4 +1,4 @@
-// tests/unit/gesture.test.js — phân loại cử chỉ: chạm, giữ, vuốt, kéo (của camera), hai ngón.
+// tests/unit/gesture.test.js — phân loại cử chỉ: chạm, chạm hai lần, giữ, vuốt, kéo (của camera), hai ngón.
 import { describe, it, expect } from 'vitest';
 import { GESTURE, createGestureTracker } from '../../src/engine/gpu/gesture.js';
 
@@ -112,5 +112,131 @@ describe('createGestureTracker', () => {
     const g = createGestureTracker({ holdMs: 50 });
     g.down(p(0, 0, 0));
     expect(kinds(g.poll(50))).toEqual(['hold-start']);
+  });
+});
+
+describe('createGestureTracker · chạm hai lần (GĐ 5)', () => {
+  /** Một lần chạm trọn: xuống ở (x, y) lúc t, nhấc ngón tại chỗ sau 50 ms. Trả loại các cử chỉ lúc nhấc ngón. */
+  const tap = (g, x, y, t, id = 1) => {
+    g.down(p(x, y, t, id));
+    return kinds(g.up(p(x, y, t + 50, id)));
+  };
+
+  it('chạm hai lần nhanh và gần → tap, tap, double-tap (double-tap ở chỗ chạm thứ hai, ngay sau tap của nó)', () => {
+    const g = createGestureTracker();
+    g.down(p(100, 100, 0));
+    expect(g.up(p(100, 100, 80))).toEqual([{ kind: 'tap', x: 100, y: 100 }]);
+    // Ngón tay chạm lần hai là một con trỏ mới (pointerId khác; chuột thì giữ id): cặp chạm không xét id.
+    g.down(p(110, 105, 200, 2));
+    expect(g.up(p(111, 106, 260, 2))).toEqual([
+      { kind: 'tap', x: 110, y: 105 },
+      { kind: 'double-tap', x: 110, y: 105 },
+    ]);
+    expect(g.state).toBe('idle');
+  });
+
+  it('lần chạm hai xuống quá doubleMs sau lúc nhấc ngón đầu → chỉ hai tap (đúng doubleMs vẫn tính)', () => {
+    const late = createGestureTracker();
+    expect(tap(late, 50, 50, 0)).toEqual(['tap']); // nhấc ngón lúc 50
+    expect(tap(late, 50, 50, 50 + GESTURE.doubleMs + 1)).toEqual(['tap']);
+
+    // Đo từ lúc nhấc ngón, không phải lúc chạm xuống: lần hai đến 350 ms sau lần chạm đầu vẫn thành cặp.
+    const edge = createGestureTracker();
+    tap(edge, 50, 50, 0);
+    expect(tap(edge, 50, 50, 50 + GESTURE.doubleMs)).toEqual(['tap', 'double-tap']);
+  });
+
+  it('lần chạm hai cách chỗ chạm đầu quá doublePx → chỉ hai tap (đo từ chỗ chạm xuống; đúng doublePx vẫn tính)', () => {
+    const far = createGestureTracker();
+    far.down(p(0, 0, 0));
+    far.move(p(6, 0, 30)); // ngón trượt nhẹ (chưa quá tapPx): lần chạm vẫn ở chỗ chạm xuống (0, 0)
+    far.up(p(6, 0, 60));
+    expect(tap(far, GESTURE.doublePx + 1, 0, 120)).toEqual(['tap']); // cách (6, 0) chưa tới doublePx, cách (0, 0) thì quá
+
+    const edge = createGestureTracker();
+    tap(edge, 0, 0, 0);
+    expect(tap(edge, 0, GESTURE.doublePx, 120)).toEqual(['tap', 'double-tap']);
+
+    // Lần hai cũng đo từ chỗ chạm XUỐNG: xuống cách đúng doublePx rồi trượt ra thêm (chưa quá tapPx) trước khi nhấc vẫn thành cặp.
+    const slide = createGestureTracker();
+    tap(slide, 0, 0, 0);
+    slide.down(p(GESTURE.doublePx, 0, 120, 2));
+    slide.move(p(GESTURE.doublePx + 6, 0, 140, 2));
+    expect(kinds(slide.up(p(GESTURE.doublePx + 6, 0, 160, 2)))).toEqual(['tap', 'double-tap']);
+  });
+
+  it('chạm ba lần liền → chỉ một double-tap: cặp tính lại từ đầu, lần ba là tap thường (lần bốn mới thành cặp)', () => {
+    const g = createGestureTracker();
+    expect([tap(g, 30, 30, 0), tap(g, 30, 30, 100), tap(g, 30, 30, 200), tap(g, 30, 30, 300)]).toEqual([
+      ['tap'],
+      ['tap', 'double-tap'],
+      ['tap'],
+      ['tap', 'double-tap'],
+    ]);
+  });
+
+  it('lần chạm hai thành giữ → không có double-tap; thành kéo → không gì, và lần chạm đầu bị quên', () => {
+    const held = createGestureTracker();
+    tap(held, 20, 20, 0);
+    held.down(p(20, 20, 100));
+    expect(kinds(held.poll(100 + GESTURE.holdMs))).toEqual(['hold-start']);
+    expect(kinds(held.up(p(20, 20, 600)))).toEqual(['hold-end']);
+
+    // Máy bận, chưa kịp poll: nhấc ngón sau holdMs vẫn là một lần giữ, không phải lần chạm hai.
+    const busy = createGestureTracker();
+    tap(busy, 20, 20, 0);
+    busy.down(p(20, 20, 100));
+    expect(kinds(busy.up(p(20, 20, 100 + GESTURE.holdMs)))).toEqual(['hold-start', 'hold-end']);
+
+    // Ngưỡng giữ ngắn hơn doubleMs: chạm ngay sau cái giữ, đúng chỗ cũ, cũng không ghép với 'tap' trước cái giữ.
+    const quick = createGestureTracker({ holdMs: 100 });
+    tap(quick, 20, 20, 0);
+    quick.down(p(20, 20, 60));
+    expect(kinds(quick.poll(160))).toEqual(['hold-start']);
+    quick.up(p(20, 20, 170));
+    expect(tap(quick, 20, 20, 200)).toEqual(['tap']);
+
+    // Như trên nhưng chưa kịp poll (máy bận): cái giữ muộn cũng xóa 'tap' lẻ.
+    const lateHold = createGestureTracker({ holdMs: 100 });
+    tap(lateHold, 20, 20, 0);
+    lateHold.down(p(20, 20, 60));
+    expect(kinds(lateHold.up(p(20, 20, 170)))).toEqual(['hold-start', 'hold-end']);
+    expect(tap(lateHold, 20, 20, 200)).toEqual(['tap']);
+
+    const dragged = createGestureTracker();
+    tap(dragged, 20, 20, 0);
+    dragged.down(p(20, 20, 100));
+    dragged.move(p(20 + GESTURE.tapPx + 1, 20, 120));
+    expect(dragged.up(p(20 + GESTURE.tapPx + 1, 20, 160))).toEqual([]);
+    // Lần chạm đầu đã bị quên: chạm ngay sau cú kéo, đúng chỗ cũ, cũng không ghép với nó.
+    expect(tap(dragged, 20, 20, 200)).toEqual(['tap']);
+  });
+
+  it('ngón thứ hai, cancel, mất pointerup giữa hai lần chạm → lần chạm đầu bị quên: lần sau chỉ là tap', () => {
+    const pinch = createGestureTracker();
+    tap(pinch, 20, 20, 0);
+    pinch.down(p(20, 20, 100, 1));
+    pinch.down(p(80, 80, 110, 2)); // chụm hai ngón để zoom
+    pinch.up(p(80, 80, 150, 2));
+    pinch.up(p(20, 20, 160, 1));
+    expect(tap(pinch, 20, 20, 200)).toEqual(['tap']);
+
+    const left = createGestureTracker();
+    tap(left, 20, 20, 0);
+    left.cancel(); // rời trang (blur, pointercancel) giữa hai lần chạm
+    expect(tap(left, 20, 20, 100)).toEqual(['tap']);
+
+    const lost = createGestureTracker();
+    tap(lost, 20, 20, 0);
+    lost.down(p(20, 20, 100)); // pointerup của lần chạm này không bao giờ tới
+    expect(tap(lost, 20, 20, 200)).toEqual(['tap']);
+  });
+
+  it('ngưỡng mặc định 300 ms, 24 px; doubleMs và doublePx tùy chỉnh được', () => {
+    expect(GESTURE).toMatchObject({ doubleMs: 300, doublePx: 24 });
+    const g = createGestureTracker({ doubleMs: 500, doublePx: 60 });
+    tap(g, 0, 0, 0);
+    // Lần hai đến 450 ms sau lúc nhấc ngón, cách 50 px: quá ngưỡng mặc định cả hai phía, vẫn trong ngưỡng riêng.
+    expect(tap(g, 50, 0, 500)).toEqual(['tap', 'double-tap']);
   });
 });

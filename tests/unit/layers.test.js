@@ -109,7 +109,8 @@ describe('createCtx', () => {
     const { ctx, weights, env: e } = createCtx({ meta, stage, level: 'vua', budget: { dpr: 1.5 }, mobile: true, reducedMotion: false, now });
     expect(ctx.tier).toBe('webgl2');
     expect(Object.keys(ctx).sort()).toEqual([
-      'budget', 'camera', 'debug', 'level', 'mobile', 'now', 'palette', 'reducedMotion', 'renderer', 'scene', 'tier', 'u', 'weight',
+      'budget', 'camera', 'captions', 'debug', 'level', 'mobile', 'now', 'palette', 'reducedMotion', 'renderer', 'scene', 'tier', 'u',
+      'weight',
     ]);
     expect(ctx.palette.hex.datSet).toBe('#010203'); // bức ghi đè token
     expect(ctx.palette.hex.denThen).toBe('#0E0A08');
@@ -117,6 +118,15 @@ describe('createCtx', () => {
     expect(ctx.weight('mat-nuoc')).toBe(weights.weight('mat-nuoc'));
     expect(ctx.debug).toBe(false);
     expect(e).toEqual({ tier: 'webgl2', level: 'vua', budget: { dpr: 1.5 }, now, mobile: true });
+  });
+
+  it('ctx.captions (GĐ 5): mặc định không có chữ (keys rỗng, show không làm gì); có caption-set thì ctx giữ đúng object đó', () => {
+    const base = { meta, stage, level: 'vua', budget: {}, mobile: false, reducedMotion: false, now: new Date('2026-09-28T14:00:00Z') };
+    const { ctx } = createCtx(base);
+    expect(ctx.captions.keys).toEqual([]);
+    expect(() => ctx.captions.show('bat-ky', () => null)).not.toThrow();
+    const captions = { keys: ['tram-nam'], show: vi.fn() };
+    expect(createCtx({ ...base, captions }).ctx.captions).toBe(captions);
   });
 });
 

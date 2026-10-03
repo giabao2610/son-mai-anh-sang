@@ -72,6 +72,16 @@ describe('Kính mài', () => {
     expect(lens.onGesture(gesture('swipe', 'touch'))).toBe(false); // sương xoáy vẫn là của bức
   });
 
+  it('kính tròn giữ cả cú chạm hai lần của ngón tay (không để bức thả hoa đăng ngoài ý người xem); chuột thì không giữ', () => {
+    const lens = kinhMai.mount(fakeApi());
+    expect(lens.onGesture(gesture('double-tap', 'touch'))).toBe(false); // kính tắt: cử chỉ là của bức
+    lens.activate(true);
+    // Hai 'tap' của ngón tay đã đặt kính, nên 'double-tap' ghép từ chúng cũng là của kính.
+    expect(lens.onGesture(gesture('double-tap', 'touch'))).toBe(true);
+    expect(lens.onGesture(gesture('double-tap', 'pen'))).toBe(true);
+    expect(lens.onGesture(gesture('double-tap', 'mouse'))).toBe(false); // nhấp đúp chuột vẫn tới bức, như nhấp chuột
+  });
+
   it('hình gạt: tay nắm hiện; mũi tên ±2%, Home/End; mỗi lần đổi thì vẽ lại; canvas không giữ cử chỉ nào', async () => {
     const api = fakeApi();
     const lens = kinhMai.mount(api);

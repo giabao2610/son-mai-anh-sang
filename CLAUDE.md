@@ -30,6 +30,10 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
 - Công cụ học (GĐ 4): `engine/tools/<id>.js` (Kính mài, Lột lớp) chỉ nhìn các view của `engine/gpu/views.js`;
   `engine/gpu/toolbox.js` gắn công cụ, mỗi lúc một công cụ; `ui/rail-tools.js` vẽ mục "Đồ nghề" trong thanh lớp.
   Dial (núm của cả bức, như thanh giờ): bức khai báo ở `setup().dials`, `engine/gpu/dial-set.js` đọc/ghi, `ui/dials.js` vẽ.
+  GĐ 5: Từng sợi (`engine/tools/tung-soi.js`) chỉ nhìn `api.draws`, năm hàm của móc lần vẽ `engine/gpu/draws.js`.
+- Chữ đi theo vật (GĐ 5): bức gọi `ctx.captions.show(khóa, anchor)`; `engine/gpu/caption-set.js` tra `content.captions` và chiếu
+  điểm neo mỗi khung, `ui/captions.js` vẽ vùng aria-live phủ lên canvas. Quầng trăng tiến độ: `ui/moon-progress.js` (trong
+  `[data-moon]`, theo `setState` và mốc `'chunk'` của boot).
 - Cách phân biệt: tên một bước của nghề (cốt, phủ, mài, phủ bóng, con dấu) thuộc xưởng; tên chủ đề (sen, trăng,
   gợn nước, đom đóm) thuộc bức.
 
@@ -69,6 +73,8 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - Theo **luật hai lần**: chỉ rút code của một bức lên `src/lib/` hoặc `src/engine/stock/` khi bức thứ hai thật sự cần.
 - Hợp đồng (`src/engine/contracts/`) chỉ **thêm trường tùy chọn**, không đổi nghĩa trường cũ.
 - Id đã deploy (slug, layerId, knobId, dialId) là **API công khai**: không đổi.
+- `meta.layers[].files` liệt kê mọi file `parts/` mà lớp import (trực tiếp hay qua part khác); dữ liệu dùng chung giữa các lớp đi
+  qua `shared`, lớp không import part của lớp khác (test hợp đồng giữ).
 
 ### Shader và TSL
 - Không đổi `renderer.toneMapping` lúc chạy.
@@ -85,6 +91,10 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - Số lượng đổi được lúc chạy (lá, đom đóm…): cấp phát theo trần MỘT lần, lúc chạy chỉ ghi lại dữ liệu và đổi `count`.
   InstancedMesh và object có `count > 1` có cache key riêng theo uuid, nên đổi `count` không biên dịch lại; đừng để
   sprite về `count` 0 hay 1.
+- `DynamicDrawUsage` chỉ dùng cho thuộc tính ghi lại MỖI khung: three r186 tải lại thuộc tính đó ở mọi lần render, bất kể version
+  (`renderers/common/Attributes.js`). Thuộc tính chỉ đổi lúc có việc thì để usage mặc định và đặt `needsUpdate` khi ghi.
+- InstancedMesh: `setMatrixAt` không cập nhật `boundingSphere` (frustum culling dùng nó): ghi ma trận xong thì
+  `computeBoundingSphere()`; ô trống (ma trận cỡ 0) đặt ở chỗ không làm phình hình cầu.
 - Vẽ lại ngoài vòng lặp (khi `?freeze=N` đã dừng) phải đợi nhịp `requestAnimationFrame` kế tiếp: scene pass và
   reflector chỉ vẽ lại cảnh một lần mỗi `frameId`, mà `frameId` chỉ tăng ở mỗi nhịp rAF của renderer.
 - `scene.fogNode` nằm trong cache key của MỌI material: gán một lần; mọi thứ đổi lúc chạy trong sương là uniform. `fbm` cần
@@ -114,10 +124,14 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   không đo được (Sổ tay ghi "—"). Mẻ không có nhịp để so (lần hỏi đầu, mẻ dài hơn một lần nghẽn) thì bỏ mẫu mà không tính là hỏng:
   số chưa kiểm được không bao giờ vào Sổ tay.
 - Số lượng theo máy (số lá, số hạt, độ phân giải…) đọc từ `ctx.budget` (bảng `quality.js` của bức), không viết cứng.
+- Phần nhẹ (bao đóng import tĩnh của `engine/boot.js` và `paintings/*/index.js`: `engine/*.js`, các file `ui/` mà boot kéo theo,
+  `lib/astro/`, `lib/random.js`) chạy cả trên trình duyệt cũ của tầng tĩnh (Safari 14): không dùng built-in ES2022 trở lên (như
+  `Object.hasOwn`, `Array.prototype.at`) và `structuredClone` ở đó (phần nặng thì được; `tests/rules/imports.test.js` giữ).
 
 ### Công cụ học, Dial, poster (GĐ 4)
-- Công cụ chỉ nhìn `api.views()`, không biết bức nào. `overlay()` chỉ dựng node, không giữ trạng thái: views.js ghép lại overlay
-  khi `requireView` đổi MRT. Đổi chế độ (hình, view, vạch gạt) = đổi uniform; chọn view bằng `If` trong `Fn` (`tools/pick.js`).
+- Công cụ chỉ nhìn `api.views()` (Từng sợi: `api.draws`), không biết bức nào. `overlay()` chỉ dựng node, không giữ trạng thái:
+  views.js ghép lại overlay khi `requireView` đổi MRT. Đổi chế độ (hình, view, vạch gạt) = đổi uniform; chọn view bằng `If` trong
+  `Fn` (`tools/pick.js`).
 - Tap (`post.build/display({ tap })`) là biểu thức THUẦN (texture của pass, texture của bloom, uniform), không phải biến
   `.toVar()` trong Fn: overlay tính lại nó ở lượt vẽ cuối, sau FXAA. Nhãn ở `content.layers[id].taps` (test hợp đồng giữ).
 - Màu hằng trong overlay là số sRGB, vì overlay trộn với ảnh cuối đã ở không gian hiển thị. `color('#hex')` của three tự đổi sang
@@ -130,9 +144,45 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - Poster chụp từ chính cảnh bằng `scripts/poster.js` (GPU thật); đổi thời điểm thì sửa `meta.poster.capture` rồi chạy lại.
   `img[data-poster]` là ảnh poster; `body[data-poster]` là cờ `?poster` (CSS ẩn mọi UI trừ canvas).
 
+### Tên vật, chữ đi theo vật, móc lần vẽ (GĐ 5)
+- Mọi vật trong `layer.objects` có `name` kebab-case không dấu, không trùng trong lớp, và nhãn ở `content.layers[id].objects[name]`,
+  kể cả vật mà thí nghiệm thêm vào (`tests/paintings/objects.test.js` giữ, ở mức cao, thấp và lúc bật từng thí nghiệm). Con của
+  một vật như thế (Mesh trong Group) không cần tên riêng: Từng sợi gán nó cho vật cha.
+- Chữ đi theo vật: chữ chỉ ở `content.captions` (dạng `Poem`: 1–2 dòng ≤ 60 ký tự, có `source`); bức gọi
+  `ctx.captions.show(khóa, anchor)` và không viết chữ nào trong code. `anchor()` trả `null` khi khung đó không có điểm neo (chữ ẩn,
+  không cảnh báo); `undefined` hay số không hữu hạn là lỗi (cảnh báo một lần).
+- Chỉ `engine/gpu/draws.js` được gọi `setRenderObjectFunction` (`tests/rules/files.test.js` giữ). Scene pass phải là `updateBefore`
+  ĐẦU TIÊN của lượt cuối (`views.js`: `Fn(() => { scenePass.toVar(); … })`), vì three chạy `updateBefore` theo hậu thứ tự (con trước
+  cha) và RTT/bloom gọi `resetRendererState` (gỡ móc) trong lúc vẽ: scene pass vẽ lần đầu từ bên trong RTT thì móc không thấy lượt
+  vẽ cảnh (`tests/unit/pipeline.test.js` giữ).
+- Cử chỉ `'double-tap'` đến ngay sau `'tap'` thứ hai (hai `'tap'` vẫn tới như thường); công cụ giữ `'tap'` thì giữ cả `'double-tap'`
+  (Kính mài ở hình tròn giữ cả hai khi là ngón tay hay bút; hình gạt không giữ cử chỉ nào trên canvas, nên chạm hai lần vẫn tới
+  bức), không thì bức nhận `'double-tap'` mà không có hai `'tap'` làm nên nó.
+- E2e cần chạm hai lần thì phát sự kiện con trỏ ngay trong trang (`e2e/helpers.js#doubleTapAt`: pointerId 1, `pointerType: 'mouse'`),
+  không dùng chuột của Playwright (mỗi sự kiện của nó đợi một nhịp khung); id khác thì `setPointerCapture` của OrbitControls ném lỗi.
+
+### Bố cục và vòng đời (GĐ 5)
+- Thứ tự DOM của các tấm cố định: thanh lớp → thanh công cụ → Sổ tay (Tab đi theo thứ tự DOM, WCAG 2.4.3): `toolbox.js` gắn thanh
+  công cụ ngay sau `[data-rail]`, `workshop.js` đặt thanh lớp ngay trước và Sổ tay ngay sau `[data-toolbar]`. Đừng chèn tấm nào khác
+  vào giữa, đừng chuyển focus khi bật công cụ. z-index (thanh công cụ 1 < thanh lớp, Sổ tay 2), không phải thứ tự DOM, giữ thanh công
+  cụ ở dưới.
+- Bề rộng thanh lớp và Sổ tay ở `--rail-w` / `--notebook-w` (`notebook.css`); đổi một số thì tính lại ngưỡng 1240px / 1239.98px của
+  `tools.css` (`tests/unit/shell-css.test.js` tính lại). Không có phần trăm trong `max-width` máy tính của `.tool-panel`: ô của bảng
+  là phần tử flex, phần trăm ở đó "vòng" và Chromium bỏ cả `max-width`.
+- Cặp `@media` phải bù nhau: một luật mặc định cộng một luật đè, hay quy ước `.98` (`max-width: 1239.98px` cạnh `min-width: 1240px`);
+  không bao giờ `max-width: Npx` cạnh `min-width: (N+1)px`: bề rộng CSS lẻ khi zoom (cửa sổ 1549px ở 125% là 1239,2px) lọt giữa
+  hai ngưỡng và không luật nào khớp.
+- `engine/gpu/run.js#bringUp` gọi `gone()` trước việc đầu tiên và ngay sau MỌI `await` (thêm một lần chờ thì thêm
+  `if (gone()) return false;` ngay sau nó, và thêm tên bước đó vào bảng `it.each` của `tests/unit/run.test.js`). Trang đã về tĩnh
+  (`fail()`, hay boot hết hạn 10 s) hoặc lần dựng đã bị gỡ thì phần còn lại chỉ tự dọn (`d.closeAll()`), không gọi gì khác tới vỏ
+  trang, `__sma`, sân khấu hay cảnh: boot chỉ khóa vỏ trang khi lần mở trang quá hạn hay hỏng, còn hạn 10 s của "Dựng lại cảnh"
+  là của run.js. Sự kiện GPU đến khi `stopped()` (`onLost`, `onError`) thì bỏ qua: không về tĩnh lần hai, lý do đã báo giữ nguyên.
+
 ### Chuyển động và ngẫu nhiên
 - Không dùng `time`/`deltaTime` của TSL; dùng `ctx.u.time` và `ctx.u.delta` (nhờ vậy `?freeze` cho ảnh tất định).
 - Không dùng `Math.random`; dùng `src/lib/random.js` (PRNG có hạt giống).
+- Thứ chuyển động theo cử chỉ mà phải tất định với `?freeze` (hoa đăng) thì tính thẳng từ thời gian (dạng đóng: vị trí = f(t − lúc
+  bắt đầu)), không cộng dồn từng khung: `update(0, t)` phải ra đúng khung N.
 
 ### Chữ và chú thích
 - Mọi material gán `emissiveNode` tường minh, kể cả `vec3(0)`.
@@ -143,6 +193,8 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   của bảng sơn mài. Test hợp đồng giữ các luật này.
 - Vùng `aria-live` (`[data-hint]`, `[data-static]`, `[data-badge-note]`) không bao giờ dùng `hidden`: để trống khi không có
   gì để nói (CSS thu lại khi `:empty`). Vừa bỏ `hidden` vừa điền chữ trong cùng một nhịp thì VoiceOver bỏ qua.
+- Chữ trong vùng aria-live ẩn bằng opacity (thuộc tính `data-*`, như `data-away` của chữ đi theo vật), không bằng `hidden`:
+  `hidden` gỡ chữ khỏi cây trợ năng (hiện lại là đọc lại) và bỏ transition.
 - Thông báo lỗi cho lập trình viên (`throw`, `console`) viết tiếng Việt.
 - Chú thích tiếng Việt ở những điểm cần học (làm gì, vì sao), không chú thích dòng hiển nhiên.
 
@@ -168,5 +220,6 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - `window.__sma` trong DevTools cho biết `state`, `tier`, `backend`, `level`, `frames`, `reason`. Khi cảnh live còn có
   `__sma.layers()`, `__sma.setWeight(id, v)` (mài một lớp ngay), `__sma.snapshot()`, `__sma.restore(s)`, `__sma.stats()`
   (draw call, ms, ms CPU, ms GPU), `__sma.quality()` (nấc đang hạ, `gpu`, nấc bị khóa `locked`), `__sma.degrade()` /
-  `__sma.upgrade()` (hạ/nâng tay một nấc), `__sma.tools()` / `__sma.setTool('kinh-mai')` (công cụ học, `null` tắt hết),
-  `__sma.dials()` / `__sma.setDial('gio', 27)` (núm của cả bức).
+  `__sma.upgrade()` (hạ/nâng tay một nấc), `__sma.tools()` / `__sma.setTool('kinh-mai')` (công cụ học, `null` tắt hết;
+  `__sma.setTool('tung-soi')` bật Từng sợi), `__sma.dials()` / `__sma.setDial('gio', 27)` (núm của cả bức), `__sma.readouts(id)`
+  (số đo riêng của một lớp, như Sổ tay đọc: `__sma.readouts('anh-trang')` có số hoa đăng đang trôi).

@@ -14,7 +14,7 @@ const SHAPES = ['tron', 'gat']; // chỉ số trong uniform lens_shape
 // ra cam đất (168, 101, 17). convertLinearToSRGB() đổi ngược về đúng số của #D4A94A.
 export const RIM = new Color('#D4A94A').convertLinearToSRGB();
 const STEP = 0.02; // một lần bấm mũi tên trên tay nắm gạt: 2% chiều ngang
-const HOLD = ['tap', 'hold-start', 'hold-move', 'hold-end'];
+const HOLD = ['tap', 'double-tap', 'hold-start', 'hold-move', 'hold-end'];
 const clamp01 = (v) => Math.min(Math.max(v, 0), 1);
 
 /**
@@ -154,7 +154,8 @@ export function mount(api) {
         move(g.ndc); // máy tính: kính đi theo chuột
         return true;
       }
-      // Chạm và giữ của ngón tay, bút: đặt và dời kính. Bấm chuột thì vẫn là của bức (gợn sóng); vuốt, kéo cũng vậy.
+      // Chạm và giữ của ngón tay, bút: đặt và dời kính. Cả 'double-tap': hai 'tap' làm nên nó đã là của kính, bức mà nhận
+      // thì làm điều người xem không định. Bấm chuột (cả nhấp đúp) thì vẫn là của bức (gợn sóng); vuốt, kéo cũng vậy.
       if (g.pointer === 'mouse' || !HOLD.includes(g.kind)) return false;
       move(g.ndc);
       return true;

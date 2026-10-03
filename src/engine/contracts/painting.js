@@ -43,6 +43,8 @@
  * @property {string} hint                              'Chạm vào mặt nước'
  * @property {Record<string, DialText>} [dials]         khóa = Dial.id
  * @property {Record<string, LayerContent>} [layers]    khóa = LayerMeta.id (bắt buộc từ GĐ 2)
+ * @property {Record<string, Poem>} [captions]          [5] chữ đi theo vật: khóa → { lines (1–2 dòng), source, author? };
+ *                                                     bức gọi ctx.captions.show(khóa, anchor). Khóa kebab-case không dấu
  */
 /** @typedef {{ label: string, notes?: Record<string, string> }} DialText */
 /** Chữ của một lớp trong Sổ tay (GĐ 2). tests/paintings/contract.test.js giữ các luật ghi ở đây.
@@ -57,6 +59,7 @@
  * @property {Record<string, { label: string, explain: string }>} [experiments]   cho MỌI thí nghiệm của lớp
  * @property {Record<string, string>} [readouts]   nhãn cho MỌI số đo riêng của lớp
  * @property {Record<string, string>} [taps]    nhãn các bước chụp của post (Lột lớp, Kính mài)
+ * @property {Record<string, string>} [objects] [5] nhãn cho MỌI vật trong layer.objects, khóa = object.name (Từng sợi)
  */
 
 export {};

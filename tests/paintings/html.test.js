@@ -127,7 +127,7 @@ for (const { meta, page, lang } of paintings) {
 }
 
 describe('styles/tools.css (GĐ 4)', () => {
-  it('thanh công cụ nằm DƯỚI thanh lớp và Sổ tay (z-index nhỏ hơn hẳn): sau "Dựng lại cảnh", thanh công cụ mới được gắn sau chúng trong DOM, tay nắm gạt không được đè lên', () => {
+  it('thanh công cụ nằm DƯỚI thanh lớp và Sổ tay (z-index nhỏ hơn hẳn): nó đứng ngay sau thanh lớp trong DOM (thứ tự Tab, GĐ 5), bằng z-index thì nó và tay nắm gạt (cao cả khung) đè lên thanh lớp', () => {
     const zIndex = (file, selector) => {
       const css = readFileSync(ROOT + file, 'utf8');
       const rule = css.match(new RegExp(`(?:^|\\n)${selector}\\s*\\{([^}]*)\\}`));
@@ -138,16 +138,29 @@ describe('styles/tools.css (GĐ 4)', () => {
     expect([toolbar, panels].every(Number.isFinite), `toolbar ${toolbar}, rail/notebook ${panels}`).toBe(true);
     expect(toolbar).toBeLessThan(panels);
   });
+
+  it('các dòng chữ dưới hàng thanh trượt giữ khoảng 8px của .tool-panel; dòng trống (aria-live, tóm tắt lúc đang đếm) thì thu lại', () => {
+    // JSDOM 30 tính cascade theo độ ưu tiên: `.tool-x { margin: 0 }` ngang hàng `.tool-panel > * + *` mà đứng sau thì xóa khoảng 8px.
+    const css = readFileSync(ROOT + 'src/styles/tools.css', 'utf8');
+    const lines = ['tool-status', 'tool-detail', 'tool-summary', 'tool-note'].map((c) => `<p class="${c}">chữ</p>`).join('');
+    const { window } = new JSDOM(`<style>${css}</style><div class="tool-panel"><div class="tool-row"></div>${lines}`
+      + '<p class="tool-status"></p><p class="tool-summary"></p></div>');
+    const [, ...rows] = window.document.querySelector('.tool-panel').children;
+    expect(rows.map((p) => `${p.className}${p.textContent ? '' : ' (trống)'} ${window.getComputedStyle(p).marginTop}`)).toEqual([
+      'tool-status 8px', 'tool-detail 8px', 'tool-summary 8px', 'tool-note 8px', 'tool-status (trống) 0px', 'tool-summary (trống) 0px',
+    ]);
+  });
 });
 
 describe('styles/shell.css (trang nào cũng dùng)', () => {
-  it('@import tokens.css, notebook.css (GĐ 2), tools.css (GĐ 4) rồi đúng 5 file font theo trọng lượng (spec §5), trước luật đầu tiên', () => {
+  it('@import tokens.css, notebook.css (GĐ 2), tools.css (GĐ 4), captions.css (GĐ 5) rồi đúng 5 file font theo trọng lượng (spec §5), trước luật đầu tiên', () => {
     const css = readFileSync(ROOT + 'src/styles/shell.css', 'utf8');
     const imports = [...css.matchAll(/@import\s+'([^']+)'/g)].map((m) => m[1]);
     expect(imports).toEqual([
       './tokens.css',
       './notebook.css',
       './tools.css',
+      './captions.css',
       '@fontsource/cormorant-garamond/500.css',
       '@fontsource/cormorant-garamond/500-italic.css',
       '@fontsource/be-vietnam-pro/400.css',

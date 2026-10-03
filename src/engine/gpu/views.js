@@ -1,6 +1,6 @@
 // engine/gpu/views.js — các view mà công cụ học nhìn được (ảnh cuối, tap của lớp, emissive, normal lười, depth), ghép overlay của công cụ, requireView.
 import { NoToneMapping } from 'three/webgpu';
-import { oneMinus, pow, renderOutput, vec3, vec4 } from 'three/tsl';
+import { Fn, oneMinus, pow, renderOutput, vec3, vec4 } from 'three/tsl';
 
 /** View của xưởng, bức nào cũng có (nhãn ở t.views). Tap của lớp có id '<layerId>:<tapId>'. */
 export const BUILTIN_VIEWS = Object.freeze(['final', 'emissive', 'normal', 'depth']);
@@ -45,7 +45,7 @@ export function createViews({ scenePass, renderPipeline, mrtFor, final, taps, co
   };
 
   /**
-   * Ảnh cuối → overlay của từng công cụ → vec4(rgb, 1), rồi báo pipeline dựng lại đồ thị. Không gọi lại build/display
+   * Ảnh cuối → overlay của từng công cụ → vec4(rgb, 1), scene pass đứng đầu, rồi báo pipeline dựng lại đồ thị. Không gọi lại build/display
    * của lớp nào: bloom và FXAA giữ nguyên. Overlay ném lỗi thì bỏ đúng công cụ đó (spec §9); trả id các công cụ bị bỏ.
    */
   const compose = () => {
@@ -60,8 +60,15 @@ export function createViews({ scenePass, renderPipeline, mrtFor, final, taps, co
       }
     }
     overlays = overlays.filter((o) => !broken.includes(o.id));
+    // Scene pass vẽ ĐẦU TIÊN trong lượt cuối (Phụ lục A.53), để móc lần vẽ của Từng sợi (draws.js) thấy lượt vẽ cảnh. three gọi
+    // updateBefore theo thứ tự node dựng xong, con trước cha; RTT của FXAA nằm sâu trong c nên tới lượt trước, mà RTT gỡ móc
+    // (resetRendererState) rồi vẽ quad của nó, và chính quad ấy vẽ scene pass lần đầu trong khung. scenePass.toVar() ở đầu Fn
+    // được dựng trước c. Không ai đọc biến này nên shader không có thêm dòng nào.
     // Alpha luôn 1: canvas có alpha, và renderOutput "bỏ nhân trước" alpha; chỗ nào alpha 0 sẽ trong suốt (luật 3).
-    renderPipeline.outputNode = vec4(c.rgb, 1);
+    renderPipeline.outputNode = Fn(() => {
+      scenePass.toVar();
+      return vec4(c.rgb, 1);
+    })();
     renderPipeline.needsUpdate = true;
     return broken;
   };

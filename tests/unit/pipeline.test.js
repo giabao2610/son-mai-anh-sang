@@ -1,10 +1,11 @@
-// tests/unit/pipeline.test.js — nối post của các lớp (build → renderOutput → display), MRT, tap, view Normal lười; không cần GPU.
+// tests/unit/pipeline.test.js — nối post của các lớp (build → renderOutput → display), MRT, tap, view Normal lười, scene pass đứng đầu lượt cuối; không cần GPU.
 import { describe, it, expect, vi } from 'vitest';
 import {
   NoToneMapping, MaterialBlending, SRGBColorSpace, Scene, PerspectiveCamera, Vector4,
 } from 'three/webgpu';
-import { uniform } from 'three/tsl';
+import { rtt, uniform } from 'three/tsl';
 import { buildFinalNode, createPipeline } from '../../src/engine/gpu/pipeline.js';
+import { buildFinalPass } from '../helpers/final-pass.js';
 
 // three r186: vec4(a, b) trả về VarNode "intent" bọc một JoinNode. Bóc lớp vỏ để xem các thành phần.
 const unwrap = (node) => (node.isVarNode && node.intent ? node.node : node);
@@ -128,7 +129,8 @@ describe('createPipeline (dựng đồ thị, không cần GPU)', () => {
     // tô màu tuyến tính → sRGB hai lần. Test này canh trực tiếp cờ đó, không chỉ hình dạng đồ thị.
     expect(p.renderPipeline.outputColorTransform).toBe(false);
 
-    const join = unwrap(p.renderPipeline.outputNode);
+    // outputNode là Fn của views.js (scene pass đứng đầu): dựng như three dựng lượt cuối để lấy vec4(rgb, 1) mà nó trả.
+    const join = unwrap(buildFinalPass(p.renderPipeline.outputNode).stack.outputNode);
     expect(join.nodeType).toBe('vec4');
     expect(join.nodes[1].value).toBe(1);
     const ro = join.nodes[0].node;
@@ -136,6 +138,26 @@ describe('createPipeline (dựng đồ thị, không cần GPU)', () => {
     expect(ro.colorNode).toBe(p.scenePass.getTextureNode('output'));
     expect(ro.getToneMapping()).toBe(NoToneMapping);
 
+    p.dispose();
+  });
+
+  it('lượt cuối: scene pass chạy updateBefore ĐẦU TIÊN, cả khi display vẽ ra RTT (như FXAA) và overlay đọc texture của scene pass', () => {
+    // display như Phủ bóng: fxaa(node) vẽ chuỗi phía trước ra một RTT (Phụ lục A.42). three gọi updateBefore theo thứ tự node dựng
+    // xong (con trước cha): không có Fn của views.js thì RTT chạy trước, gỡ móc lần vẽ rồi vẽ scene pass từ bên trong nó (A.53).
+    let rttNode = null;
+    const display = ({ color }) => {
+      rttNode = rtt(color);
+      return rttNode;
+    };
+    const p = createPipeline({
+      renderer: fakeRenderer, scene: new Scene(), camera: new PerspectiveCamera(),
+      layers: [{ id: 'phu-bong', layer: { post: { display }, dispose() {} } }], weight: () => uniform(1),
+    });
+    const order = () => buildFinalPass(p.renderPipeline.outputNode).updateBefore
+      .map((n) => (n === p.scenePass ? 'scenePass' : n === rttNode ? 'rtt' : n.constructor.name));
+    expect(order()).toEqual(['scenePass', 'rtt']);
+    p.views.setOverlays([{ id: 'kinh', fn: (final, view) => final.add(view('emissive')) }]);
+    expect(order()).toEqual(['scenePass', 'rtt']);
     p.dispose();
   });
 

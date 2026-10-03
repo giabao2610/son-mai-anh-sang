@@ -125,6 +125,7 @@ function petalItems(flowers, buds) {
  */
 export function makePetals({ geometry, material, openness }) {
   const mesh = new InstancedMesh(geometry, material, PETAL_CAPACITY);
+  mesh.name = 'canh-sen';
   geometry.setAttribute('petalHinge', new InstancedBufferAttribute(new Float32Array(PETAL_CAPACITY * 4), 4));
   geometry.setAttribute('petalYaw', new InstancedBufferAttribute(new Float32Array(PETAL_CAPACITY), 1));
   const h = attribute('petalHinge', 'vec4');
@@ -205,7 +206,9 @@ export function makeCoreGeometry() {
 
 /** Gương sen: một instance cho mỗi bông đã nở (nụ không có), cấp phát cho FLOWERS bông. */
 export function makeCores(material) {
-  return new InstancedMesh(makeCoreGeometry(), material, FLOWERS);
+  const mesh = new InstancedMesh(makeCoreGeometry(), material, FLOWERS);
+  mesh.name = 'guong-sen';
+  return mesh;
 }
 
 /** Ghi vị trí và cỡ của từng gương sen. */

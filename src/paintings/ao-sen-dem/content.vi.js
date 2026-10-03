@@ -1,5 +1,6 @@
-// paintings/ao-sen-dem/content.vi.js — chữ tiếng Việt của Bức 1: gợi ý tương tác; Hiểu/Chỉnh/Phá của từng lớp trong Sổ tay.
+// paintings/ao-sen-dem/content.vi.js — chữ tiếng Việt của Bức 1: gợi ý tương tác, thơ của hoa đăng; Hiểu/Chỉnh/Phá của từng lớp trong Sổ tay.
 import phuBong from '../../engine/stock/phu-bong/content.vi.js';
+import captions from './content.captions.vi.js';
 import cotDiagram from './diagrams/cot.svg?raw';
 import anhTrangDiagram from './diagrams/anh-trang.svg?raw';
 import suongDiagram from './diagrams/suong.svg?raw';
@@ -7,12 +8,14 @@ import matNuocDiagram from './diagrams/mat-nuoc.svg?raw';
 import vangLaDiagram from './diagrams/vang-la.svg?raw';
 
 /**
- * Mọi nhãn tra theo id (lớp, núm, thí nghiệm, số đo): đổi chữ không đụng tới code của lớp.
+ * Mọi nhãn tra theo id (lớp, núm, thí nghiệm, số đo, tên vật): đổi chữ không đụng tới code của lớp.
  * understand ≤ 150 chữ (đếm theo khoảng trắng); đường dẫn "Đọc thêm" chỉ https. Test hợp đồng giữ các luật này.
  * @type {import('../../engine/contracts/painting.js').PaintingContent}
  */
 export default {
-  hint: 'Chạm vào mặt nước',
+  hint: 'Chạm vào mặt nước · chạm hai lần để thả hoa đăng',
+  // Thơ của hoa đăng (chữ đi theo vật): mỗi lần thả một cặp câu; shared.js chỉ cầm khóa. Tách file riêng để file này dưới 300 dòng.
+  captions,
   // Thanh giờ (Dial 'gio' của shared.js). Ghi chú 'daytime' chỉ hiện khi đang là ban ngày và thanh chưa bị kéo đi.
   dials: {
     gio: {
@@ -61,22 +64,30 @@ export default {
         },
       },
       readouts: { leaves: 'Số lá', vertices: 'Số đỉnh mỗi lần vẽ' },
+      objects: {
+        'la-noi': 'Lá nổi', 'la-dung': 'Lá đứng', 'canh-sen': 'Cánh sen', 'guong-sen': 'Gương sen và nhị',
+        cuong: 'Cuống hoa và lá', 'lau-say': 'Lau sậy', 'la-rieng': 'Lá nổi, mỗi lá một Mesh',
+      },
     },
 
     'anh-trang': {
       understand:
         'Lớp này thắp đèn và sơn màu. Trăng là quả cầu tự phát sáng, đúng pha của đêm nay: đường ranh sáng tối '
-        + 'tính từ tuổi trăng. Ánh trăng là một DirectionalLight chiếu từ phía trăng, kèm MỘT shadow map: một '
-        + 'ảnh độ sâu nhìn từ trăng, để biết chỗ nào bị hoa và lá đứng che. Màu lấy đúng câu ca dao: lá xanh, '
-        + 'bông trắng, nhị vàng; màu nào cũng trộn từ đất sét theo trọng số của lớp. Mép cánh sen sáng lên nhờ '
-        + 'fresnel: chỗ mặt cánh gần song song với hướng nhìn thì phản quang mạnh. Lá có lớp clearcoat bóng như '
-        + 'sáp. Chiếc đèn hoa đăng là một ngọn đèn điểm ấm: cùng một ánh sáng, mỗi chất liệu đáp lại một khác.',
+        + 'tính từ tuổi trăng. Ánh trăng là một DirectionalLight chiếu từ phía trăng, kèm MỘT shadow map: ảnh độ '
+        + 'sâu nhìn từ trăng, để biết chỗ nào bị hoa và lá đứng che. Màu lấy đúng câu ca dao: lá xanh, bông '
+        + 'trắng, nhị vàng; màu nào cũng trộn từ đất sét theo trọng số. Mép cánh sen sáng lên nhờ fresnel: nhìn '
+        + 'càng xiên, bề mặt càng phản quang. Lá có lớp clearcoat bóng như sáp. Đèn hoa đăng ở bờ là đèn thật '
+        + '(PointLight): nó chiếu ấm lên lá và cánh sen quanh nó. Hoa đăng thả xuống nước chỉ tự phát sáng '
+        + '(emissive, có bloom) như trăng, không chiếu lên gì: thêm đèn thật lúc chạy là mọi chất liệu '
+        + 'phải biên dịch lại.',
       diagram: anhTrangDiagram,
       learned: [
         'DirectionalLight: ánh sáng song song từ rất xa, như trăng hay mặt trời.',
         'Shadow map: vẽ cảnh từ phía đèn để biết chỗ nào khuất sáng.',
         'Fresnel: bề mặt phản quang mạnh hơn khi nhìn xiên.',
         'Mọi màu đi từ đất sét: mix(đất sét, màu, trọng số).',
+        'Đèn thật chiếu sáng mọi thứ quanh nó nhưng thêm lúc chạy là biên dịch lại; vật tự phát sáng (emissive) rẻ hơn '
+          + 'nhiều nhưng không chiếu sáng gì.',
       ],
       readMore: [
         { title: 'LearnOpenGL · Shadow Mapping', url: 'https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping' },
@@ -90,7 +101,7 @@ export default {
         translucency: 'Cánh trong khi ngược sáng',
         clearcoat: 'Lớp bóng trên lá',
         candleColor: 'Màu đèn hoa đăng',
-        candleIntensity: 'Độ sáng đèn hoa đăng',
+        candleIntensity: 'Độ sáng đèn thật ở bờ',
         shadowMapSize: 'Cỡ shadow map (điểm ảnh)',
         shadowBias: 'Shadow bias',
       },
@@ -110,7 +121,8 @@ export default {
             + 'còn mặt nước soi nguyên ngọn đèn.',
         },
       },
-      readouts: { shadowMap: 'Cỡ shadow map' },
+      readouts: { shadowMap: 'Cỡ shadow map', lanterns: 'Hoa đăng đang trôi' },
+      objects: { trang: 'Trăng', 'hoa-dang': 'Đèn hoa đăng' },
     },
 
     suong: {
@@ -154,6 +166,7 @@ export default {
         },
       },
       readouts: { octaves: 'Số octave đang chạy' },
+      objects: { 'vom-troi': 'Vòm trời' },
     },
 
     'mat-nuoc': {
@@ -202,6 +215,7 @@ export default {
         },
       },
       readouts: { reflectionScale: 'Độ phân giải phản chiếu (so với màn hình)' },
+      objects: { 'mat-nuoc': 'Mặt nước' },
     },
 
     'vang-la': {
@@ -246,6 +260,7 @@ export default {
         },
       },
       readouts: { count: 'Số con đang vẽ' },
+      objects: { 'dom-dom': 'Đom đóm (GPU)', 'dom-dom-cpu': 'Đom đóm (CPU)' },
     },
 
     // Lớp dùng chung: chữ viết trung tính cho mọi bức. Muốn ví dụ riêng của ao sen thì ghi đè bằng spread ở đây.

@@ -7,6 +7,9 @@ import { createKnobs } from './knob-set.js';
 /** Mặc định của một lần tween trọng số (giây). Đủ chậm để thấy lớp "phủ" lên, đủ nhanh để không phải chờ. */
 export const TWEEN_SECONDS = 0.8;
 
+/** ctx.captions khi người gọi không đưa caption-set (scene.js luôn đưa): không có khóa nào, show() không làm gì. */
+const NO_CAPTIONS = Object.freeze({ keys: Object.freeze([]), show() {} });
+
 const clamp01 = (v) => Math.min(Math.max(v, 0), 1);
 // smoothstep: bắt đầu và kết thúc êm, không giật ở hai đầu.
 const ease = (s) => s * s * (3 - 2 * s);
@@ -84,8 +87,10 @@ export function createWeights(layerMetas, initial = 1) {
  * @param {boolean} p.reducedMotion
  * @param {Date} p.now
  * @param {boolean} [p.debug]
+ * @param {import('../contracts/runtime.js').EngineCtx['captions']} [p.captions]   [5] chữ đi theo vật: `api` của
+ *                                       caption-set.js (scene.js đưa vào); thiếu thì không có chữ
  */
-export function createCtx({ meta, stage, level, budget, mobile, reducedMotion, now, debug = false }) {
+export function createCtx({ meta, stage, level, budget, mobile, reducedMotion, now, debug = false, captions = NO_CAPTIONS }) {
   const hex = mergePalette(meta.palette);
   const weights = createWeights(meta.layers);
   /** @type {import('../contracts/runtime.js').EngineCtx} */
@@ -103,6 +108,7 @@ export function createCtx({ meta, stage, level, budget, mobile, reducedMotion, n
     u: stage.u,
     weight: (id) => weights.weight(id),
     debug,
+    captions,
   };
   /** @type {import('../contracts/runtime.js').KnobEnv} */
   const env = { tier: ctx.tier, level, budget, now, mobile };

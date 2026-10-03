@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-// tests/unit/workshop.test.js — thanh lớp + Sổ tay + chế độ mài, chạy trên một bàn thợ giả (không three).
+// tests/unit/workshop.test.js — thanh lớp + Sổ tay + chế độ mài, chạy trên một bàn thợ giả (không three); chỗ của chúng trong trang.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mountWorkshop } from '../../src/ui/workshop.js';
+import { createToolbox } from '../../src/engine/gpu/toolbox.js';
 import t from '../../src/ui/strings.vi.js';
 
 const meta = {
@@ -176,6 +177,52 @@ describe('chế độ mài', () => {
     current = fakeStudio(); // dựng lại xong: thí nghiệm về tắt hết
     workshop.open(); // (vòng rAF gọi sync mỗi khung)
     expect(button().getAttribute('aria-pressed')).toBe('false');
+    workshop.dispose();
+  });
+});
+
+describe('thứ tự trong trang (GĐ 5, WCAG 2.4.3: Tab đi theo thứ tự DOM)', () => {
+  /** Các con của body theo thứ tự DOM: tấm cố định gọi theo tên, phần tử khác theo thẻ. */
+  const order = () => [...document.body.children].map((el) => ['rail', 'toolbar', 'notebook'].find((a) => el.hasAttribute(`data-${a}`)) ?? el.localName);
+  /** Hộp đồ nghề thật (engine/gpu/toolbox.js) với một công cụ giả: như scene.js dựng mỗi lần mở trang hay "Dựng lại cảnh". */
+  const scene = () => createToolbox({
+    tools: [{
+      id: 'kinh-mai',
+      mount: ({ el }) => {
+        el.append(document.createElement('button'));
+        return { dispose() {} };
+      },
+    }],
+    views: { list: () => [], require: async () => {}, setOverlays: () => [] },
+    doc: document,
+  });
+
+  it('Sổ tay mở lần đầu khi cảnh đã có thanh công cụ: thanh lớp ngay trước nó, Sổ tay ngay sau (đi hết thanh lớp là Tab vào bảng)', () => {
+    const bar = document.createElement('div');
+    bar.setAttribute('data-toolbar', '');
+    document.body.append(document.createElement('main'), bar, document.createElement('aside'));
+    const { workshop } = mount(fakeStudio());
+    expect(order()).toEqual(['main', 'rail', 'toolbar', 'notebook', 'aside']);
+    workshop.dispose();
+  });
+
+  it('chưa có thanh công cụ (tầng tĩnh, hay bức không có công cụ nào): thanh lớp rồi Sổ tay ở cuối body', () => {
+    document.body.append(document.createElement('main'));
+    const { workshop } = mount(null);
+    expect(order()).toEqual(['main', 'rail', 'notebook']);
+    workshop.dispose();
+  });
+
+  it('cả vòng đời: mở trang (thanh công cụ) → mở Sổ tay → "Dựng lại cảnh" (thanh công cụ mới): luôn thanh lớp → thanh công cụ → Sổ tay', () => {
+    document.body.append(document.createElement('main'));
+    const first = scene();
+    const { workshop } = mount(fakeStudio());
+    workshop.open({ grind: true });
+    expect(order()).toEqual(['main', 'rail', 'toolbar', 'notebook']);
+    first.dispose(); // mất GPU: cảnh cũ bị gỡ, thanh lớp và Sổ tay ở lại
+    expect(order()).toEqual(['main', 'rail', 'notebook']);
+    scene();
+    expect(order()).toEqual(['main', 'rail', 'toolbar', 'notebook']);
     workshop.dispose();
   });
 });

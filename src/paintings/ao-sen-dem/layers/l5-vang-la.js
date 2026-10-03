@@ -109,6 +109,7 @@ export function createLayer(ctx, shared) {
   // Hiển thị: MỘT Sprite vẽ `count` bản sao; vị trí đọc thẳng bộ đệm compute qua toAttribute()
   // (thành vertex attribute, không cần storage buffer ở vertex stage).
   const sprite = createFireflySprite(ctx, { cell: posPhase.toAttribute(), w, fogFactor: shared.suong.fogFactor, count: wanted });
+  sprite.name = 'dom-dom'; // hai đàn chung một hàm dựng: tên đặt ở đây, nơi biết đàn nào là đàn nào
   ctx.scene.add(sprite);
   const objects = [sprite]; // mảng SỐNG: đàn CPU thêm vào khi được dựng
 
@@ -155,6 +156,7 @@ export function createLayer(ctx, shared) {
           if (on && !cpu) {
             const uniforms = { flowScale: ctx.knob('flowScale'), speed: ctx.knob('speed'), attraction: ctx.knob('attraction') };
             cpu = createCpuFlock(ctx, { w, fogFactor: shared.suong.fogFactor, attract: shared.attract, knobs: uniforms, count: Math.min(wanted, cap) });
+            cpu.sprite.name = 'dom-dom-cpu';
             if (!additive) setAdditive(cpu.sprite, false);
             ctx.scene.add(cpu.sprite);
             objects.push(cpu.sprite);

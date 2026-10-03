@@ -1,5 +1,5 @@
 // paintings/ao-sen-dem/layers/l3-suong.js — Lớp 3 · Sương: vòm trời (sao, quầng trăng, Ngân Hà) và sương là là trên mặt nước (scene.fogNode).
-import { color, min, mix, uniform } from 'three/tsl';
+import { color, min, mix, oneMinus, uniform } from 'three/tsl';
 import { MAX_OCTAVES } from '../../../lib/tsl/noise.js';
 import { createFog } from '../parts/suong-mu.js';
 import { createSkyDome, makeSky } from '../parts/suong-troi.js';
@@ -21,7 +21,8 @@ export const knobs = [
 
 /**
  * @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx
- * @param {object} shared  shared.moon, shared.hour, shared.swirl (setup của bức); shared.anhTrang.glow (lớp trước)
+ * @param {object} shared  shared.moon, shared.hour, shared.swirl (setup của bức); shared.anhTrang.glow và
+ *   shared.anhTrang.lantern (lớp trước)
  */
 export function createLayer(ctx, shared) {
   const w = ctx.weight(id);
@@ -65,6 +66,13 @@ export function createLayer(ctx, shared) {
   ctx.scene.fogNode = fog.node;
   // Sương không tác động lên kênh MRT emissive: lớp sau tự nhân (1 − fogFactor). Mặt nước dùng sky cho phản chiếu giả.
   shared.suong = { fogFactor: fog.factor, sky: skyW };
+  // Hoa đăng trong sương (GĐ 5): đèn của lớp Ánh trăng tự phát sáng, mà sương không chạm kênh emissive, nên đèn ở xa sẽ
+  // bloom xuyên sương. Nhân (1 − hệ số sương) vào emissiveNode như đom đóm. Đèn không dùng được mrtNode để chỉ làm mờ
+  // kênh bloom: reflector vẽ đèn vào ảnh không có MRT. Khác đom đóm (fog = false), đèn vẫn để sương trộn màu, nên trong
+  // ảnh chính phần tự phát sáng bị nhân (1 − hệ số) hai lần, kênh bloom một lần. Lớp sau sửa node của lớp trước được, vì
+  // chưa material nào biên dịch: gán node mới lúc dựng là đủ, không tốn gì lúc chạy.
+  const lantern = shared.anhTrang.lantern;
+  if (lantern) lantern.material.emissiveNode = lantern.material.emissiveNode.mul(oneMinus(fog.factor));
 
   let disposed = false;
   return {

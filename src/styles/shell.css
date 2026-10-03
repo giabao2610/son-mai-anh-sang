@@ -7,6 +7,7 @@
 @import './tokens.css';
 @import './notebook.css';
 @import './tools.css';
+@import './captions.css';
 @import '@fontsource/cormorant-garamond/500.css';
 @import '@fontsource/cormorant-garamond/500-italic.css';
 @import '@fontsource/be-vietnam-pro/400.css';
@@ -55,7 +56,8 @@ img[data-poster] {
 
 /* ── Lớp 1: sân khấu 3D ───────────────────────────────────────────────────────────────── */
 /* Canvas được gắn vào đây với opacity 0, nên xưởng vẽ được một khung ẩn sau poster.
-   ui/shell.js thêm data-visible → opacity chuyển 0 → 1: poster "hòa" sang cảnh 3D. */
+   ui/shell.js thêm data-visible → opacity chuyển 0 → 1: poster "hòa" sang cảnh 3D. Ở JS, con số 900 ms này là
+   CROSSFADE_MS của ui/moon-progress.js: quầng trăng tan cùng lúc, lưới an toàn của ui/shell.js cũng tính từ đó. */
 [data-stage] { position: fixed; inset: 0; }
 [data-stage] canvas {
   display: block;
@@ -87,7 +89,11 @@ body[data-state='static'] [data-stage] { display: none; }
 }
 
 /* Ghim từng khối vào hàng của nó: ô ghi chú bị ẩn (display: none) thì rời khỏi lưới, và nếu không ghim,
-   chân trang sẽ trượt lên hàng 1fr ở giữa rồi bị kéo giãn. */
+   chân trang sẽ trượt lên hàng 1fr ở giữa rồi bị kéo giãn.
+   Và ghim mọi khối vào cột 1: [data-static] và .hint cùng ở hàng 2, nên không ghim cột thì lưới tự xếp .hint sang một cột
+   ngầm bên phải. Cột đó ép gợi ý thành một cột chữ hẹp (5 dòng trên điện thoại 390px), còn đầu và chân trang chỉ còn cột 1:
+   huy hiệu và con dấu lệch vào giữa màn hình máy tính thay vì nằm ở góc phải. */
+.frame > * { grid-column: 1; }
 .top {
   grid-row: 1;
   display: flex;
@@ -274,6 +280,10 @@ header h1 {
   font: italic 500 clamp(16px, 0.6vw + 12px, 20px) / 1.4 var(--serif);
   color: var(--vang-la-sang);
   letter-spacing: 0.02em;
+  /* Màn hẹp (chừng 340px trở xuống, như 320px) thì gợi ý xuống hai dòng: justify-self chỉ đặt KHUNG vào giữa, các
+     dòng trong khung phải tự canh giữa; balance chia hai dòng dài gần bằng nhau, như một cặp câu. */
+  text-align: center;
+  text-wrap: balance;
   animation: hint-in 1.2s ease-out both;
 }
 .hint[data-kind='invite'] { color: var(--nga); pointer-events: auto; }
@@ -299,9 +309,22 @@ header h1 {
 [data-moon]:empty { display: none; }
 .moon-dark { fill: color-mix(in srgb, var(--cham) 80%, var(--den-then)); }
 .moon-lit { fill: var(--nga); }
+/* Quầng tiến độ lúc tải phần 3D (GĐ 5): ui/moon-progress.js đặt dashoffset đích và transition inline. */
+.moon-halo {
+  fill: none;
+  stroke: var(--vang-la-sang);
+  stroke-width: 9; /* toạ độ riêng của vòng lớn gấp 100 (ui/moon-progress.js nói vì sao): trên trăng là 0,09, chừng 1,6px ở trăng 40px */
+  stroke-linecap: round;
+  /* Vòng có pathLength="1": nét 1 dài đúng cả vòng, nên dashoffset 1 là vòng rỗng, 0 là vòng đầy. Khoảng trống 2 dài hơn
+     cả vòng, nên lúc rỗng không có nét nào của chu kỳ sau ló ra ở cuối, trình duyệt nào cũng vậy. */
+  stroke-dasharray: 1 2;
+}
+/* Giảm chuyển động: quầng nhảy thẳng tới từng mốc. !important thắng transition inline mà JS đặt. */
+@media (prefers-reduced-motion: reduce) { .moon-halo { transition: none !important; } }
 
-/* ── ?poster (GĐ 4): chỉ còn canvas, để scripts/poster.js chụp poster từ chính cảnh (không chữ, không huy hiệu, không UI) ── */
-body[data-poster] :is(.frame, .rail, .notebook, .toolbar) { display: none !important; }
+/* ── ?poster (GĐ 4): chỉ còn canvas, để scripts/poster.js chụp poster từ chính cảnh (không chữ, không huy hiệu, không UI) ──
+   GĐ 5: kể cả chữ đi theo vật. Ở đây được display: none, vì ?poster là ảnh để chụp, không có người xem nào đang nghe vùng live. */
+body[data-poster] :is(.frame, .rail, .notebook, .toolbar, .captions) { display: none !important; }
 
 /* ── Chế độ thợ (?debug=stats): stats-gl tự đặt ở góc trái trên, đè lên tên bức. Dời ra giữa mép trên ── */
 [data-debug='stats'] { left: 50% !important; transform: translateX(-50%); }
