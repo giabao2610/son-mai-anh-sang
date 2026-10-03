@@ -26,12 +26,25 @@ export function fakeRenderer() {
 }
 
 /**
+ * ctx.captions giả (GĐ 5): `keys` như các khóa của content.captions, đông cứng như keys của api thật (một bản sao), nên bức
+ * nào xáo khóa tại chỗ thì test hỏng ngay; `show` là vi.fn ghi lời gọi: test đọc `show.mock.calls` (khóa, anchor) rồi tự gọi
+ * anchor() để xem điểm neo.
+ * @param {string[]} [keys]
+ */
+export function fakeCaptions(keys = []) {
+  return { keys: Object.freeze([...keys]), show: vi.fn() };
+}
+
+/**
  * EngineCtx giả, dựng bằng CHÍNH createCtx của xưởng. Scene, camera, uniform là đồ thật của three
- * (dựng được node graph trong Node); renderer là fakeRenderer(). `ctx.weights` và `ctx.env` chỉ test dùng:
- * chúng không liệt kê được (non-enumerable), nên ctx mà lớp nhận qua `{ ...ctx }` không có hai thứ này.
+ * (dựng được node graph trong Node); renderer là fakeRenderer(); captions là fakeCaptions() nếu test không đưa.
+ * `ctx.weights` và `ctx.env` chỉ test dùng: chúng không liệt kê được (non-enumerable), nên ctx mà lớp nhận qua
+ * `{ ...ctx }` không có hai thứ này.
  * @param {object} meta  PaintingMeta
  */
-export function makeEngineCtx(meta, { level = 'cao', budget = {}, now = NOW, reducedMotion = false, tier = 'webgpu', mobile = false } = {}) {
+export function makeEngineCtx(meta, {
+  level = 'cao', budget = {}, now = NOW, reducedMotion = false, tier = 'webgpu', mobile = false, captions = fakeCaptions(),
+} = {}) {
   const stage = {
     backend: tier,
     renderer: fakeRenderer(),
@@ -39,7 +52,7 @@ export function makeEngineCtx(meta, { level = 'cao', budget = {}, now = NOW, red
     camera: new PerspectiveCamera(40, 1.6, 0.1, 500),
     u: { time: uniform(0), delta: uniform(1 / 60), resolution: uniform(new Vector2(640, 400)), pointer: uniform(new Vector2()) },
   };
-  const { ctx, weights, env } = createCtx({ meta, stage, level, budget, mobile, reducedMotion, now });
+  const { ctx, weights, env } = createCtx({ meta, stage, level, budget, mobile, reducedMotion, now, captions });
   Object.defineProperty(ctx, 'weights', { value: weights, enumerable: false });
   Object.defineProperty(ctx, 'env', { value: env, enumerable: false });
   return ctx;
@@ -47,7 +60,8 @@ export function makeEngineCtx(meta, { level = 'cao', budget = {}, now = NOW, red
 
 /**
  * Dựng bức như run.js: ngân sách của mức (budgetFor, ghép bảng của bức), setup(ctx) rồi buildLayers (cùng hàm của xưởng).
- * `until` = id lớp cuối cần dựng; `budget` ghi đè vài số của mức.
+ * `until` = id lớp cuối cần dựng; `budget` ghi đè vài số của mức; `captions` = ctx.captions giả (fakeCaptions(keys))
+ * khi test cần xem bức gọi chữ đi theo vật. Các tùy chọn khác đi tiếp vào makeEngineCtx (level, now, tier…).
  * @returns {{ ctx: object, setup: object | undefined, shared: object, built: object[], layers: Record<string, object>, knobs: Record<string, object> }}
  */
 export function buildPainting(painting, meta, { until, budget = {}, ...options } = {}) {

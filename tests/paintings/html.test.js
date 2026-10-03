@@ -141,13 +141,14 @@ describe('styles/tools.css (GĐ 4)', () => {
 });
 
 describe('styles/shell.css (trang nào cũng dùng)', () => {
-  it('@import tokens.css, notebook.css (GĐ 2), tools.css (GĐ 4) rồi đúng 5 file font theo trọng lượng (spec §5), trước luật đầu tiên', () => {
+  it('@import tokens.css, notebook.css (GĐ 2), tools.css (GĐ 4), captions.css (GĐ 5) rồi đúng 5 file font theo trọng lượng (spec §5), trước luật đầu tiên', () => {
     const css = readFileSync(ROOT + 'src/styles/shell.css', 'utf8');
     const imports = [...css.matchAll(/@import\s+'([^']+)'/g)].map((m) => m[1]);
     expect(imports).toEqual([
       './tokens.css',
       './notebook.css',
       './tools.css',
+      './captions.css',
       '@fontsource/cormorant-garamond/500.css',
       '@fontsource/cormorant-garamond/500-italic.css',
       '@fontsource/be-vietnam-pro/400.css',

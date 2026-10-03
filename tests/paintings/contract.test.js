@@ -9,12 +9,13 @@ import { hasCode } from '../../src/ui/code-view.js';
 import { NOW, buildPainting } from '../helpers/fake-ctx.js';
 import { svgColors } from '../helpers/svg.js';
 import { jpegSize, webpSize } from '../helpers/image.js';
+import { KEBAB } from '../helpers/kebab.js';
+import { captionErrors } from '../helpers/caption-rules.js';
 import { parseAt } from '../../src/engine/flags.js';
 import { pass } from 'three/tsl';
 import { buildFinalNode, makeMRT } from '../../src/engine/gpu/pipeline.js';
 
 const SRC = resolve(import.meta.dirname, '../../src');
-const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const MARKER = /\/\/\s*@knob\s+([A-Za-z0-9_]+)/g;
 const MAX_WORDS = 150;
 
@@ -263,6 +264,12 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
       for (const { layerId, tapId } of taps) {
         expect(content.layers?.[layerId]?.taps?.[tapId], `nhãn tap "${layerId}:${tapId}"`).toBeTruthy();
       }
+    });
+
+    it.each(langs)('%s: chữ đi theo vật (GĐ 5, nếu có): khóa kebab-case; mỗi mục 1–2 dòng không rỗng (≤ 60 ký tự), có nguồn', async (lang) => {
+      const { default: content } = await entry.content[lang]();
+      const errors = captionErrors(content.captions);
+      expect(errors, `content.captions (${lang}):\n${errors.join('\n')}`).toEqual([]);
     });
 
     it.each(langs)('%s: sơ đồ (nếu có) là SVG có <title>, chỉ dùng màu của bảng sơn mài', async (lang) => {

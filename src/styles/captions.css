@@ -1,0 +1,56 @@
+/* styles/captions.css — chữ đi theo vật (GĐ 5, ui/captions.js): vùng aria-live phủ lên canvas; một dòng thơ kèm nguồn đứng trên điểm neo. */
+
+/* Vùng chữ phủ kín [data-stage], tức cùng cỡ với canvas: px mà engine/gpu/caption-set.js chiếu ra dùng thẳng được.
+   pointer-events: none để chạm, kéo vẫn rơi xuống canvas. ui/captions.js đã giữ chữ trong vùng; overflow: hidden chỉ là lưới
+   an toàn (xoay máy giữa chừng): có gì lọt ra thì bị cắt chứ không làm trang cuộn.
+   Vùng là aria-live: không bao giờ hidden hay display: none. Không có chữ thì nó rỗng, và không có khung nào để thu lại. */
+.captions {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Góc trái trên của chữ ở (0, 0); JS dời bằng transform: translate(x, y) translate(-50%, -100%), nên chữ đứng ngay TRÊN
+   điểm neo, căn giữa. transform không đụng tới bố cục, nên đổi mỗi khung vẫn rẻ. padding-bottom chừa một khoảng hở để
+   chữ không đè lên chính vật. JS giữ cả khung chữ (gồm padding) trong vùng, nên padding hai bên và trên là khoảng cách tới
+   mép màn hình của chữ đang bị giữ ở mép. Font và bóng chữ như thơ của chân trang (shell.css), để chữ đọc được trên cảnh tối. */
+.caption {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: min(26rem, 80vw);
+  margin: 0;
+  padding: 6px 12px 10px;
+  font: italic 500 clamp(18px, 0.8vw + 13px, 24px) / 1.4 var(--serif);
+  text-align: center;
+  text-wrap: balance;
+  color: var(--nga);
+  text-shadow: var(--ink-shadow);
+  opacity: 0;
+  transition: opacity 0.8s ease-out;
+}
+/* ui/captions.js đọc style rồi mới gắn data-shown, nên chữ mờ dần hiện ra. */
+.caption[data-shown] { opacity: 1; }
+/* Tan trong 1,2 s: đúng CAPTION_FADE của ui/captions.js, chữ bắt đầu tan trước khi hết giờ đúng bấy nhiêu. */
+.caption[data-fading] { opacity: 0; transition: opacity 1.2s ease-in; }
+/* Người xem xin giảm chuyển động: chữ hiện và tắt ngay, không mờ dần. Cũng không tan sớm: dòng chữ đứng nguyên tới lúc
+   clear() gỡ nó (hết CAPTION_SECONDS), thay vì biến mất trước đó CAPTION_FADE giây. */
+@media (prefers-reduced-motion: reduce) {
+  .caption, .caption[data-fading] { transition: none; }
+  .caption[data-fading] { opacity: 1; }
+}
+/* Điểm neo ra ngoài khung (ui/captions.js gắn data-away): ẩn bằng opacity, không bằng hidden. hidden (display: none) gỡ chữ
+   khỏi cây trợ năng, nên vào lại khung là VoiceOver có thể đọc lại cả câu; nó còn hủy transition, nên chữ hiện lại đột ngột.
+   Ra ngoài khung thì ẩn ngay; vào lại thì gỡ data-away, và chữ mờ dần hiện ra như lúc mới thả.
+   Cùng độ ưu tiên với [data-shown] và [data-fading] (kể cả trong khối giảm chuyển động): phải đứng sau chúng để thắng. */
+.caption[data-away] { opacity: 0; transition: none; }
+.caption-line { display: block; }
+.caption-cite {
+  display: block;
+  margin-top: 6px;
+  font: 400 12px/1.4 var(--sans);
+  letter-spacing: 0.04em;
+  color: var(--bac-la);
+}
+.caption-cite cite { font-style: normal; }

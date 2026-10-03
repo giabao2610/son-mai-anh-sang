@@ -1,4 +1,4 @@
-// engine/gpu/scene.js — dựng MỘT cảnh trên một sân khấu: ctx → setup → lớp → pipeline → thang nấc → input → bàn thợ; và hàm vẽ một khung.
+// engine/gpu/scene.js — dựng MỘT cảnh trên một sân khấu: chữ → ctx → setup → lớp → pipeline → thang nấc → input → bàn thợ; và hàm vẽ một khung.
 import { budgetFor, isMobile, pickLevel } from '../quality.js';
 import { FRAME_BUDGET_MS, createTuner } from '../tuner.js';
 import { createGpuTimer } from './gpu-timer.js';
@@ -9,6 +9,8 @@ import { createStudio } from './studio.js';
 import { createInput } from './input.js';
 import { createToolbox } from './toolbox.js';
 import { createDialSet } from './dial-set.js';
+import { createCaptionSet } from './caption-set.js';
+import { mountCaptions } from '../../ui/captions.js';
 
 /**
  * Bộ điều chỉnh của một cảnh: bộ quyết định (tuner, hàm thuần) + thang nấc (ladder, chạm GPU) + bộ đo GPU (gpu-timer).
@@ -75,7 +77,7 @@ function createQuality({ level, ladder, tuner, timer }) {
 
 /**
  * run.js gọi hàm này một lần khi mở trang, và thêm một lần nữa nếu người xem bấm "Dựng lại cảnh" sau khi mất GPU.
- * Mọi thứ tạo ra đều đăng ký vào `disposer` theo thứ tự tạo (setup → lớp → pipeline → input), nên gỡ được ngược lại.
+ * Mọi thứ tạo ra đều đăng ký vào `disposer` theo thứ tự tạo (chữ → setup → lớp → pipeline → input), nên gỡ được ngược lại.
  * Nếu setup/createLayer ném lỗi, buildLayers đã gỡ các lớp dựng dở; lỗi đi tiếp lên run.js.
  *
  * @param {object} p
@@ -89,7 +91,7 @@ function createQuality({ level, ladder, tuner, timer }) {
  * @param {Window} p.win
  * @param {import('../contracts/runtime.js').Tool[]} [p.tools]   công cụ học (engine/tools/index.js)
  * @param {Record<string, any>} [p.t]        chữ giao diện (nhãn view của công cụ)
- * @param {object | null} [p.content]        chữ của bức (nhãn tap của lớp)
+ * @param {object | null} [p.content]        chữ của bức (nhãn tap của lớp, chữ đi theo vật)
  */
 export function buildScene({ stage, disposer, painting, meta, flags, now, reducedMotion, win, tools = [], t = {}, content = null }) {
   stage.useCamera(painting.camera);
@@ -99,7 +101,22 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
   const budget = budgetFor(level, painting.quality);
   stage.setDpr(budget.dpr);
 
-  const { ctx, weights, env } = createCtx({ meta, stage, level, budget, mobile, reducedMotion, now, debug: Boolean(flags.debug) });
+  // Chữ đi theo vật (GĐ 5): vùng aria-live trong [data-stage], phủ lên canvas và cùng cỡ với nó. Bức chỉ cầm khóa
+  // (ctx.captions); chữ ở content.captions, chữ tải hỏng thì không có khóa nào.
+  const canvas = stage.renderer.domElement;
+  const captionSet = createCaptionSet({
+    captions: content?.captions ?? {},
+    ui: mountCaptions(win.document, canvas.parentElement),
+    camera: stage.camera,
+    time: stage.u.time,
+    size: () => ({ width: canvas.clientWidth, height: canvas.clientHeight }),
+    debug: Boolean(flags.debug),
+  });
+  disposer.add(() => captionSet.dispose());
+
+  const { ctx, weights, env } = createCtx({
+    meta, stage, level, budget, mobile, reducedMotion, now, debug: Boolean(flags.debug), captions: captionSet.api,
+  });
   // setup() của bức chạy TRƯỚC mọi createLayer; không có setup thì các lớp dùng chung một object {}.
   const setup = painting.setup?.(ctx);
   if (setup?.dispose) disposer.add(() => setup.dispose());
@@ -146,6 +163,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
             const t = stage.u.time.value;
             setup?.update?.(0, t);
             for (const { layer } of layers) layer.update?.(0, t);
+            captionSet.step(); // đồng hồ đứng nên chữ ở lại; camera có thể vừa bị kéo: chiếu lại
             pipeline.render();
           }
           resolve();
@@ -195,7 +213,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     quality,
     /** Biên dịch trước với đúng render target + MRT của pass, trong lúc poster còn hiện. */
     compile: () => pipeline.compile(),
-    /** Một khung: nấc → đồng hồ → cử chỉ → setup.update → layer.update → tween trọng số → camera → render → ms GPU → số đo. */
+    /** Một khung: nấc → đồng hồ → cử chỉ → setup.update → layer.update → tween trọng số → camera → chữ → render → ms GPU → số đo. */
     step(ms) {
       const start = win.performance.now();
       quality.sample(ms ?? start);
@@ -206,6 +224,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
       weights.step(dt);
       stage.breathe(t);
       stage.controls?.update();
+      captionSet.step(); // chữ đi theo điểm neo, theo camera của chính khung này
       pipeline.render();
       timer.poll(ms ?? start); // hỏi ms GPU của các khung trước, không chờ
       const end = win.performance.now();

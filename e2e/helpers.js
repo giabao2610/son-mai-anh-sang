@@ -38,8 +38,11 @@ export async function waitForFrames(page, n, { timeout = 30_000 } = {}) {
   return readSma(page);
 }
 
-/** Stylesheet chỉ áp lúc chụp: ẩn mọi con của body trừ [data-stage] (poster, tên, thơ, huy hiệu, con dấu). */
-const STAGE_ONLY = 'body > :not([data-stage]) { visibility: hidden !important; }';
+/**
+ * Stylesheet chỉ áp lúc chụp: ẩn mọi con của body trừ [data-stage] (poster, tên, thơ, huy hiệu, con dấu), và chữ đi theo vật
+ * (GĐ 5): vùng chữ nằm TRONG [data-stage], ngay trên chỗ chạm, nên không ẩn thì ảnh quanh chỗ chạm đổi vì chữ chứ không vì cảnh.
+ */
+const STAGE_ONLY = 'body > :not([data-stage]), [data-captions] { visibility: hidden !important; }';
 
 /**
  * Chụp canvas bằng locator.screenshot() rồi giải mã PNG ngay trong trang (không cần thư viện PNG ở Node).

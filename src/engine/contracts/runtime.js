@@ -148,6 +148,9 @@
  * @property {{ time: any, delta: any, resolution: any, pointer?: any }} u              [0] uniform chung (pointer: [1])
  * @property {(layerId: string) => any} weight [0] uniform trọng số; 'cot' luôn là 1; id lạ → ném lỗi
  * @property {boolean} debug                   [0]
+ * @property {{ keys: string[], show: (key: string, anchor: () => ({ x: number, y: number, z: number } | null)) => void }} [captions]
+ *                                            [5] chữ đi theo vật: keys = các khóa có trong content.captions (rỗng khi chữ tải hỏng);
+ *                                            show() thay dòng đang hiện; anchor() trả null thì chữ ẩn ở khung đó
  */
 /** Ctx mà createLayer nhận: EngineCtx cộng hai hàm của CHÍNH lớp đang dựng.
  * @typedef {Object} LayerCtxExtra
