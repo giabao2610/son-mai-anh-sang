@@ -68,4 +68,19 @@ describe('studioApi (GĐ 4): các hàm của bàn thợ mà __sma lộ ra', () =
     expect(api.quality().locked).toEqual(['dpr=1.5']);
     expect(api.tools()).toEqual([{ id: 'kinh', on: false }]);
   });
+
+  it('readouts(id) (GĐ 5): số đo riêng của một lớp, đọc qua bàn thợ; chưa có bàn thợ thì mảng rỗng', () => {
+    let studio = null;
+    const api = studioApi(() => studio);
+    expect(api.readouts('hai')).toEqual([]);
+    const asked = [];
+    studio = {
+      readouts: (layerId) => {
+        asked.push(layerId);
+        return [{ id: 'dinh', value: 42, unit: 'đỉnh' }];
+      },
+    };
+    expect(api.readouts('hai')).toEqual([{ id: 'dinh', value: 42, unit: 'đỉnh' }]);
+    expect(asked).toEqual(['hai']);
+  });
 });

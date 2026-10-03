@@ -1,7 +1,8 @@
-// paintings/ao-sen-dem/shared.js — setup() của Bức 1: giờ đêm nay (thanh giờ), hướng trăng, gợn sóng, điểm hút đom đóm, xoáy sương, cử chỉ.
+// paintings/ao-sen-dem/shared.js — setup() của Bức 1: giờ đêm nay (thanh giờ), hướng trăng, gợn sóng, điểm hút đom đóm, xoáy sương, hoa đăng, cử chỉ.
 import { Plane, Vector2, Vector3, Vector4 } from 'three/webgpu';
 import { Fn, Loop, exp, float, length, pow2, sin, step, uniform, uniformArray } from 'three/tsl';
 import { hourOfNight, tonight } from '../../lib/astro/moon.js';
+import { createLanternSlots } from './parts/anh-trang-drift.js';
 
 export const POND_RADIUS = 60; // bán kính mặt nước: đĩa nước của lớp 4 dùng đúng số này; chạm ngoài đĩa thì không gợn
 export const RIPPLE_SLOTS = 8;
@@ -107,13 +108,15 @@ export function setup(ctx) {
     spin: uniform(0).setName('swirlSpin'),
   };
   const rippleAmp = ctx.reducedMotion ? 0.5 : 1; // §10: giảm chuyển động thì gợn sóng (và xoáy sương) nhẹ hơn
+  // Vòng đệm hoa đăng (GĐ 5): lớp Ánh trăng vẽ mọi ô, mỗi khung tính lại từ đồng hồ của cảnh. Sức chứa theo mức.
+  const lanterns = createLanternSlots(ctx.budget.lanterns ?? 8, { pond: POND_RADIUS });
 
   const water = new Plane(new Vector3(0, 1, 0), 0);
   const hit = new Vector3();
   let holding = false;
 
   return {
-    shared: { hour: uHour, hourNote: note, moon: { dir: moonDir }, ripples, attract, swirl },
+    shared: { hour: uHour, hourNote: note, moon: { dir: moonDir }, ripples, attract, swirl, lanterns },
     // Thanh giờ (GĐ 4): xưởng vẽ thanh trượt, kéo thì chỉ đổi uHour.value. Ban ngày mượn 21:00 và ghi chú, nhưng chỉ
     // tới khi người xem kéo thanh đi: lúc đó họ đã chọn giờ của mình. Nhãn và chữ ghi chú ở content.dials.gio.
     dials: [{

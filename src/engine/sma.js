@@ -10,6 +10,7 @@
  * GĐ 3 thêm `quality()` (mức, nấc đang hạ), `degrade()` / `upgrade()` (hạ/nâng tay một nấc) và `stats()`
  * (draw call, tam giác, ms mỗi khung, ms CPU). GĐ 4: `stats().gpuMs`, `quality().gpu`, `quality().locked`, `tools()` và
  * `setTool(id | null)` (bật một công cụ học, hay tắt hết), `dials()` và `setDial(id, v)` (núm của cả bức, ví dụ giờ).
+ * GĐ 5: `readouts(layerId)`: số đo riêng của một lớp, như Sổ tay đọc, mà không phải mở Sổ tay (e2e, DevTools).
  *
  * Ngoài hàm, chỉ giữ DỮ LIỆU thuần (chuỗi, số, null), nên `JSON.stringify(window.__sma)` đọc được ngay.
  * @param {Window | Record<string, any>} win
@@ -69,5 +70,6 @@ export function studioApi(getStudio) {
     setTool: (id) => s()?.setTool(id),
     dials: () => s()?.dials() ?? [],
     setDial: (id, v) => s()?.setDial(id, v),
+    readouts: (layerId) => s()?.readouts(layerId) ?? [],
   };
 }

@@ -1785,6 +1785,9 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
   - Tên vật: dựng ở mức cao và mức thấp, và trong lúc mỗi thí nghiệm đang bật, mọi vật trong `layer.objects` có `name` kebab-case
     không dấu, không trùng trong lớp, và có nhãn ở `content.layers[id].objects[name]`. Mọi khóa trong `objects` của content ứng với
     một vật có thật ở một trong các lần dựng đó (không có nhãn thừa).
+  - `LayerMeta.files` của mỗi lớp kê đủ mọi file trong `parts/` của bức mà file lớp (trong `layers/`) import tĩnh, thẳng hay qua part
+    khác (`staticClosure`, chỉ đi qua `parts/`): Sổ tay hiện đủ code của lớp. Cùng với luật "mỗi file thuộc tối đa một lớp", part là
+    của riêng một lớp: lớp khác cần gì của nó thì nhận qua `shared`.
 
 ### E2E (Playwright 1.63, Chromium headless shell, chạy trên bản build qua `vite preview`)
 - **Cấu hình chung:**

@@ -11,6 +11,7 @@ import { svgColors } from '../helpers/svg.js';
 import { jpegSize, webpSize } from '../helpers/image.js';
 import { KEBAB } from '../helpers/kebab.js';
 import { captionErrors } from '../helpers/caption-rules.js';
+import { read, staticClosure } from '../helpers/source.js';
 import { parseAt } from '../../src/engine/flags.js';
 import { pass } from 'three/tsl';
 import { buildFinalNode, makeMRT } from '../../src/engine/gpu/pipeline.js';
@@ -67,6 +68,22 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
         owner.set(file, layer.id);
         // Tranh mẫu không deploy nên cố ý nằm ngoài glob của ui/code-view.js.
         if (row.deployed) expect(hasCode(file), `src/${file} nằm ngoài glob ?code của ui/code-view.js`).toBe(true);
+      }
+    }
+  });
+
+  it('files của lớp (GĐ 5) kê đủ mọi file trong parts/ mà file lớp import tĩnh, thẳng hay qua part khác: Sổ tay hiện đủ code', () => {
+    const parts = `src/paintings/${slug}/parts/`;
+    for (const layer of meta.layers) {
+      for (const file of layer.files.filter((f) => f.startsWith(`paintings/${slug}/layers/`))) {
+        // Chỉ đi qua parts/: shared.js cũng import part, nhưng nó là của cả bức, không thuộc lớp nào. Cùng với luật "mỗi
+        // file thuộc tối đa một lớp", part là của riêng một lớp: lớp khác cần gì của nó thì nhận qua shared.
+        const start = `src/${file}`;
+        const reached = staticClosure(start, (rel) => (rel === start || rel.startsWith(parts) ? read(rel) : null))
+          .filter((f) => f.startsWith(parts))
+          .map((f) => f.slice('src/'.length)); // đường dẫn tính từ src/, như files
+        const missing = reached.filter((f) => !layer.files.includes(f));
+        expect(missing, `lớp "${layer.id}": ${file} import (thẳng hay qua part khác) mà files chưa kê`).toEqual([]);
       }
     }
   });

@@ -15,9 +15,12 @@ function ladderAt(level, device) {
 }
 
 describe('quality.js của Bức 1', () => {
-  it('bảng §10: DPR, phản chiếu (0 = giả), đom đóm, lá, bóng (0 = tắt), bloom, octave sương', () => {
-    expect(budgetFor('cao', painting.quality)).toEqual({ dpr: 2, reflection: 0.5, fireflies: 3000, leaves: 1200, shadow: 1024, bloom: 0.5, fogOctaves: 3 });
-    expect(budgetFor('thap', painting.quality)).toMatchObject({ reflection: 0, shadow: 0, fogOctaves: 1 });
+  it('bảng §10: DPR, phản chiếu (0 = giả), đom đóm, lá, bóng (0 = tắt), bloom, octave sương, hoa đăng (GĐ 5)', () => {
+    expect(budgetFor('cao', painting.quality)).toEqual({
+      dpr: 2, reflection: 0.5, fireflies: 3000, leaves: 1200, shadow: 1024, bloom: 0.5, fogOctaves: 3, lanterns: 8,
+    });
+    expect(budgetFor('vua', painting.quality)).toMatchObject({ lanterns: 6 });
+    expect(budgetFor('thap', painting.quality)).toMatchObject({ reflection: 0, shadow: 0, fogOctaves: 1, lanterns: 4 });
   });
 
   it('mức cao, màn DPR 2: 4 nấc dpr rồi đủ 5 nấc của các lớp, đúng thứ tự', () => {
