@@ -126,7 +126,8 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   số chưa kiểm được không bao giờ vào Sổ tay.
 - Số lượng theo máy (số lá, số hạt, độ phân giải…) đọc từ `ctx.budget` (bảng `quality.js` của bức), không viết cứng.
 - `tuner.sample()` trả `'skip'` (thử ngừng vẽ, sau GĐ 5) thì `scene.step()` bỏ hết phần sau `quality.sample()`: không vẽ, không tiến
-  đồng hồ, ảnh cũ ở lại. Việc thêm vào `step()` đặt sau dòng đó; Sổ tay mở thì không thử (tests/unit/tuner.test.js, scene.test.js).
+  đồng hồ, ảnh cũ ở lại. Việc thêm vào `step()` đặt sau dòng đó. Sổ tay mở thì không thử (`tests/unit/tuner.test.js` giữ luật thử,
+  `scene.test.js` giữ chuyện bỏ khung).
 - Phần nhẹ (bao đóng import tĩnh của `engine/boot.js` và `paintings/*/index.js`: `engine/*.js`, các file `ui/` mà boot kéo theo,
   `lib/astro/`, `lib/random.js`) chạy cả trên trình duyệt cũ của tầng tĩnh (Safari 14): không dùng built-in ES2022 trở lên (như
   `Object.hasOwn`, `Array.prototype.at`) và `structuredClone` ở đó (phần nặng thì được; `tests/rules/imports.test.js` giữ).

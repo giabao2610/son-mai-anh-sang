@@ -1676,11 +1676,13 @@ Hoa đăng không có nấc hạ chất lượng.
    dài ấy thành "rớt khung" ở mọi cửa sổ và các màn đó không bao giờ nâng lại được (review GĐ 3 tìm ra).
    Chống dao động: nâng một nấc mà trong 3 cửa sổ sau lại phải hạ đúng nấc đó thì khóa nấc ấy, không nâng nó nữa trong phiên.
 2. **Trình duyệt khóa ở 30 fps** (Energy Saver của Chrome khi chạy pin, Low Power Mode của iPhone): hạ nấc nào cũng không nhanh hơn.
-   (Sau GĐ 5) **Thử ngừng vẽ:** lần hạ đầu của một đợt hạ (lúc mới live, hay sau một lần nâng) được thay bằng một lần thử. Xưởng
+   (Sau GĐ 5) **Thử ngừng vẽ:** lần hạ đầu của một đợt hạ (lúc mới live, sau một lần nâng, hay sau khi hết khóa nhịp) được thay bằng
+   một lần thử. Xưởng
    không vẽ gì trong 6 nhịp rAF (`tuner.sample()` trả `'skip'`; `scene.js` bỏ cả khung: không vẽ, không tiến đồng hồ, ảnh cũ ở lại),
    bỏ 2 khoảng đầu (GPU làm nốt các khung đã gửi) rồi lấy trung vị phần còn lại. Không vẽ gì mà nhịp vẫn chậm hơn 1,2 × ngân sách
-   thì trình duyệt đang khóa nhịp: vào "bị khóa nhịp" ngay, không hạ nấc nào. Nhanh lên thì máy là nút cổ chai: hạ như cũ, không thử
-   lại tới lần nâng sau. Sổ tay mở thì không thử (người xem đang nhìn cảnh); khoảng lạ (tab ẩn, debugger) thì bỏ lần thử, đo lại hai
+   thì trình duyệt đang khóa nhịp: vào "bị khóa nhịp" ngay, với mốc "nhịp bị khóa" là chính nhịp đo được lúc không vẽ. Máy vẽ chậm
+   hơn cả nhịp ấy (tiết kiệm pin còn hạ xung nhịp GPU) thì luật "quá tải thật" ở dưới vẫn hạ về lại nhịp ấy; không thì không hạ nấc
+   nào. Nhanh lên thì máy là nút cổ chai: hạ như cũ, không thử lại tới lần nâng sau. Sổ tay mở thì không thử (người xem đang nhìn cảnh); khoảng lạ (tab ẩn, debugger) thì bỏ lần thử, đo lại hai
    cửa sổ rồi thử lại. Đo trên GPU Apple, rAF giả 30 Hz: luật cũ hạ 5 nấc từ giây 6 tới giây 22 rồi mới trả lại hết; giờ "bị khóa
    nhịp" ở giây 6,4, không hạ nấc nào (Phụ lục A.76).
    **Lưới an toàn** (GĐ 3, vẫn giữ cho máy mà lần thử nói "không kịp" nhưng hạ nấc không giúp gì): mốc "lúc bắt đầu hạ" là trung bình của cửa sổ khiến hạ nấc đầu tiên, ghi cả khi Sổ tay đang mở, và bỏ đi khi đã nâng về hết
@@ -1905,7 +1907,8 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
   - chế độ canh dùng tải;
   - `state()` có `locked` và `gpu`.
 - (Sau GĐ 5) **`tuner`, thử ngừng vẽ** (helper `run()` có `idleFor`: nhịp rAF khi không vẽ): khóa 30 fps (không vẽ vẫn 33 ms) thì
-  6 khung `'skip'` rồi "bị khóa nhịp", không hạ nấc nào, không thử lại, cả trên điện thoại; máy là nút cổ chai (không vẽ thì 60 Hz)
+  6 khung `'skip'` rồi "bị khóa nhịp", không hạ nấc nào, không thử lại, cả trên điện thoại; khóa 30 fps mà nấc 0 vẽ mất 50 ms thì
+  vẫn hạ một nấc về lại 33 ms (mốc là nhịp đo lúc không vẽ), trả thử rồi khóa nấc ấy; máy là nút cổ chai (không vẽ thì 60 Hz)
   thì hạ như cũ, hạ hết mà không nhanh hơn thì vẫn trả lại hết (lưới an toàn); thử trước lần hạ đầu của mỗi đợt hạ (lúc mới live,
   sau mỗi lần nâng); Sổ tay mở thì không thử; khoảng > 250 ms giữa lần thử thì bỏ, đo lại rồi thử lại. **`scene`:** khung `'skip'`
   không vẽ, không tiến đồng hồ; khóa 30 fps mà không đo được GPU thì không hạ nấc nào.
@@ -1982,7 +1985,7 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
   nhãn rơi về tên vật, rồi về loại; số tam giác theo `drawRange` và nhóm, như three; Points, Line không có tam giác;
   `InstancedBufferGeometry` lấy số bản ở `instanceCount`; lần vẽ ném lỗi thì `list()` giữ khung đủ trước đó và `stop()` vẫn trả hàm cũ.
   (Sau GĐ 5) Khung vẽ đủ chỉ cất bản ghi thô: không ai hỏi `list()` thì không duyệt `layer.objects`; hỏi lại cùng khung thì trả đúng
-  danh sách đã dựng, khung mới thì dựng lại.
+  danh sách đã dựng, khung mới thì dựng lại; `stop()` thả khung đã ghi (bản ghi thô giữ vật, hình, material).
 - (GĐ 5) **`tung-soi`** (jsdom, đồng hồ giả): Đồ nghề có Từng sợi sau Kính mài và Lột lớp; bật thì `draws.start()`, đang đếm thì
   "Dệt lại" bị khóa, có danh sách thì thanh ở N; `aria-valuetext` và dòng mô tả nói về sợi đang xem (sợi k là lần vẽ thứ k), nấc 0
   nói chưa vẽ gì; ô số k/N có `aria-live="off"`; kéo về k < N gọi `limit(k)`, về N gọi `limit(null)`; "Dệt lại" đi 0 → N theo
@@ -2429,7 +2432,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | Từng sợi tách hai lần vẽ của vật trong suốt DoubleSide | Khi một bức có material như thế | three vẽ cả hai mặt trong MỘT lần gọi móc (§7, Phụ lục A.53): đặt `forceSinglePass`, hay chia thành hai material |
 | Chữ đi theo vật đo lại khi bố cục đổi giữa chừng | Khi thấy chữ lệch sau khi xoay máy | Hiện cỡ chữ và chân khung chỉ đo lúc `show` (§4.1 mục 10). Đo lại khi `resize`, hay `ResizeObserver` trên các ô của chân khung |
 | Tô sáng sợi vừa vẽ | Khi người xem cần | Vẽ thêm một lượt mặt nạ cho vật của sợi k, rồi overlay trộn viền vàng lá như Kính mài |
-| Tách `engine/tuner.js` (286 dòng sau gói sửa sau GĐ 5, quá mức mềm 250) | Lần sửa bộ điều chỉnh kế tiếp | Đưa đường tải (GĐ 4: `byLoad`, ngưỡng `busy`/`idle`/`light`) ra file riêng; trạng thái hai đường dùng chung (`overRun`, `capped`, `down`/`up`…) đi qua một object |
+| Tách `engine/tuner.js` (gần 290 dòng sau gói sửa sau GĐ 5, quá mức mềm 250) | Lần sửa bộ điều chỉnh kế tiếp | Đưa đường tải (GĐ 4: `byLoad`, ngưỡng `busy`/`idle`/`light`) ra file riêng; trạng thái hai đường dùng chung (`overRun`, `capped`, `down`/`up`…) đi qua một object |
 | Hoa đăng tránh lá, hay bị gợn đẩy đi | Khi thấy cần | Đường trôi hiện tính thẳng theo thời gian (tất định với `?freeze`); bị đẩy thì phải tích phân từng khung, và `update(0, t)` phải giữ đúng khung N |
 | Hoa đăng chiếu sáng thật | Không làm | Mỗi `PointLight` thêm lúc chạy là biên dịch lại mọi material và tốn thêm ở mọi điểm ảnh; vũng sáng trên nước đã cho cảm giác đèn soi nước |
 
@@ -2832,3 +2835,6 @@ Các mục dưới đây đã được kiểm bằng ba cách:
       khung mới. Bộ chặn 60 khung/giây (`createFrameCap`) vốn bỏ khung theo cùng cách trên màn 90/120/144 Hz.
     - Trên cùng máy, WebGPU không đo được ms GPU (A.48), còn WebGL2 (`?webgl`) và SwiftShader thì đo được
       (`EXT_disjoint_timer_query_webgl2`): muốn thử đường nhịp trên WebGL2 thì giấu phần mở rộng ấy.
+    - Hệ quả nhỏ, tự hết sau vài khung: `__sma.frames` đếm cả các nhịp không vẽ (`run.js` đếm nhịp của vòng lặp); khung đầu sau lần
+      thử có `dt` bị kẹp ở 0,1 giây, nên số ms của `__sma.stats()` nhích lên một khung, và một mẻ của `gpu-timer` có nhịp khung dài
+      hơn (Sổ tay mở thì không có lần thử, nên số đo "Tắt / Bật" không bị ảnh hưởng).
