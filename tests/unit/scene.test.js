@@ -85,7 +85,7 @@ function build({ backend = 'webgpu', reducedMotion = false, flags = {}, setup, t
     now: new Date('2026-09-28T14:00:00Z'), reducedMotion, win, tools,
   });
   const renders = () => stage.renderer.render.mock.calls.length;
-  return { stage, disposer, scene, frames, flush, renders };
+  return { stage, disposer, scene, frames, flush, renders, win };
 }
 
 describe('buildScene', () => {
@@ -252,7 +252,7 @@ describe('buildScene', () => {
       id: 'kinh',
       mount: () => ({ onGesture: (g) => { seen.push(g.kind); return g.kind === 'tap'; }, dispose() {} }),
     };
-    const { stage, scene } = build({ setup: () => ({ onGesture }), tools: [lens] });
+    const { stage, scene, win } = build({ setup: () => ({ onGesture }), tools: [lens] });
     const canvas = stage.renderer.domElement;
     const event = (type, extra) => Object.assign(new Event(type), { clientX: 320, clientY: 200, pointerId: 1, button: 0, ...extra });
     const tap = () => {
@@ -265,6 +265,8 @@ describe('buildScene', () => {
     expect(onGesture.mock.calls.map(([g]) => g.kind)).toEqual(['tap']); // chưa bật công cụ: bức nhận chạm, không nhận hover
     await scene.studio.setTool('kinh');
     expect(scene.studio.tools()).toEqual([{ id: 'kinh', on: true }]);
+    // Người xem bật công cụ mất vài giây: lần chạm sau không ghép với lần trước thành chạm hai lần (GĐ 5).
+    win.performance.now = () => 5000;
     canvas.dispatchEvent(event('pointermove', { pointerType: 'mouse', buttons: 0 }));
     tap();
     scene.step(1016);

@@ -92,6 +92,28 @@ describe('createInput', () => {
     expect(input.drain().map((g) => `${g.kind}:${g.pointer}`)).toEqual(['tap:touch', 'hold-start:pen', 'hold-end:pen', 'tap:mouse']);
   });
 
+  it("chạm hai lần liền nhau (GĐ 5) → tap, tap, rồi 'double-tap' ở chỗ chạm hai, kèm NDC, tia và loại con trỏ", () => {
+    const onQueue = vi.fn();
+    const own = createInput({ canvas, camera, controls, pointer: u, win, onQueue });
+    // Mỗi lần ngón tay chạm là một con trỏ mới (pointerId khác, vẫn là con trỏ chính); lần hai cách lần đầu 10 px.
+    const touch = (type, x, id) => canvas.dispatchEvent(pointer(type, x, 50, { pointerType: 'touch', pointerId: id, isPrimary: true }));
+    touch('pointerdown', 90, 1);
+    clock = 60;
+    touch('pointerup', 90, 1);
+    clock = 160;
+    touch('pointerdown', 100, 2);
+    clock = 220;
+    touch('pointerup', 100, 2);
+    const queued = own.drain();
+    expect(queued.map((g) => `${g.kind}:${g.pointer}`)).toEqual(['tap:touch', 'tap:touch', 'double-tap:touch']);
+    const [, second, double] = queued;
+    expect(double.ndc).toEqual({ x: 0, y: 0 });
+    expect(double.ray).toEqual(second.ray); // cùng chỗ với lần chạm hai
+    expect(double.ray.origin.toArray()).toEqual([0, 5, 10]);
+    expect(onQueue).toHaveBeenLastCalledWith('double-tap'); // cảnh đứng yên (?freeze) thấy cử chỉ mới và vẽ lại
+    own.dispose();
+  });
+
   it('giữ yên holdMs → hold-start và camera đứng yên; thả → hold-end, camera chạy lại', () => {
     canvas.dispatchEvent(pointer('pointerdown', 50, 50));
     clock = GESTURE.holdMs;
