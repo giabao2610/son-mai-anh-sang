@@ -127,7 +127,8 @@
  * @property {() => Promise<void>} redraw          vẽ lại khung đứng yên (?freeze) sau khi công cụ đổi uniform
  * @property {DrawProbe | null} [draws]            [5] lần vẽ của lượt vẽ cảnh (Từng sợi): engine/gpu/draws.js. Chỉ năm hàm của
  *                                                 DrawProbe: begin()/end() ở lại scene.js, công cụ không tự mở hay đóng khung ghi.
- *                                                 null khi hộp đồ nghề được dựng không có móc: công cụ cần móc thì kiểm trước khi dùng
+ *                                                 null khi hộp đồ nghề được dựng không có móc: công cụ cần móc thì ném lỗi trong
+ *                                                 mount() (như Từng sợi), và toolbox.js bỏ riêng công cụ đó
  */
 /** @typedef {{ id: string, label: string, ready: boolean }} ViewInfo */
 /** [5] Móc lần vẽ (renderer.setRenderObjectFunction), phần công cụ thấy (ToolApi.draws). Chỉ gắn giữa start() và stop(); lúc khác

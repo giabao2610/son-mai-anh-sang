@@ -5,6 +5,7 @@ import { BoxGeometry, Mesh, MeshStandardNodeMaterial, PerspectiveCamera } from '
 import * as tungSoi from '../../src/engine/tools/tung-soi.js';
 import { tools } from '../../src/engine/tools/index.js';
 import { createDrawProbe } from '../../src/engine/gpu/draws.js';
+import { createToolbox } from '../../src/engine/gpu/toolbox.js';
 import t from '../../src/ui/strings.vi.js';
 
 const { POLL_MS, STEP_MS, MAX_PLAY_MS, playStepMs, playStride } = tungSoi;
@@ -420,13 +421,15 @@ describe('Từng sợi', () => {
     expect(renderer.fn).toBeNull(); // trả hàm vẽ cũ
   });
 
-  it('xưởng chưa có móc (api.draws null): ô trống, không ném lỗi', () => {
-    const api = { ...fakeApi(), draws: null };
-    const tool = tungSoi.mount(api);
-    expect(api.el.querySelector('input, button')).toBeNull();
-    expect(() => {
-      tool.activate?.(true);
-      tool.dispose();
-    }).not.toThrow();
+  it('xưởng chưa có móc (api.draws null): gắn hỏng bằng lỗi tiếng Việt, hộp đồ nghề bỏ công cụ này (không còn nút mở ra bảng trống)', () => {
+    expect(() => tungSoi.mount({ ...fakeApi(), draws: null })).toThrow('ToolApi.draws');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const views = { list: () => [], require: vi.fn(async () => {}), setOverlays: () => [] };
+    const toolbox = createToolbox({ tools: [tungSoi], views, doc: document, t, draws: null });
+    expect(toolbox.list()).toEqual([]); // thanh lớp vẽ mục "Đồ nghề" từ danh sách này: không có nút Từng sợi
+    expect(document.querySelector('[data-tool-slot="tung-soi"]')).toBeNull();
+    expect(warn).toHaveBeenCalledWith('Công cụ "tung-soi" gắn không được, bỏ công cụ này:', expect.any(Error));
+    warn.mockRestore();
+    toolbox.dispose();
   });
 });

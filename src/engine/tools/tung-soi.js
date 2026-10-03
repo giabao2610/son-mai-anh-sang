@@ -39,11 +39,9 @@ export function mount(api) {
   const text = t.tools[id];
   const doc = api.el.ownerDocument;
   const win = doc.defaultView;
-  // Xưởng chưa có móc lần vẽ: một ô trống không làm gì; không ném lỗi, để các công cụ khác vẫn gắn được.
-  if (!draws) {
-    api.el.append(h(doc, 'div', { class: 'tool-panel', role: 'group', 'aria-label': text.name }));
-    return { dispose() {} };
-  }
+  // Xưởng chưa có móc lần vẽ: ném lỗi. toolbox.js bắt lỗi của từng mount(), bỏ riêng công cụ này kèm cảnh báo, nên các công cụ
+  // khác vẫn gắn được và thanh lớp không có nút Từng sợi mở ra một bảng trống.
+  if (!draws) throw new Error('Từng sợi cần móc lần vẽ của xưởng (ToolApi.draws), mà hộp đồ nghề không có: không gắn công cụ này.');
 
   const range = h(doc, 'input', { type: 'range', id: 'tung-soi-range', min: '0', max: '0', step: '1', value: '0' });
   // <output> ngầm là role status (aria-live polite): "Dệt lại" ghi k/N mỗi bước (40 ms với 300 sợi) sẽ làm ngập hàng đợi của
