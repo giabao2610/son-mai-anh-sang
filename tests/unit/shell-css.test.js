@@ -75,6 +75,14 @@ describe('shell.css · canvas của sân khấu', () => {
   });
 });
 
+describe('shell.css · khung chữ', () => {
+  it('một cột: mọi khối của .frame ghim vào cột 1 ([data-static] và .hint cùng ở hàng 2 không đẻ ra cột ngầm thứ hai)', () => {
+    // Không ghim cột thì lưới tự xếp .hint sang một cột ngầm bên phải [data-static]: gợi ý bị ép vào cột hẹp (5 dòng trên
+    // điện thoại 390px), đầu và chân trang chỉ còn cột 1 nên huy hiệu và con dấu lệch vào giữa màn hình máy tính.
+    expect(declarations('.frame > *')).toMatch(/grid-column: 1(;|\s|$)/);
+  });
+});
+
 describe('shell.css · vùng aria-live', () => {
   it('khi trống chỉ thu khung (không viền, không nền), không display: none hay visibility: hidden', () => {
     const regions = [['[data-badge-note]:empty', css], ['[data-static]:empty', css], ['.hint:empty', css], ['.nb-busy:empty', notebookCss]];
