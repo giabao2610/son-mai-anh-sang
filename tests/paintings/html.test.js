@@ -138,6 +138,18 @@ describe('styles/tools.css (GĐ 4)', () => {
     expect([toolbar, panels].every(Number.isFinite), `toolbar ${toolbar}, rail/notebook ${panels}`).toBe(true);
     expect(toolbar).toBeLessThan(panels);
   });
+
+  it('các dòng chữ dưới hàng thanh trượt giữ khoảng 8px của .tool-panel; dòng trống (aria-live, tóm tắt lúc đang đếm) thì thu lại', () => {
+    // JSDOM 30 tính cascade theo độ ưu tiên: `.tool-x { margin: 0 }` ngang hàng `.tool-panel > * + *` mà đứng sau thì xóa khoảng 8px.
+    const css = readFileSync(ROOT + 'src/styles/tools.css', 'utf8');
+    const lines = ['tool-status', 'tool-detail', 'tool-summary', 'tool-note'].map((c) => `<p class="${c}">chữ</p>`).join('');
+    const { window } = new JSDOM(`<style>${css}</style><div class="tool-panel"><div class="tool-row"></div>${lines}`
+      + '<p class="tool-status"></p><p class="tool-summary"></p></div>');
+    const [, ...rows] = window.document.querySelector('.tool-panel').children;
+    expect(rows.map((p) => `${p.className}${p.textContent ? '' : ' (trống)'} ${window.getComputedStyle(p).marginTop}`)).toEqual([
+      'tool-status 8px', 'tool-detail 8px', 'tool-summary 8px', 'tool-note 8px', 'tool-status (trống) 0px', 'tool-summary (trống) 0px',
+    ]);
+  });
 });
 
 describe('styles/shell.css (trang nào cũng dùng)', () => {

@@ -33,6 +33,10 @@ export function formatSeal({ day, month, leap, can, chi }, { traditional = false
   return `${day} tháng ${name}${leap ? ' nhuận' : ''} · ${CAN[can]} ${CHI[chi]}`;
 }
 
+const COUNT = new Intl.NumberFormat('vi');
+/** Số đếm kiểu Việt, dấu chấm ngăn hàng nghìn (1.200), như số đo của Sổ tay: số lần vẽ, số bản, số tam giác. */
+const num = (v) => COUNT.format(v);
+
 const t = {
   lang: 'vi',
   tierName: { webgpu: 'WebGPU', webgl2: 'WebGL2', static: 'Tranh tĩnh' },
@@ -94,6 +98,23 @@ const t = {
     'lot-lop': {
       name: 'Lột lớp',
       label: 'Lột dần ảnh',
+    },
+    /** GĐ 5: mỗi sợi là một lần vẽ (draw call) của lượt vẽ cảnh; info là một DrawInfo của móc lần vẽ (engine/gpu/draws.js). */
+    'tung-soi': {
+      name: 'Từng sợi',
+      label: 'Sợi',
+      play: 'Dệt lại',
+      counting: 'Đang đếm các lần vẽ…',
+      empty: 'Chưa vẽ sợi nào: chỉ còn màu nền xóa khung, vẫn qua hậu kỳ.',
+      step: (k, n) => `${num(k)}/${num(n)}`,
+      valuetext: (k, n, label) => (k === 0 ? `Sợi 0 trên ${num(n)}: chưa vẽ gì` : `Sợi ${num(k)} trên ${num(n)}: ${label}`),
+      detail: ({ label, layer, kind, instances, triangles }) => `${label} · ${layer ? `lớp ${layer}` : 'không thuộc lớp nào'} · `
+        + `${kind}${instances > 1 ? ` × ${num(instances)}` : ''} · ${num(triangles)} tam giác.`,
+      /** Câu thêm sau dòng mô tả khi vật kéo theo lần vẽ lồng (mặt soi: reflector vẽ lại cảnh ngay trước khi vật được vẽ). */
+      nested: (count) => `Trước khi vẽ vật này, GPU vẽ lại ${num(count)} lần cho ảnh phản chiếu.`,
+      summary: ({ scene, reflection, other }) => `Khung này: lượt vẽ cảnh ${num(scene)} · phản chiếu ${num(reflection)} · `
+        + `các lượt khác (bóng, bloom, hậu kỳ) ${num(other)} draw call.`,
+      note: 'Bóng đổ và ảnh phản chiếu vẽ ở lượt riêng, nên lúc nào cũng đủ, kể cả khi các vật sau chưa được vẽ ở lượt chính.',
     },
   },
   /** Các view của xưởng mà công cụ nhìn được; tap của lớp lấy nhãn ở content của lớp. */

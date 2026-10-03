@@ -39,14 +39,25 @@
   cursor: pointer;
 }
 .tool-panel button[aria-pressed='true'] { color: var(--den-then); background: var(--vang-la); border-color: var(--vang-la); }
+/* "Dệt lại" khóa khi Từng sợi đang đếm lần vẽ: màu riêng ở trên đè màu xám mặc định của trình duyệt, nên tự làm nhạt. */
+.tool-panel button:disabled { cursor: default; opacity: 0.55; }
 .tool-panel :focus-visible,
 .lens-handle:focus-visible { outline: 2px solid var(--vang-la-sang); outline-offset: 2px; }
 .tool-panel label { font: 600 12px/1.3 var(--sans); color: var(--vang-la); }
 .tool-panel input[type='range'] { width: min(260px, 50vw); accent-color: var(--vang-la); }
 .tool-value { min-width: 7em; font: 400 12px/1.3 var(--mono); color: var(--vang-la-sang); }
-/* Vùng aria-live: luôn có mặt, trống thì thu lại (không dùng hidden hay display: none). */
-.tool-status { margin: 0; font-size: 12px; color: var(--vang-la-sang); }
+/* Vùng aria-live: luôn có mặt, trống thì thu lại (không dùng hidden hay display: none). Các dòng chữ dưới hàng chỉ bỏ lề
+   DƯỚI mặc định của <p>: `margin: 0` ngang độ ưu tiên với `.tool-panel > * + *` mà đứng sau sẽ xóa luôn khoảng 8px phía trên. */
+.tool-status { margin-bottom: 0; font-size: 12px; color: var(--vang-la-sang); }
 .tool-panel > .tool-status:empty { margin-top: 0; }
+/* Từng sợi (GĐ 5): dòng mô tả sợi đang xem (màu chữ của bảng), tóm tắt khung (trống khi đang đếm), ghi chú tĩnh; nhạt dần. */
+.tool-detail,
+.tool-summary,
+.tool-note { margin-bottom: 0; font-size: 12px; line-height: 1.5; }
+.tool-summary { color: var(--bac-la); }
+/* Không in nghiêng: trang không tải bản nghiêng của Be Vietnam Pro, trình duyệt sẽ tự xiên chữ (dấu tiếng Việt xấu đi). */
+.tool-note { color: color-mix(in srgb, var(--bac-la) 75%, transparent); }
+.tool-panel > .tool-summary:empty { margin-top: 0; }
 
 /* Tay nắm của hình gạt: một dải dọc cả khung ở vị trí --split (0–1); vạch vàng lá ở giữa, núm tròn ở giữa chiều cao.
    Kéo bằng chuột hay ngón tay (touch-action: none để trình duyệt không cuộn trang thay vì kéo). */

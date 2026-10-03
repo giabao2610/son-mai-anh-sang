@@ -394,7 +394,7 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       await still(page, testInfo);
       const base = (await canvasRegions(page)).all;
       await page.evaluate(() => window.__sma.setTool('lot-lop'));
-      const range = page.locator('[data-toolbar] input[type="range"]');
+      const range = page.locator('[data-tool-slot="lot-lop"] input[type="range"]'); // Từng sợi cũng có một thanh trong [data-toolbar]
       const last = Number(await range.getAttribute('max'));
       const slide = async (v) => {
         const before = await range.getAttribute('aria-valuetext');
