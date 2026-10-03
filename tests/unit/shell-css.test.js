@@ -1,4 +1,4 @@
-// tests/unit/shell-css.test.js — CSS của vỏ trang và Sổ tay: nhấn giữ trên canvas là cử chỉ của bức (iOS); vùng aria-live không bao giờ bị ẩn; quầng trăng; chữ đi theo vật.
+// tests/unit/shell-css.test.js — CSS của vỏ trang và Sổ tay: nhấn giữ trên canvas là cử chỉ của bức (iOS); vùng aria-live không bao giờ bị ẩn; quầng trăng; chữ đi theo vật; chỗ của bảng công cụ.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { CROSSFADE_MS } from '../../src/ui/moon-progress.js';
@@ -7,6 +7,7 @@ import { CAPTION_FADE } from '../../src/ui/captions.js';
 const read = (file) => readFileSync(new URL(`../../src/styles/${file}`, import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const css = read('shell.css');
 const notebookCss = read('notebook.css');
+const toolsCss = read('tools.css');
 const captionsCss = read('captions.css');
 
 /** Gộp khai báo của mọi khối có đúng bộ chọn `selector` (kể cả khối nằm trong @media). */
@@ -16,6 +17,28 @@ function declarations(selector, source = css) {
     if (selectors.split(',').some((s) => s.trim() === selector)) out.push(body);
   }
   return out.join(';').replace(/\s+/g, ' ');
+}
+
+/**
+ * Mọi khối của một file theo thứ tự, kèm điều kiện của khối @media bao nó (mỗi khối @media lồng được một tầng ngoặc):
+ * { media, selectors, body }, media là '' ngoài mọi @media, không thì như '(min-width: 1240px)'.
+ */
+function blocks(source) {
+  const out = [];
+  for (const [, media, inner, selectors, body] of source.matchAll(/@media([^{]*)\{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}|([^{}]+)\{([^{}]*)\}/g)) {
+    if (media === undefined) out.push({ media: '', selectors: selectors.trim(), body });
+    else for (const m of inner.matchAll(/([^{}]+)\{([^{}]*)\}/g)) out.push({ media: media.trim().replace(/\s+/g, ' '), selectors: m[1].trim(), body: m[2] });
+  }
+  return out;
+}
+
+/** Như declarations(), nhưng chỉ trong các khối @media có đúng điều kiện `media` ('' là ngoài mọi @media). */
+function declarationsIn(media, selector, source) {
+  return blocks(source)
+    .filter((b) => b.media === media && b.selectors.split(',').some((s) => s.trim() === selector))
+    .map((b) => b.body)
+    .join(';')
+    .replace(/\s+/g, ' ');
 }
 
 /** Nội dung của mọi khối @media (prefers-reduced-motion: reduce), nối lại (mỗi khối lồng được một tầng ngoặc). */
@@ -159,5 +182,69 @@ describe('captions.css · chữ đi theo vật (GĐ 5)', () => {
   it('?poster không có chữ: body[data-poster] ẩn cả vùng chữ (thứ tự @import do tests/paintings/html.test.js giữ)', () => {
     const hidden = /body\[data-poster\] :is\(([^)]*)\)\s*\{\s*display: none !important;?\s*\}/.exec(css)?.[1] ?? '';
     expect(hidden.split(',').map((s) => s.trim())).toContain('.captions');
+  });
+});
+
+describe('tools.css · bảng công cụ không bao giờ nằm dưới thanh lớp hay Sổ tay (GĐ 5)', () => {
+  const RAIL_OPEN = '.rail:not([hidden]) ~ .toolbar';
+  // Bảng hẹp nhất còn dùng được, đo trên GPU thật ở 1280×800: hàng của Từng sợi (nhãn, thanh 260px, số đếm, "Dệt lại") một dòng là
+  // 451px, cộng 26px đệm và viền của .tool-panel là 477px; hàng view của Kính mài 475px, Lột lớp 458px.
+  const PANEL_MIN = 480;
+
+  it('thanh lớp và Sổ tay đọc bề rộng từ --rail-w và --notebook-w: chính hai biến mà tools.css dùng để đặt bảng công cụ', () => {
+    const root = declarations(':root', notebookCss);
+    expect(root).toMatch(/--rail-w: 224px/);
+    expect(root).toMatch(/--notebook-w: min\(440px, calc\(100vw - 300px\)\)/);
+    expect(declarations('.rail', notebookCss)).toMatch(/(^|[;\s])width: var\(--rail-w\)/);
+    expect(declarations('.notebook', notebookCss)).toMatch(/(^|[;\s])width: var\(--notebook-w\)/);
+  });
+
+  it('máy tính, thanh lớp mở: bảng bắt đầu sau thanh lớp; đủ chỗ thì dừng trước Sổ tay (cả khi Sổ tay đóng, bảng không nhảy), không thì Sổ tay thu lại khi công cụ bật', () => {
+    // Thanh công cụ đứng ngay sau thanh lớp trong trang (thứ tự Tab), nên "~" đọc được thanh lớp đang mở mà không cần :has().
+    // Bề rộng CSS có thể lẻ (zoom trình duyệt: cửa sổ 1549px ở 125% là 1239.2px), nên không có cặp min-width 641px / max-width
+    // 640px (640.8px lọt giữa hai ngưỡng): luật máy tính là mặc định, ngoài mọi @media, và điện thoại đè lên.
+    const desktop = declarationsIn('', RAIL_OPEN, toolsCss);
+    expect(desktop).toMatch(/left: calc\(var\(--gutter\) \+ var\(--rail-w\) \+ 16px\)/);
+    expect(desktop).toMatch(/right: var\(--gutter\)/);
+    expect(declarationsIn('(max-width: 640px)', RAIL_OPEN, toolsCss)).toMatch(/left: 0; right: 0/);
+    expect(declarationsIn('(min-width: 1240px)', RAIL_OPEN, toolsCss)).toMatch(/right: calc\(var\(--gutter\) \+ var\(--notebook-w\) \+ 16px\)/);
+    // Cùng độ ưu tiên thì khối đứng sau thắng: khối của điện thoại và khối 1240px phải đứng sau luật mặc định.
+    const at = (media) => blocks(toolsCss).findIndex((b) => b.media === media && b.selectors === RAIL_OPEN);
+    expect(at('(max-width: 640px)'), 'khối điện thoại đứng sau luật mặc định').toBeGreaterThan(at(''));
+    expect(at('(min-width: 1240px)'), 'khối 1240px đứng sau luật mặc định').toBeGreaterThan(at(''));
+    // Một ngưỡng duy nhất cho "Sổ tay thu lại khi công cụ bật", từ điện thoại tới máy tính hẹp; 1239.98px chứ không phải 1239px
+    // (quy ước .02 của Bootstrap), để 1239.2px cũng khớp.
+    const hides = blocks(toolsCss).filter((b) => b.selectors.split(',').some((s) => s.trim() === 'body[data-tool] .notebook'));
+    expect(hides.map((b) => [b.media, b.body.replace(/\s+/g, ' ').trim()])).toEqual([['(max-width: 1239.98px)', 'display: none;']]);
+    // Bảng co theo ô của nó (phần tử flex của thanh). Một phần trăm trong max-width của máy tính là phần trăm "vòng" lúc tính bề
+    // rộng nội dung của ô: trình duyệt bỏ qua cả max-width (kể cả 560px), ô rộng theo dòng chữ dài nhất và bảng lệch khỏi giữa.
+    expect(declarationsIn('', '.tool-panel', toolsCss)).toMatch(/max-width: min\(560px, [^;%]*\);/);
+  });
+
+  it(`ngưỡng 1240px = 2 lề + thanh lớp + Sổ tay + 2 khe + bảng hẹp nhất còn dùng được (${PANEL_MIN}px)`, () => {
+    const px = (re, source) => Number(re.exec(source)?.[1]);
+    const gutter = px(/--gutter: (\d+)px/, css); // lề máy tính (khối :root đầu tiên của shell.css)
+    const rail = px(/--rail-w: (\d+)px/, notebookCss);
+    const notebook = px(/--notebook-w: min\((\d+)px/, notebookCss); // từ 740px trở lên Sổ tay rộng đúng 440px
+    const gap = px(/\+ var\(--rail-w\) \+ (\d+)px/, toolsCss);
+    expect([gutter, rail, notebook, gap].every(Number.isFinite), `${gutter} ${rail} ${notebook} ${gap}`).toBe(true);
+    expect(px(/\+ var\(--notebook-w\) \+ (\d+)px/, toolsCss), 'hai khe bằng nhau: bảng ở giữa khoảng trống').toBe(gap);
+    const threshold = 2 * gutter + rail + notebook + 2 * gap + PANEL_MIN;
+    const media = (selector) => blocks(toolsCss).filter((b) => b.selectors === selector).map((b) => b.media);
+    expect(media(RAIL_OPEN)).toContain(`(min-width: ${threshold}px)`);
+    expect(media('body[data-tool] .notebook')).toEqual([`(max-width: ${threshold - 0.02}px)`]);
+  });
+
+  it('không transform, filter, backdrop-filter (hay thuộc tính nào khác tạo khối chứa) trên .toolbar và .tool: tay nắm gạt (position: fixed) đo theo khung nhìn', () => {
+    const subject = /\.(toolbar|tool)(?![\w-])[^\s>+~]*$/; // phần cuối của bộ chọn là .toolbar hay .tool (không phải .tool-panel…)
+    const errors = [];
+    for (const [file, source] of [['shell.css', css], ['notebook.css', notebookCss], ['tools.css', toolsCss], ['captions.css', captionsCss]]) {
+      for (const b of blocks(source).filter((x) => x.selectors.split(',').some((s) => subject.test(s.trim())))) {
+        for (const m of b.body.matchAll(/(?:^|[;\s])((?:-webkit-)?(?:transform|filter|backdrop-filter|perspective|will-change|contain))\s*:/g)) {
+          errors.push(`${file} › ${b.selectors} › ${m[1]}`);
+        }
+      }
+    }
+    expect(errors).toEqual([]);
   });
 });

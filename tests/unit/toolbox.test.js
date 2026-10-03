@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// tests/unit/toolbox.test.js — hộp đồ nghề: gắn công cụ, nhãn view, móc lần vẽ, mỗi lúc một công cụ, cử chỉ tới công cụ trước bức, công cụ hỏng thì bỏ.
+// tests/unit/toolbox.test.js — hộp đồ nghề: gắn công cụ, nhãn view, móc lần vẽ, mỗi lúc một công cụ, cử chỉ tới công cụ trước bức, công cụ hỏng thì bỏ, chỗ của thanh công cụ trong trang.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createToolbox } from '../../src/engine/gpu/toolbox.js';
 
@@ -151,6 +151,23 @@ describe('createToolbox', () => {
     expect(ugly.dispose).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0][0]).toBe('Công cụ "hong" gắn không được, bỏ công cụ này:');
     warn.mockRestore();
+  });
+
+  it('thứ tự Tab (GĐ 5): chưa có thanh lớp thì thanh công cụ gắn cuối body; "Dựng lại cảnh" khi đã có thì gắn NGAY SAU thanh lớp, trước Sổ tay', () => {
+    const first = createToolbox({ tools: [fakeTool('kinh')], views: fakeViews(), doc: document, t, content });
+    expect(document.body.lastElementChild.hasAttribute('data-toolbar')).toBe(true);
+    // Thanh lớp và Sổ tay của ui/workshop.js sống qua các lần dựng lại (đang đóng hay mở thì thứ tự vẫn thế); cảnh cũ bị gỡ.
+    const panel = (attr) => {
+      const el = document.createElement('div');
+      el.setAttribute(attr, '');
+      el.hidden = true;
+      return el;
+    };
+    document.body.append(panel('data-rail'), panel('data-notebook'), document.createElement('aside'));
+    first.dispose();
+    createToolbox({ tools: [fakeTool('kinh')], views: fakeViews(), doc: document, t, content });
+    const names = [...document.body.children].map((el) => ['rail', 'toolbar', 'notebook'].find((a) => el.hasAttribute(`data-${a}`)) ?? el.localName);
+    expect(names).toEqual(['rail', 'toolbar', 'notebook', 'aside']);
   });
 
   it('không có công cụ nào: không đụng tới DOM; dispose gỡ công cụ, thanh công cụ và body[data-tool]', () => {

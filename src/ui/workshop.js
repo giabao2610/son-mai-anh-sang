@@ -54,7 +54,14 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
     },
     tools: tools?.el ?? null,
   });
-  doc.body.append(rail.el, notebook.el);
+  // Thứ tự Tab theo thứ tự DOM (WCAG 2.4.3): thanh lớp → thanh công cụ → Sổ tay. Đi hết thanh lớp là Tab vào bảng công cụ.
+  // Cảnh dựng thanh công cụ trước khi xưởng mở lần đầu, nên hai tấm của xưởng đứng hai bên nó; "Dựng lại cảnh" thì
+  // engine/gpu/toolbox.js gắn thanh mới ngay sau thanh lớp. Trên màn hình, z-index giữ thanh công cụ dưới hai tấm (tools.css).
+  const toolbar = doc.querySelector('[data-toolbar]');
+  if (toolbar) {
+    toolbar.before(rail.el);
+    toolbar.after(notebook.el);
+  } else doc.body.append(rail.el, notebook.el);
 
   /** Vẽ lại thanh lớp theo bàn thợ: vạch trọng số chạy theo tween, công tắc theo đích, nút "tiếp theo". */
   const sync = () => {

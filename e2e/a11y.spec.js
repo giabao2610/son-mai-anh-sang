@@ -98,7 +98,7 @@ for (const { meta, page: htmlPage } of paintings) {
         expect(log.errors).toEqual([]);
       });
 
-      test('bàn phím: Tab tới lời mời, Enter vào chế độ mài; đi hết thanh lớp, Đồ nghề, thanh giờ, Sổ tay; Escape đóng Sổ tay; thanh và nút của Từng sợi', async ({
+      test('bàn phím: Tab tới lời mời, Enter vào chế độ mài; đi hết thanh lớp, Đồ nghề, thanh giờ, Sổ tay; Escape đóng Sổ tay; từ nút Từng sợi, Tab qua phần còn lại của thanh lớp rồi tới thanh và nút của nó (khung hẹp, máy tính)', async ({
         page,
       }, testInfo) => {
         test.setTimeout(120_000);
@@ -150,22 +150,42 @@ for (const { meta, page: htmlPage } of paintings) {
         await page.keyboard.press('Escape');
         await expect(page.locator('[data-notebook]')).toBeHidden();
         await expect(page.locator('[data-rail]')).toBeVisible();
-        // Từng sợi (GĐ 5): Enter trên nút Đồ nghề bật công cụ, rồi Tab đi tới thanh và nút "Dệt lại" của nó. Thanh công cụ đứng
-        // TRƯỚC thanh lớp trong trang, nên Tab đi hết thanh lớp, vòng về đầu trang rồi mới tới (chừng bảy lần Tab). "Dệt lại" bị
-        // khóa tới khi có danh sách lần vẽ, mà Tab bỏ qua nút bị khóa: chờ danh sách trước khi đi.
-        await page.locator('[data-rail] [data-tool="tung-soi"]').focus();
+        // Từng sợi (GĐ 5): Enter trên nút Đồ nghề bật công cụ. Thanh công cụ đứng ngay sau thanh lớp trong trang, nên Tab đi qua
+        // phần còn lại của thanh lớp rồi vào thẳng thanh và nút "Dệt lại" (WCAG 2.4.3): không vòng về đầu trang, không qua Sổ tay.
+        // "Dệt lại" bị khóa tới khi có danh sách lần vẽ, mà Tab bỏ qua nút bị khóa: chờ danh sách trước khi đi.
+        const weave = page.locator('[data-rail] [data-tool="tung-soi"]');
+        await weave.focus();
         await page.keyboard.press('Enter');
         await expect(page.locator('body')).toHaveAttribute('data-tool', 'tung-soi');
         const range = page.locator('#tung-soi-range');
         await expect.poll(async () => Number(await range.getAttribute('max')), { timeout: 30_000 }).toBeGreaterThan(0);
-        const stops = new Set();
-        for (let i = 0; i < 40 && !(stops.has('input@tool:range') && stops.has('button@tool')); i += 1) {
-          await page.keyboard.press('Tab');
-          stops.add(await focused());
-        }
-        const toolWalk = [...stops].join(', ');
-        expect(toolWalk, 'thanh của Từng sợi').toContain('input@tool:range');
-        expect(toolWalk, 'nút "Dệt lại" của Từng sợi').toContain('button@tool');
+        /** Các điểm dừng của n lần Tab, tính từ nút Từng sợi trên thanh lớp. */
+        const tabsFromWeave = async (n) => {
+          await weave.focus();
+          const stops = [];
+          for (let i = 0; i < n; i += 1) {
+            await page.keyboard.press('Tab');
+            stops.push(await focused());
+          }
+          return stops;
+        };
+        // Phần còn lại của thanh lớp sau nút Từng sợi: nút Đồ nghề đứng sau nó (nếu có), thanh giờ, "Phủ lớp tiếp theo" (chế độ
+        // mài: các lớp còn ở 0), nút đóng × (đứng đầu thanh trên máy tính nhưng cuối thanh trong trang).
+        const tools = (await page.evaluate(() => window.__sma.tools())).map((x) => x.id);
+        const laterTools = tools.slice(tools.indexOf('tung-soi') + 1).map((id) => `button@rail:${id}`);
+        const next = (await page.locator('[data-rail] .rail-next').isVisible()) ? ['button@rail'] : [];
+        const toolStops = ['input@tool:range', 'button@tool'];
+        // Khung hẹp (640px, như điện thoại): thanh giờ ở sau nút nhỏ "◷ 21:00", ô trượt đã mở ở lượt đi trên; Sổ tay thu lại.
+        if (dials.length > 0) await expect(page.locator('[data-rail] .dial-chip')).toHaveAttribute('aria-expanded', 'true');
+        const narrowDials = dials.length > 0 ? ['button@rail:chip', ...dials.map(() => 'input@rail:range')] : [];
+        const narrow = [...laterTools, ...narrowDials, ...next, 'button@rail', ...toolStops];
+        expect(await tabsFromWeave(narrow.length), 'khung hẹp: từ nút Từng sợi tới bảng của nó').toEqual(narrow);
+        // Máy tính: thanh giờ nằm thẳng trong thanh lớp, và Sổ tay (mở lại, đủ chỗ ở 1280px) đứng SAU bảng công cụ.
+        await page.setViewportSize({ width: 1280, height: 800 });
+        await page.locator(`[data-rail] [data-layer="${meta.layers[0].id}"] .rail-name`).click();
+        await expect(page.locator('[data-notebook]')).toBeVisible();
+        const wide = [...laterTools, ...dials.map(() => 'input@rail:range'), ...next, 'button@rail', ...toolStops, 'button@nb'];
+        expect(await tabsFromWeave(wide.length), 'máy tính: từ nút Từng sợi tới bảng của nó, rồi Sổ tay').toEqual(wide);
         // Mũi tên trên thanh đổi sợi đang xem; trình đọc màn hình nghe qua aria-valuetext.
         await range.focus();
         const valuetext = await range.getAttribute('aria-valuetext');

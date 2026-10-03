@@ -5,10 +5,12 @@ import { h } from '../../ui/dom.js';
  * Công cụ học (spec §7) chạy trên MỌI bức, vì chỉ nhìn các view mà xưởng liệt kê (views.js). Hộp đồ nghề:
  * - gắn từng công cụ (`mount(api)`), cho nó một ô trong thanh công cụ ([data-toolbar]) để dựng thanh điều khiển;
  * - ghép overlay của mọi công cụ lên ảnh cuối MỘT lần; công cụ nào gắn hay ghép hỏng thì bỏ nó, cảnh vẫn chạy (spec §9);
- * - bật MỘT công cụ mỗi lúc: bật cái này thì cái kia tắt; body[data-tool] cho CSS (điện thoại: Sổ tay thu lại);
+ * - bật MỘT công cụ mỗi lúc: bật cái này thì cái kia tắt; body[data-tool] cho CSS (khung hẹp: Sổ tay thu lại);
  * - cử chỉ tới công cụ đang bật TRƯỚC bức; công cụ trả true thì cử chỉ dừng ở đó;
  * - (GĐ 5) đưa móc lần vẽ của cảnh (draws.js) cho công cụ qua api.draws, chỉ năm hàm của DrawProbe: công cụ tự start() khi
- *   bật, stop() khi tắt.
+ *   bật, stop() khi tắt;
+ * - (GĐ 5) đặt thanh công cụ ngay sau thanh lớp trong trang: Tab từ nút công cụ trên thanh lớp đi qua phần còn lại của thanh
+ *   lớp rồi vào bảng của nó, không vòng về đầu trang.
  * Bức không biết có công cụ nào: nó chỉ nhận những cử chỉ không công cụ nào dùng.
  *
  * @param {object} p
@@ -62,7 +64,13 @@ export function createToolbox({ tools, views, doc, t = {}, content = null, redra
   }
   const overlays = mounted.filter((m) => m.instance.overlay).map((m) => ({ id: m.id, fn: (c, view) => m.instance.overlay(c, view) }));
   for (const id of views.setOverlays(overlays)) remove(id);
-  if (bar && mounted.length > 0) doc.body.append(bar);
+  if (bar && mounted.length > 0) {
+    // Thứ tự Tab theo thứ tự DOM (WCAG 2.4.3): thanh công cụ đứng NGAY SAU thanh lớp, nơi có nút bật nó, và trước Sổ tay.
+    // "Dựng lại cảnh" dựng thanh mới khi thanh lớp đã có; lần mở trang thì chưa: ui/workshop.js đặt thanh lớp ngay trước thanh này.
+    const rail = doc.querySelector('[data-rail]');
+    if (rail) rail.after(bar);
+    else doc.body.append(bar);
+  }
 
   const find = (id) => mounted.find((m) => m.id === id) ?? null;
 

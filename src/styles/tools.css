@@ -1,12 +1,12 @@
 /* styles/tools.css — mục Đồ nghề và thanh giờ trong thanh lớp; thanh điều khiển của công cụ học và tay nắm gạt; màu từ bảng sơn mài. */
 
-/* Thanh công cụ: máy tính ở giữa đáy tranh, điện thoại ngay trên dải thanh lớp.
-   KHÔNG đặt transform hay backdrop-filter lên .toolbar và .tool: cả hai tạo containing block cho con position: fixed,
-   và tay nắm gạt (con của .tool) phải đo theo cả khung nhìn. Nền mờ đặt ở .tool-panel. */
+/* Thanh công cụ: máy tính ở đáy tranh (xưởng mở thì giữa thanh lớp và Sổ tay, xem cuối file), điện thoại ngay trên dải thanh lớp.
+   KHÔNG đặt transform, filter hay backdrop-filter lên .toolbar và .tool: các thuộc tính đó tạo containing block cho con
+   position: fixed, và tay nắm gạt (con của .tool) phải đo theo cả khung nhìn. Nền mờ đặt ở .tool-panel. */
 .toolbar {
   position: fixed;
-  /* Dưới thanh lớp và Sổ tay (z-index 2), trên tranh và lớp chữ. Bằng nhau thì thứ tự DOM quyết định: "Dựng lại cảnh" gắn
-     thanh công cụ mới SAU thanh lớp, và tay nắm gạt (cao cả khung) sẽ đè lên thanh lớp, Sổ tay. */
+  /* Dưới thanh lớp và Sổ tay (z-index 2), trên tranh và lớp chữ. Trong trang nó đứng ngay sau thanh lớp (thứ tự Tab, GĐ 5), nên
+     bằng z-index thì nó và tay nắm gạt (cao cả khung) sẽ vẽ đè lên thanh lớp. */
   z-index: 1;
   left: 0;
   right: 0;
@@ -15,6 +15,9 @@
   justify-content: center;
   pointer-events: none; /* chỗ trống hai bên thanh vẫn là của canvas */
 }
+/* Bảng nằm trong ô của công cụ (.tool), mà ô là phần tử flex của thanh: thanh hẹp hơn bảng thì ô co lại (tới bề rộng tối thiểu
+   của nội dung) và bảng co theo. Đừng thêm phần trăm vào max-width dưới đây: lúc tính bề rộng nội dung của ô, phần trăm "vòng"
+   làm trình duyệt bỏ qua cả max-width, kể cả 560px; ô rộng theo dòng chữ dài nhất và bảng lệch khỏi giữa. */
 .tool-panel {
   max-width: min(560px, calc(100vw - 2 * var(--gutter)));
   padding: 10px 12px;
@@ -116,11 +119,10 @@
 /* Công cụ đang bật: thơ và con dấu ở chân tranh nhường chỗ cho thanh điều khiển (tắt công cụ thì hiện lại). */
 body[data-tool] .foot { visibility: hidden; }
 
-/* Điện thoại: thanh công cụ ngay trên dải thanh lớp (68px); Sổ tay thu lại khi một công cụ bật, để chừa chỗ nhìn cảnh. */
+/* Điện thoại: thanh công cụ ngay trên dải thanh lớp (68px). */
 @media (max-width: 640px) {
   .toolbar { bottom: 76px; padding: 0 8px; }
-  .tool-panel { max-width: 100%; }
-  body[data-tool] .notebook { display: none; }
+  .tool-panel { max-width: 100%; } /* chỉ phần trăm, không có trần 560px: bảng không lệch như lời dặn ở .tool-panel */
   /* Dải thanh lớp: Đồ nghề nằm cùng hàng, chỉ còn nút công cụ và nút nhỏ "◷ 21:00". Ô trượt mở ra ngay trên dải: nó đặt
      theo khung nhìn (position: fixed), nên dải thanh lớp không được có backdrop-filter (thuộc tính đó biến dải thành khối
      chứa của con fixed, và dải cuộn ngang thì cắt mất ô trượt). */
@@ -150,4 +152,24 @@ body[data-tool] .foot { visibility: hidden; }
     border-top: 1px solid color-mix(in srgb, var(--vang-la) 35%, transparent);
   }
   .rail-dials:not([data-open]) { display: none; }
+}
+
+/* ── Xưởng mở (GĐ 5): bảng công cụ không bao giờ nằm dưới thanh lớp hay Sổ tay ─────────────────────────────────────────
+   Máy tính: bảng bắt đầu sau thanh lớp, cách một khe 16px. Thanh công cụ đứng ngay sau thanh lớp trong trang (thứ tự Tab), nên
+   "~" đọc được thanh lớp đang mở hay đóng mà không cần :has(), thứ trình duyệt cũ ở tầng WebGL2 có thể chưa có. Xưởng đóng
+   (thanh lớp hidden) thì bảng ở giữa cả khung như trước. Điện thoại: bảng trải cả bề ngang, ngay trên dải thanh lớp.
+   Bề rộng CSS có thể lẻ (zoom trình duyệt: cửa sổ 1549px ở 125% là 1239.2px), nên giữa hai ngưỡng không được hở: luật máy tính
+   là mặc định cho điện thoại đè lên, và Sổ tay thu lại tới 1239.98px chứ không phải 1239px. */
+.rail:not([hidden]) ~ .toolbar { left: calc(var(--gutter) + var(--rail-w) + 16px); right: var(--gutter); }
+@media (max-width: 640px) { .rail:not([hidden]) ~ .toolbar { left: 0; right: 0; } }
+/* Đủ chỗ: bảng vào khoảng trống giữa thanh lớp và Sổ tay, kể cả khi người xem đóng Sổ tay (bảng không nhảy chỗ). Ngưỡng 1240px =
+   2 lề 32px + thanh lớp 224px + Sổ tay 440px + 2 khe 16px + 480px, bề rộng hẹp nhất mà bảng còn dùng được (thanh, số đếm và
+   "Dệt lại" của Từng sợi trên một hàng). Đổi một con số thì tính lại ngưỡng: tests/unit/shell-css.test.js tính lại nó. */
+@media (min-width: 1240px) {
+  .rail:not([hidden]) ~ .toolbar { right: calc(var(--gutter) + var(--notebook-w) + 16px); }
+}
+/* Hẹp hơn (máy tính hẹp, điện thoại): Sổ tay thu lại khi một công cụ bật, để bảng có chỗ và người xem thấy cảnh; tắt công cụ
+   thì Sổ tay hiện lại. */
+@media (max-width: 1239.98px) {
+  body[data-tool] .notebook { display: none; }
 }

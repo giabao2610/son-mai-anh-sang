@@ -127,7 +127,7 @@ for (const { meta, page, lang } of paintings) {
 }
 
 describe('styles/tools.css (GĐ 4)', () => {
-  it('thanh công cụ nằm DƯỚI thanh lớp và Sổ tay (z-index nhỏ hơn hẳn): sau "Dựng lại cảnh", thanh công cụ mới được gắn sau chúng trong DOM, tay nắm gạt không được đè lên', () => {
+  it('thanh công cụ nằm DƯỚI thanh lớp và Sổ tay (z-index nhỏ hơn hẳn): nó đứng ngay sau thanh lớp trong DOM (thứ tự Tab, GĐ 5), bằng z-index thì nó và tay nắm gạt (cao cả khung) đè lên thanh lớp', () => {
     const zIndex = (file, selector) => {
       const css = readFileSync(ROOT + file, 'utf8');
       const rule = css.match(new RegExp(`(?:^|\\n)${selector}\\s*\\{([^}]*)\\}`));
