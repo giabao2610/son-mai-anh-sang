@@ -47,7 +47,9 @@ jobs:
           path: dist
 
   # Cổng chặn phần 2: tranh tĩnh + WebGL2 trên SwiftShader (kèm a11y), chia hai phần chạy song song theo từng test
-  # (--fully-parallel: chia theo test, không theo file, nên hai phần lệch nhau ít). GĐ 3 đo được khoảng 12 phút e2e cho một bức.
+  # (--fully-parallel: chia theo test, không theo file). Mỗi project chia riêng: --shard chia theo SỐ test và theo thứ tự project,
+  # nên chia chung hai project thì phần 1 nhận trọn project tĩnh (vài giây) và phần 2 nhận trọn WebGL2 (cả chục phút).
+  # GĐ 3 đo được khoảng 12 phút e2e cho một bức.
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -73,8 +75,13 @@ jobs:
       - name: Cài Chromium headless shell và thư viện hệ thống
         run: npx playwright install --with-deps --only-shell chromium
 
-      - name: E2E chặn · tranh tĩnh + WebGL2 trên SwiftShader (kèm a11y) · phần ${{ matrix.shard }}/2
-        run: npx playwright test --project=static --project=webgl2-swiftshader --shard=${{ matrix.shard }}/2 --fully-parallel
+      - name: E2E chặn · tranh tĩnh · phần ${{ matrix.shard }}/2
+        run: npx playwright test --project=static --shard=${{ matrix.shard }}/2 --fully-parallel
+
+      - name: E2E chặn · WebGL2 trên SwiftShader (kèm a11y) · phần ${{ matrix.shard }}/2
+        # Chạy cả khi phần tĩnh hỏng: job vẫn đỏ, mà vẫn có kết quả và ảnh của phần nặng.
+        if: ${{ !cancelled() }}
+        run: npx playwright test --project=webgl2-swiftshader --shard=${{ matrix.shard }}/2 --fully-parallel
 
       - name: Giữ ảnh chụp và trace của e2e
         if: ${{ !cancelled() }}

@@ -2325,7 +2325,10 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
     - **`build`** (chặn, trần 20 phút) chỉ còn `npm ci` → `npm test` → `npm run build` → đóng gói Pages;
     - **`e2e`** (chặn) chạy hai phần song song (`--shard=1/2`, `--shard=2/2`, `--fully-parallel` để chia theo test, không theo file).
       Mỗi phần tự `npm run build`: build chỉ mất vài giây, nhanh hơn chuyển `dist/` qua artifact, và không thêm action mới
-      (`download-artifact`). Đếm lúc làm: 166 test chia 83 / 83;
+      (`download-artifact`).
+      - Mỗi project chia riêng (hai lệnh trong mỗi phần): `--shard` chia theo SỐ test và theo thứ tự project, nên chia chung hai
+        project thì phần 1 nhận trọn project tĩnh (vài giây) còn phần 2 nhận trọn WebGL2 (thấy lúc chạy thử, GĐ 6).
+      - Đếm lúc làm: mỗi project 83 test, chia 42 / 41;
     - **`e2e-webgpu`** (không chặn) cũng hai phần (83 test chia 42 / 41);
     - **`deploy`** cần `build` và cả hai phần của `e2e`.
 
