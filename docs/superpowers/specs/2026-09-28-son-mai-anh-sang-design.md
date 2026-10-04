@@ -39,7 +39,7 @@ Dự án dùng lại đúng ý đó. **Sơn Mài Ánh Sáng là cách dựng tra
 - Mỗi lớp là một kỹ thuật dựng hình, có trọng số từ 0 đến 1.
 - "Mài" là gỡ dần từng lớp để thấy bức tranh được làm ra thế nào, xuống tận **cốt đất sét**.
 
-Ao Sen Đêm là **Bức 1**. (GĐ 6) Đèn Kéo Quân là **Bức 2** (§18). Đông Hồ, Cung Quế về sau có thể là Bức 3, 4, làm bằng cùng kỹ thuật và dùng chung một xưởng.
+Ao Sen Đêm là **Bức 1**. (GĐ 6) Đèn Kéo Quân là **Bức 2** (§18). (GĐ 7) Cung Quế là **Bức 3** (§19). Đông Hồ về sau có thể là Bức 4, làm bằng cùng kỹ thuật và dùng chung một xưởng.
 
 ### Từ vựng (dùng giống nhau trong tài liệu và trong code)
 
@@ -126,6 +126,16 @@ Ao Sen Đêm là **Bức 1**. (GĐ 6) Đèn Kéo Quân là **Bức 2** (§18). �
 
   Sau phần thiết kế đầu tiên (sáu lớp), Bạn nói "làm luôn đến spec": Claude tự quyết phần còn lại của §18, rồi Bạn duyệt một lượt
   trong spec. Duyệt xong, Bạn chọn làm thẳng, vừa làm vừa sửa, thay cho dựng thử trên nhánh vứt đi như GĐ 4–5 (§18.9).
+- **(GĐ 7)** Bạn chọn làm **Bức 3 · Cung Quế** (§19), trả lời từng câu ngày 2026-10-04 và 2026-10-05:
+  - chủ đề **Cung Quế**: chú Cuội ngồi gốc cây đa trên cung trăng; kỹ thuật **SDF raymarching**: không có tam giác nào, bóng mềm và AO
+    lấy từ trường khoảng cách;
+  - bố cục **tiểu hành tinh**: mặt trăng là một hành tinh nhỏ giữa trời đen, Trái Đất treo trên trời, camera xoay quanh;
+  - ánh sáng **pha trăng thật**: nắng theo pha trăng của ngày đang xem; núm "Ngày âm lịch" kéo qua cả tháng; phần đêm có ánh đất;
+  - cử chỉ **chạm và giữ**: chạm thì lá đa rơi (trọng lực trăng), giữ thì cây đa nhổ rễ bay lên (hòa khối của SDF); kéo vẫn xoay camera;
+  - cách vẽ **khối bao**: một mesh cầu bao quanh thế giới; shader của nó dò tia vào trong, ghi độ sâu và pháp tuyến như vật thường.
+
+  Sau phần thiết kế đầu tiên (cảnh, sáu lớp, cử chỉ), Bạn nói "làm luôn đến spec": Claude tự quyết phần còn lại của §19 (kỹ thuật,
+  Phòng tranh và trình sinh trang, CI, kiểm thử, cách làm), rồi Bạn duyệt một lượt trong spec.
 
 ### Giả định (bạn đã xem và không phản đối)
 - Project nằm ở `~/Documents/Projects/son-mai-anh-sang`.
@@ -1559,6 +1569,13 @@ Mỗi mốc đặt một ĐÍCH (phần vòng) và một thời gian bò (`HALO_
   - Đích là đường dẫn tương đối tới thư mục của trang kia. Vite không viết lại `<a href>`, nên đường dẫn tương đối chạy dưới mọi `base`.
   - Chỉ là HTML và CSS (`shell.css`), không có JS: chạy cả ở tầng tĩnh. `?poster` ẩn cùng `.frame`.
   - Test HTML so link với registry (xếp theo `meta.no`).
+- **(GĐ 7) Trang sinh từ một khuôn** (§19.7):
+  - `scripts/pages.js` (`npm run pages`) viết trang của mọi bức và Phòng tranh từ registry, `meta` và `ui/strings.vi.js`;
+  - trang vẫn là file HTML commit trong repo; test báo lỗi khi file trên đĩa lệch với trang sinh ra;
+  - dải link có thêm "Phòng tranh" ở giữa (trước, Phòng tranh, sau);
+  - trình sinh luôn in `<svg data-moon>`, vì cả ba bức đều giữ trăng SVG.
+- **(GĐ 7) Phòng tranh** `tranh/index.html`: trang tĩnh không có script, liệt kê các bức theo `meta.no`; nằm trong `input` của Vite.
+  URL gốc vẫn là Bức 1.
 
 **Poster và OG (GĐ 4):**
 - `node scripts/poster.js <slug>` chạy trên máy có GPU thật (máy của Bao, WebGPU), trên bản build (`vite preview`):
@@ -2286,6 +2303,10 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
 - (GĐ 6) Bức 2 trên điện thoại thật: bóng trên vách đọc được, thổi nến và giữ trống bằng ngón tay, 45 khung/giây ở mức vừa và thấp.
 - (GĐ 6) VoiceOver đọc link lật tranh ở cả hai trang (tên bức và chiều đi).
 - (GĐ 6) Bao đọc lại thơ của Bức 2 trên trang (chữ, dấu, nguồn; §18.2) và duyệt ảnh poster (§18.3).
+- (GĐ 7) Bức 3 trên điện thoại thật: 45 khung/giây ở mức vừa và thấp; chạm cho lá rơi, giữ cho cây bay bằng ngón tay.
+- (GĐ 7) VoiceOver đọc Dial "Ngày âm lịch" (nhãn ngày) và dải link có "Phòng tranh" ở cả ba trang; Phòng tranh trên Safari của
+  điện thoại.
+- (GĐ 7) Bao đọc lại thơ của Bức 3 trên trang (§19.2) và duyệt ảnh poster (§19.3).
 
 ## 13. Repo, CI, deploy
 
@@ -2334,6 +2355,14 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
     - **`deploy`** cần `build` và cả hai phần của `e2e`.
 
     Thời gian thật đo khi làm (§18.9).
+  - (GĐ 7) Sau GĐ 6, phần 1 của mỗi job đã gần trần 40 phút (e2e chặn 26 phút, e2e WebGPU có lần 32 phút): `--shard` chia theo số
+    test và theo thứ tự file, nên phần 1 nhận mọi spec riêng của các bức. GĐ 7 chia **theo bức** (§19.9):
+    - job `nhom-e2e` chạy `node scripts/e2e-groups.js`, in ra ma trận các nhóm từ registry: mỗi bức một nhóm (`--grep "{tên bức} · "`),
+      cộng nhóm `chung` (`--grep-invert` mọi tên bức: lật tranh, Phòng tranh);
+    - `e2e` (chặn) và `e2e-webgpu` (không chặn) chạy một job cho mỗi nhóm (`matrix.group`, `fromJSON`), kèm `--pass-with-no-tests`;
+      giá trị của ma trận đi qua `env`;
+    - `deploy` cần `build` và mọi job của `e2e`;
+    - thêm bức thì thêm job, tự động; test luật giữ quy ước tên `describe`.
 - **URL:** `https://giabao2610.github.io/son-mai-anh-sang/`.
 - **Luật trong `CLAUDE.md`:**
   - **Nguồn tham chiếu:**
@@ -2373,7 +2402,8 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | **4 · Phủ bóng + Kính mài** | Phủ bóng hoàn chỉnh (chặng `display`: LUT từ bảng màu, grain, vignette, FXAA; `tap`); `Tool` + Kính mài + Lột lớp dựng từ `views()`; `Dial` + `ui/dials.js` + thanh giờ; `?poster` + poster thật + og (`scripts/poster.js`); e2e "mài về cốt"; kiểm tra a11y; README gồm mục "Thêm một bức tranh mới". Kèm theo (chốt khi lập kế hoạch GĐ 4): bộ điều chỉnh đo thời gian GPU thật (chẩn đoán theo máy, `engine/tuner.js`) và ms GPU trong Sổ tay; Kính mài có hai hình (tròn, gạt trước/sau); đồ nghề và thanh giờ nằm trong thanh lớp; a11y bằng axe-core; og dạng JPEG; các mục còn nợ của GĐ 3 (trần khung trên màn 60,0x Hz, nấc `suong.chi-tiet` ở mức thấp, `update(0, t)` khi vẽ lại lúc `?freeze`, kiểm trần do `max()` trả, ba mức cùng bộ khóa, e2e vuốt chứng minh sương xoáy, tách e2e WebGPU ra job riêng, sửa lời spec) | Mọi e2e qua; đã deploy; README đầy đủ |
 | **5 · Hoa đăng + Từng sợi** *(tùy chọn)* | Trong sáu mục dự kiến, Bao chọn ba: **trăng tiến độ** (quầng trong `[data-moon]`, mốc từ `boot`/`run`), **Từng sợi** (`engine/gpu/draws.js` + `tools/tung-soi.js`, `ToolApi.draws`, tên vật + nhãn), **thả hoa đăng** (cử chỉ `double-tap`, `ctx.captions` + `ui/captions.js`, đèn gộp InstancedMesh của lớp Ánh trăng, vũng sáng trên nước, 12 cặp câu thơ). Kèm theo: `__sma.readouts`, luật móc lần vẽ, gợi ý mới. Chốt khi dựng thử: bảng công cụ không còn nằm dưới Sổ tay và Tab từ nút công cụ không còn vòng qua cả trang mới tới bảng (lỗi GĐ 4), "Dựng lại cảnh" quá hạn không đụng trang đã về tĩnh cùng bộ test đầu tiên cho `run()` (lỗi GĐ 2), khung chữ một cột (lỗi GĐ 1), luật đường nhẹ không dùng built-in ES2022, luật `files` của lớp kê đủ `parts/`. Ba mục còn lại (link công thức, Xem bản dịch, đàn bầu) để sau (§16) | Mọi test và e2e qua; mức cao vẫn ≤ 45 draw call (đèn không thêm draw call); Bao duyệt chữ của thơ; đã deploy |
 | **6 · Bức 2 · Đèn Kéo Quân** | Bức mới theo luật 7 (§18): gian nhà tối, đèn lục giác, đoàn quân rước cờ; sáu lớp Cốt, Ngọn nến, Gian nhà, Giấy, Kéo quân, Phủ bóng; gobo `atan(y, x)` làm node bóng tự viết của ngọn nến, shadow map thật là thí nghiệm "so"; ba cử chỉ thổi nến, giữ trống, gạt trống (tính thẳng theo thời gian); link lật tranh giữa các trang; e2e chia hai phần trên CI. Làm thẳng, task rủi ro nhất trước (§18.9) | Mọi test và e2e qua (cả Bức 1); mức cao ≤ 45 draw call; hợp đồng không đổi; Bao duyệt thơ, hình nhân và poster; đã deploy |
-| 7 · *(mở rộng)* | Bức mới theo luật 7: Đông Hồ (hạt compute), Cung Quế (SDF raymarch); khi có Bức 3: Phòng tranh và trình sinh HTML (§16) | tùy |
+| **7 · Bức 3 · Cung Quế** | Bức mới theo luật 7 (§19): tiểu hành tinh SDF, dò tia trong một khối bao; sáu lớp Cốt, Mặt trời, Bóng mềm, Ánh đất, Lá đa, Phủ bóng; pha trăng thật với Dial "Ngày âm lịch"; chạm cho lá rơi, giữ cho cây bay. Kèm theo: Phòng tranh và trình sinh trang (§19.7); CI chia e2e theo bức (§19.9) | Bức 3 chạy trên cả hai backend, 60 khung/giây trên Mac M2 ở mức cao; e2e chặn qua trong CI; Bao duyệt ảnh và thơ; đã deploy |
+| 8 · *(mở rộng)* | Bức mới theo luật 7: Đông Hồ (hạt compute) | tùy |
 
 **GĐ 0 · Nền móng gồm:**
 - **Máy và công cụ:** Node 24 (hướng dẫn fnm), Vite 8, Vitest 5, Playwright; `.gitignore`; `CLAUDE.md`; README khung.
@@ -2408,10 +2438,11 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
    - Muốn đổi mặc định của lớp dùng chung thì ghi đè trong `painting.js`: `{ ...phuBong, knobs: phuBong.knobs.map((k) => k.id === 'bloomStrength' ? { ...k, value: 0.3 } : k) }`. Chỉ đổi `value`, `min`, `max`, không đổi `id`.
    - (GĐ 5) Đặt `name` cho mọi vật trong `objects` của từng lớp, và nhãn ở `content.layers[id].objects`. Muốn chữ hiện cạnh một vật
      (thơ, chú thích) thì ghi vào `content.captions` rồi gọi `ctx.captions.show(khóa, anchor)` (§4.1 mục 10).
-3. Copy `index.html` sang `tranh/den-keo-quan/index.html`. Sửa `data-painting`, title, thơ, poster, og và dòng import. Bỏ `<svg data-moon>` nếu bức không có trăng.
-4. Thêm một dòng vào `paintings/registry.js`: `{ meta, page: 'tranh/den-keo-quan/index.html', lang: 'vi' }`.
-   (GĐ 6) Registry xếp theo `meta.no`. Thêm link lật tranh vào trang mới, và link "bức sau" vào trang của bức kề trước (§8.7); test
-   HTML chỉ ra chỗ thiếu.
+3. Thêm một dòng vào `paintings/registry.js`: `{ meta, page: 'tranh/den-keo-quan/index.html', lang: 'vi' }`. (GĐ 6) Registry xếp
+   theo `meta.no`.
+4. (GĐ 7) Chạy `npm run pages`: trình sinh viết trang của bức mới từ `meta` (§19.7), thêm link "bức sau" vào trang của bức kề trước,
+   và thêm bức vào Phòng tranh. Không viết tay trang nữa; test HTML báo khi file trên đĩa lệch với trang sinh ra. (Trước GĐ 7: copy
+   `index.html` rồi sửa tay `data-painting`, title, thơ, poster, og, dòng import và link lật tranh.)
 5. Đặt poster vào `public/paintings/den-keo-quan/`, hoặc chạy `node scripts/poster.js den-keo-quan`.
 6. Chạy `npm test` rồi sửa theo từng lỗi tiếng Việt. Chạy `npm run e2e`: e2e chung tự chạy trên bức mới. Tương tác riêng của bức viết vào `e2e/den-keo-quan.spec.js`.
 7. Cần thứ gì của Ao Sen Đêm thì **không import chéo**; rút nó lên trước theo công thức (e). Cần khả năng mới của xưởng thì thêm **trường tùy chọn** vào hợp đồng (luật 7).
@@ -2460,14 +2491,18 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 
 | Việc | Khi nào | Đường đi |
 |---|---|---|
-| Trình sinh HTML | Khi có Bức 3 hoặc bản tiếng Anh | `plugins/vite-plugin-paintings.js` sinh trang từ template, meta và content; test HTML giữ nguyên vai trò |
-| Phòng tranh `/tranh/` | (GĐ 6) Khi có Bức 3, cùng lúc với trình sinh HTML (Bao chọn: hai bức thì lật tranh trước/sau là đủ) | Trang tĩnh đọc registry, không có three. URL gốc vẫn là Bức 1 |
+| ~~Trình sinh HTML~~ | Làm ở GĐ 7 | §19.7: `scripts/pages.js` (`npm run pages`) sinh trang từ một khuôn; trang vẫn commit trong repo, test giữ trang khớp. Không làm plugin Vite: trang phải là file thật cho tầng tĩnh, và build không ghi vào thư mục nguồn |
+| ~~Phòng tranh `/tranh/`~~ | Làm ở GĐ 7 | §19.7: trang tĩnh sinh từ registry, không có script. URL gốc vẫn là Bức 1 |
 | Link công thức `#r=` | Khi Bao chọn (GĐ 5 không chọn) | `engine/recipe.js` (hàm thuần) mã hóa `snapshot()` = `{ weights, knobs: {'layerId.knobId': v}, dials }`. Giải mã trước `createLayer`; chỉ ghi các giá trị khác mặc định, kẹp theo `max` của tầng |
 | Xem bản dịch | Khi Bao chọn (GĐ 5 không chọn) | `renderer.debug.getShaderAsync(scene, camera, obj)` cho từng `layer.objects`. Tên đặt bằng `setName` giúp đọc được mã sinh ra |
 | ~~Công cụ soi ("Từng sợi")~~ | Làm ở GĐ 5 | §7 Từng sợi: `ToolApi.draws` thay cho `layers()`/`stats()` dự định trước đây |
 | Đàn bầu | Khi Bao chọn (GĐ 5 không chọn) | Trường tùy chọn `Painting.sound` cùng `lib/audio/`, chỉ phát khi người xem bật |
-| Đông Hồ | GĐ 6 | `CameraSpec.kind: 'ortho'` (trường tùy chọn); rút hạt compute lên `lib/tsl/particles.js`; `meta.palette` |
-| Cung Quế | GĐ 6 | Mesh toàn màn hình dùng `vertexNode`/`depthNode`; nấc đầu tiên là `maxSteps`; trường tùy chọn `meta.requires` (tầng tối thiểu) |
+| Đông Hồ | GĐ 8 hay sau | `CameraSpec.kind: 'ortho'` (trường tùy chọn); rút hạt compute lên `lib/tsl/particles.js`; `meta.palette` |
+| ~~Cung Quế~~ | Làm ở GĐ 7 | §19. Khác dự định cũ: dò tia trong một khối cầu bao thay cho mesh phủ màn hình (chỉ tốn ở phần khối chiếm); `depthNode` và `normalNode` trên `NodeMaterial` gốc; không cần `meta.requires`, vì WebGL2 chạy được; nấc đầu là `dpr`, rồi bóng, rồi số bước |
+| (GĐ 7) SDF, dò tia, bóng mềm dùng chung | Luật hai lần: khi bức thứ hai cần | `git mv` phần chung của `parts/cot-sdf.js`, `parts/cot-do-tia.js`, `parts/bong-mem-tia.js` sang `lib/tsl/sdf.js`; đầu vào thành tham số |
+| (GĐ 7) Dò bóng ở độ phân giải thấp hơn | Khi đo thấy bóng mềm quá đắt trên điện thoại | Một lượt vẽ riêng ghi độ che của nắng ở nửa độ phân giải, rồi lớp Bóng mềm đọc lại; thêm một nấc |
+| (GĐ 7) Vuốt quay hành tinh, khóa thủy triều | Khi Bao chọn (GĐ 7 không chọn) | Góc quay tính thẳng theo thời gian như trống của Bức 2, rồi từ từ quay mặt có chú Cuội về Trái Đất |
+| (GĐ 7) Hằng Nga, cung điện trên trăng | Khi Bao chọn | Thêm hình vào `scene`; hình bao riêng để không tăng giá của điểm ảnh ở xa |
 | Wrap lighting cho cánh sen | Khi làm lighting model riêng (GĐ 5+) | `LightingModel` tự viết cho cánh; hiện viền fresnel + `translucency` đã cho cảm giác cánh mỏng |
 | Test số của `rippleHeight` | Khi có bộ tính TSL trên CPU | Hiện chỉ kiểm dựng được node; e2e "chạm mặt nước đổi ảnh" giữ hành vi |
 | ~~Đo ms GPU thật cho thí nghiệm `compare`~~ | Làm ở GĐ 4 | §10 "Bộ điều chỉnh đo được thời gian GPU": `gpu-timer.js`, cột ms GPU trong "Tắt / Bật" |
@@ -3136,6 +3171,476 @@ cho GĐ 6 **làm thẳng, vừa làm vừa sửa**:
 - **Sàn tối dưới đèn.** Đáy đèn kín, nên sàn quanh chân đèn chỉ có ánh đêm. Ảnh nặng nề quá thì nâng ngọn nến hoặc thu nhỏ đế (số
   của Cốt), không đổi cách làm.
 
+## 19. Bức 3 · Cung Quế (GĐ 7)
+
+> Mặt trăng là một hành tinh nhỏ giữa trời đen. Chú Cuội ngồi gốc cây đa, con trâu gặm cỏ, Trái Đất treo trên đầu, và nắng chiếu
+> theo đúng pha trăng của đêm nay.
+
+**Nơi ở:** `src/paintings/cung-que/`, trang `tranh/cung-que/index.html`, poster ở `public/paintings/cung-que/`. Lớp 6 là Phủ bóng dùng
+chung. Mọi luật của kỹ thuật (§0) và của xưởng (§8–§10, `CLAUDE.md`) áp như hai bức trước. Chương này chỉ ghi phần riêng của Bức 3,
+cùng hai việc đi kèm: Phòng tranh với trình sinh trang (§19.7), và CI chia e2e theo bức (§19.9). Những gì Bao đã chọn nằm ở §1 (GĐ 7);
+phần còn lại do Claude quyết, Bao duyệt khi đọc spec.
+
+**Số trong chương này** là số thiết kế, theo đơn vị của cảnh: một đơn vị coi như 10 m khi tính trọng lực (§19.5). Số cuối cùng chốt
+lúc làm (§19.10); số nào đổi thì sửa lại ở đây, trong cùng task.
+
+**Điều mới so với hai bức trước:** thế giới của bức (hành tinh, cây, người, trâu) không có một tam giác nào. Nó là một hàm khoảng
+cách có dấu (SDF), và một shader dò tia (raymarching) vẽ nó bên trong một khối cầu bao. Ánh sáng, bóng và AO cũng tự tính trong
+shader đó: cảnh không có đèn nào của three.
+
+### 19.1 Cảnh
+- **Hành tinh** là mặt trăng thu nhỏ: quả cầu bán kính 1, tâm ở gốc tọa độ, trục +Y hướng về Trái Đất.
+  - Sáu hố va chạm, bán kính 0,12–0,3, sâu 0,03–0,06, có gờ miệng thấp. Mỗi hố là một phép lõm mềm trên quả cầu, tính theo góc giữa
+    điểm và tâm hố: rẻ, không cần noise trong lúc dò tia.
+  - Mặt đất gồ ghề chỉ có ở pháp tuyến lúc tô (bump từ noise, tính một lần ở điểm chạm), không có trong hình dò tia. Dò tia qua noise
+    nhiều tầng là cái giá lớn nhất của SDF.
+- **Cây đa** đứng ở đỉnh (+Y), chỗ luôn hướng về Trái Đất:
+  - thân là một nón tròn hơi cong, cao 0,45, bán kính 0,085 ở gốc, 0,05 ở ngọn; năm chân rễ bạnh ra ở gốc và hòa vào đất (hòa khối,
+    §19.4 lớp 1);
+  - bốn cành chính tỏa ra ở độ cao 0,4;
+  - tán là bảy khối bầu dục hòa vào nhau thành một vòm rộng chừng 0,9, từ độ cao 0,45 tới 0,8 trên mặt đất;
+  - rễ phụ: chừng mười sợi mảnh buông từ cành xuống, không chạm đất. Rễ phụ lặp quanh trục bằng phép chia góc (domain repetition):
+    một hình cho nhiều bản, mà giá chỉ như một.
+- **Chú Cuội** ngồi tựa gốc đa, quay về phía camera mặc định: thân, đầu, tay ôm gối, chân co; cao chừng 0,11 khi ngồi.
+- **Con trâu** gặm cỏ, cách gốc đa chừng 0,35 trên mặt đất (lệch về phía +X): mình bầu dục, đầu cúi, hai sừng cong, bốn chân, đuôi;
+  dài chừng 0,15.
+- **Trái Đất** treo thẳng trên đỉnh cây, ở (0; 3,1; 0), bán kính 0,28. Đây là một mesh cầu bình thường, có biển, lục địa, mây và
+  viền khí quyển, tự quay chậm. Tỉ lệ là của truyện cổ tích, không phải của thiên văn.
+- **Bầu trời** đen sơn mài, có sao vàng li ti: một mesh cầu lớn vẽ mặt trong, sao sinh bằng hàm băm theo hướng nhìn.
+- **Mặt Trời** không có trong khung; chỉ có hướng nắng (§19.2, pha trăng).
+- **Khối bao** là một mesh cầu tâm (0; 0,6; 0), bán kính 1,75. Nó chứa trọn hành tinh, Cuội, trâu, và cả cây đa khi bay lên cao nhất
+  (§19.5). Lá rơi, Trái Đất và bầu trời là mesh riêng, nằm ngoài khối bao.
+- **Trang có trăng SVG cạnh con dấu**, như hai bức trước.
+
+### 19.2 Trải nghiệm riêng của Bức 3
+- **Camera** (`CameraSpec`):
+  - đứng ngang hành tinh, nhìn hơi ngước lên, nên khung mặc định có hành tinh ở dưới, cây ở giữa, Trái Đất ở trên;
+  - số thiết kế: `position` [0; 0,7; 5], `target` [0; 1,2; 0], `fov` 50; xoay dọc 1,2–1,95; khoảng cách 3,8–6,5; `breathe` 0,05;
+  - **xoay ngang trọn vòng**: `azimuth` [−Infinity, Infinity]. OrbitControls coi đó là không giới hạn (Phụ lục A.86). Tiểu hành
+    tinh thì phải đi vòng quanh được.
+
+  Chốt ở điểm duyệt ảnh (§19.10), kể cả khung dọc của điện thoại: ở 390×844, hành tinh vừa khít bề ngang.
+- **Gợi ý** (`content.hint`): *"Chạm vào tán đa · giữ để cây bay lên · kéo để xoay"*.
+- **Hai cử chỉ** (`setup().onGesture`). Công cụ học vẫn được ưu tiên như ở mọi bức.
+  1. **Chạm là lá rơi** (`'tap'`):
+     - Lá rơi từ điểm trên tán gần tia chạm nhất: tia giao với hình bầu dục bao tán, tính bằng JS (§19.4 lớp 5). Chạm trượt ra
+       ngoài tán thì lá vẫn rơi, từ điểm trên tán gần tia nhất, nên chạm ở đâu cũng có phản hồi.
+     - Mỗi lần chạm có 4 lá (núm `burst`).
+     - Lá rơi chậm: trọng lực trên trăng chừng bằng 1/6 Trái Đất, nên lá từ tán xuống đất mất chừng 2,7 giây, trên Trái Đất thì
+       chừng 1,1 giây.
+     - Lá không chao lượn, vì trên trăng không có không khí: lá vừa quay đều vừa rơi thẳng, như chiếc lông chim rơi cùng cây búa
+       trong thí nghiệm của Apollo 15.
+     - Lá nằm lại trên mặt đất vài giây rồi nhỏ dần và biến mất. Cùng lúc có tối đa `budget.leaves` lá; lá cũ nhất nhường chỗ.
+  2. **Giữ là cây bay** (`'hold-start'` → `'hold-end'`), theo truyền thuyết cây đa bay lên trời mang theo chú Cuội:
+     - Cây nhổ lên, cao dần tới 0,45 trong chừng 1,5 giây; chú Cuội níu theo một rễ và lên cùng cây.
+     - Chân rễ hòa khối với mặt đất, nên đất bị kéo dài lên như đất sét, rồi đứt khi cây lên cao quá độ hòa (`smooth`). Đây là cảnh
+       "đúng chất SDF" của bức.
+     - Thả tay thì cây rơi xuống chậm theo trọng lực trăng, nảy nhẹ một lần rồi đứng yên; rễ liền lại với đất.
+     - Camera không xoay trong lúc giữ: xưởng tắt OrbitControls khi giữ (§8.1).
+  - `'swipe'` và `'double-tap'` không làm gì riêng: hai `'tap'` của một lần chạm đúp đã là hai chùm lá. Kéo là của camera.
+  - **Tất định:** độ cao của cây và đường rơi của lá tính thẳng từ thời gian (§19.5), nên `?freeze` và `update(0, t)` cho đúng khung N.
+  - **Giảm chuyển động:** camera không thở; cây bay lên và hạ xuống chậm còn một nửa; lá vẫn rơi, vì đó là phản hồi của cú chạm.
+- **Pha trăng thật**, với **Dial "Ngày âm lịch"** (`setup().dials`, id `ngay`):
+  - Hướng nắng S (từ hành tinh tới Mặt Trời) tính từ góc tuổi trăng φ của `lib/astro/moon.js` (0 là trăng mới, π là trăng tròn):
+    `S = −E·cos φ + A·sin φ`, với E = +Y (hướng về Trái Đất) và A = +X (bên phải của khung mặc định):
+    - trăng tròn (φ = π): S = E. Nắng rọi thẳng xuống đỉnh cây; nửa trên của hành tinh, nửa mà Trái Đất nhìn thấy, sáng trọn;
+    - trăng mới (φ = 0): S = −E. Nắng rọi từ dưới; chú Cuội ngồi trong đêm, chỉ có ánh đất;
+    - thượng huyền (φ = π/2): nắng từ bên phải; đường ranh sáng tối dựng đứng giữa hành tinh.
+
+    Phần được nắng chiếu của nửa trên là (1 − cos φ)/2, đúng bằng `illumination` của `moonPhase`. Người xem thấy tận mắt vì sao trăng
+    có pha.
+  - Dial `ngay` đi từ 1 tới 30, bước 0,25, và φ = 2π(ngày − 1)/29,53.
+  - Mặc định là tuổi trăng của `ctx.now` (`?at` hay giờ thật): `1 + moonPhase(now).fraction × 29,53`. Nhờ vậy lúc mở trang, hành
+    tinh sáng đúng như trăng ngoài trời đêm nay.
+  - Nhãn (`format`, cũng là `aria-valuetext`): "mùng 1" … "mùng 10", "ngày 11" … "ngày 14", "rằm", "ngày 16" … "ngày 30". Không có
+    ghi chú (`note`).
+  - Hệ trục khác `sunDirection` của hộp màu: hàm đó trả hướng trong view space, để vẽ một quả cầu trăng nhìn từ Trái Đất (Bức 1).
+    Bức 3 cần hướng trong world space quanh một hành tinh. Công thức chỉ một dòng nên viết trong bức (`parts/mat-troi-pha.js`), không
+    đổi hộp màu.
+- **Thơ của cả bức** (`meta.poem`, in sẵn trong HTML): *"Thằng Cuội ngồi gốc cây đa / Để trâu ăn lúa gọi cha ời ời"* (ca dao).
+  - Câu thơ hợp đúng cảnh: chú Cuội, gốc đa, con trâu.
+  - Dị bản đã biết: "Để trâu ăn lúa" và "Bỏ trâu ăn lúa". Nguồn được đối chiếu ở cuối GĐ (§19.10); Bao chốt trước khi merge, như GĐ 6.
+- **Lật tranh và Phòng tranh** (§19.7):
+  - header của Bức 3 có "← Bức 2 · Đèn Kéo Quân" và "Phòng tranh";
+  - Bức 2 có thêm "Bức 3 · Cung Quế →";
+  - mọi trang đều có link "Phòng tranh".
+
+### 19.3 Chỉ đạo nghệ thuật
+- **Không khí:** một truyện cổ tích lặng lẽ giữa vũ trụ. Hành tinh bạc xám dưới nắng, cây đa sẫm, ánh đất xanh lam nhạt trên phần
+  đêm, sao vàng li ti. Không neon, không màu bão hòa gắt.
+- **Không gắn với lễ hội** (giữ giả định ở §1): có truyền thuyết chú Cuội, nhưng không đèn lồng, không bánh, không rước.
+- **Bảng màu:** bảng sơn mài (§5) đã có gần đủ.
+  - Bụi trăng: `bacLa` (bạc lá). Thân và rễ đa, áo chú Cuội: `canhGian`. Tán đa và lá rơi: `xanhLuc`. Trâu: `denThen` sáng lên một
+    chút.
+  - Trái Đất: biển `cham`, đất `xanhLuc`, mây `nga`. Sao: `vangLaSang`. Nắng: `nga`.
+  - Bức thêm một token qua `meta.palette`: `anhDat` (xanh ánh đất, khoảng `#7E9CC8`), cho ánh đất và viền khí quyển. Số hex chốt ở lượt
+    màu.
+- **Dáng:** khối tròn, mềm, như tượng đất nặn rồi sơn mài, vì đó là thứ SDF làm đẹp nhất (hòa khối). Không cố tả từng chiếc lá trên
+  tán: tán là một khối, lá chỉ có ở màu (noise) và ở lá rơi.
+- **Poster:**
+  - chụp từ cảnh bằng `scripts/poster.js cung-que`;
+  - `poster.capture` thiết kế là `{ at: '2026-10-21T21:00', freeze: 120 }`: chừng ngày 11 âm lịch, trăng gần tròn, đường ranh sáng
+    tối cắt chéo hành tinh nên thấy được bóng mềm của cây. Chốt ở lượt màu, Bao duyệt;
+  - `poster.alt`: "Tranh sơn mài cung trăng: chú Cuội ngồi gốc cây đa trên một hành tinh nhỏ, con trâu gặm cỏ, Trái Đất treo trên
+    trời.".
+- **Lượt màu:** đo như §5 và §18.3 (độ sáng trung bình, độ bão hòa, tỉ lệ điểm tối; 1280×800 và 390×844; GPU thật). Riêng Bức 3 đo ở
+  ba pha: mùng 3 (lưỡi liềm, có ánh đất), mùng 8 (thượng huyền), rằm. Bao duyệt ảnh.
+
+### 19.4 Sáu lớp
+**Một shader cho cả thế giới.** Khối bao là MỘT mesh với MỘT material. Mọi lớp góp vào material đó lúc dựng, như các lớp của Bức 2
+nhân vào node bóng của ngọn nến (§18.4). Cách nối:
+1. Cốt dựng material bằng lớp gốc `NodeMaterial`, không dùng `MeshBasicNodeMaterial` hay `MeshStandardNodeMaterial` (Phụ lục A.81):
+   - lớp gốc có `lights = false`, nên màu ra là `colorNode`, không đèn nào của three chen vào;
+   - `normalNode` là pháp tuyến SDF (view space), nên kênh normal của MRT, cùng Kính mài và Lột lớp, thấy đúng hình SDF chứ không thấy
+     quả cầu bao;
+   - `depthNode` là độ sâu của điểm chạm (Phụ lục A.82), nên mesh khác (lá, Trái Đất) xếp lớp đúng với thế giới SDF;
+   - `emissiveNode` gán tường minh, như luật chung.
+2. Màu, pháp tuyến và độ sâu đều cần kết quả dò tia, nhưng mỗi điểm ảnh chỉ dò MỘT lần: hàm dò bọc trong `Fn(...).once()` (Phụ lục
+   A.84). Task đầu kiểm điều này trong mã shader sinh ra (§19.9).
+3. Cốt công bố `shared.cot.recipe`: các hàm JS dựng node từ "điểm chạm" `h = { p, n, v, id }` (vị trí, pháp tuyến, hướng nhìn, vật
+   nào). Lớp sau thay hay bọc hàm của lớp trước TRƯỚC khi biên dịch. Thân `Fn` chạy lúc biên dịch, tức sau khi mọi lớp đã dựng, nên
+   nó thấy đủ các hàm:
+   - `albedo(h)`: màu của vật (Cốt: đất sét; Mặt trời: màu thật);
+   - `sun(h)`: nắng (Mặt trời viết); `visibility(h)`: phần nắng không bị che (Bóng mềm nhân thêm);
+   - `ambient(h)`: ánh sáng không đến từ hướng nắng (Ánh đất cộng thêm); `occlusion(h)`: AO (Bóng mềm nhân thêm).
+
+   Màu cuối = `mix(đất sét dưới đèn xưởng, albedo × sun × visibility, w2) + albedo × ambient × occlusion`. Mỗi phần tự trộn theo trọng
+   số của lớp sở hữu nó, nên mọi trọng số bằng 0 thì về đất sét (luật 1 của §0).
+4. Lá rơi (lớp 5) là mesh riêng, nhưng tô bằng cùng `recipe`, với điểm chạm là điểm trên lá. Vì vậy lá có bóng cây đè lên (dò tia
+   bóng từ chỗ của lá) và có ánh đất như mọi vật.
+
+Cảnh không có đèn nào của three, và không bật `renderer.shadowMap` (test giữ).
+
+#### Lớp 1 · Cốt (`layers/l1-cot.js`)
+- **Thấy gì:** hành tinh, hố, cây đa, rễ, chú Cuội, con trâu. Tất cả là đất sét dưới "đèn xưởng" viết trong shader: một hướng sáng cố
+  định cộng một phần sáng đều, như `HemisphereLight` của hai bức trước. Nền đen.
+- **Kỹ thuật:**
+  - **Hình SDF** (`parts/cot-sdf.js`):
+    - các hàm khoảng cách cơ bản: cầu, nón tròn, viên thuốc, bầu dục, xuyến;
+    - phép hòa mềm `smin` (Inigo Quilez, dạng đa thức), phép chia góc cho rễ phụ;
+    - `scene(p)` trả khoảng cách và id của vật gần nhất (đất, cây, Cuội, trâu). Trước khi tính hình đắt (tán, rễ), nó tính khoảng
+      cách tới một hình bao rẻ; còn xa thì trả luôn khoảng cách đó.
+  - **Dò tia** (`parts/cot-do-tia.js`):
+    - tia đi từ `cameraPosition` qua điểm trên mặt khối bao; giao giải tích với quả cầu bao cho đoạn [t0; t1];
+    - sphere tracing từ t0: mỗi bước tiến đúng bằng khoảng cách SDF, nhân 0,9 cho an toàn, vì hố và bump làm SDF không còn chính xác;
+    - chạm khi khoảng cách < ε·t, với ε theo cỡ điểm ảnh: càng xa càng cho phép sai nhiều hơn;
+    - quá `steps` bước hay đi quá t1 thì `Discard()`.
+  - Khối bao vẽ mặt TRONG (`BackSide`), nên camera ở trong khối vẫn có điểm ảnh để dò; tia bắt đầu từ max(t0; 0).
+  - Pháp tuyến là gradient của SDF, lấy theo bốn điểm hình tứ diện (bốn lần gọi `scene`), rồi đổi sang view space cho `normalNode`.
+  - Độ sâu: `viewZToPerspectiveDepth(viewZ của điểm chạm, cameraNear, cameraFar)` (Phụ lục A.82).
+  - **Cây bay:** hình cây (thân, cành, tán, rễ phụ) và chú Cuội dời lên theo uniform `treeLift` (§19.5). Chân rễ hòa với đất bằng
+    `smin` với độ hòa `smooth`: cây lên thấp hơn độ hòa thì đất kéo dài theo, lên cao hơn thì đứt.
+- **Núm:**
+  - `steps` (uniform; số bước dò tối đa, 16 tới `budget.steps`): ít bước thì mép hình, và chỗ tia đi sát bề mặt, bị thủng;
+  - `smooth` (uniform; 0–0,15, mặc định 0,06): độ hòa khối giữa rễ và đất, giữa các khối của tán.
+- **Phá** (cả ba là uniform, không biên dịch lại):
+  - *"Tô theo số bước"* (`soBuoc`): tô mỗi điểm ảnh theo số bước nó đã dò, từ chàm tới vàng lá. Mép hình, nơi tia đi sát bề mặt,
+    sáng rực: thấy chỗ shader làm việc nhiều nhất.
+  - *"Hiện khối bao"* (`khoiBao`): điểm ảnh nào có tia trượt thì tô mờ thay cho `Discard()`, nên hiện ra quả cầu chứa cả thế giới.
+  - *"Hòa khối cứng"* (`hoaCung`): `smin` thành `min`, lộ đường nối giữa rễ và đất, giữa các khối của tán.
+- **Số đo:** `bay` ("Cây bay lên", m), `buoc` ("Bước dò tối đa"), `hinh` ("Số hình SDF": số hình cơ bản trong `scene`).
+- **Nấc** `buoc`: hạ trần số bước dò còn ba phần tư (uniform; hạ trần, không ghi vào núm `steps`).
+- **Công bố** `shared.cot = { mesh, material, scene, recipe, bounds, lift, smooth, depthOff }`:
+  - `scene`: hàm TSL khoảng cách của cả thế giới; Bóng mềm và Lá đa dò tia lại bằng nó;
+  - `bounds`: số của khối bao và của hình bầu dục bao tán (JS, cho cú chạm);
+  - `depthOff`: uniform của thí nghiệm "Không ghi độ sâu" (lớp 5).
+
+#### Lớp 2 · Mặt trời (`layers/l2-mat-troi.js`)
+- **Thấy gì:** nắng chiếu theo pha trăng, và màu thật hiện ra: bụi trăng bạc xám, thân đa nâu, tán xanh sẫm, áo nâu của chú Cuội, trâu
+  đen. Phía không có nắng tối hẳn, vì chưa có ánh đất.
+- **Kỹ thuật** (`parts/mat-troi-pha.js`, `parts/mat-troi-brdf.js`):
+  - Hướng nắng `S` theo Dial `ngay` (§19.2), tính trong shader từ uniform của Dial.
+  - **Bụi trăng không phải mặt Lambert.** Mặt đất của hành tinh dùng mô hình Lommel–Seeliger cộng phần "bừng" khi nắng ở sau lưng người
+    nhìn (opposition surge, dạng gọn của mô hình Hapke):
+    `f = 2·μ0 / (μ0 + μ) · (1 + B0·exp(−g / w))`, với μ0 là cos góc tới, μ là cos góc nhìn, g là góc giữa hướng nắng và hướng nhìn.
+    - Hệ số 2 làm giữa đĩa sáng bằng mặt Lambert.
+    - Bụi trăng không tối dần ra mép như mặt Lambert, nên trăng rằm trông như một đĩa phẳng sáng đều.
+    - Khi nắng ở sau lưng người nhìn (g gần 0), bụi bừng sáng hơn hẳn.
+  - Cây, Cuội, trâu dùng Lambert.
+- **Núm:** `intensity` (0–3, mặc định 1,6), `surge` (độ bừng B0, 0–1, mặc định 0,5).
+- **Phá:** *"Bề mặt Lambert"* (`lambert`): bụi trăng thành mặt Lambert, nên trăng rằm tối dần ra mép như một quả bóng thạch cao.
+- **Số đo:** `tuoi` ("Tuổi trăng", ngày), `sang` ("Phần sáng nhìn từ Trái Đất", %), `goc` ("Góc pha", độ).
+
+#### Lớp 3 · Bóng mềm (`layers/l3-bong-mem.js`)
+- **Thấy gì:** cây đa đổ bóng lên mặt đất; chú Cuội và con trâu có bóng. Bóng có nửa tối mềm, càng xa vật che càng mềm. Khe rễ, đáy
+  hố, chỗ Cuội tựa gốc thì tối hơn (AO).
+- **Kỹ thuật** (`parts/bong-mem-tia.js`):
+  - **Bóng mềm từ trường khoảng cách:** từ điểm chạm, dò tia về phía `S` bằng chính `scene`. Ở mỗi bước, khoảng cách h tới vật gần
+    nhất cho biết tia đi sát vật tới đâu: `bóng = min(bóng, k·h/t)`. Tia đi sát mép vật mà không chạm thì rơi vào nửa tối; k càng
+    nhỏ thì nửa tối càng rộng. Không cần shadow map, không cần đèn: chỉ thêm một vòng dò.
+  - **AO từ trường khoảng cách:** lấy năm điểm cách đều dọc pháp tuyến. Điểm nào có khoảng cách nhỏ hơn quãng đã đi thì quanh đó có
+    vật che; cộng dồn lại thành độ che.
+  - Bọc `recipe.visibility` (nhân `mix(1, bóng, w3)`) và `recipe.occlusion` (nhân `mix(1, AO, w3)`).
+- **Núm:** `softness` (k, 2–32, mặc định 8), `ao` (độ đậm AO, 0–1, mặc định 0,8).
+- **Phá:** *"Bóng cứng"* (`bongCung`): k = 128, nửa tối gần như biến mất. Đem so với bóng shadow map của Bức 2.
+- **Số đo:** `buocBong` ("Bước dò bóng"), `mauAo` ("Số mẫu AO").
+- **Nấc** `chi-tiet`: số bước dò bóng và số mẫu AO giảm một nửa (hạ trần, không ghi vào núm).
+
+#### Lớp 4 · Ánh đất (`layers/l4-anh-dat.js`)
+- **Thấy gì:** Trái Đất treo trên trời và bầu trời sao. Phần đêm của hành tinh không còn đen hẳn mà có ánh xanh lam nhạt.
+- **Kỹ thuật** (`parts/anh-dat-troi.js`):
+  - **Trái Đất** là một mesh cầu, cũng dùng `NodeMaterial` như khối bao.
+    - Màu biển, đất, mây sinh bằng noise theo hướng trên mặt cầu, tô bằng cùng hướng nắng `S`. Vì vậy pha của Trái Đất nhìn từ trăng
+      ngược với pha trăng nhìn từ Trái Đất: trăng mới thì Trái Đất tròn.
+    - Viền khí quyển (fresnel) màu `anhDat`, ghi vào emissive, nên Phủ bóng làm nó tỏa nhẹ.
+  - **Ánh đất** (earthshine): Trái Đất phản chiếu nắng xuống hành tinh, từ hướng +Y.
+    - Cường độ theo phần sáng của Trái Đất nhìn từ trăng, (1 + cos φ)/2, nên mạnh nhất lúc trăng mới.
+    - Cộng vào `recipe.ambient`, nhân `w4`.
+    - Đây chính là ánh "tro" người ta thấy trên phần tối của trăng lưỡi liềm.
+  - **Bầu trời:** một mesh cầu lớn, vẽ mặt trong, không ghi độ sâu, vẽ trước mọi thứ (`renderOrder`). Sao sinh bằng hàm băm theo ô trên
+    hướng nhìn, nhấp nháy theo `ctx.u.time` (tất định). Sao ghi vào emissive, nhân `w4`.
+- **Núm:** `earthshine` (0–1, mặc định 0,25), `stars` (mật độ sao, 0–1, mặc định 0,6).
+- **Phá:** *"Không có Trái Đất"* (`khongTraiDat`): giấu Trái Đất và tắt ánh đất (uniform). Phần đêm đen kịt, nên thấy ngay ánh đất đã
+  góp gì.
+- **Số đo:** `traiDat` ("Trái Đất sáng, nhìn từ trăng", %).
+- **Vật:** `trai-dat`, `bau-troi`.
+
+#### Lớp 5 · Lá đa (`layers/l5-la-da.js`)
+- **Thấy gì:** chạm thì lá rơi (§19.2). Lá khuất sau thân cây thì bị che, lá trước thân thì nằm trên.
+- **Kỹ thuật:**
+  - **Đường rơi** (`parts/la-da-roi.js`, hàm thuần, không import three) có dạng đóng:
+    - `p(t) = p0 + v0·τ + ½·g·τ²`, với τ = t − lúc rơi, và g hướng về tâm hành tinh, lấy tại điểm xuất phát;
+    - lúc chạm đất là nghiệm của một phương trình bậc hai theo phương thẳng đứng tại chỗ đó;
+    - sau đó lá nằm yên, rồi nhỏ dần trong 1 giây và biến mất;
+    - lá quay đều quanh một trục ngẫu nhiên, vì không có không khí để hãm.
+  - **Mesh** là một `InstancedMesh`, cấp theo trần `budget.leaves` MỘT lần:
+    - Mỗi lá có thuộc tính riêng (lúc rơi, điểm xuất phát, vận tốc đầu, trục quay, hạt giống). Thuộc tính chỉ ghi lúc chạm (đặt
+      `needsUpdate`, không dùng `DynamicDrawUsage`).
+    - `positionNode` tính vị trí và độ xoay của lá theo thời gian trên GPU, xoay cả `normalLocal`: không có ma trận nào phải ghi lại
+      mỗi khung.
+    - Ô trống có lúc rơi rất xa trong quá khứ, nên lá có cỡ 0 và nằm ở tâm hành tinh.
+    - `frustumCulled = false`, vì vị trí thật chỉ có trong shader.
+  - **Cú chạm** (JS): giao tia của cử chỉ với hình bầu dục bao tán, đã dời theo `treeLift`. Không giao thì lấy điểm trên hình bầu dục
+    gần tia nhất. Các lá xuất phát quanh điểm đó, với hạt giống từ `lib/random.js` theo số lần chạm, nên tất định.
+  - **Xếp lớp nhờ độ sâu:** lá là mesh thường, nên phép thử độ sâu của GPU so lá với độ sâu mà khối bao đã ghi (lớp 1). Không có độ sâu
+    đó thì lá luôn nằm trên mọi thứ.
+  - Màu lá theo `recipe` của khối bao (lớp 1–4): xanh sẫm, có nắng, có bóng cây (dò tia bóng ngắn từ chỗ của lá), có ánh đất.
+  - Lá to dần theo `w5`, và bằng 0 thì không thấy: lớp này chỉ thêm vật, không đổi màu vật khác.
+- **Núm:**
+  - `burst` (js; 1–8, mặc định 4): số lá mỗi lần chạm;
+  - `gravity` (select: `trang` 1,62 m/s² hay `traiDat` 9,81 m/s²): đổi sang trọng lực Trái Đất thì lá rơi nhanh gấp chừng 2,5 lần
+    (√6).
+- **Phá:** *"Không ghi độ sâu"* (`doSau`): khối bao ghi độ sâu xa nhất (uniform `shared.cot.depthOff`), nên lá sau thân cây vẫn vẽ đè
+  lên thân. Thấy vì sao hai lối vẽ phải dùng chung một bộ đệm độ sâu.
+- **Số đo:** `la` ("Lá đang rơi"), `roi` ("Thời gian rơi từ tán", giây, theo núm `gravity`).
+- **Vật:** `la-roi`.
+
+#### Lớp 6 · Phủ bóng (dùng chung)
+Như hai bức trước. Thứ có emissive là sao và viền khí quyển của Trái Đất. Bụi trăng không tự phát sáng: chỗ sáng nhất là nắng thật.
+
+### 19.5 Chuyển động tất định (`shared.js` của bức)
+- **Cây bay** (`parts/cot-cay-bay.js`, hàm thuần) có dạng đóng theo các mốc giữ và thả, như trống của Bức 2:
+  - đang giữ (từ t0, độ cao L0): `lift = L0 + (H − L0)·(1 − e^(−(t − t0)/τ))`, với H = 0,45 và τ = 0,5 s;
+  - thả ở t1 (độ cao L1, vận tốc v1 lấy từ đoạn trước): rơi tự do `L1 + v1·Δ − ½·g·Δ²` với g của trăng, tới khi chạm 0; nảy một lần
+    với vận tốc còn 0,3 lần; rồi đứng yên;
+  - mỗi mốc lưu (t, độ cao, vận tốc) tính từ đoạn trước, nên độ cao và vận tốc liên tục. Gọi `lift(t)` bao nhiêu lần, theo thứ tự nào,
+    cũng ra cùng một số;
+  - giảm chuyển động: τ và thời gian rơi gấp đôi.
+- **Lá:** §19.4 lớp 5. Mốc rơi là `ctx.u.time` lúc chạm.
+- **Trái Đất** tự quay một vòng mỗi 120 giây theo `ctx.u.time`; sao nhấp nháy theo `ctx.u.time`.
+- **Đơn vị:** một đơn vị cảnh coi như 10 m. Vì vậy g của trăng là 0,162 đơn vị/s² (1,62 m/s²), của Trái Đất là 0,981. Cây đa cao chừng
+  8 m.
+
+### 19.6 Xưởng và hợp đồng
+- **Hợp đồng không đổi, logic của xưởng không đổi.** Mọi thứ Bức 3 cần đã có:
+  - `Painting.setup` với `dials` và `onGesture`;
+  - các cử chỉ `'tap'` và `'hold-*'`;
+  - thí nghiệm, số đo, nấc, `quality`.
+
+  Raymarching là chuyện giữa bức và three (`NodeMaterial`, `depthNode`, `normalNode`); xưởng không cần biết. Đây là phép thử của §0 lần
+  thứ hai: một bức vẽ theo lối khác hẳn vẫn vào được xưởng mà không đổi một dòng logic.
+  - Chỉ thêm chữ: `ui/strings.vi.js` có thêm khóa `series` (nhãn của dải link lật tranh) và `gallery` (chữ của Phòng tranh), §19.7.
+  - `CameraSpec.azimuth` nhận `±Infinity` (Phụ lục A.86); JSDoc ghi thêm điều này.
+- **Luật hai lần:**
+  - Bức 3 dùng của hộp màu `lib/astro/moon.js` (pha trăng) và `lib/tsl/noise.js` (biển, đất, mây của Trái Đất; bump của mặt đất), cùng
+    lớp dùng chung Phủ bóng.
+  - Không rút gì lên `lib/`: SDF, dò tia, bóng mềm ở lại trong bức, tới khi một bức khác cần (§16).
+- **Hàng rào từ vựng** (`meta.fence`): `banyan`, `buffalo`, `earthshine`, `regolith`, `chú cuội`, `cuội`, `cây đa`, `trâu`, `ánh đất`,
+  `bụi trăng`.
+  - Không rào `sdf`, `raymarch`, `march`: đó là tên kỹ thuật, bức sau có thể cần rút chúng lên hộp màu.
+  - Test tự kiểm phải bắt được ít nhất một từ của Bức 3 và không bắt nhầm.
+- **Tên vật** (Từng sợi): `khoi-bao` (lớp 1), `trai-dat`, `bau-troi` (lớp 4), `la-roi` (lớp 5). Cả cảnh chỉ có bốn lần vẽ, và Từng sợi
+  cho thấy điều đó: một quả cầu chứa cả thế giới.
+- **Trang** `tranh/cung-que/index.html` do trình sinh trang viết ra (§19.7), không viết tay.
+
+### 19.7 Phòng tranh và trình sinh trang
+**Trình sinh trang** (`scripts/pages.js`, lệnh `npm run pages`):
+- Trang của các bức chỉ khác nhau ở phần chữ và đường dẫn: tên, mô tả, thẻ og, poster, số bức, link lật tranh, thơ, dòng import. Trình
+  sinh viết mọi trang từ MỘT khuôn, đọc registry, `meta` và `ui/strings.vi.js`.
+- Trang sinh ra được **commit vào repo** như trước, không sinh lúc build:
+  - trang vẫn là file HTML thật, đọc được, chạy được ở tầng tĩnh; Vite vẫn lấy `input` từ registry như cũ;
+  - không có bước build nào ghi vào thư mục nguồn;
+  - test "trang trên đĩa khớp với trang sinh ra" báo lỗi tiếng Việt khi lệch, kèm lệnh `npm run pages`. Các test HTML cũ giữ nguyên vai
+    trò (§8.7).
+
+  §16 từng ghi "plugin Vite"; GĐ 7 chọn script cộng test vì các lý do trên.
+- Lần đầu, trình sinh phải ra đúng từng byte hai trang hiện có (một test giữ), rồi mới đổi khuôn: thêm link Phòng tranh, thêm Bức 3.
+- Thêm một bức về sau: thêm dòng registry, chạy `npm run pages`. Link "bức sau" của bức kề trước tự có (§15 a).
+
+**Dải link** dưới `<h1>` của mỗi trang (`<nav class="series" aria-label="Các bức tranh">`), theo thứ tự:
+1. `← Bức {n−1} · {tên}` (`rel="prev"`);
+2. `Phòng tranh`;
+3. `Bức {n+1} · {tên} →` (`rel="next"`).
+
+Bức đầu không có link trước, bức cuối không có link sau. Đường dẫn tương đối như GĐ 6:
+- từ gốc, Phòng tranh là `tranh/`;
+- từ `tranh/<slug>/`, Phòng tranh là `../`, bức kề là `../<slug>/`, Bức 1 là `../../`.
+
+**Phòng tranh** (`tranh/index.html`, URL `…/son-mai-anh-sang/tranh/`):
+- Trang tĩnh, sinh từ registry, không có script nào (không three, không boot), nên chạy trên mọi trình duyệt, mọi tầng.
+- Nội dung:
+  - dòng nhỏ "Sơn Mài Ánh Sáng", `<h1>` "Phòng tranh", một câu giới thiệu kỹ thuật;
+  - một danh sách có thứ tự (`<ol>`) các bức theo `meta.no`. Mỗi mục là một link gồm poster, "Bức N", tên và `tagline`. Poster có
+    `loading="lazy"`, `width`, `height`, và `alt=""` vì chữ của link đã nói đủ.
+- Kiểu: `src/styles/gallery.css`, dùng `tokens.css` và font của trang tranh; một cột trên điện thoại, nhiều cột trên máy tính.
+- Thẻ og: `og:title` "Phòng tranh · Sơn Mài Ánh Sáng", `og:url` = `SITE + 'tranh/'`, `og:image` lấy của Bức 1.
+- `vite.config.js` thêm trang này vào `input` (khóa `phong-tranh`).
+- URL gốc vẫn là Bức 1.
+
+### 19.8 Chất lượng và ngân sách
+**Bảng của Bức 3** (`paintings/cung-que/quality.js`):
+
+| Mức | DPR tối đa | Bước dò (`steps`) | Bước dò bóng | Mẫu AO | Lá tối đa | Bloom (`resolutionScale`) |
+|---|---|---|---|---|---|---|
+| **cao** | 2 | 128 | 32 | 5 | 64 | 0.5 |
+| **vừa** | 1.5 | 96 | 24 | 4 | 48 | 0.25 |
+| **thấp** | 1.25 | 64 | 16 | 3 | 32 | 0.25 |
+
+- Khóa: `dpr`, `steps`, `shadowSteps`, `ao`, `leaves`, `bloom`.
+- Thang: `['dpr', 'bong-mem.chi-tiet', 'cot.buoc', 'phu-bong.bloom']`. Nấc `cot.buoc` hạ trần số bước dò còn ba phần tư. Số bước là
+  uniform (vòng lặp có cận là uniform, Phụ lục A.83), nên hạ nấc không biên dịch lại.
+- Trần núm theo mức: `steps` tối đa `budget.steps`; `burst` tối đa 8 ở mọi mức (số lá đã có trần `leaves`).
+- **Draw call:** khối bao, Trái Đất, bầu trời, lá là 4 vật, nên mức cao có `4 + 12 (bloom) + 1 (FXAA) + 1 (quad) = 18`. E2e giữ ≤ 30.
+- **Chi phí mỗi điểm ảnh** là rủi ro chính của bức:
+  - chỉ điểm ảnh trong khối bao mới dò, và khối bao chiếm chừng một nửa khung mặc định;
+  - mỗi điểm ảnh tốn: tới `steps` lần gọi `scene` (mỗi lần vài chục phép tính, có hình bao để bỏ qua phần đắt), 4 lần cho pháp tuyến,
+    tới `shadowSteps` lần cho bóng, `ao` lần cho AO;
+  - mục tiêu như §2: 60 khung/giây trên laptop (Mac M2, 1280×800, DPR 2, mức cao), 45 trên điện thoại tầm trung (mức vừa và thấp);
+  - đo ở task đầu với một hình SDF đại diện (§19.10), rồi đo lại khi đủ sáu lớp.
+- **JS:** chunk của bức cộng chunk content; chunk `three` dùng chung. Số đo ghi vào README.
+
+### 19.9 Kiểm thử
+**Tự chạy cho Bức 3**, vì các test này lặp qua registry:
+- hợp đồng, tên vật, HTML;
+- e2e chung: tĩnh, WebGL2, WebGPU, mài về Cốt, công cụ học, `?poster`, quầng trăng;
+- a11y.
+
+**Unit mới** (`tests/paintings/cung-que/`):
+- `mat-troi-pha`:
+  - ngày 1 cho S = −E, ngày ≈ 15,77 cho S = +E, ngày ≈ 8,38 cho S = A;
+  - phần sáng bằng `illumination`;
+  - nhãn của Dial ("mùng 1", "rằm", "ngày 20"); mặc định theo `?at`.
+- `cot-cay-bay`:
+  - giữ thì lên gần H trong 1,5 s; thả thì về 0 và nảy một lần;
+  - độ cao và vận tốc liên tục ở mỗi mốc; giữ, thả nhiều lần;
+  - gọi theo thứ tự nào cũng ra cùng số;
+  - giảm chuyển động thì chậm gấp đôi.
+- `la-da-roi`:
+  - rơi từ tán mất chừng 2,7 s với g của trăng, chừng 1,1 s với g của Trái Đất;
+  - chạm đất đúng chỗ; nằm yên rồi biến mất;
+  - vòng ô theo trần; tất định theo số lần chạm;
+  - tia trượt tán thì điểm xuất phát là điểm gần tia nhất.
+- `cot-the-gioi`: khối bao chứa hình bao của mọi vật, kể cả khi cây bay cao nhất.
+- **Từng lớp**, dựng cả bức bằng `buildPainting`:
+  - khối bao là `NodeMaterial` gốc, có `depthNode`, `normalNode`, `emissiveNode`;
+  - cảnh không có đèn nào của three, `shadowMap` tắt;
+  - thí nghiệm và số đo đủ, có nhãn; nấc chỉ có khi có tác dụng.
+
+  "Mọi trọng số bằng 0 thì về đất sét" kiểm ở e2e (mài về Cốt), vì TSL chưa có bộ tính trên CPU (§16).
+- **Cử chỉ:** chạm sinh `burst` lá; giữ và thả gọi đúng mốc của cây bay; `'swipe'`, `'double-tap'` không làm gì riêng.
+- **Shader** (`tests/helpers/nodes.js#compileMaterial`, WGSL và GLSL):
+  - khối bao, Trái Đất, bầu trời, lá biên dịch được ở cả hai backend;
+  - **mã fragment của khối bao có đúng một vòng dò tia chính** (đếm tên biến của vòng dò), dù màu, pháp tuyến và độ sâu cùng dùng nó.
+- **Chữ của Sổ tay** và **chất lượng**: như Bức 2.
+
+**Trình sinh trang, Phòng tranh, CI:**
+- `tests/paintings/html.test.js`:
+  - trang trên đĩa khớp với trang sinh ra;
+  - dải link đúng thứ tự: trước, Phòng tranh, sau;
+  - Phòng tranh liệt kê đủ các bức theo `meta.no`, link và poster trỏ đúng, không có `<script>`.
+- `tests/rules/e2e.test.js`:
+  - mọi `test.describe` trong `e2e/<slug>.spec.js` bắt đầu bằng `` `${meta.title} · ` ``;
+  - nhóm e2e (`scripts/e2e-groups.js`) gồm đúng các bức của registry, cộng nhóm `chung`.
+
+**E2e riêng** (`e2e/cung-que.spec.js`; WebGL2 trên SwiftShader là cổng chặn, WebGPU không chặn):
+- Dial: ngày 15 thì vùng tán đa sáng hơn hẳn ngày 1; ngày 8 thì nửa phải của hành tinh sáng hơn nửa trái.
+- Mài: mọi lớp về 0 thì vùng hành tinh xám đều (độ bão hòa thấp). Cùng một khung `?freeze` thì giống hệt nhau.
+- Ánh đất: ở ngày 1, phần đêm của hành tinh có ánh khi Ánh đất bằng 1, đen kịt khi bằng 0. Vùng Trái Đất có màu lam.
+- Bóng mềm: ở ngày 10 (nắng xiên từ bên phải, chừng 20° trên chân trời ở gốc cây), vùng bóng cây trên mặt đất tối hơn rõ khi Bóng
+  mềm bằng 1 so với 0. Trước thượng huyền (ngày < 8,4), mặt trời còn dưới chân trời ở đỉnh hành tinh, nên cây chưa đổ bóng.
+- Độ sâu và pháp tuyến của SDF: tại một điểm nằm trong khối bao nhưng ngoài hình SDF, view Depth và view Normal (Lột lớp) là nền, không
+  phải mặt quả cầu bao.
+- Chạm vào tán thì số đo `la` > 0. Giữ thì số đo `bay` > 0,3 sau 2 giây; thả thì về 0 trong 4 giây.
+- Draw call ≤ 30 ở mức cao; `?level=thap` chạy được; bật từng thí nghiệm không có lỗi console.
+
+**E2e Phòng tranh** (`e2e/phong-tranh.spec.js`, ở project tĩnh, không cần GPU):
+- đủ ba mục, đúng thứ tự;
+- bấm từng mục thì tới đúng trang;
+- axe không có lỗi serious hay critical.
+
+`e2e/lat-tranh.spec.js` thêm Bức 2 ⇄ Bức 3, và link "Phòng tranh" ở mọi trang.
+
+**CI: chia e2e theo bức** (§13):
+- **Lý do:**
+  - `--shard` chia theo SỐ test và theo thứ tự file, nên phần 1 nhận mọi spec riêng của các bức, là phần nặng nhất.
+  - Sau GĐ 6, phần 1 của e2e chặn mất 26 phút, phần 1 của e2e WebGPU có lần mất 32 phút, trên trần 40. Thêm Bức 3 là quá trần.
+- **Cách mới:** mỗi bức một job, cộng một job `chung` cho các test không thuộc bức nào (lật tranh, Phòng tranh).
+  - Job `nhom-e2e` chạy `node scripts/e2e-groups.js`. Script này đọc registry rồi in ra ma trận `[{ id, grep }, …, { id: 'chung',
+    grepInvert }]`; tên bức đã được thoát ký tự đặc biệt của regex.
+  - `e2e` và `e2e-webgpu` lấy `matrix.group` từ đó (`fromJSON`), rồi chạy `--grep` (hay `--grep-invert`) theo nhóm, kèm
+    `--pass-with-no-tests`.
+  - Giá trị của ma trận đi qua `env`, không chèn thẳng vào lệnh shell.
+  - Gom được vì mọi test của một bức đều nằm trong `describe` bắt đầu bằng `"{tên bức} · "`: e2e chung, a11y và spec riêng đều đã như
+    vậy. Test luật giữ quy ước này.
+  - Không dùng `PWTEST_SHARD_WEIGHTS`, vì đó là biến nội bộ của Playwright (Phụ lục A.85).
+- **Ước lượng** từ số đo GĐ 6: mỗi job một bức chừng 15–20 phút, cộng 3 phút cài đặt; job `chung` vài phút. Thêm bức thì thêm job, tự
+  động, không sửa workflow. Thời gian thật đo ở task CI.
+- `deploy` cần `build` và mọi job của `e2e`.
+
+**Kiểm tay** (thêm vào §12):
+- Bức 3 trên điện thoại thật: mượt ở mức vừa và thấp; chạm, giữ bằng ngón tay;
+- VoiceOver đọc Dial "Ngày âm lịch" và dải link (có Phòng tranh);
+- Phòng tranh trên Safari của điện thoại;
+- Bao duyệt thơ và poster.
+
+### 19.10 Cách làm GĐ 7
+Như GĐ 6 (§18.9): làm thẳng trên nhánh `gd7-cung-que`, vừa làm vừa sửa.
+1. **Plan gọn.** Mỗi task ghi mục tiêu, file, test viết trước, cách kiểm bằng chạy thật. Code đầy đủ chỉ có ở chỗ khó: dò tia,
+   `depthNode`, pháp tuyến, bóng mềm, BRDF bụi trăng, đường rơi, trình sinh trang, ma trận CI. Bao xem plan và chọn cách thực thi.
+2. **Task rủi ro nhất làm trước:** khối bao với một SDF đại diện (hành tinh có hố, một cây có tán và rễ), chạy thật trên WebGPU (GPU
+   thật) và WebGL2 (SwiftShader).
+
+   **Luật dừng:** một trong bốn điều sau không đạt thì dừng, báo Bao, và chọn đường lùi (§19.11):
+   - `depthNode` đúng ở cả hai backend: một mesh thử bị che đúng sau hình SDF;
+   - kênh normal thấy pháp tuyến SDF (`normalNode` qua `normalView`, Phụ lục A.81);
+   - mã fragment có đúng một vòng dò chính (`Fn().once()`, Phụ lục A.84);
+   - trên Mac M2, 1280×800, DPR 2, mức cao: ≥ 60 khung/giây.
+3. Đủ hình (cây, rễ, Cuội, trâu), camera, lớp Mặt trời với Dial pha trăng.
+4. **Điểm duyệt ảnh giữa chừng** (một trang ảnh riêng tư): hình, bố cục, ba pha. Bao duyệt trước khi làm các lớp còn lại. Hình là số
+   trong `parts/cot-the-gioi.js` và `parts/cot-sdf.js`, nên sửa rẻ.
+5. Bóng mềm, Ánh đất, Lá đa và cây bay; trình sinh trang và Phòng tranh; CI theo bức; chữ của Sổ tay và sơ đồ; lượt màu; poster. Task
+   nào cũng có test viết trước và chạy thật. Chỗ nào làm khác spec thì sửa spec trong cùng task.
+6. Review cuối cả nhánh, đối chiếu thơ, rồi hỏi Bao trước khi push, và hỏi lại trước khi merge (merge là deploy).
+
+### 19.11 Rủi ro riêng
+- **Chi phí mỗi điểm ảnh:** dò tia, bóng và AO chạy trên chừng nửa màn hình.
+  - Cách tránh: hình bao rẻ trước hình đắt; bump chỉ có lúc tô; ε theo cỡ điểm ảnh; số bước là uniform nên hạ được bằng nấc; đo ở task
+    đầu.
+  - Nếu vẫn thiếu: chia khối bao làm hai (hành tinh, cây) để bớt điểm ảnh có tia trượt; giảm `steps` mặc định. Dò bóng ở độ phân giải
+    thấp hơn là việc để sau (§16).
+- **`depthNode` hay `normalNode` không chạy như đọc mã, ở một backend nào đó.**
+  - Đường lùi cho độ sâu: lá tự kiểm che khuất bằng cách dò tia từ camera tới lá qua `scene` (lá nhỏ nên rẻ). Hoặc để lá luôn nằm trên,
+    và ghi vào phần giới hạn đã biết.
+  - Đường lùi cho pháp tuyến: bỏ `normalNode`; view Normal của Bức 3 thấy quả cầu bao, ghi vào phần giới hạn đã biết.
+- **Vòng dò chạy nhiều lần** vì có ba chỗ dùng: màu, pháp tuyến, độ sâu. `Fn().once()` có thể vẫn sinh lại vòng dò trong lượt dựng
+  riêng của pháp tuyến (`subBuild` 'NORMAL'). Đường lùi: dò một lần trong `colorNode`, giữ kết quả bằng `.toVar()` cho `normalNode` và
+  `depthNode` đọc lại. Nếu không được thì bỏ `normalNode` như trên.
+- **Hình SDF trông thô:** khối tròn dễ thành đồ chơi nhựa. Cách tránh: dáng đất nặn có chủ ý, màu sơn mài; Bao duyệt ở điểm duyệt ảnh.
+- **Thủng hình khi tia đi sát mặt** (rễ phụ mảnh, mép tán). Cách tránh: bước nhân 0,9; ε theo khoảng cách; rễ phụ đủ dày so với cỡ
+  điểm ảnh ở khoảng cách gần nhất. Thí nghiệm "Tô theo số bước" giúp thấy chỗ hỏng.
+- **Trình sinh trang làm lệch trang cũ.** Cách tránh: test từng byte với hai trang hiện có trước khi đổi khuôn.
+- **CI:** chia theo bức như §19.9; đo ở task CI.
+
 ## Phụ lục A: sự thật API đã kiểm trên three@0.186.1
 
 Các mục dưới đây đã được kiểm bằng ba cách:
@@ -3492,3 +3997,30 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - (GĐ 6, chạy thật) Thí nghiệm "Shadow map thật": trống cắt đúng hình trong lượt vẽ bóng trên cả WebGPU và WebGL2 (WebGL2 lộ
       răng cưa rõ hơn). Camera bóng của `PointLight` mặc định thấy từ 0,5 m: trống cách lửa 9 cm, nên phải hạ `shadow.camera.near`
       (0,02), không thì cả chiếc đèn nằm ngoài cube map.
+81. **`NodeMaterial` gốc cho một hình tự dò tia** (đọc mã nguồn r186: `materials/nodes/NodeMaterial.js`, `MeshBasicNodeMaterial.js`,
+    `nodes/accessors/Normal.js`; GĐ 7 chạy thật ở task đầu):
+    - Lớp gốc có `lights = false`, nên `setupOutgoingLight()` trả `diffuseColor.rgb` (tức `colorNode`): màu ra không qua đèn nào.
+      `emissiveNode` vẫn được cộng vào, và được ghi vào kênh emissive của MRT.
+    - Ở fragment, `normalView` là `builder.context.setupNormal()`, và lớp gốc trả `normalNode` (nếu có). Vì vậy kênh normal của MRT
+      (`packNormalToRGB(normalView)`, `engine/gpu/pipeline.js`) mang đúng pháp tuyến mà material đưa vào.
+    - `MeshBasicNodeMaterial.setupNormal()` luôn trả `normalViewGeometry` và bỏ qua `normalNode`, nên không dùng được cho hình tự dò tia.
+    - Lớp gốc có `fog = true` mặc định. Bức 3 không có sương, nhưng vẫn đặt `fog = false` cho rõ.
+82. **Ghi độ sâu từ fragment** (`NodeMaterial.setupDepth`, `nodes/display/ViewportDepthNode.js`):
+    - Có `depthNode` thì three gán `depth.assign(depthNode)`: fragment ghi độ sâu của chính nó (WGSL `@builtin(frag_depth)`, GLSL
+      `gl_FragDepth`).
+    - Renderer của xưởng không bật `logarithmicDepthBuffer` hay `reversedDepthBuffer` (`engine/gpu/stage.js`). Khi đó độ sâu của phần
+      cứng là `viewZToPerspectiveDepth(viewZ, near, far) = (near + viewZ)·far / ((far − near)·viewZ)`, nằm trong [0; 1], giống nhau ở
+      WebGPU và WebGL2: với ma trận chiếu của WebGL, (z_ndc + 1)/2 ra đúng biểu thức này.
+83. **Vòng lặp trong TSL** (`nodes/utils/LoopNode.js`, `nodes/utils/Discard.js`):
+    - `Loop(n, ({ i }) => …)` nhận `n` là số hay node `int`. Cận là uniform cũng được: đổi lúc chạy mà không biên dịch lại.
+    - `Break()` và `Continue()` đặt trong `If`; `Discard()` bỏ điểm ảnh.
+84. **`Fn(...).once()`** (`nodes/tsl/TSLCore.js`): đặt `shaderNode.once = true`, nên lời gọi được giữ lại để dùng chung trong một lần
+    dựng shader. Có tham số `subBuilds` (như `normalView` dùng `['NORMAL', 'VERTEX']`). Bức 3 dựa vào đó để vòng dò tia chạy một lần
+    cho cả màu, pháp tuyến và độ sâu; task đầu kiểm mã sinh ra (§19.10).
+85. **Playwright 1.63: lọc và chia test** (`playwright/lib/common/index.js`, `runner/index.js`):
+    - `--grep` so với chuỗi ghép từ tên project, đường dẫn file, các `describe`, tên test và tag (`_grepTitleWithTags`).
+    - `--shard` chia theo số test, theo thứ tự. Trọng số cho từng phần chỉ có qua biến môi trường `PWTEST_SHARD_WEIGHTS`: biến nội bộ
+      Playwright dùng để tự test, không phải API công khai.
+86. **OrbitControls xoay trọn vòng** (`examples/jsm/controls/OrbitControls.js`): `minAzimuthAngle` và `maxAzimuthAngle` mặc định là
+    `−Infinity` và `Infinity`, tức không giới hạn. Xưởng gán thẳng từ `CameraSpec.azimuth` (`engine/gpu/stage.js`), nên
+    `[−Infinity, Infinity]` cho camera đi vòng quanh. GĐ 7 chạy thật ở task camera.
