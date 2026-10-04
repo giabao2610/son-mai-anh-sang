@@ -56,7 +56,11 @@ export function createLayer(ctx, shared) {
       // decay là uniform của three (PointLightNode đọc mỗi khung): đổi không biên dịch lại (Phụ lục A.78).
       { id: 'noDecay', toggle: (on) => { light.decay = on ? 0 : 2; } },
     ],
-    readouts: [{ id: 'backWall', get: () => Math.round(100 / backWall ** 2), unit: '%' }],
+    readouts: [
+      { id: 'backWall', get: () => Math.round(100 / backWall ** 2), unit: '%' },
+      // Lửa ngả bao nhiêu vì bị thổi (mm), tính thẳng từ thời gian như vị trí của đèn.
+      { id: 'lean', get: () => Math.round(shared.flame.at(ctx.u.time.value).lean * 1000), unit: 'mm' },
+    ],
     dispose() {
       if (disposed) return;
       disposed = true;

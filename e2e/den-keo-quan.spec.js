@@ -1,6 +1,8 @@
 // e2e/den-keo-quan.spec.js — tương tác và hình ảnh riêng của Bức 2: bóng hình nhân chạy trên vách, mài lớp, cử chỉ, chất lượng, thí nghiệm.
 import { test, expect } from '@playwright/test';
-import { waitForSettled, waitForFrames, canvasRegions, gpuReport, collectConsole, readSma } from './helpers.js';
+import {
+  waitForSettled, waitForFrames, canvasRegions, gpuReport, collectConsole, readSma, tapAt, swipeAt,
+} from './helpers.js';
 
 const AT = 'at=2026-09-28T21:00';
 // Vùng vách sau (tỉ lệ khung 640×400 của e2e), gần hết bề rộng giữa hai cột: bóng đoàn quân phủ vùng này ở mọi khung. Chốt lại
@@ -63,7 +65,7 @@ test.describe('Đèn Kéo Quân · bóng trên vách', () => {
     test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
   });
 
-  test('đoàn quân in bóng lên vách sau và chạy theo thời gian; cùng khung thì giống hệt; mài Kéo quân về 0 thì hết mép bóng', async ({ page }, testInfo) => {
+  test('đoàn quân in bóng lên vách sau và chạy theo thời gian; cùng khung thì giống hệt; mài Kéo quân về 0 thì vách sáng lên', async ({ page }, testInfo) => {
     test.setTimeout(300_000);
     await open(page, testInfo, 60);
     const a = await wallOf(page);
@@ -75,9 +77,9 @@ test.describe('Đèn Kéo Quân · bóng trên vách', () => {
     expect(b.checksum, 'khung 60 và 120 phải khác: trống đã quay').not.toBe(a.checksum);
     await page.evaluate(() => window.__sma.setWeight('keo-quan', 0));
     const flat = await wallOf(page);
-    // Vùng đo có cả cột và dải sáng tối tự nhiên của vách, nên độ lệch chuẩn không về 0 khi hết bóng: đo được 0,055 → 0,036.
-    expect(flat.std, 'không còn mép bóng thì vách đều màu hơn hẳn').toBeLessThan(b.std * 0.8);
-    expect(flat.mean, 'hết bóng thì vách sáng hơn').toBeGreaterThan(b.mean);
+    // So cùng một vùng trước/sau khi mài: node bóng không được dùng thì hai ảnh như nhau. Không dùng độ lệch chuẩn: chiếc đèn (khối
+    // tối, tương phản mạnh) nằm trong vùng và chi phối nó, nên tỉ lệ dao động quanh 0,8 theo vị trí của đoàn quân.
+    expect(flat.mean, 'hết bóng thì vách sáng hơn rõ').toBeGreaterThan(b.mean * 1.05);
     expect(log.errors).toEqual([]);
   });
 
@@ -112,3 +114,45 @@ test.describe('Đèn Kéo Quân · bóng trên vách', () => {
   });
 });
 
+test.describe('Đèn Kéo Quân · cử chỉ', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  /** Mở Bức 2 KHÔNG đóng băng: đồng hồ của cảnh chạy thật. Mọi lần chờ dùng số đo, không chờ cứng theo giây (đồng hồ của cảnh trên
+   * GPU phần mềm có thể chậm hơn đồng hồ tường). */
+  async function live(page, testInfo) {
+    const { query } = testInfo.project.metadata;
+    await page.goto(`./tranh/den-keo-quan/?${query.replace(/^\?/, '')}&${AT}`);
+    const settled = await waitForSettled(page, { timeout: 60_000 });
+    expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+  }
+  /** Chờ tới khi số đo `id` của lớp `layer` thỏa `op` so với `value`. */
+  const until = (page, layer, id, op, value, timeout) => page.waitForFunction(([l, i, o, v]) => {
+    const r = window.__sma.readouts(l).find((x) => x.id === i)?.value;
+    return typeof r === 'number' && (o === '>' ? r > v : r < v);
+  }, [layer, id, op, value], { timeout });
+
+  test('chạm thì thổi nến: lửa ngả rồi đứng lại', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    await live(page, testInfo);
+    await tapAt(page, 0.5, 0.5);
+    await until(page, 'ngon-nen', 'lean', '>', 2, 10_000);
+    await until(page, 'ngon-nen', 'lean', '<', 0.5, 30_000);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('giữ thì trống dừng, thả thì quay lại; vuốt thì quay nhanh hơn tốc độ thường', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    await live(page, testInfo);
+    const box = await page.locator('[data-stage] canvas').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.6);
+    await page.mouse.down();
+    await until(page, 'keo-quan', 'rpm', '<', 0.3, 15_000);
+    await page.mouse.up();
+    await until(page, 'keo-quan', 'rpm', '>', 3, 30_000);
+    await swipeAt(page, 0.3, 0.6, { dx: 220 });
+    await until(page, 'keo-quan', 'rpm', '>', 9, 10_000);
+    expect(log.errors).toEqual([]);
+  });
+});

@@ -1,20 +1,42 @@
-// paintings/den-keo-quan/shared.js — setup() của Bức 2: góc trống và trạng thái ngọn lửa (tạm: trống quay đều, lửa đứng yên; Task 5 thay bằng createSpin/createFlame và cử chỉ).
+// paintings/den-keo-quan/shared.js — setup() của Bức 2: trống quay và ngọn lửa (hàm thuần, tính thẳng từ thời gian), và ba cử chỉ: chạm thổi nến, giữ dừng trống, vuốt gạt trống.
+import { Vector3 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
+import { createSpin, flickOf, rpmToOmega } from './parts/keo-quan-quay.js';
+import { createFlame } from './parts/ngon-nen-thoi.js';
+
+/** Tốc độ thường của trống lúc dựng (vòng/phút); lớp Kéo quân đặt lại theo núm speed ngay khi dựng. */
+const BASE_RPM = 6;
 
 /**
- * setup() chạy TRƯỚC mọi createLayer; `shared` đi vào tham số thứ 2 của từng lớp.
  * @param {import('../../engine/contracts/runtime.js').EngineCtx} ctx
  * @returns {import('../../engine/contracts/runtime.js').PaintingSetup}
  */
 export function setup(ctx) {
+  const slow = ctx.reducedMotion ? 0.5 : 1; // §18.2: giảm chuyển động thì trống quay chậm còn một nửa
+  const spin = createSpin({ omega: rpmToOmega(BASE_RPM) * slow });
+  const flame = createFlame({ reduced: ctx.reducedMotion });
   const theta = uniform(0).setName('drumAngle');
-  // Tạm: lửa đứng yên (không nhấp nháy, không thổi). Task 5 thay bằng createFlame (parts/ngon-nen-thoi.js).
-  const flame = { at: () => ({ offset: [0, 0, 0], glow: 1, lean: 0 }) };
+  const forward = new Vector3();
   return {
-    shared: { theta, flame },
-    // Tạm: trống quay đều 0,6 rad/s, tính thẳng từ t (tất định với ?freeze). Task 5 thay bằng createSpin.
+    shared: { spin, flame, theta, slow },
+    // Chạm ở đâu cũng được: cả căn phòng là của ngọn đèn. Thời điểm là đồng hồ của cảnh (tất định với ?freeze).
+    onGesture(g) {
+      const t = ctx.u.time.value;
+      if (g.kind === 'tap') {
+        ctx.camera.getWorldDirection(forward); // thổi theo hướng nhìn, chiếu xuống mặt sàn
+        const len = Math.hypot(forward.x, forward.z) || 1;
+        flame.blow(t, [forward.x / len, forward.z / len]);
+      } else if (g.kind === 'hold-start') {
+        spin.grip(t);
+      } else if (g.kind === 'hold-end') {
+        spin.release(t);
+      } else if (g.kind === 'swipe') {
+        spin.flick(t, flickOf(g.velocity) * slow);
+      }
+    },
+    // Mỗi khung, TRƯỚC các lớp; cả update(0, t) lúc ?freeze vẽ lại.
     update(dt, t) {
-      theta.value = 0.6 * t;
+      theta.value = spin.angle(t);
     },
   };
 }

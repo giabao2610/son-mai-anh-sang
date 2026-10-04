@@ -37,11 +37,19 @@ export default {
         'paintings/den-keo-quan/parts/cot-hinh-nhan.js',
       ],
     },
-    { id: 'ngon-nen', name: 'Ngọn nến', files: ['paintings/den-keo-quan/layers/l2-ngon-nen.js'] },
+    {
+      id: 'ngon-nen',
+      name: 'Ngọn nến',
+      files: ['paintings/den-keo-quan/layers/l2-ngon-nen.js', 'paintings/den-keo-quan/parts/ngon-nen-thoi.js'],
+    },
     {
       id: 'keo-quan',
       name: 'Kéo quân',
-      files: ['paintings/den-keo-quan/layers/l5-keo-quan.js', 'paintings/den-keo-quan/parts/keo-quan-gobo.js'],
+      files: [
+        'paintings/den-keo-quan/layers/l5-keo-quan.js',
+        'paintings/den-keo-quan/parts/keo-quan-gobo.js',
+        'paintings/den-keo-quan/parts/keo-quan-quay.js',
+      ],
     },
     phuBong,
   ],

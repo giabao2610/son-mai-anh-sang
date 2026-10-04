@@ -175,6 +175,51 @@ export function doubleTapAt(page, fx, fy, { gapMs = 40, pointerType = 'mouse' } 
   }, { x: fx, y: fy, gap: gapMs, type: pointerType });
 }
 
+/**
+ * Chạm MỘT lần lên canvas ở (fx, fy) (tỉ lệ 0–1 của khung canvas) bằng PointerEvent phát ngay trong trang, như doubleTapAt: trên GPU
+ * phần mềm, chuột của Playwright có thể để lần xuống và lần lên cách nhau quá GESTURE.holdMs (350 ms), và cú chạm thành cú giữ.
+ * @returns {Promise<number | null>}  __sma.frames ngay sau lần chạm
+ */
+export function tapAt(page, fx, fy, { pointerType = 'mouse' } = {}) {
+  return page.evaluate(({ x, y, type }) => {
+    const canvas = document.querySelector('[data-stage] canvas');
+    const box = canvas.getBoundingClientRect();
+    const at = {
+      pointerId: 1, pointerType: type, isPrimary: true, button: 0, bubbles: true, cancelable: true, composed: true,
+      clientX: box.left + box.width * x, clientY: box.top + box.height * y,
+    };
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { ...at, buttons: 1 }));
+    canvas.dispatchEvent(new PointerEvent('pointerup', { ...at, buttons: 0 }));
+    return window.__sma?.frames ?? null;
+  }, { x: fx, y: fy, type: pointerType });
+}
+
+/**
+ * Vuốt ngang trên canvas từ (fx, fy) một đoạn dx px trong `ms` mili giây, bằng PointerEvent phát ngay trong trang. Mỗi sự kiện chuột
+ * của Playwright đợi một nhịp khung (Phụ lục A.51), nên trên GPU phần mềm một cú vuốt dễ quá GESTURE.swipeMs (300 ms) và thành kéo
+ * (camera). Xuống, hai lần dời cách nhau ms / 2, rồi nhấc; pointerId 1 như doubleTapAt (OrbitControls gọi setPointerCapture).
+ * @returns {Promise<number | null>}  __sma.frames ngay sau khi nhấc
+ */
+export function swipeAt(page, fx, fy, { dx = 160, ms = 60, pointerType = 'mouse' } = {}) {
+  return page.evaluate(async ({ x, y, d, dur, type }) => {
+    const canvas = document.querySelector('[data-stage] canvas');
+    const box = canvas.getBoundingClientRect();
+    const at = (cx) => ({
+      pointerId: 1, pointerType: type, isPrimary: true, button: 0, bubbles: true, cancelable: true, composed: true,
+      clientX: cx, clientY: box.top + box.height * y,
+    });
+    const x0 = box.left + box.width * x;
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { ...at(x0), buttons: 1 }));
+    await wait(dur / 2);
+    canvas.dispatchEvent(new PointerEvent('pointermove', { ...at(x0 + d / 2), buttons: 1 }));
+    await wait(dur / 2);
+    canvas.dispatchEvent(new PointerEvent('pointermove', { ...at(x0 + d), buttons: 1 }));
+    canvas.dispatchEvent(new PointerEvent('pointerup', { ...at(x0 + d), buttons: 0 }));
+    return window.__sma?.frames ?? null;
+  }, { x: fx, y: fy, d: dx, dur: ms, type: pointerType });
+}
+
 /** Hỏi thẳng trình duyệt nó có GPU gì (để bỏ qua test WebGPU khi không có adapter). */
 export async function gpuReport(page) {
   return page.evaluate(async () => {

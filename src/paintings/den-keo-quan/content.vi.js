@@ -50,7 +50,7 @@ export default {
           explain: 'Bỏ luật nghịch đảo bình phương: vách xa sáng như vách gần, căn phòng mất chiều sâu.',
         },
       },
-      readouts: { backWall: 'Độ rọi ở vách sau' },
+      readouts: { backWall: 'Độ rọi ở vách sau', lean: 'Lửa lệch' },
     },
     'keo-quan': {
       understand: 'Kéo quân là bóng của đoàn quân trên trống, chiếu lên vách. Không có shadow map nào: với mỗi điểm đang tô, shader '
@@ -59,7 +59,7 @@ export default {
       learned: ['Một bóng chiếu đúng hình có thể tính thẳng bằng hình học (gobo), không cần vẽ thêm lượt nào.'],
       readMore: [{ title: 'Gobo (lighting)', url: 'https://en.wikipedia.org/wiki/Gobo_(lighting)' }],
       knobs: { speed: 'Tốc độ quay (vòng/phút)', penumbra: 'Độ nhòe của bóng', strength: 'Độ đậm của bóng' },
-      readouts: { magnify: 'Bóng phóng to ở vách sau', penumbra: 'Nửa tối ở vách sau' },
+      readouts: { rpm: 'Vòng mỗi phút', magnify: 'Bóng phóng to ở vách sau', penumbra: 'Nửa tối ở vách sau' },
       experiments: {
         pointLight: {
           label: 'Nguồn sáng là một điểm',
