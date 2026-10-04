@@ -2634,8 +2634,15 @@ Bức 2. Những gì Bao đã chọn nằm ở §1 (GĐ 6); phần còn lại c�
     lại").
   - Nhạc sĩ Đỗ Nhuận chỉ viết thêm đoạn mở đầu cho bài hát, nên lời gốc là dân gian (báo Tiền Phong, "Trung thu, đèn cù và Đỗ
     Nhuận").
-  - Dị bản: Wikipedia tiếng Việt in "khéo xếp", còn phần lớn nguồn in "khéo kết"; dấu phẩy sau "Voi giấy" có nơi có, nơi không.
-    Chữ chốt theo bản in phổ biến nhất, sau khi đối chiếu thêm sách ca dao. Việc này làm trước khi merge, như GĐ 5, và Bao duyệt.
+  - Dị bản: "khéo kết" hay "khéo xếp"; dấu phẩy sau "Voi giấy" có nơi có, nơi không. Đối chiếu ngày 2026-10-04 (mọi nguồn đều in bản
+    hát, có tiếng đệm "ối a", "cái", "nó lại"):
+    - "khéo kết": báo Tiền Phong ("Trung thu, đèn cù và Đỗ Nhuận"); tên bài của Đỗ Nhuận, "Khen ai khéo kết cái đèn cù";
+    - "khéo xếp": Wikipedia tiếng Việt ("Đèn kéo quân", mục dân ca), báo Công giáo và Dân tộc ("Ký ức đèn cù vòng quanh", in
+      "Voi giấy, ngựa giấy" có dấu phẩy), lời dân ca trên trang karaoke;
+    - chưa mở được bản số hóa của hai bộ sách ca dao (Kho tàng ca dao người Việt; Tục ngữ ca dao dân ca Việt Nam của Vũ Ngọc Phan).
+
+    Trang dùng bản lục bát không tiếng đệm: "Khen ai khéo kết đèn cù / Voi giấy, ngựa giấy tít mù vòng quanh". Bao chốt "kết" hay
+    "xếp" trước khi merge, như GĐ 5; đổi thì sửa `meta.poem` và thơ in sẵn trong trang (test HTML giữ hai chỗ khớp nhau).
   - Câu thơ hợp đúng bộ hình nhân: voi giấy, ngựa giấy chạy vòng quanh.
 - **Lật tranh** (§18.6):
   - header của Bức 2 có link "← Bức 1 · Ao Sen Đêm";
