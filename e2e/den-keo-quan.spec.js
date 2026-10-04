@@ -6,6 +6,10 @@ const AT = 'at=2026-09-28T21:00';
 // Vùng vách sau (tỉ lệ khung 640×400 của e2e), gần hết bề rộng giữa hai cột: bóng đoàn quân phủ vùng này ở mọi khung. Chốt lại
 // theo bố cục cuối.
 const WALL = { x0: 0.15, y0: 0.15, x1: 0.85, y1: 0.85 };
+// Trần ngay trên đèn (vầng sáng qua miệng đèn, vành chóp và bóng chong chóng), sàn ngay dưới đèn (đế che). Tỉ lệ khung 640×400;
+// chốt lại theo bố cục cuối.
+const CEILING = { x0: 0.3, y0: 0, x1: 0.7, y1: 0.07 };
+const FLOOR = { x0: 0.35, y0: 0.93, x1: 0.65, y1: 1 };
 
 let log;
 test.beforeEach(async ({ page }, testInfo) => {
@@ -84,6 +88,20 @@ test.describe('Đèn Kéo Quân · bóng trên vách', () => {
     await toggleExperiment(page, 'keo-quan', 'pointLight', true); // vẽ lại khung đứng yên (?freeze), cùng thời điểm
     const hard = await wallOf(page);
     expect(hard.std).toBeGreaterThan(soft.std);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('trần có vầng sáng mang bóng chong chóng xoay; sàn ngay dưới đèn tối vì đế che (mài Kéo quân về 0 thì sáng lên)', async ({ page }, testInfo) => {
+    test.setTimeout(240_000);
+    await open(page, testInfo, 60);
+    const a = await canvasRegions(page, { ceiling: CEILING, under: FLOOR });
+    await open(page, testInfo, 75);
+    const b = await canvasRegions(page, { ceiling: CEILING });
+    expect(b.ceiling.checksum, 'chong chóng quay: trần đổi giữa hai khung').not.toBe(a.ceiling.checksum);
+    // So cùng một vùng: góc sàn xa đèn vốn tối hơn vì luật nghịch đảo bình phương, nên không so hai vùng khác nhau.
+    await page.evaluate(() => window.__sma.setWeight('keo-quan', 0));
+    const c = await canvasRegions(page, { under: FLOOR });
+    expect(a.under.mean, 'đế che: sàn dưới đèn tối hơn khi chưa mài Kéo quân').toBeLessThan(c.under.mean * 0.8);
     expect(log.errors).toEqual([]);
   });
 

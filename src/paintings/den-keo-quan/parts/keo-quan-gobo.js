@@ -1,9 +1,13 @@
 // paintings/den-keo-quan/parts/keo-quan-gobo.js — của lớp Kéo quân: gobo tính ngay khi tô từng điểm: tia từ ngọn lửa cắt ống trụ của trống, tra mặt nạ hình nhân theo góc, nhòe theo cỡ ngọn lửa.
-import { Fn, float, fract, log2, max, mix, smoothstep, texture, vec2 } from 'three/tsl';
+import { Fn, abs, atan, float, fract, length, log2, max, mix, smoothstep, texture, vec2 } from 'three/tsl';
 
 const TAU = Math.PI * 2;
 /** Sàn của cỡ nguồn sáng (m): nửa tối luôn > 0, nên smoothstep(a, b, x) luôn có a < b (GLSL không định nghĩa a ≥ b). */
 export const EPS = 1e-4;
+/** Nan tre ở các góc lăng trụ giấy: nửa bề rộng (m). */
+export const RIB = 0.004;
+/** Chong chóng: phần chu kỳ mà một cánh che (cánh nằm giữa chu kỳ). */
+export const BLADE = 0.4;
 
 /**
  * @param {object} p
@@ -17,7 +21,7 @@ export const EPS = 1e-4;
  * @returns {{ all: any, figures: any }}  hai Fn TSL của P (vị trí thế giới): độ sáng lọt qua, 0 → 1
  */
 export function createGobo({ lantern, mask, candle, rest, size, theta, u }) {
-  const { axisNode: axis, drum, cylinderExit } = lantern;
+  const { axisNode: axis, drum, paper, mouth, fan, cylinderExit, planeCross, sides } = lantern;
   const texelsPerMeter = mask.width / (TAU * drum.r);
   /** Mức mip: log2 của số texel mà nửa tối (quy về mặt trống, mét) trải qua; không âm, nên LOD không bao giờ là −∞. */
   const lodOf = (meters) => log2(max(meters.mul(texelsPerMeter), 1));
@@ -39,10 +43,31 @@ export function createGobo({ lantern, mask, candle, rest, size, theta, u }) {
   /** Cỡ nguồn sáng hiệu lực: núm × penumbra, về EPS khi "Nguồn sáng là một điểm". */
   const sizeNode = () => size.mul(u.penumbra).mul(float(1).sub(u.point)).add(EPS);
 
-  /** Ánh sáng ra phòng. Lúc này chỉ có hình nhân; đế, miệng, chong chóng, nan tre nhân thêm sau. */
+  /** Ánh sáng ra phòng theo tia C → P: hình nhân × nan tre × đế × (vành miệng, chong chóng). 1 là lọt hết. */
   const all = Fn(([P]) => {
     const C = mix(candle, rest, u.naive).toVar(); // "Công thức gọn": coi như lửa đứng yên trên trục
-    return float(1).sub(cover(P, C, sizeNode()));
+    const s = sizeNode().toVar();
+    const out = cylinderExit(P, C, axis, float(paper.r)).toVar(); // tia ra khỏi giấy ở đâu (lăng trụ coi như ống tròn)
+    const pen = s.mul(float(1).sub(out.z)).max(EPS).toVar(); // nửa tối ở bán kính của giấy
+    // Đế gỗ: tia ra dưới đáy giấy là vướng đế. 0 dưới đáy, 1 trên đáy.
+    const base = smoothstep(float(paper.y0).sub(pen), float(paper.y0).add(pen), out.y);
+    // Trên đỉnh giấy: hoặc lọt qua miệng, hoặc vướng vành chóp. top: 0 dưới đỉnh, 1 trên đỉnh.
+    const top = smoothstep(float(paper.y1).sub(pen), float(paper.y1).add(pen), out.y).toVar();
+    const lip = planeCross(P, C, axis, float(paper.y1)).toVar();
+    const open = float(1).sub(smoothstep(float(mouth).sub(pen), float(mouth).add(pen), length(lip.xy)));
+    // Chong chóng: điểm cắt mặt phẳng của cánh ở bán kính rho, góc tính như trống (quay cùng θ).
+    const vane = planeCross(P, C, axis, float(fan.y)).toVar();
+    const rho = length(vane.xy).toVar();
+    const f = fract(atan(vane.y, vane.x.add(EPS)).add(theta).mul(fan.blades / TAU)); // EPS: atan(0, 0) không định nghĩa
+    const pw = pen.mul(fan.blades / TAU).div(rho.max(1e-3)); // nửa tối, đổi ra phần của một chu kỳ cánh
+    const onBlade = float(1).sub(smoothstep(float(BLADE / 2).sub(pw), float(BLADE / 2).add(pw), abs(f.sub(0.5))));
+    const inFan = float(1).sub(smoothstep(float(fan.r).sub(pen), float(fan.r).add(pen), rho));
+    const above = mix(float(1), open.mul(float(1).sub(onBlade.mul(inFan))), top);
+    // Nan tre: cung từ chỗ tia ra tới góc gần nhất của lăng trụ (góc ở π/2 − k·2π/sides, xem cornerAngles).
+    const k = out.x.sub(Math.PI / 2).div(TAU).mul(sides);
+    const arc = abs(fract(k.add(0.5)).sub(0.5)).mul(TAU).div(sides).mul(paper.r);
+    const rib = mix(smoothstep(float(RIB).sub(pen), float(RIB).add(pen), arc), float(1), top); // nan chỉ chạy dọc thân
+    return base.mul(above).mul(rib).mul(float(1).sub(cover(P, C, s)));
   });
   /** Ánh sáng xuyên giấy (lớp Giấy nhân vào): chỉ hình nhân, nan tre ở ngoài giấy nên không che giấy. */
   const figures = Fn(([P]) => float(1).sub(cover(P, candle, sizeNode())));

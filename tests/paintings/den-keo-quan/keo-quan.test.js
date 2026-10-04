@@ -41,4 +41,29 @@ describe('l5-keo-quan', () => {
       expect(u).toBeCloseTo((((phiLocal / (2 * Math.PI)) % 1) + 1) % 1, 9);
     }
   });
+
+  it('số đo: bóng ở vách sau to gấp vách / bán kính trống; nửa tối ở vách sau theo cỡ lửa và núm penumbra', () => {
+    const { layers, shared } = build();
+    const read = (id) => layers['keo-quan'].readouts.find((r) => r.id === id).get();
+    const d = shared.cot.lantern.axis[1] + shared.cot.room.half; // 1,9
+    expect(read('magnify')).toBeCloseTo(d / shared.cot.lantern.drum.r, 1); // ≈ 21,1
+    // s × (D − r) / r, đổi ra cm: 0,01 × (1,9 − 0,09) / 0,09 × 100 ≈ 20 cm
+    expect(read('penumbra')).toBeCloseTo((0.01 * (d - 0.09)) / 0.09 * 100, 0);
+  });
+
+  it.each([
+    ['penumbra 0', { penumbra: 0 }], ['penumbra 2', { penumbra: 2 }], ['nguồn sáng là một điểm', { point: 1 }], ['công thức gọn', { naive: 1 }],
+  ])('núm biên (%s): vách vẫn dịch được ra WGSL và GLSL, không lỗi', (_, set) => {
+    const built = build();
+    for (const [k, v] of Object.entries(set)) built.shared.keoQuan.u[k].value = v;
+    for (const backend of ['webgpu', 'webgl2']) {
+      expect(compileMaterial(wall(built), built.ctx, backend, { shadows: true }).problems, backend).toEqual([]);
+    }
+  });
+
+  it('sides 4 và 8: góc nan tre theo uniform lanternSides, không cần biên dịch lại', async () => {
+    const built = build();
+    await built.knobs.cot.set('sides', 8);
+    expect(built.shared.cot.lantern.sides.value).toBe(8);
+  });
 });

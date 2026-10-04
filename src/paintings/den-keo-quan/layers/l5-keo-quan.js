@@ -17,7 +17,7 @@ export const knobs = [
  */
 export function createLayer(ctx, shared) {
   const w = ctx.weight(id);
-  const { lantern, mask } = shared.cot;
+  const { lantern, mask, room } = shared.cot;
   const { light, candle, size } = shared.ngonNen;
   const u = {
     naive: uniform(0).setName('goboNaive'),
@@ -32,6 +32,9 @@ export function createLayer(ctx, shared) {
   shared.keoQuan = { gobo, u };
   // Tốc độ thường: lớp nối vào trống của setup khi trống quay theo cử chỉ; lúc này trống quay đều (shared.js).
   let speed = ctx.knobValue('speed');
+  // Vách sau cách trục D (m): bóng to gấp D / r; nửa tối trên vách = cỡ lửa × (D − r) / r (tam giác đồng dạng).
+  const D = lantern.axis[1] + room.half;
+  const r = lantern.drum.r;
 
   return {
     objects: [],
@@ -43,6 +46,14 @@ export function createLayer(ctx, shared) {
       { id: 'pointLight', toggle: (on) => { u.point.value = on ? 1 : 0; } },
       // Lấy góc của chính P thay cho giao tia: đúng khi lửa đứng yên trên trục, sai khi lửa chao.
       { id: 'naive', toggle: (on) => { u.naive.value = on ? 1 : 0; } },
+    ],
+    readouts: [
+      { id: 'magnify', get: () => Math.round((D / r) * 10) / 10, unit: '×' },
+      {
+        id: 'penumbra',
+        get: () => Math.round(size.value * u.penumbra.value * (1 - u.point.value) * ((D - r) / r) * 100),
+        unit: 'cm',
+      },
     ],
     dispose() {},
   };
