@@ -17,6 +17,10 @@ export default {
       knobs: { sides: 'Số cạnh của đèn', wireframe: 'Khung dây' },
       experiments: {
         flatNormals: { label: 'Normal phẳng', explain: 'Mỗi tam giác sáng một màu: thấy rõ mọi hình được ghép từ mặt phẳng.' },
+        solidDrum: {
+          label: 'Trống không cắt',
+          explain: 'Cả dải hình nhân thành giấy đặc: bóng trên vách thành một vành tối liền. Bóng là do những chỗ cắt.',
+        },
       },
       readouts: { vertices: 'Số đỉnh' },
       objects: {
@@ -30,6 +34,8 @@ export default {
         'de-chop': 'Đế và vành chóp',
         'cay-nen': 'Cây nến',
         'day-treo': 'Dây treo',
+        trong: 'Trống hình nhân',
+        'chong-chong': 'Chong chóng',
       },
     },
     'ngon-nen': {
@@ -45,6 +51,24 @@ export default {
         },
       },
       readouts: { backWall: 'Độ rọi ở vách sau' },
+    },
+    'keo-quan': {
+      understand: 'Kéo quân là bóng của đoàn quân trên trống, chiếu lên vách. Không có shadow map nào: với mỗi điểm đang tô, shader '
+        + 'dựng tia từ ngọn lửa tới điểm đó, tìm chỗ tia cắt ống trụ của trống, đổi chỗ cắt ra góc bằng atan(y, x) rồi tra mặt nạ hình '
+        + 'nhân ở góc ấy. Nguồn sáng có kích thước nên bóng có nửa tối: gần đèn thì nét, trên vách xa thì nhòe.',
+      learned: ['Một bóng chiếu đúng hình có thể tính thẳng bằng hình học (gobo), không cần vẽ thêm lượt nào.'],
+      readMore: [{ title: 'Gobo (lighting)', url: 'https://en.wikipedia.org/wiki/Gobo_(lighting)' }],
+      knobs: { speed: 'Tốc độ quay (vòng/phút)', penumbra: 'Độ nhòe của bóng', strength: 'Độ đậm của bóng' },
+      experiments: {
+        pointLight: {
+          label: 'Nguồn sáng là một điểm',
+          explain: 'Ngọn lửa coi như không có kích thước: mép bóng gắt ở mọi khoảng cách, không còn nửa tối.',
+        },
+        naive: {
+          label: 'Công thức gọn',
+          explain: 'Lấy góc của chính điểm trên vách thay cho giao tia: đúng khi lửa đứng yên trên trục, nhưng thổi nến thì bóng thôi chao.',
+        },
+      },
     },
     'phu-bong': { ...phuBong.layers['phu-bong'] },
   },

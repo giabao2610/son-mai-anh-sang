@@ -3,6 +3,7 @@ import { FrontSide, HemisphereLight, MeshPhysicalNodeMaterial, MeshStandardNodeM
 import { color, uniform, vec2, vec3 } from 'three/tsl';
 import { ROOM, createRoom } from '../parts/cot-phong.js';
 import { LANTERN, createLantern, cylinderExit, planeCross } from '../parts/cot-den.js';
+import { createDrum, createMaskTexture, placeholderRaster } from '../parts/cot-trong.js';
 
 export const id = 'cot';
 
@@ -46,8 +47,13 @@ export function createLayer(ctx, shared) {
   };
   const room = createRoom(materials);
   const lantern = createLantern(materials, ctx.knobValue('sides'));
+  // Mặt nạ hình nhân: độ phủ quanh trống (1 = giấy, che ánh nến). Tạm: tám ô chữ nhật.
+  const raster = placeholderRaster(1024);
+  const mask = { texture: createMaskTexture(raster), width: raster.width, solid: uniform(0).setName('drumSolid') };
+  const drum = createDrum(ctx, { lantern: LANTERN, mask, theta: shared.theta });
+  Object.assign(materials, drum.materials);
   const hemi = new HemisphereLight(STUDIO.sky, STUDIO.ground, STUDIO.intensity);
-  const objects = [...room.objects, ...lantern.objects];
+  const objects = [...room.objects, ...lantern.objects, drum.mesh, drum.fan];
   ctx.scene.add(...objects, hemi);
 
   const sides = uniform(ctx.knobValue('sides')).setName('lanternSides');
@@ -59,6 +65,7 @@ export function createLayer(ctx, shared) {
     lantern: { ...LANTERN, axisNode: vec2(...LANTERN.axis), sides, cylinderExit, planeCross },
     room: ROOM,
     paper: lantern.paper,
+    mask,
     materials,
     receivers: room.objects,
     casters: objects.filter((o) => o.castShadow),
@@ -77,6 +84,9 @@ export function createLayer(ctx, shared) {
   let disposed = false;
   return {
     objects,
+    update() {
+      drum.update(); // trống và chong chóng theo góc trống của setup (kể cả update(0, t) lúc ?freeze)
+    },
     onKnob: {
       sides: (v) => { // @knob sides
         lantern.rebuild(v);
@@ -85,7 +95,11 @@ export function createLayer(ctx, shared) {
       },
       wireframe: (v) => setAll('wireframe', v), // @knob wireframe
     },
-    experiments: [{ id: 'flatNormals', toggle: (on) => setAll('flatShading', on) }],
+    experiments: [
+      { id: 'flatNormals', toggle: (on) => setAll('flatShading', on) },
+      // Trống không cắt: cả dải hình thành giấy đặc, bóng thành một vành tối liền (uniform, không biên dịch lại).
+      { id: 'solidDrum', toggle: (on) => { mask.solid.value = on ? 1 : 0; } },
+    ],
     readouts: [{ id: 'vertices', get: () => vertexCount(objects) }],
     dispose() {
       if (disposed) return;
@@ -93,6 +107,7 @@ export function createLayer(ctx, shared) {
       ctx.scene.remove(...objects, hemi);
       for (const o of objects) o.geometry.dispose();
       for (const m of Object.values(materials)) m.dispose();
+      mask.texture.dispose();
       hemi.dispose();
     },
   };

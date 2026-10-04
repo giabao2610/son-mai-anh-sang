@@ -33,9 +33,15 @@ export default {
         'paintings/den-keo-quan/layers/l1-cot.js',
         'paintings/den-keo-quan/parts/cot-phong.js',
         'paintings/den-keo-quan/parts/cot-den.js',
+        'paintings/den-keo-quan/parts/cot-trong.js',
       ],
     },
     { id: 'ngon-nen', name: 'Ngọn nến', files: ['paintings/den-keo-quan/layers/l2-ngon-nen.js'] },
+    {
+      id: 'keo-quan',
+      name: 'Kéo quân',
+      files: ['paintings/den-keo-quan/layers/l5-keo-quan.js', 'paintings/den-keo-quan/parts/keo-quan-gobo.js'],
+    },
     phuBong,
   ],
   // Từ vựng riêng của bức: test luật cấm xưởng (engine/, ui/, lib/tsl/) nhắc tới.
