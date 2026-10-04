@@ -2721,7 +2721,7 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
     - quay quanh trục theo góc `θ(t)` của `shared` (§18.5); chong chóng quay cùng góc.
 - **Núm:**
   - `sides` (rebuild; 4, 6 hay 8 cạnh): đổi hình đèn và số tấm giấy;
-  - `figures` (rebuild; 6–10): vẽ lại mặt nạ vào chính texture đã có (node giữ tham chiếu texture);
+  - `figures` (rebuild; 6–10, mức thấp 6–8): vẽ lại mặt nạ vào chính texture đã có (node giữ tham chiếu texture);
   - `wireframe` (rebuild).
 
   Như Bức 1, mọi thứ cấp phát theo trần MỘT lần; rebuild chỉ ghi lại dữ liệu.
@@ -2986,6 +2986,26 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
     mip.
   - Đo ms GPU lúc làm: task đầu đo riêng node gobo, đo lại khi đủ sáu lớp. Mục tiêu như §2: 60 khung/giây trên laptop, 45 trên điện thoại tầm trung (mức vừa và thấp).
 - **JS:** chunk của bức cộng chunk content; chunk `three` dùng chung với Bức 1 (§8.7). Số đo ghi vào README.
+- **Trần núm theo mức:** `figures` tối đa 8 ở mức thấp (mỗi lần kéo là vẽ lại cả mặt nạ), 10 ở mức cao và vừa; `octaves` của Gian nhà
+  tối đa 3 ở mức thấp.
+- **Số đo** (2026-10-04, Mac M2 8 GB, Chromium headless qua Playwright, WebGPU, bản build, đo sau 10 giây live):
+
+  | Mức | 1280×800, DPR 2 | 390×844, DPR 3 (giả lập điện thoại) |
+  |---|---|---|
+  | **cao** | 60 khung/giây · 28 draw call · CPU 0,9 ms | 60 · 28 · 0,6 ms |
+  | **vừa** | 60 · 28 · 0,5 ms | 59 · 28 · 1,3 ms |
+  | **thấp** | 60 · 28 · 0,6 ms | 60 · 28 · 0,8 ms |
+
+  - Mọi ô đều chạm trần 60 khung/giây của xưởng; bộ điều chỉnh không hạ nấc nào.
+  - ms GPU: Chrome trên GPU Apple báo các pass chồng lên nhau (Phụ lục A.48), xưởng bỏ số vô lý, nên gần như không có mẫu.
+  - Tải nặng để đo chi phí mỗi điểm ảnh: 2560×1600, DPR 2, mức cao cho 43 khung/giây, bộ điều chỉnh tự hạ DPR về 1,75. Tức chừng
+    2 ns mỗi điểm ảnh trên M2.
+  - Khung điện thoại ở mức vừa chỉ có khoảng 0,74 triệu điểm ảnh, tức khoảng 1,4 ms trên M2. Một GPU điện thoại tầm trung chậm hơn
+    8–15 lần vẫn trên mốc 45 khung/giây. Vì vậy chưa thêm nấc "tra mặt nạ không nội suy" (§18.10); đo lại trên điện thoại thật ở
+    lượt kiểm tay (§12).
+  - WebGL2 (SwiftShader): 28 draw call, như WebGPU.
+  - Mặt nạ (Chromium, M2): bề rộng 2048 lần đầu 35–48 ms, các lần sau 13 ms; bề rộng 1024 lần đầu 16 ms. Đạt mục tiêu ≤ 50 ms, giữ
+    lấy mẫu 4 × 4.
 
 ### 18.8 Kiểm thử
 **Tự chạy cho Bức 2**, vì các test này lặp qua registry:

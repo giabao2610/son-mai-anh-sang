@@ -116,7 +116,16 @@ test.describe('Đèn Kéo Quân · bóng trên vách', () => {
   test('node bóng tự viết không vẽ shadow map nào: draw call ở mức cao không có phần bóng', async ({ page }, testInfo) => {
     await open(page, testInfo, 30, '&level=cao');
     const { drawCalls } = await page.evaluate(() => window.__sma.stats());
-    expect(drawCalls).toBeLessThanOrEqual(30); // cube shadow map sẽ thêm ≥ 6 × số vật đổ bóng
+    expect(drawCalls).toBeLessThanOrEqual(30); // cube shadow map sẽ thêm ≥ 6 × số vật đổ bóng; trần chung của bức là 45
+  });
+
+  test('mức thấp chạy được: live, không lỗi console, draw call như mức cao (chỉ ít điểm ảnh và ít tầng noise hơn)', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    await open(page, testInfo, 30, '&level=thap');
+    expect(await page.evaluate(() => window.__sma.level)).toBe('thap');
+    const { drawCalls } = await page.evaluate(() => window.__sma.stats());
+    expect(drawCalls).toBeLessThanOrEqual(30);
+    expect(log.errors).toEqual([]);
   });
 });
 

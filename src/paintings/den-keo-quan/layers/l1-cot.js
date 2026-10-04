@@ -17,8 +17,9 @@ export const knobs = [
   // Số cạnh của đèn: dựng lại hình giấy và đế (vài ms), ghi lại nan tre; gobo và màu giấy đọc uniform lanternSides.
   { id: 'sides', via: 'rebuild', min: 4, max: 8, step: 2, value: 6 },
   { id: 'wireframe', kind: 'bool', via: 'rebuild', value: false },
-  // Số hình nhân quanh trống: vẽ lại mặt nạ (vài chục ms). Mười hình ngựa và voi đã kín chu vi dải, nên trần là 10.
-  { id: 'figures', via: 'rebuild', min: 6, max: 10, step: 1, value: 8 },
+  // Số hình nhân quanh trống: vẽ lại mặt nạ (vài chục ms). Mười hình ngựa và voi đã kín chu vi dải, nên trần là 10; mức thấp (máy
+  // yếu, mỗi lần kéo núm là vẽ lại cả dải) giữ trần ở 8.
+  { id: 'figures', via: 'rebuild', min: 6, max: (env) => (env.level === 'thap' ? 8 : 10), step: 1, value: 8 },
 ];
 
 // Đèn xưởng: trời trắng, đất xám; đủ để đất sét đọc được hình khối khi mọi lớp khác bằng 0 (luật 1, luật 3).
