@@ -2855,7 +2855,8 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
       - bóng trên vách lộ răng cưa theo cỡ map;
       - nhòe đều khắp nơi, không theo khoảng cách.
     - Đèn thứ hai **chỉ được dựng khi bật lần đầu.** Thêm một đèn là đổi bộ đèn nằm trong cache key, nên lần bật đầu biên dịch lại
-      một lần, và Sổ tay hiện "đang dựng…" (như "Normal phẳng"). Từ đó, tắt chỉ là đặt `intensity` 0 và `shadow.autoUpdate = false`:
+      một lần: cảnh khựng một nhịp, như "Normal phẳng" (thí nghiệm không trả Promise, nên Sổ tay không hiện "đang dựng…"). Từ đó,
+      tắt chỉ là đặt `intensity` 0 và `shadow.autoUpdate = false`:
       không vẽ bóng nữa.
     - Mức thấp không có thí nghiệm này (`budget.shadowMap` = 0).
     - Bản shadow map không có màu giấy (§16).
