@@ -12,6 +12,8 @@ const WALL = { x0: 0.15, y0: 0.15, x1: 0.85, y1: 0.85 };
 // chốt lại theo bố cục cuối.
 const CEILING = { x0: 0.3, y0: 0, x1: 0.7, y1: 0.07 };
 const FLOOR = { x0: 0.35, y0: 0.93, x1: 0.65, y1: 1 };
+// Dải sàn sát chân vách sau: tia từ lửa tới đây đi DƯỚI dải hình nhân, trên đế (cách trục 1,45–1,98 m), nên không có bóng hình nhân.
+const FLOOR_RING = { x0: 0.4, y0: 0.885, x1: 0.6, y1: 0.905 };
 // Góc xa đèn: chân vách trái và sàn sát vách (cách ngọn lửa 2,5–3,2 m). Tỉ lệ khung 640×400.
 const FAR = { x0: 0, y0: 0.55, x1: 0.1, y1: 1 };
 // Sàn bên trái, ngoài vùng tối dưới đế đèn. Tỉ lệ khung 640×400.
@@ -50,6 +52,14 @@ async function open(page, testInfo, frames, extra = '') {
   return waitForFrames(page, frames, { timeout: 120_000 });
 }
 const wallOf = async (page) => (await canvasRegions(page, { wall: WALL })).wall;
+/**
+ * Đứng yên mọi thứ trừ trống: lửa thôi nhấp nháy, Phủ bóng về 0 (hạt của nó đổi theo từng khung). Gọi page.emulateMedia({ reducedMotion })
+ * trước open để camera không thở. Hai khung khác nhau thì chỉ còn trống và chong chóng quay làm ảnh đổi.
+ */
+async function onlyDrum(page) {
+  await page.evaluate(() => window.__sma.restore({ knobs: { 'ngon-nen.flicker': 0 } }));
+  await page.evaluate(() => window.__sma.setWeight('phu-bong', 0)); // vẽ lại khung đứng yên
+}
 
 /**
  * Bật/tắt một thí nghiệm như người xem. Bấm Tab (lần tương tác đầu, không chạm canvas: chạm là thổi nến; phím bổ trợ đứng một mình
@@ -76,16 +86,19 @@ test.describe('Đèn Kéo Quân · bóng trên vách', () => {
     test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
   });
 
-  test('đoàn quân in bóng lên vách sau và chạy theo thời gian; cùng khung thì giống hệt; mài Kéo quân về 0 thì vách sáng lên', async ({ page }, testInfo) => {
+  test('đoàn quân in bóng lên vách sau và chạy theo thời gian (do trống quay); cùng khung thì giống hệt; mài Kéo quân về 0 thì vách sáng lên', async ({ page }, testInfo) => {
     test.setTimeout(300_000);
-    await open(page, testInfo, 60);
-    const a = await wallOf(page);
-    await open(page, testInfo, 60);
-    const again = await wallOf(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' }); // camera không thở (trống vẫn quay, chậm còn một nửa)
+    const frame = async (n) => {
+      await open(page, testInfo, n);
+      await onlyDrum(page);
+      return wallOf(page);
+    };
+    const a = await frame(60);
+    const again = await frame(60);
     expect(again.checksum, 'cùng ?at&freeze phải ra cùng ảnh').toBe(a.checksum);
-    await open(page, testInfo, 120);
-    const b = await wallOf(page);
-    expect(b.checksum, 'khung 60 và 120 phải khác: trống đã quay').not.toBe(a.checksum);
+    const b = await frame(120);
+    expect(b.checksum, 'khung 60 và 120 phải khác: trống đã quay (hạt và nhấp nháy đã tắt)').not.toBe(a.checksum);
     await page.evaluate(() => window.__sma.setWeight('keo-quan', 0));
     const flat = await wallOf(page);
     // So cùng một vùng trước/sau khi mài: node bóng không được dùng thì hai ảnh như nhau. Không dùng độ lệch chuẩn: chiếc đèn (khối
@@ -106,15 +119,40 @@ test.describe('Đèn Kéo Quân · bóng trên vách', () => {
 
   test('trần có vầng sáng mang bóng chong chóng xoay; sàn ngay dưới đèn tối vì đế che (mài Kéo quân về 0 thì sáng lên)', async ({ page }, testInfo) => {
     test.setTimeout(240_000);
+    await page.emulateMedia({ reducedMotion: 'reduce' }); // camera không thở: trần đổi chỉ vì chong chóng quay
     await open(page, testInfo, 60);
+    await onlyDrum(page);
     const a = await canvasRegions(page, { ceiling: CEILING, under: FLOOR });
     await open(page, testInfo, 75);
+    await onlyDrum(page);
     const b = await canvasRegions(page, { ceiling: CEILING });
     expect(b.ceiling.checksum, 'chong chóng quay: trần đổi giữa hai khung').not.toBe(a.ceiling.checksum);
     // So cùng một vùng: góc sàn xa đèn vốn tối hơn vì luật nghịch đảo bình phương, nên không so hai vùng khác nhau.
     await page.evaluate(() => window.__sma.setWeight('keo-quan', 0));
     const c = await canvasRegions(page, { under: FLOOR });
     expect(a.under.mean, 'đế che: sàn dưới đèn tối hơn khi chưa mài Kéo quân').toBeLessThan(c.under.mean * 0.8);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('nửa tối lớn (penumbra 2) không làm tối oan dải sàn sát chân vách, nơi tia đi dưới dải hình nhân', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    await open(page, testInfo, 60);
+    const sharp = (await canvasRegions(page, { ring: FLOOR_RING })).ring;
+    await page.evaluate(() => window.__sma.restore({ knobs: { 'keo-quan.penumbra': 2 } })); // restore vẽ lại khung đứng yên
+    const soft = (await canvasRegions(page, { ring: FLOOR_RING })).ring;
+    // Đo lúc sửa (GPU thật): 0,79 khi mip cao lẫn vạch đất vào hàng mép bị kẹp của mặt nạ; 0,93 khi có cửa sổ ngoài dải.
+    expect(soft.mean).toBeGreaterThan(sharp.mean * 0.88);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('núm figures và sides dựng lại mặt nạ (texture có mip) và đèn trên GPU: bóng đổi, không lỗi', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    await open(page, testInfo, 60);
+    const before = await wallOf(page);
+    await page.evaluate(() => window.__sma.restore({ knobs: { 'cot.figures': 10, 'cot.sides': 8 } }));
+    const after = await wallOf(page);
+    expect(after.checksum).not.toBe(before.checksum);
+    expect(await page.evaluate(() => window.__sma.state)).toBe('live');
     expect(log.errors).toEqual([]);
   });
 
