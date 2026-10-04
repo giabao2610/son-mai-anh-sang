@@ -125,7 +125,7 @@ Ao Sen Đêm là **Bức 1**. (GĐ 6) Đèn Kéo Quân là **Bức 2** (§18). �
   - sáu lớp: Cốt, Ngọn nến, Gian nhà, Giấy, Kéo quân, Phủ bóng.
 
   Sau phần thiết kế đầu tiên (sáu lớp), Bạn nói "làm luôn đến spec": Claude tự quyết phần còn lại của §18, rồi Bạn duyệt một lượt
-  trong spec.
+  trong spec. Duyệt xong, Bạn chọn làm thẳng, vừa làm vừa sửa, thay cho dựng thử trên nhánh vứt đi như GĐ 4–5 (§18.9).
 
 ### Giả định (bạn đã xem và không phản đối)
 - Project nằm ở `~/Documents/Projects/son-mai-anh-sang`.
@@ -2328,7 +2328,7 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
     - **`e2e-webgpu`** (không chặn) cũng hai phần;
     - **`deploy`** cần `build` và cả hai phần của `e2e`.
 
-    Thời gian thật đo ở bản dựng thử (§18.9).
+    Thời gian thật đo khi làm (§18.9).
 - **URL:** `https://giabao2610.github.io/son-mai-anh-sang/`.
 - **Luật trong `CLAUDE.md`:**
   - **Nguồn tham chiếu:**
@@ -2367,7 +2367,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | **3 · Sương + Vàng lá GPU** | Lớp 3 hoàn chỉnh; lớp 5 compute + biến thể CPU; `degrade`, `quality.js` của bức và `ladder`; bộ điều chỉnh chất lượng chạy thật. Kèm theo (chốt khi lập kế hoạch GĐ 3): trần 60 khung/giây, trần núm theo mức, bộ điều chỉnh canh cả khi Sổ tay mở; vuốt → sương xoáy; curl noise; thí nghiệm `compare` + ms CPU; `?level`; huy hiệu "hạ {n} nấc"; `__sma.quality/degrade/upgrade/stats`; mục hoãn của GĐ 2 (phản chiếu giả ở mức thấp, bóng tĩnh + khung bóng ôm sát, bỏ compute khi `w5 = 0`, đo draw call); Phụ lục A.29+; lượt màu cả bức so với poster | Điện thoại từ 45fps trở lên; mức cao ≤ 45 draw call; đã deploy |
 | **4 · Phủ bóng + Kính mài** | Phủ bóng hoàn chỉnh (chặng `display`: LUT từ bảng màu, grain, vignette, FXAA; `tap`); `Tool` + Kính mài + Lột lớp dựng từ `views()`; `Dial` + `ui/dials.js` + thanh giờ; `?poster` + poster thật + og (`scripts/poster.js`); e2e "mài về cốt"; kiểm tra a11y; README gồm mục "Thêm một bức tranh mới". Kèm theo (chốt khi lập kế hoạch GĐ 4): bộ điều chỉnh đo thời gian GPU thật (chẩn đoán theo máy, `engine/tuner.js`) và ms GPU trong Sổ tay; Kính mài có hai hình (tròn, gạt trước/sau); đồ nghề và thanh giờ nằm trong thanh lớp; a11y bằng axe-core; og dạng JPEG; các mục còn nợ của GĐ 3 (trần khung trên màn 60,0x Hz, nấc `suong.chi-tiet` ở mức thấp, `update(0, t)` khi vẽ lại lúc `?freeze`, kiểm trần do `max()` trả, ba mức cùng bộ khóa, e2e vuốt chứng minh sương xoáy, tách e2e WebGPU ra job riêng, sửa lời spec) | Mọi e2e qua; đã deploy; README đầy đủ |
 | **5 · Hoa đăng + Từng sợi** *(tùy chọn)* | Trong sáu mục dự kiến, Bao chọn ba: **trăng tiến độ** (quầng trong `[data-moon]`, mốc từ `boot`/`run`), **Từng sợi** (`engine/gpu/draws.js` + `tools/tung-soi.js`, `ToolApi.draws`, tên vật + nhãn), **thả hoa đăng** (cử chỉ `double-tap`, `ctx.captions` + `ui/captions.js`, đèn gộp InstancedMesh của lớp Ánh trăng, vũng sáng trên nước, 12 cặp câu thơ). Kèm theo: `__sma.readouts`, luật móc lần vẽ, gợi ý mới. Chốt khi dựng thử: bảng công cụ không còn nằm dưới Sổ tay và Tab từ nút công cụ không còn vòng qua cả trang mới tới bảng (lỗi GĐ 4), "Dựng lại cảnh" quá hạn không đụng trang đã về tĩnh cùng bộ test đầu tiên cho `run()` (lỗi GĐ 2), khung chữ một cột (lỗi GĐ 1), luật đường nhẹ không dùng built-in ES2022, luật `files` của lớp kê đủ `parts/`. Ba mục còn lại (link công thức, Xem bản dịch, đàn bầu) để sau (§16) | Mọi test và e2e qua; mức cao vẫn ≤ 45 draw call (đèn không thêm draw call); Bao duyệt chữ của thơ; đã deploy |
-| **6 · Bức 2 · Đèn Kéo Quân** | Bức mới theo luật 7 (§18): gian nhà tối, đèn lục giác, đoàn quân rước cờ; sáu lớp Cốt, Ngọn nến, Gian nhà, Giấy, Kéo quân, Phủ bóng; gobo `atan(y, x)` làm node bóng tự viết của ngọn nến, shadow map thật là thí nghiệm "so"; ba cử chỉ thổi nến, giữ trống, gạt trống (tính thẳng theo thời gian); link lật tranh giữa các trang; e2e chia hai phần trên CI. Dựng thử trước khi có plan (§18.9) | Mọi test và e2e qua (cả Bức 1); mức cao ≤ 45 draw call; hợp đồng không đổi; Bao duyệt thơ, hình nhân và poster; đã deploy |
+| **6 · Bức 2 · Đèn Kéo Quân** | Bức mới theo luật 7 (§18): gian nhà tối, đèn lục giác, đoàn quân rước cờ; sáu lớp Cốt, Ngọn nến, Gian nhà, Giấy, Kéo quân, Phủ bóng; gobo `atan(y, x)` làm node bóng tự viết của ngọn nến, shadow map thật là thí nghiệm "so"; ba cử chỉ thổi nến, giữ trống, gạt trống (tính thẳng theo thời gian); link lật tranh giữa các trang; e2e chia hai phần trên CI. Làm thẳng, task rủi ro nhất trước (§18.9) | Mọi test và e2e qua (cả Bức 1); mức cao ≤ 45 draw call; hợp đồng không đổi; Bao duyệt thơ, hình nhân và poster; đã deploy |
 | 7 · *(mở rộng)* | Bức mới theo luật 7: Đông Hồ (hạt compute), Cung Quế (SDF raymarch); khi có Bức 3: Phòng tranh và trình sinh HTML (§16) | tùy |
 
 **GĐ 0 · Nền móng gồm:**
@@ -2570,7 +2570,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 Phủ bóng dùng chung. Mọi luật của kỹ thuật (§0) và của xưởng (§8–§10, `CLAUDE.md`) áp như Bức 1; chương này chỉ ghi phần riêng của
 Bức 2. Những gì Bao đã chọn nằm ở §1 (GĐ 6); phần còn lại của chương này do Claude quyết, Bao duyệt khi đọc spec.
 
-**Số trong chương này** (đơn vị mét, giây) là số thiết kế. Bản dựng thử (§18.9) chốt số cuối cùng; số nào đổi thì sửa lại ở đây.
+**Số trong chương này** (đơn vị mét, giây) là số thiết kế. Số cuối cùng chốt lúc làm (§18.9); số nào đổi thì sửa lại ở đây, trong cùng task.
 
 ### 18.1 Cảnh
 - **Gian nhà** rộng 5 × 5, cao 3,2:
@@ -2599,7 +2599,7 @@ Bức 2. Những gì Bao đã chọn nằm ở §1 (GĐ 6); phần còn lại c�
   - giới hạn xoay ngang, xoay dọc và khoảng cách giữ camera luôn ở trong gian: không bao giờ thấy mép ngoài của vách;
   - `breathe` nhỏ.
 
-  Số chốt khi dựng thử, cùng lúc với bố cục poster.
+  Số chốt lúc làm, cùng lúc với bố cục poster.
 - **Gợi ý** (`content.hint`): *"Chạm để thổi nến · vuốt để gạt đèn · giữ để dừng"*.
 - **Ba cử chỉ.** Bức nhận cử chỉ qua `setup().onGesture`. Chạm ở đâu trên tranh cũng được; công cụ học vẫn được ưu tiên như ở mọi
   bức.
@@ -2662,10 +2662,10 @@ Bức 2. Những gì Bao đã chọn nằm ở §1 (GĐ 6); phần còn lại c�
   - Dáng **cắt giấy**: mỗi hình ghép từ vài hình cơ bản (elip, viên thuốc, đa giác).
   - Chân ngựa và cờ có nhịp so le, để bóng chạy có tiết tấu.
   - Mọi hình đứng chung một đường chân: mép dưới của dải.
-  - Dựng thử dựng đủ 8 hình. Bao xem ảnh chụp, cả bóng trên vách, trước khi có plan.
+  - Bao duyệt ảnh của đủ 8 hình, cả bóng trên vách, ở điểm duyệt ảnh giữa chừng (§18.9), trước khi làm các lớp còn lại.
 - **Poster:**
   - chụp từ cảnh bằng `scripts/poster.js den-keo-quan`, lúc đoàn quân đang ở chỗ đẹp trên vách sau;
-  - `poster.capture = { at: '2026-10-25T21:00', freeze: N }`, N chốt khi dựng thử;
+  - `poster.capture = { at: '2026-10-25T21:00', freeze: N }`, N chốt lúc chụp poster;
   - `poster.alt`: "Tranh sơn mài đèn kéo quân: ngọn đèn giấy treo giữa gian nhà tối, bóng voi ngựa chạy quanh vách.".
 - **Lượt màu:**
   - đo như §5: độ sáng trung bình, độ bão hòa, tỉ lệ điểm tối; ở 1280×800 và 390×844, trên GPU thật;
@@ -2959,12 +2959,12 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
   - Bật "Shadow map thật" thì mỗi khung thêm 6 lượt × số vật đổ bóng, chừng 30 lần vẽ nữa. Vượt 45 là chủ ý: thí nghiệm này để thấy
     cái giá.
 - **Mặt nạ** được vẽ trong `createLayer` của Cốt, lúc poster còn hiện.
-  - Mục tiêu: ≤ 50 ms ở mức cao trên máy dựng thử (đo khi dựng thử).
+  - Mục tiêu: ≤ 50 ms ở mức cao trên máy của Bao (Mac M2), đo ở task mặt nạ.
   - Quá thì giảm lấy mẫu từ 4 × 4 xuống 3 × 3, hoặc vẽ ở bề rộng nhỏ hơn rồi lọc.
 - **Chi phí mỗi điểm ảnh:**
   - Node gobo chạy trên mọi bề mặt nhận bóng, tức gần cả màn hình: một phương trình bậc hai, hai lần `atan`, một lần tra texture có
     mip.
-  - Đo ms GPU khi dựng thử. Mục tiêu như §2: 60 khung/giây trên laptop, 45 trên điện thoại tầm trung (mức vừa và thấp).
+  - Đo ms GPU lúc làm: task đầu đo riêng node gobo, đo lại khi đủ sáu lớp. Mục tiêu như §2: 60 khung/giây trên laptop, 45 trên điện thoại tầm trung (mức vừa và thấp).
 - **JS:** chunk của bức cộng chunk content; chunk `three` dùng chung với Bức 1 (§8.7). Số đo ghi vào README.
 
 ### 18.8 Kiểm thử
@@ -3007,7 +3007,7 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
 - hai khung `?freeze` khác nhau thì vùng vách sau khác nhau (đoàn quân đã chạy); cùng một khung thì giống nhau;
 - mài Kéo quân về 0 thì độ tương phản của vách sau giảm hẳn (không còn mép bóng); mài Giấy về 0 thì vách hết màu;
 - chạm thì số đo "Lửa lệch" > 0, rồi về gần 0 sau khoảng 3 s; giữ thì `rpm` về gần 0; vuốt thì `rpm` vượt tốc độ thường;
-- draw call ≤ 45 ở mức cao (dựng thử ước 28);
+- draw call ≤ 45 ở mức cao (ước 28);
 - `?level=thap` không có thí nghiệm "Shadow map thật";
 - bật "Shadow map thật": cảnh vẫn chạy, không có lỗi console, draw call tăng;
 - lật tranh: từ Bức 1 bấm "Bức 2 · Đèn Kéo Quân →" thì tới đúng trang, cả khi `?static`; và đi ngược lại.
@@ -3026,33 +3026,34 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
 - Bao duyệt thơ và ảnh poster.
 
 ### 18.9 Cách làm GĐ 6
-Như GĐ 4 và GĐ 5:
-1. Bao duyệt spec này.
-2. **Dựng thử** trên một nhánh vứt đi, để kiểm những gì spec chưa kiểm được bằng chạy thật:
-   - node bóng tự viết trên cả WebGPU và WebGL2, và khi `castShadow` bật thì không có shadow map nào được vẽ (đếm draw call);
-   - mặt nạ có mip tự tính chạy đúng trên cả hai backend; nửa tối theo khoảng cách nhìn đúng;
-   - "Shadow map thật": cube shadow map trên WebGL2, trống cắt hình đúng trong lượt vẽ bóng, lần biên dịch lại khi bật lần đầu;
-   - thứ tự vẽ của lửa và giấy trong suốt;
-   - 8 hình nhân, bố cục, camera, lượt màu, poster;
-   - ms GPU và nhịp khung trên máy thật, trên SwiftShader và khi giả lập điện thoại; thời gian e2e khi có hai bức.
-
-   Bao xem ảnh chụp (một trang ảnh riêng tư, như GĐ 5) trước khi có plan.
-3. Plan dựng từ các commit của bản dựng thử: mỗi task một commit, task nào cũng được review. Bao chọn cách thực thi.
-4. Chụp poster, đối chiếu thơ, review cuối. Rồi hỏi Bao trước khi push, vì push là deploy.
+GĐ 4 và GĐ 5 dựng thử trên một nhánh vứt đi rồi mới viết plan, để code trong plan là code đã chạy. Cái giá là viết code gần như hai
+lần: GĐ 5 có 18 commit dựng thử, plan 11.990 dòng chép lại chúng, và lúc thực thi chép lại lần nữa. Sau khi duyệt spec, Bao chọn
+cho GĐ 6 **làm thẳng, vừa làm vừa sửa**:
+1. **Plan gọn.** Mỗi task ghi mục tiêu, file, test viết trước, cách kiểm bằng chạy thật. Code đầy đủ chỉ có ở chỗ khó: gobo, giao
+   tia, công thức quay, mặt nạ. Bao xem plan và chọn cách thực thi.
+2. **Task rủi ro nhất làm trước.** Khung tối thiểu của Bức 2 (gian nhà, trống, đèn có node bóng tự viết, mặt nạ tạm) chạy thật trên
+   WebGPU (GPU thật) và WebGL2 (SwiftShader), đếm draw call. Node bóng tự viết không chạy ở một backend nào đó thì dừng, báo Bao, và
+   chuyển sang đường lùi (§18.10).
+3. Mặt nạ có mip tự tính (so ảnh của hai backend), rồi tám hình nhân, bố cục, camera.
+4. **Điểm duyệt ảnh giữa chừng** (một trang ảnh riêng tư, như GĐ 5): hình nhân, bóng trên vách, bố cục. Bao duyệt trước khi làm các
+   lớp còn lại. Hình là dữ liệu, nên sửa rẻ.
+5. Các lớp còn lại, cử chỉ, lật tranh, CI, chữ của Sổ tay, lượt màu, poster. Task nào cũng có test viết trước, chạy thật, và review.
+   Chỗ nào làm khác spec thì sửa spec trong cùng task.
+6. Review cuối cả nhánh, đối chiếu thơ, rồi hỏi Bao trước khi push (push là deploy).
 
 ### 18.10 Rủi ro riêng
 - **Hình nhân trông thô.** Ghép từ hình cơ bản dễ ra dáng búp bê.
-  - Cách tránh: chọn dáng cắt giấy có chủ ý (khối phẳng, mép gọn); dựng thử đủ 8 hình, và Bao duyệt ảnh trước khi có plan.
+  - Cách tránh: chọn dáng cắt giấy có chủ ý (khối phẳng, mép gọn); Bao duyệt ảnh của đủ 8 hình ở điểm duyệt giữa chừng (§18.9).
   - Hình là dữ liệu, nên sửa hình không đụng tới code.
 - **Node bóng tự viết là một đường ít người dùng của three.**
-  - Mới đọc mã (Phụ lục A.77), chưa chạy thật; dựng thử kiểm trên cả hai backend.
+  - Mới đọc mã (Phụ lục A.77), chưa chạy thật. Task đầu chạy thật trên cả hai backend; hỏng thì dừng ở đó (§18.9).
   - Đường lùi: gobo vẫn là một hàm TSL, nhân thẳng được vào ánh sáng của từng material. Cách đó mất phần tách bạch giữa đèn và bóng,
     nhưng chắc chắn chạy.
-- **Mip của DataTexture có thể khác nhau giữa hai backend.** Chuỗi mip tự tính bằng JS, không nhờ GPU sinh; dựng thử so ảnh của hai
+- **Mip của DataTexture có thể khác nhau giữa hai backend.** Chuỗi mip tự tính bằng JS, không nhờ GPU sinh; task mặt nạ so ảnh của hai
   backend.
-- **Chi phí trên điện thoại.** Node gobo chạy trên gần cả màn hình. Đo khi dựng thử; nếu thiếu thì thêm một nấc (tra mặt nạ không
-  nội suy giữa các mức mip) trước khi có plan.
-- **CI dài gấp đôi.** Chia phần như §18.8; thời gian đo khi dựng thử.
+- **Chi phí trên điện thoại.** Node gobo chạy trên gần cả màn hình. Đo lúc làm; nếu thiếu thì thêm một nấc (tra mặt nạ không
+  nội suy giữa các mức mip).
+- **CI dài gấp đôi.** Chia phần như §18.8; thời gian đo ở task CI.
 - **Sàn tối dưới đèn.** Đáy đèn kín, nên sàn quanh chân đèn chỉ có ánh đêm. Ảnh nặng nề quá thì nâng ngọn nến hoặc thu nhỏ đế (số
   của Cốt), không đổi cách làm.
 
@@ -3385,7 +3386,7 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - Hệ quả nhỏ, tự hết sau vài khung: `__sma.frames` đếm cả các nhịp không vẽ (`run.js` đếm nhịp của vòng lặp); khung đầu sau lần
       thử có `dt` bị kẹp ở 0,1 giây, nên số ms của `__sma.stats()` nhích lên một khung, và một mẻ của `gpu-timer` có nhịp khung dài
       hơn (Sổ tay mở thì không có lần thử, nên số đo "Tắt / Bật" không bị ảnh hưởng).
-77. **Node bóng tự viết của một đèn** (đọc mã nguồn r186, `nodes/lighting/AnalyticLightNode.js`; GĐ 6 chạy thật ở bản dựng thử):
+77. **Node bóng tự viết của một đèn** (đọc mã nguồn r186, `nodes/lighting/AnalyticLightNode.js`; GĐ 6 chạy thật ở task đầu):
     - `setup()` chỉ gọi `setupShadow` khi `light.castShadow` và `builder.object.receiveShadow` cùng đúng. `setupShadow` thoát ngay khi
       `renderer.shadowMap.enabled` là `false`.
     - Có `light.shadow.shadowNode` thì three dùng node đó (`nodeObject(customShadowNode)`) thay cho `setupShadowNode()`: không tạo
@@ -3397,7 +3398,7 @@ Các mục dưới đây đã được kiểm bằng ba cách:
 78. **`PointLight`** (`nodes/lighting/PointLightNode.js`): `decay` và `distance` là uniform, cập nhật mỗi khung (`decayExponentNode`,
     `cutoffDistanceNode`). Đổi lúc chạy không biên dịch lại.
 79. **`DataTexture` có mip tự tính** (`renderers/webgpu/utils/WebGPUTextureUtils.js`): với `DataTexture`, backend WebGPU nạp từng mức
-    trong `texture.mipmaps`. `TextureNode` nhận mức mip qua `level()`. GĐ 6 kiểm WebGL2 ở bản dựng thử.
+    trong `texture.mipmaps`. `TextureNode` nhận mức mip qua `level()`. GĐ 6 kiểm WebGL2 ở task mặt nạ.
 80. **Vật cắt hình trong lượt vẽ bóng** (`renderers/common/Renderer.js`, `materials/nodes/NodeMaterial.js`):
     - Lượt vẽ bóng dùng `material.maskShadowNode`; không có thì dùng `material.maskNode`. Điểm nào có mặt nạ `false` thì bị bỏ
       (`discard`).
