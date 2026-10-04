@@ -9,7 +9,7 @@ export const id = 'giay';
 
 export const knobs = [
   { id: 'thickness', min: 0, max: 1, step: 0.01, value: 0.4 },
-  { id: 'dye', min: 0, max: 1, step: 0.01, value: 0.7 },
+  { id: 'dye', min: 0, max: 1, step: 0.01, value: 0.9 },
   { id: 'fiber', min: 0, max: 1, step: 0.01, value: 0.5 },
 ];
 
@@ -18,9 +18,9 @@ const TAU = Math.PI * 2;
 const SIGMA = 2.2;
 /**
  * Giấy sáng bao nhiêu so với phép tính vật lý. Thật ra giấy cách lửa 15 cm sáng gấp vài trăm lần vách cách 1,9 m; màn hình không chứa
- * nổi khoảng đó: AgX nén giấy về trắng và mất màu nhuộm. Như người vẽ, ta hạ riêng độ sáng của giấy cho màu còn đọc được (lõi ~2–3).
+ * nổi khoảng đó: AgX nén giấy về trắng và mất màu nhuộm. Như người vẽ, ta hạ riêng độ sáng của giấy cho màu còn đọc được (lõi chừng 1–2).
  */
-const EXPOSURE = 0.05;
+const EXPOSURE = 0.04;
 /** "Giấy trong suốt": còn lại bao nhiêu độ đục. */
 const CLEAR = 0.15;
 

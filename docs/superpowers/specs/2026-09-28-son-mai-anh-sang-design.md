@@ -2681,6 +2681,12 @@ Bức 2. Những gì Bao đã chọn nằm ở §1 (GĐ 6); phần còn lại c�
   - đo như §5: độ sáng trung bình, độ bão hòa, tỉ lệ điểm tối; ở 1280×800 và 390×844, trên GPU thật;
   - số mặc định của các núm nằm trong một commit riêng;
   - Bao duyệt ảnh.
+  - (Đo 2026-10-04, Mac M2, `?at=2026-10-25T21:00&freeze=240&level=cao`, DPR 1; độ sáng 0–255, độ bão hòa HSV, điểm tối là kênh lớn
+    nhất < 30.) Trước lượt màu: 52,4 / 0,50 / 10,7% ở 1280×800 và 74,1 / 0,57 / 15,0% ở 390×844. Ảnh ấm nhưng "sữa": vách sau màu
+    kem nhạt, giấy pastel, bóng ngả xám tím.
+  - Lượt màu: cường độ nến 8 → 6,3; độ đậm màu nhuộm 0,7 → 0,9; ánh đêm 10% → 7%; phơi sáng của giấy 0,05 → 0,04. Sau: 40,3 / 0,51 /
+    21,1% và 61,3 / 0,61 / 18,5%. Tối và ấm hơn; ba mảng màu trên vách (vàng lá ở giữa, đỏ son bên phải, chàm lạnh bên trái) và ba
+    tấm giấy trước mặt đọc rõ; đoàn quân vẫn rõ. Màu `lua`, `giayDo` giữ như thiết kế.
 
 ### 18.4 Sáu lớp
 **Nối các lớp.** Như Bức 1: lớp trước công bố trong `shared.<id>`, lớp sau sửa node của lớp trước trước khi biên dịch.
@@ -2763,7 +2769,7 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
     - `positionNode` uốn lửa theo độ ngả và độ nhấp nháy. Lửa dùng chung uniform với đèn, nên lửa và bóng chao cùng nhịp.
   - Đèn xưởng (`shared.cot.hemi`) giảm theo trọng số, xuống còn một chút ánh đêm: chàm ở trên, cánh gián ở dưới. Nhờ vậy chỗ bóng
     không bao giờ đen kịt (luật 3).
-    - Ánh đêm chỉ ngả 30% về hai sắc đó và giữ nguyên độ sáng của đèn xưởng; độ sáng do hệ số đêm (10%) giữ.
+    - Ánh đêm chỉ ngả 30% về hai sắc đó và giữ nguyên độ sáng của đèn xưởng; độ sáng do hệ số đêm (7%, chốt ở lượt màu) giữ.
     - Ngả hết về chàm thì bóng thành xanh tím và át mất ánh nến ấm (thấy lúc làm, GĐ 6).
 - **Núm:**
   - `flameSize` (uniform; 0–0,04 m, mặc định 0,004): cũng là cỡ nguồn sáng, dùng cho nửa tối của lớp Kéo quân. Ở 1 cm, nửa tối trên
@@ -2815,9 +2821,9 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
   - **Ánh sáng xuyên mặt mỏng:** nhìn mặt ngoài nhưng tính ánh nến chiếu vào mặt trong.
     `emissiveNode` = màu nến × cường độ × độ thấu `exp(−σ × dày)` × `max(0, −N·L)` / r² × màu tấm giấy × sợi giấy × hệ số phơi sáng.
     Lớp Kéo quân nhân thêm bóng hình nhân vào node này.
-    - Hệ số phơi sáng (0,05) là lựa chọn của người vẽ. Theo vật lý, giấy cách lửa 15 cm sáng gấp vài trăm lần vách cách 1,9 m; màn hình
+    - Hệ số phơi sáng (0,04, chốt ở lượt màu) là lựa chọn của người vẽ. Theo vật lý, giấy cách lửa 15 cm sáng gấp vài trăm lần vách cách 1,9 m; màn hình
       không chứa nổi khoảng đó, nên AgX nén giấy về trắng và mất màu nhuộm. Hạ riêng độ sáng của giấy thì màu còn đọc được.
-    - Ánh sáng ra phòng đã qua giấy nhuộm nên tối hơn ánh nến trần, vì vậy cường độ mặc định của đèn là 8 (chốt ở lượt màu).
+    - Ánh sáng ra phòng đã qua giấy nhuộm nên tối hơn ánh nến trần, vì vậy cường độ mặc định của đèn là 6,3 (lượt màu), không phải 4.
   - Màu từng tấm là một mảng uniform 8 ô, tính trên CPU theo số cạnh. Đổi số cạnh chỉ ghi lại mảng, không biên dịch lại.
   - Tia qua miệng trên (lên trần) không đi qua giấy nào, nên giữ màu nến.
   - **Lọc màu:** nhân `mix(1, màu tấm giấy, w4)` vào node bóng của đèn. Tia đi qua tấm nào thì `shared.cot.lantern.paperExit` trả

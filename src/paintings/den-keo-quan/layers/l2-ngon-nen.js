@@ -7,7 +7,7 @@ export const id = 'ngon-nen';
 
 export const knobs = [
   // Cường độ đèn là thuộc tính JS của PointLight (three đọc mỗi khung), nên đổi không biên dịch lại: núm 'js'.
-  { id: 'intensity', via: 'js', min: 0, max: 20, step: 0.1, value: 8 },
+  { id: 'intensity', via: 'js', min: 0, max: 20, step: 0.1, value: 6.3 },
   // Cỡ ngọn lửa (m) cũng là cỡ nguồn sáng: lớp Kéo quân tính nửa tối theo nó. 4 mm: chân tay hình nhân còn đọc được trên vách.
   { id: 'flameSize', min: 0, max: 0.04, step: 0.001, value: 0.004 },
   // Nhấp nháy và sắc nến đi qua đèn thật (thuộc tính JS của PointLight) và createFlame trên CPU; shader của lửa (và của giấy) chỉ
@@ -17,7 +17,7 @@ export const knobs = [
 ];
 
 /** Đèn xưởng còn lại bao nhiêu khi nến sáng hẳn: một chút ánh đêm để chỗ bóng không đen kịt (luật 3). */
-const NIGHT = 0.1;
+const NIGHT = 0.07;
 /** Ánh đêm ngả về chàm (trên) và cánh gián (dưới) bao nhiêu: ngả hết thì bóng thành xanh tím và át mất ánh nến ấm. */
 const TINT = 0.3;
 const luminance = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;

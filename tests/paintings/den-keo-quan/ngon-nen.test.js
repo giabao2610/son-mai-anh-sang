@@ -80,12 +80,12 @@ describe('l2-ngon-nen', () => {
     expect(built.shared.ngonNen.power.value).toBe(0);
   });
 
-  it('đèn xưởng lui về ánh đêm: còn NIGHT × cường độ, trên ngả chàm, dưới ngả cánh gián (một phần), độ sáng giữ nguyên (chỗ bóng không đen kịt)', () => {
+  it('đèn xưởng lui về ánh đêm: còn 7% cường độ (NIGHT), trên ngả chàm, dưới ngả cánh gián (một phần), độ sáng giữ nguyên (chỗ bóng không đen kịt)', () => {
     const built = build();
     const { hemi, hemiIntensity } = built.shared.cot;
     const studio = { sky: hemi.color.clone(), ground: hemi.groundColor.clone() };
     built.layers['ngon-nen'].update(0, 1); // trọng số mặc định 1
-    expect(hemi.intensity).toBeCloseTo(hemiIntensity * 0.1, 6);
+    expect(hemi.intensity).toBeCloseTo(hemiIntensity * 0.07, 6);
     const { color: paint } = built.ctx.palette;
     // Ngả về sắc của sơn (lam hơn đỏ ở trên, đỏ hơn lam ở dưới) nhưng không ngả hết: ngả hết thì bóng thành xanh tím.
     const blueOverRed = (c) => hue(c)[2] / hue(c)[0];
