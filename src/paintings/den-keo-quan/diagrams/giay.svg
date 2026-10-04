@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" role="img" aria-labelledby="dg-kq-gi-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-kq-gi-title">Ánh sáng xuyên giấy: shader tô mặt ngoài nhưng tính ánh nến chiếu vào mặt trong, theo góc giữa tia sáng và pháp tuyến ngược (−N). Qua bề dày, ánh sáng còn exp(−σ × dày). Tia ra phòng mang màu tấm giấy.</title>
+  <defs>
+    <marker id="dg-kq-gi-mui" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#F2D48A"/>
+    </marker>
+    <marker id="dg-kq-gi-do" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#B3261E"/>
+    </marker>
+    <marker id="dg-kq-gi-n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#C9C6BD"/>
+    </marker>
+  </defs>
+  <!-- ngọn lửa trong đèn -->
+  <path d="M46 102 C 37 92, 41 78, 46 68 C 51 78, 55 92, 46 102 Z" fill="#F2D48A"/>
+  <text x="46" y="124" fill="#8A8580" text-anchor="middle">lửa</text>
+  <!-- tấm giấy: mặt trong (trái), mặt ngoài (phải) -->
+  <rect x="166" y="24" width="14" height="132" fill="#D9C7A0"/>
+  <rect x="180" y="24" width="4" height="132" fill="#B3261E" fill-opacity="0.7"/>
+  <text x="160" y="18" fill="#8A8580" text-anchor="end">mặt trong</text>
+  <text x="190" y="18" fill="#8A8580">mặt ngoài</text>
+  <!-- tia vào mặt trong, pháp tuyến -->
+  <path d="M54 84 L164 96" stroke="#F2D48A" stroke-width="1.6" marker-end="url(#dg-kq-gi-mui)"/>
+  <path d="M184 96 L222 96" stroke="#C9C6BD" stroke-width="1.4" marker-end="url(#dg-kq-gi-n)"/>
+  <text x="226" y="100" fill="#C9C6BD">N</text>
+  <text x="104" y="76" fill="#F2D48A" text-anchor="middle">L</text>
+  <text x="96" y="150" fill="#EDE3CF" text-anchor="middle">sáng ∝ max(0, −N·L) / r²</text>
+  <!-- tia ra phòng mang màu giấy -->
+  <path d="M186 104 L330 128" stroke="#B3261E" stroke-width="2" marker-end="url(#dg-kq-gi-do)"/>
+  <text x="270" y="60" fill="#EDE3CF" text-anchor="middle">× exp(−σ · dày)</text>
+  <text x="270" y="152" fill="#B3261E" text-anchor="middle">ra phòng: màu tấm giấy</text>
+</svg>
