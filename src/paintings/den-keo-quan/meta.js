@@ -41,7 +41,11 @@ export default {
     {
       id: 'ngon-nen',
       name: 'Ngọn nến',
-      files: ['paintings/den-keo-quan/layers/l2-ngon-nen.js', 'paintings/den-keo-quan/parts/ngon-nen-thoi.js'],
+      files: [
+        'paintings/den-keo-quan/layers/l2-ngon-nen.js',
+        'paintings/den-keo-quan/parts/ngon-nen-thoi.js',
+        'paintings/den-keo-quan/parts/ngon-nen-lua.js',
+      ],
     },
     {
       id: 'keo-quan',

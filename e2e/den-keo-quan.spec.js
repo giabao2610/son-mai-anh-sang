@@ -12,6 +12,8 @@ const WALL = { x0: 0.15, y0: 0.15, x1: 0.85, y1: 0.85 };
 // chốt lại theo bố cục cuối.
 const CEILING = { x0: 0.3, y0: 0, x1: 0.7, y1: 0.07 };
 const FLOOR = { x0: 0.35, y0: 0.93, x1: 0.65, y1: 1 };
+// Góc xa đèn: chân vách trái và sàn sát vách (cách ngọn lửa 2,5–3,2 m). Tỉ lệ khung 640×400.
+const FAR = { x0: 0, y0: 0.55, x1: 0.1, y1: 1 };
 
 let log;
 test.beforeEach(async ({ page }, testInfo) => {
@@ -111,6 +113,39 @@ test.describe('Đèn Kéo Quân · bóng trên vách', () => {
     await open(page, testInfo, 30, '&level=cao');
     const { drawCalls } = await page.evaluate(() => window.__sma.stats());
     expect(drawCalls).toBeLessThanOrEqual(30); // cube shadow map sẽ thêm ≥ 6 × số vật đổ bóng
+  });
+});
+
+test.describe('Đèn Kéo Quân · ngọn nến', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('"Ánh sáng không suy giảm": góc xa đèn sáng lên rõ (luật nghịch đảo bình phương bị bỏ)', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    await open(page, testInfo, 60);
+    const before = (await canvasRegions(page, { far: FAR })).far;
+    await toggleExperiment(page, 'ngon-nen', 'noDecay', true); // vẽ lại khung đứng yên, cùng thời điểm
+    const after = (await canvasRegions(page, { far: FAR })).far;
+    expect(after.mean).toBeGreaterThan(before.mean * 1.3);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('"Tắt nhấp nháy": hai khung khác nhau giống hệt ở vùng vách; còn nhấp nháy thì khác', async ({ page }, testInfo) => {
+    test.setTimeout(420_000);
+    await page.emulateMedia({ reducedMotion: 'reduce' }); // camera không thở: giữa hai khung chỉ còn ngọn nến đổi
+    const still = async (frames, steady) => {
+      await open(page, testInfo, frames);
+      if (steady) await toggleExperiment(page, 'ngon-nen', 'steady', true);
+      // Bóng đoàn quân (trống quay) và hạt của Phủ bóng (đổi theo khung) cũng đổi giữa hai khung: mài về 0, chỉ còn ánh nến.
+      for (const id of ['keo-quan', 'phu-bong']) await page.evaluate((l) => window.__sma.setWeight(l, 0), id);
+      return wallOf(page);
+    };
+    const [a, b] = [await still(60, false), await still(90, false)];
+    expect(b.checksum, 'nến nhấp nháy: khung 60 và 90 phải khác').not.toBe(a.checksum);
+    const [c, d] = [await still(60, true), await still(90, true)];
+    expect(d.checksum, 'tắt nhấp nháy: khung 60 và 90 giống hệt').toBe(c.checksum);
+    expect(log.errors).toEqual([]);
   });
 });
 

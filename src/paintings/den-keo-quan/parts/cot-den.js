@@ -8,7 +8,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
  * - axis: (x, z) của trục; cách vách sau (z = −2,5) đúng 1,9, nên bóng trên vách sau to gấp 1,9 / 0,09 ≈ 21 lần.
  * - paper: lăng trụ giấy, bán kính ngoại tiếp r, từ y0 tới y1. Đáy kín (đế), miệng trên hở bán kính `mouth`.
  * - drum: trống hình nhân (bán kính r, dải hình từ y0 tới y1). flame: tâm ngọn lửa lúc đứng yên, ở giữa dải hình.
- * - candle: thân nến. fan: chong chóng (độ cao, bán kính, số cánh). hang: chỗ buộc dây trên xà giữa.
+ * - candle: thân nến; đỉnh nến thấp hơn tâm ngọn lửa chừng 3 cm, nên ngọn lửa (lớp Ngọn nến) đứng trên bấc mà đèn thật vẫn ở
+ *   giữa thân lửa. fan: chong chóng (độ cao, bán kính, số cánh). hang: chỗ buộc dây trên xà giữa.
  */
 export const LANTERN = Object.freeze({
   axis: Object.freeze([0, -0.6]),
@@ -17,7 +18,7 @@ export const LANTERN = Object.freeze({
   mouth: 0.12,
   drum: Object.freeze({ r: 0.09, y0: 1.47, y1: 1.61 }),
   flame: Object.freeze([0, 1.54, -0.6]),
-  candle: Object.freeze({ r: 0.012, y0: 1.36, y1: 1.5 }),
+  candle: Object.freeze({ r: 0.012, y0: 1.36, y1: 1.51 }),
   fan: Object.freeze({ y: 1.7, r: 0.1, blades: 8 }),
   hang: 3.05,
 });

@@ -2746,17 +2746,25 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
 - **Kỹ thuật:**
   - **`PointLight` thật** đặt ở ngọn lửa, suy giảm theo bình phương khoảng cách (`decay` 2). Mỗi khung, vị trí đèn lấy theo vị trí
     lửa của `shared.flame` (gồm nhấp nháy và thổi).
-  - **Ngọn lửa** là một mesh tròn xoay (`LatheGeometry`) hình giọt nước:
+  - **Ngọn lửa** là một mesh tròn xoay (`LatheGeometry`) hình giọt nước, cao 5,5 cm, chân đứng ngay trên đỉnh nến; đèn thật nằm
+    quãng giữa thân lửa:
     - `MeshBasicNodeMaterial`, cộng dồn (`AdditiveBlending`, `depthWrite = false`);
-    - màu đổi theo chiều cao, viết bằng TSL; `emissiveNode` lớn hơn 1 để có bloom;
+    - màu đổi theo chiều cao, viết bằng TSL, và nằm hết ở `emissiveNode` (`colorNode` = 0), lớn hơn 1 để có bloom: bloom chỉ đọc ảnh
+      emissive, nên thấy đủ cả ngọn lửa;
     - `positionNode` uốn lửa theo độ ngả và độ nhấp nháy. Lửa dùng chung uniform với đèn, nên lửa và bóng chao cùng nhịp.
   - Đèn xưởng (`shared.cot.hemi`) giảm theo trọng số, xuống còn một chút ánh đêm: chàm ở trên, cánh gián ở dưới. Nhờ vậy chỗ bóng
     không bao giờ đen kịt (luật 3).
+    - Ánh đêm chỉ ngả 30% về hai sắc đó và giữ nguyên độ sáng của đèn xưởng; độ sáng do hệ số đêm (10%) giữ.
+    - Ngả hết về chàm thì bóng thành xanh tím và át mất ánh nến ấm (thấy lúc làm, GĐ 6).
 - **Núm:**
-  - `flameSize` (uniform; 0–0,04 m, mặc định khoảng 0,01): cũng là cỡ nguồn sáng, dùng cho nửa tối của lớp Kéo quân;
-  - `flicker` (uniform);
-  - `warmth` (uniform): màu ánh nến, từ đỏ cam tới vàng ngà;
+  - `flameSize` (uniform; 0–0,04 m, mặc định 0,004): cũng là cỡ nguồn sáng, dùng cho nửa tối của lớp Kéo quân. Ở 1 cm, nửa tối trên
+    vách xóa hết chân tay và cán cờ của hình nhân; ở 4 mm hình còn đọc được (thấy lúc làm, GĐ 6).
+  - `flicker` (js; 0–2): độ nhấp nháy;
+  - `warmth` (js; 0–1, mặc định 0,5): màu ánh nến, từ đỏ cam (`lua`) tới vàng ngà (`vangLaSang`);
   - `intensity` (js): cường độ của đèn thật.
+
+  `flicker` và `warmth` là `js`, không phải `uniform`: nhấp nháy và màu đi qua đèn thật (thuộc tính JS của `PointLight`) và qua
+  `createFlame` trên CPU. Shader của lửa và của giấy chỉ đọc kết quả qua uniform (`candleColor`, độ ngả, độ sáng của lửa).
 - **Phá:**
   - *"Ánh sáng không suy giảm"* (`noDecay`): `decay` = 0. Vách xa sáng như vách gần, và căn phòng mất chiều sâu. `decay` là uniform
     của three nên không biên dịch lại (Phụ lục A.78).

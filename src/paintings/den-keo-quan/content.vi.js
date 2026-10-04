@@ -44,14 +44,24 @@ export default {
         + 'cách xa gấp đôi chỉ nhận một phần tư ánh sáng. Vì vậy căn phòng có chiều sâu, gần đèn thì sáng, góc xa thì tối.',
       learned: ['Đèn điểm thật chiếu sáng mọi bề mặt quanh nó, mạnh yếu theo luật nghịch đảo bình phương.'],
       readMore: [{ title: 'three.js · PointLight', url: 'https://threejs.org/docs/#api/en/lights/PointLight' }],
-      knobs: { intensity: 'Độ sáng của nến' },
+      knobs: {
+        intensity: 'Độ sáng của nến',
+        flameSize: 'Cỡ ngọn lửa (m)',
+        flicker: 'Nhấp nháy',
+        warmth: 'Sắc nến (đỏ cam → vàng ngà)',
+      },
       experiments: {
         noDecay: {
           label: 'Ánh sáng không suy giảm',
           explain: 'Bỏ luật nghịch đảo bình phương: vách xa sáng như vách gần, căn phòng mất chiều sâu.',
         },
+        steady: {
+          label: 'Tắt nhấp nháy',
+          explain: 'Ngọn lửa đứng yên: ánh sáng và bóng trên vách thôi run. Chỉ một chút run nhỏ đã làm căn phòng như đang sống.',
+        },
       },
       readouts: { backWall: 'Độ rọi ở vách sau', lean: 'Lửa lệch' },
+      objects: { 'ngon-lua': 'Ngọn lửa' },
     },
     'keo-quan': {
       understand: 'Kéo quân là bóng của đoàn quân trên trống, chiếu lên vách. Không có shadow map nào: với mỗi điểm đang tô, shader '

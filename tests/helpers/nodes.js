@@ -70,7 +70,9 @@ const PASSES = {
  *   thì đèn có node bóng tự viết dịch như không có bóng.
  *   lights (GĐ 6, mặc định = shadows): nạp các đèn đang hiện của scene vào LightsNode, như RenderList làm lúc vẽ
  *   (`lightsNode.setLights`). Không nạp thì shader không có đèn nào: chỉ kiểm node của bức, không kiểm mô hình chiếu sáng.
- * @returns {{ vertexShader: string, fragmentShader: string, outputs: number, problems: string[] }}
+ * @returns {{ vertexShader: string, fragmentShader: string, outputs: number, problems: string[], uniforms: string[] }}
+ *   uniforms (GĐ 6): tên (setName) của mọi uniform mà shader thật sự đọc, kể cả uniform nằm trong thân một Fn (nodesOf không thấy
+ *   chúng); uniform không đặt tên mang tên chung của three (nodeUniformN).
  */
 export function compileMaterial(object, { scene, camera }, backend, { pass = 'scene', shadows = false, lights = shadows } = {}) {
   if (!PASSES[pass]) throw new Error(`compileMaterial: không có lượt vẽ "${pass}" (chỉ có ${Object.keys(PASSES).join(', ')})`);
@@ -108,7 +110,8 @@ export function compileMaterial(object, { scene, camera }, backend, { pass = 'sc
     Object.assign(console, saved);
   }
   const { vertexShader, fragmentShader } = builder;
-  return { vertexShader, fragmentShader, outputs: countOutputs(fragmentShader), problems };
+  const uniforms = [...builder.uniforms.vertex, ...builder.uniforms.fragment].map((u) => u.name);
+  return { vertexShader, fragmentShader, outputs: countOutputs(fragmentShader), problems, uniforms };
 }
 
 /** Các đèn đang hiện trong scene, như RenderList gom lúc vẽ. */
