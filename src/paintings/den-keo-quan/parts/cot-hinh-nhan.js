@@ -84,8 +84,33 @@ export function prepare(s) {
 /** Khoảng cách có dấu (âm ở trong) từ (x, y) tới hình s. Đơn vị chiều cao dải. */
 export const shapeDistance = (s, x, y) => prepare(s)(x, y);
 
+/** Hộp bao ngang [trái, phải] của cả hình, tính từ gốc tọa độ của hình (đơn vị chiều cao dải), đã lật theo FACING. */
+export function figureExtent(fig) {
+  const boxes = fig.shapes.map(bounds);
+  const [x0, x1] = [Math.min(...boxes.map((b) => b.x0)), Math.max(...boxes.map((b) => b.x1))];
+  return FACING === 1 ? [x0, x1] : [-x1, -x0];
+}
+
 /**
- * Vẽ `count` hình (lặp theo thứ tự của `figures`) đặt đều quanh dải, ra độ phủ 8 bit rộng `width`, cao `width / ASPECT`, kèm chuỗi mip.
+ * Gốc tọa độ của `count` hình quanh dải, theo phần của chu vi. Xếp theo bề rộng THẬT của từng hình, khe giữa hai hình kề nhau bằng
+ * nhau (cả khe quấn vòng): chia đều theo ô thì hai hình rộng đứng cạnh nhau sẽ chồng lên nhau (9 hình: hai người cưỡi ngựa).
+ * Hình đầu giữ đúng chỗ cũ (giữa ô đầu, 0,5 / count), để bố cục của poster không đổi.
+ */
+export function layout(figures, count) {
+  const spans = Array.from({ length: count }, (_, k) => figureExtent(figures[k % figures.length]));
+  const gap = (ASPECT - spans.reduce((sum, [a, b]) => sum + b - a, 0)) / count;
+  let edge = 0;
+  const origins = spans.map(([a, b]) => {
+    const origin = edge - a;
+    edge += b - a + gap;
+    return origin;
+  });
+  return origins.map((o) => (o - origins[0]) / ASPECT + 0.5 / count);
+}
+
+/**
+ * Vẽ `count` hình (lặp theo thứ tự của `figures`) xếp quanh dải theo `layout`, ra độ phủ 8 bit rộng `width`, cao `width / ASPECT`, kèm
+ * chuỗi mip.
  * Mỗi texel MỘT mẫu: độ phủ = clamp(0,5 − khoảng cách / cỡ texel), tức mép mịn đúng một texel mà không phải lấy nhiều mẫu. Mỗi hình
  * cơ bản chỉ xét các texel trong hộp bao của nó, nên 2048 × 512 vẽ trong vài chục ms. Hợp của các hình: lấy độ phủ lớn nhất.
  * offset: dời cả đoàn theo vòng (phần của chu vi), test quấn vòng dùng.
@@ -96,9 +121,10 @@ export function rasterize(figures, width, { count = figures.length, ground = GRO
   const texel = 1 / height;
   // Vạch đất: các hàng từ MARGIN tới MARGIN + ground, phủ kín cả vòng.
   for (let j = Math.floor(MARGIN * height); j < Math.round((MARGIN + ground) * height); j += 1) data.fill(255, j * width, (j + 1) * width);
+  const origins = layout(figures, count);
   for (let k = 0; k < count; k += 1) {
     const fig = figures[k % figures.length];
-    const cx = ((k + 0.5) / count + offset) * width; // tâm hình, theo texel
+    const cx = (origins[k] + offset) * width; // gốc tọa độ của hình, theo texel
     for (const s of fig.shapes) {
       const distance = prepare(s);
       const box = bounds(s);

@@ -8,7 +8,8 @@ const FAR = 8;
 /**
  * Đèn thứ hai chỉ được dựng khi người xem bật thí nghiệm lần đầu. Thêm một đèn là đổi bộ đèn nằm trong cache key của mọi material
  * (spec Phụ lục A.77), nên lần bật đầu biên dịch lại MỘT lần (khựng một nhịp). Từ đó tắt chỉ là intensity 0 và autoUpdate = false:
- * shadow map không được vẽ nữa, và không có gì phải biên dịch lại.
+ * shadow map không được vẽ nữa, và không có gì phải biên dịch lại. Cái giá còn lại: đèn vẫn trong cảnh, nên mỗi điểm ảnh nhận bóng
+ * vẫn tra cube map (vài phép so độ sâu), và cube map vẫn chiếm bộ nhớ cho tới khi dựng lại cảnh.
  * @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx
  * @param {{ source: any, size: number }} p  source: đèn nến (vị trí, màu); size: cỡ cube shadow map (budget.shadowMap)
  */
@@ -29,13 +30,19 @@ export function createRealShadow(ctx, { source, size }) {
       }
       if (real) real.shadow.autoUpdate = on;
     },
-    /** Mỗi khung (kể cả update(0, t)): theo vị trí, màu, cường độ của đèn nến; bóng mờ theo trọng số của lớp. */
-    sync({ power, weight, on }) {
+    /**
+     * Mỗi khung (kể cả update(0, t)): theo vị trí, màu, suy giảm của đèn nến. power đã nhân trọng số của lớp; strength là núm "Độ
+     * đậm của bóng". Không còn sáng (mài hết, nến tắt) thì thôi vẽ sáu mặt bóng.
+     */
+    sync({ power, on, strength }) {
       if (!real) return;
       real.position.copy(source.position);
       real.color.copy(source.color);
+      real.decay = source.decay; // "Ánh sáng không suy giảm" (lớp Ngọn nến) đổi decay của đèn nến: đèn thật theo cùng
+      real.distance = source.distance;
       real.intensity = on ? power : 0;
-      real.shadow.intensity = weight; // reference() trong ShadowNode: đổi lúc chạy không biên dịch lại
+      real.shadow.intensity = strength; // reference() trong ShadowNode: đổi lúc chạy không biên dịch lại
+      real.shadow.autoUpdate = on && power > 0;
     },
     dispose() {
       if (!real) return;

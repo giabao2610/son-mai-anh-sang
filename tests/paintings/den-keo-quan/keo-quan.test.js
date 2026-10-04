@@ -3,16 +3,20 @@ import { describe, it, expect } from 'vitest';
 import meta from '../../../src/paintings/den-keo-quan/meta.js';
 import * as painting from '../../../src/paintings/den-keo-quan/painting.js';
 import { buildPainting } from '../../helpers/fake-ctx.js';
-import { compileMaterial, nodesOf } from '../../helpers/nodes.js';
+import { compileMaterial, nodesOf, uniformNames } from '../../helpers/nodes.js';
 
 const build = (options) => buildPainting(painting, meta, { until: 'keo-quan', ...options });
 const wall = ({ layers }) => layers.cot.objects.find((o) => o.name === 'vach');
 
 describe('l5-keo-quan', () => {
-  it('node bóng của đèn chứa gobo: uniform drumAngle và texture mặt nạ nằm trong đồ thị', () => {
-    const { shared } = build();
-    const nodes = nodesOf(shared.ngonNen.light.shadow.shadowNode);
+  it('node bóng của đèn chứa gobo: trộn theo trọng số; shader của vách đọc góc trống, mặt nạ và "Trống không cắt"', () => {
+    const built = build();
+    const nodes = nodesOf(built.shared.ngonNen.light.shadow.shadowNode);
     expect(nodes.some((n) => n.isUniformNode && n.name === 'w_keo_quan'), 'trộn theo trọng số của lớp').toBe(true);
+    // Gobo nằm trong thân Fn (nodesOf không thấy): dịch vách ra WGSL rồi đọc uniform và texture mà shader thật sự dùng.
+    const { uniforms, fragmentShader } = compileMaterial(wall(built), built.ctx, 'webgpu', { shadows: true });
+    expect(uniforms).toEqual(expect.arrayContaining(['drumAngle', 'drumSolid', 'keo_quan_strength']));
+    expect(fragmentShader).toMatch(/textureSampleLevel/);
   });
 
   it.each(['webgpu', 'webgl2'])('%s: vách nhận bóng dịch được, có atan và tra texture, không lỗi', (backend) => {
@@ -110,12 +114,50 @@ describe('l5-keo-quan', () => {
     expect(built.ctx.scene.children.filter((o) => o.isLight)).toHaveLength(0);
   });
 
-  it('mài Kéo quân về 0 khi bóng thật đang bật thì bóng thật mờ theo (Review Focus 2): shadow.intensity = trọng số', () => {
+  it('bóng thật đang bật: hai đèn hòa theo trọng số Kéo quân; mài về 0 là về đúng bốn lớp dưới (Review Focus 2)', () => {
+    const built = build();
+    const { light, power } = built.shared.ngonNen;
+    shadowMap(built).toggle(true);
+    const frame = (k) => {
+      built.ctx.weights.set('keo-quan', k);
+      built.layers['ngon-nen'].update(0, 1);
+      built.layers['keo-quan'].update(0, 1);
+      return [light.intensity, realLight(built).intensity, realLight(built).shadow.autoUpdate];
+    };
+    const [candle1, real1, auto1] = frame(1);
+    expect([candle1, auto1]).toEqual([0, true]);
+    expect(real1).toBeCloseTo(power.value, 6);
+    const [candleQ, realQ] = frame(0.25);
+    expect(candleQ).toBeCloseTo(power.value * 0.75, 6);
+    expect(realQ).toBeCloseTo(power.value * 0.25, 6);
+    // Mài hết: chỉ còn đèn nến (mang màu giấy, không gobo), đèn thật tắt và thôi vẽ sáu mặt bóng.
+    const [candle0, real0, auto0] = frame(0);
+    expect(candle0).toBeCloseTo(power.value, 6);
+    expect([real0, auto0]).toEqual([0, false]);
+    expect(uniformNames(light.shadow.shadowNode)).toContain('goboReal');
+  });
+
+  it('bóng thật theo "Ánh sáng không suy giảm" (decay) và núm "Độ đậm của bóng"; tắt rồi bật lại vẫn vẽ bóng', async () => {
     const built = build();
     shadowMap(built).toggle(true);
-    built.ctx.weights.set('keo-quan', 0.25);
+    built.layers['ngon-nen'].experiments.find((e) => e.id === 'noDecay').toggle(true);
+    built.knobs['keo-quan'].set('strength', 0.4);
+    built.layers['ngon-nen'].update(0, 1);
     built.layers['keo-quan'].update(0, 1);
-    expect(realLight(built).shadow.intensity).toBeCloseTo(0.25, 6);
+    expect(realLight(built).decay).toBe(0);
+    expect(realLight(built).shadow.intensity).toBeCloseTo(0.4, 6);
+    shadowMap(built).toggle(false);
+    built.layers['keo-quan'].update(0, 1);
+    expect(realLight(built).shadow.autoUpdate).toBe(false);
+    shadowMap(built).toggle(true);
+    built.layers['keo-quan'].update(0, 1);
+    expect(realLight(built).shadow.autoUpdate).toBe(true);
+  });
+
+  it.each(['webgpu', 'webgl2'])('%s: bật bóng thật (hai đèn điểm, một có cube shadow map) thì vách vẫn dịch được, không lỗi', (backend) => {
+    const built = build();
+    shadowMap(built).toggle(true);
+    expect(compileMaterial(wall(built), built.ctx, backend, { shadows: true }).problems).toEqual([]);
   });
 
   it('sides 4 và 8: góc nan tre theo uniform lanternSides, không cần biên dịch lại', async () => {

@@ -55,7 +55,9 @@ export const cylinderExit = Fn(([P, C, axis, r]) => {
   const c = dot(o, o).sub(r.mul(r));
   const t = b.negate().add(sqrt(max(b.mul(b).sub(a.mul(c)), 0))).div(a);
   const h = C.add(d.mul(t));
-  return vec3(atan(h.z.sub(axis.y), h.x.sub(axis.x)), h.y, t);
+  // P thẳng trên hay dưới ngọn lửa đang ở trên trục: điểm cắt nằm trên trục, atan(0, 0) không định nghĩa. Cộng 1e-6 vào x (lệch góc
+  // cỡ 1e-5 rad ở bán kính trống, không thấy được) để không bao giờ ra NaN (NaN lọt vào bloom thành ô đen).
+  return vec3(atan(h.z.sub(axis.y), h.x.sub(axis.x).add(1e-6)), h.y, t);
 });
 
 /**

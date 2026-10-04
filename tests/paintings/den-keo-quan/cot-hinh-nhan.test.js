@@ -1,7 +1,7 @@
 // tests/paintings/den-keo-quan/cot-hinh-nhan.test.js — mặt nạ hình nhân: khoảng cách có dấu, độ phủ có mép mịn, quấn vòng, chuỗi mip, tám hình đặt đều trong dải.
 import { describe, it, expect } from 'vitest';
 import {
-  ASPECT, FIGURES, GROUND, MARGIN, bounds, mipChain, rasterize, shapeDistance,
+  ASPECT, FIGURES, GROUND, MARGIN, bounds, figureExtent, layout, mipChain, rasterize, shapeDistance,
 } from '../../../src/paintings/den-keo-quan/parts/cot-hinh-nhan.js';
 
 const coverage = ({ data }) => data.reduce((s, v) => s + v, 0) / 255;
@@ -81,6 +81,21 @@ describe('cot-hinh-nhan', () => {
 
   it('đủ tám hình theo thứ tự của spec §18.3', () => {
     expect(FIGURES.map((f) => f.id)).toEqual(['cuoi-ngua', 'linh-co', 'voi', 'danh-trong', 'linh-giao', 'ngua', 'cam-long', 'thoi-tu-va']);
+  });
+
+  it('xếp theo bề rộng thật, khe đều: 6 tới 10 hình không hình nào chạm hình kề (kể cả cặp quấn vòng); hình đầu giữ chỗ cũ', () => {
+    for (let count = 6; count <= 10; count += 1) {
+      const origins = layout(FIGURES, count); // gốc tọa độ của từng hình, theo phần của chu vi
+      expect(origins[0], `${count} hình: hình đầu`).toBeCloseTo(0.5 / count, 9);
+      const span = (k) => figureExtent(FIGURES[k % FIGURES.length]).map((x) => x / ASPECT);
+      const gaps = origins.map((o, k) => {
+        const next = (k + 1) % count;
+        const left = origins[next] + span(next)[0] + (next === 0 ? 1 : 0);
+        return left - (o + span(k)[1]);
+      });
+      expect(Math.min(...gaps), `${count} hình: khe nhỏ nhất`).toBeGreaterThan(0.005);
+      expect(Math.max(...gaps) - Math.min(...gaps), `${count} hình: khe đều`).toBeLessThan(1e-9);
+    }
   });
 
   it('6 tới 10 hình (núm figures): tổng bề rộng không quá chu vi dải', () => {

@@ -99,7 +99,8 @@ export function createLayer(ctx, shared) {
       { id: 'steady', toggle: (on) => { steady = on; applyFlicker(); } },
     ],
     readouts: [
-      { id: 'backWall', get: () => Math.round(100 / backWall ** 2), unit: '%' },
+      // "Ánh sáng không suy giảm" (decay 0): vách xa sáng như một điểm cách đèn 1 m.
+      { id: 'backWall', get: () => (light.decay === 0 ? 100 : Math.round(100 / backWall ** 2)), unit: '%' },
       // Lửa ngả bao nhiêu vì bị thổi (mm), tính thẳng từ thời gian như vị trí của đèn.
       { id: 'lean', get: () => Math.round(shared.flame.at(ctx.u.time.value).lean * 1000), unit: 'mm' },
     ],

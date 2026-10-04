@@ -92,7 +92,7 @@ export function createLayer(ctx, shared) {
   })();
   const mat = materials.giay; // của Cốt
   mat.transparent = true; // đặt TRƯỚC lần biên dịch đầu (nằm trong cache key): "Giấy trong suốt" chỉ đổi uniform opacity
-  mat.opacityNode = opacity;
+  mat.opacityNode = mix(float(1), opacity, w); // mài Giấy về 0 thì giấy đặc lại như đất sét, dù "Giấy trong suốt" đang bật
   mat.colorNode = mix(color(ctx.palette.hex.datSet), plain.mul(0.35), w); // mặt ngoài dưới ánh đêm: giấy hơi ngà
   mat.emissiveNode = glow.mul(w);
   // Trống và chong chóng cũng là giấy (chỉ thấy khi giấy trong suốt): giấy dó sẫm.

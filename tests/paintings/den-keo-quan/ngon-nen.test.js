@@ -72,6 +72,16 @@ describe('l2-ngon-nen', () => {
     expect(color.value.equals(light.color)).toBe(true);
   });
 
+  it('"Ánh sáng không suy giảm": số đo độ rọi ở vách sau thành 100% (vách xa sáng như cách đèn 1 m), tắt thì về 28%', () => {
+    const built = build();
+    const read = () => built.layers['ngon-nen'].readouts.find((r) => r.id === 'backWall').get();
+    expect(read()).toBe(28);
+    experiment(built, 'noDecay').toggle(true);
+    expect(read()).toBe(100);
+    experiment(built, 'noDecay').toggle(false);
+    expect(read()).toBe(28);
+  });
+
   it('Ngọn nến bằng 0: đèn tắt hẳn (cường độ và candlePower bằng 0)', () => {
     const built = build();
     built.ctx.weights.set('ngon-nen', 0);

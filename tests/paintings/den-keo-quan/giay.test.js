@@ -61,6 +61,11 @@ describe('l4-giay', () => {
     expect(Object.values(built.shared.cot.materials).map((m) => m.version)).toEqual(versions);
   });
 
+  it('"Giấy trong suốt" theo trọng số Giấy: mài Giấy về 0 thì giấy đặc lại (đất sét), dù thí nghiệm đang bật', () => {
+    const built = build();
+    expect(uniformNames(named(built, 'giay').material.opacityNode)).toEqual(expect.arrayContaining(['paperOpacity', 'w_giay']));
+  });
+
   it('giấy dựng transparent ngay từ đầu; "Giấy trong suốt" và "Tắt sợi giấy" chỉ đổi uniform', () => {
     const built = build();
     const paper = named(built, 'giay');

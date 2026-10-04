@@ -35,9 +35,13 @@ export function createGobo({ lantern, mask, candle, rest, size, theta, u }) {
     // Nửa tối quy về mặt trống: s × (1 − t) (tam giác đồng dạng: lửa cỡ s, điểm cắt ở phần t của đoạn C → P).
     const pen = s.mul(float(1).sub(hit.z));
     const figure = texture(mask.texture, vec2(uu, vv)).level(lodOf(pen)).r;
+    // Ngoài dải hình không có hình nhân. Ở mức mip cao (lửa to, núm penumbra lớn), hàng mép bị kẹp (ClampToEdge) đã lẫn vạch đất: nhân
+    // một cửa sổ mềm đúng bằng nửa tối (đổi ra đơn vị v), để vòng sàn dưới dải và vòng trần trên dải không tối oan.
+    const penV = max(pen.div(drum.y1 - drum.y0), EPS);
+    const inBand = smoothstep(penV.negate(), 0, vv).mul(float(1).sub(smoothstep(1, penV.add(1), vv)));
     // "Trống không cắt" (thí nghiệm của Cốt): cả dải hình thành giấy đặc.
     const band = smoothstep(-0.02, 0.0, vv).mul(float(1).sub(smoothstep(1.0, 1.02, vv)));
-    return mix(figure, band, mask.solid).mul(u.strength);
+    return mix(figure.mul(inBand), band, mask.solid).mul(u.strength);
   });
 
   /** Cỡ nguồn sáng hiệu lực: núm × penumbra, về EPS khi "Nguồn sáng là một điểm". */

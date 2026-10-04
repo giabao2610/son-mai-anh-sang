@@ -1,6 +1,7 @@
 // tests/paintings/den-keo-quan/ngon-nen-thoi.test.js — ngọn lửa: thổi thì ngả theo hướng thổi rồi đứng lại trong ~2 s; bốn lần thổi chồng; nhấp nháy tất định.
 import { describe, it, expect } from 'vitest';
 import { FLAME, createFlame } from '../../../src/paintings/den-keo-quan/parts/ngon-nen-thoi.js';
+import { mulberry32 } from '../../../src/lib/random.js';
 
 describe('ngon-nen-thoi', () => {
   it('chưa thổi: chỉ nhấp nháy vài mm, sáng quanh 1; tất định', () => {
@@ -28,11 +29,37 @@ describe('ngon-nen-thoi', () => {
     expect(f.at(1).lean).toBeLessThan(1e-6);
   });
 
-  it('tối đa FLAME.blows lần thổi cùng lúc: lần thứ năm đẩy lần đầu ra; độ ngả có trần', () => {
+  it('tối đa FLAME.blows lần thổi cùng lúc: đủ bốn lần còn đang ngả thì lần chạm sau không làm lửa giật (Review Focus 1)', () => {
     const f = createFlame();
-    for (let i = 0; i < 10; i += 1) f.blow(1 + i * 0.01, [1, 0]);
-    expect(f.at(1.2).lean).toBeLessThanOrEqual(FLAME.blows * FLAME.lean + 1e-9);
-    expect(f.at(1.2).glow).toBeGreaterThanOrEqual(FLAME.minGlow);
+    for (const t of [1, 1.1, 1.2, 1.3]) f.blow(t, [1, 0]);
+    const before = f.at(1.4 - 1e-6);
+    f.blow(1.4, [1, 0]); // lần thứ năm: lần đầu vẫn đang dao động, bỏ nó ra là bóng trên vách nhảy cả mảng
+    const after = f.at(1.4 + 1e-6);
+    const jump = Math.hypot(after.offset[0] - before.offset[0], after.offset[2] - before.offset[2]);
+    expect(jump, 'độ lệch nhảy (m)').toBeLessThan(1e-5);
+    expect(after.glow).toBeGreaterThanOrEqual(FLAME.minGlow);
+  });
+
+  it('lần thổi đã tắt hẳn thì nhường chỗ: sau vài giây, chạm lại vẫn thổi được', () => {
+    const f = createFlame();
+    for (const t of [1, 1.1, 1.2, 1.3]) f.blow(t, [1, 0]);
+    f.blow(10, [0, -1]);
+    const peak = Math.max(...[10.05, 10.1, 10.2, 10.3].map((t) => f.at(t).lean));
+    expect(peak).toBeGreaterThan(0.004);
+  });
+
+  it('chạm dồn bao nhiêu lần, lửa cũng không lệch quá FLAME.lean (12 mm), và độ lệch luôn liên tục', () => {
+    const f = createFlame();
+    const rand = mulberry32(7);
+    const taps = Array.from({ length: 30 }, (_, i) => 1 + i * 0.07 + rand() * 0.05);
+    let prev = null;
+    for (let t = 0.9; t < 6; t += 0.002) {
+      while (taps.length && taps[0] <= t) f.blow(taps.shift(), [Math.cos(t), Math.sin(t)]);
+      const a = f.at(t);
+      expect(a.lean, `t = ${t.toFixed(3)}`).toBeLessThanOrEqual(FLAME.lean + 1e-9);
+      if (prev) expect(Math.hypot(a.offset[0] - prev.offset[0], a.offset[2] - prev.offset[2]), `t = ${t.toFixed(3)}`).toBeLessThan(0.0015);
+      prev = a;
+    }
   });
 
   it('giảm chuyển động: ngả và nhấp nháy ít hơn', () => {

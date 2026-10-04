@@ -2911,7 +2911,8 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
   - `penumbra` ("Nửa tối ở vách sau", cm).
 
   `__sma.readouts('keo-quan')` đọc được các số này; e2e dùng `rpm`.
-- **Không có nấc.** Node rẻ: một phương trình bậc hai, hai lần `atan`, một lần tra texture. Hạ nó là mất đúng thứ bức muốn khoe.
+- **Không có nấc.** Node rẻ: với mỗi điểm nhận bóng, ba phương trình bậc hai (giao với trống, với giấy cho gobo và cho màu giấy), bốn
+  lần `atan`, một lần tra texture có mip. Hạ nó là mất đúng thứ bức muốn khoe.
 - **Tên vật:** lớp không thêm vật nào. Đèn thứ hai của "Shadow map thật" là đèn, không phải vật được vẽ.
 
 #### Lớp 6 · Phủ bóng (dùng chung, §6)
@@ -3011,9 +3012,9 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
     cái giá.
 - **Mặt nạ** được vẽ trong `createLayer` của Cốt, lúc poster còn hiện.
   - Mục tiêu: ≤ 50 ms ở mức cao trên máy của Bao (Mac M2), đo ở task mặt nạ.
-  - Quá thì giảm lấy mẫu từ 4 × 4 xuống 3 × 3, hoặc vẽ ở bề rộng nhỏ hơn rồi lọc.
+  - Quá thì vẽ ở bề rộng nhỏ hơn rồi lọc. (Mỗi texel chỉ một mẫu, nhờ khoảng cách có dấu; không có lấy mẫu dày để giảm.)
 - **Chi phí mỗi điểm ảnh:**
-  - Node gobo chạy trên mọi bề mặt nhận bóng, tức gần cả màn hình: một phương trình bậc hai, hai lần `atan`, một lần tra texture có
+  - Node gobo chạy trên mọi bề mặt nhận bóng, tức gần cả màn hình: ba phương trình bậc hai, bốn lần `atan`, một lần tra texture có
     mip.
   - Đo ms GPU lúc làm: task đầu đo riêng node gobo, đo lại khi đủ sáu lớp. Mục tiêu như §2: 60 khung/giây trên laptop, 45 trên điện thoại tầm trung (mức vừa và thấp).
 - **JS:** chunk của bức cộng chunk content; chunk `three` dùng chung với Bức 1 (§8.7). Số đo ghi vào README.
@@ -3036,7 +3037,7 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
     lượt kiểm tay (§12).
   - WebGL2 (SwiftShader): 28 draw call, như WebGPU.
   - Mặt nạ (Chromium, M2): bề rộng 2048 lần đầu 35–48 ms, các lần sau 13 ms; bề rộng 1024 lần đầu 16 ms. Đạt mục tiêu ≤ 50 ms, giữ
-    lấy mẫu 4 × 4.
+    một mẫu cho mỗi texel.
 
 ### 18.8 Kiểm thử
 **Tự chạy cho Bức 2**, vì các test này lặp qua registry:

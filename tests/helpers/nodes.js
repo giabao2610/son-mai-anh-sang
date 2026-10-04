@@ -1,5 +1,5 @@
 // tests/helpers/nodes.js — soi đồ thị node của three ngay trong Node (không GPU): duyệt mọi node, và dịch material ra WGSL/GLSL bằng node builder thật.
-import { HalfFloatType, RenderTarget, WebGPURenderer } from 'three/webgpu';
+import { Compatibility, HalfFloatType, RenderTarget, WebGPURenderer } from 'three/webgpu';
 import { makeMRT } from '../../src/engine/gpu/pipeline.js';
 
 /**
@@ -81,6 +81,8 @@ export function compileMaterial(object, { scene, camera }, backend, { pass = 'sc
   // Chưa init() thì hỏi tính năng là three ném lỗi, còn capabilities của WebGL2 chưa có. Dịch thử không cần tính năng nào;
   // InstancedMesh chỉ hỏi giới hạn uniform buffer để chọn chỗ đặt ma trận (uniform buffer hay thuộc tính).
   renderer.hasFeature = () => false;
+  // Shadow map thật (GĐ 6) hỏi so sánh độ sâu ngay trong texture: cả WebGL2 lẫn WebGPU (chế độ thường) đều có, như lúc chạy thật.
+  renderer.hasCompatibility = (name) => name === Compatibility.TEXTURE_COMPARE;
   renderer.shadowMap.enabled = shadows;
   const capabilities = renderer.backend.capabilities ?? (renderer.backend.capabilities = {});
   capabilities.getUniformBufferLimit = () => UNIFORM_BUFFER_LIMIT[backend];
