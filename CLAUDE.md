@@ -7,7 +7,8 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
 
 - **Kỹ thuật** "Sơn Mài Ánh Sáng": dựng tranh 3D bằng nhiều **lớp** ánh sáng, mỗi lớp có trọng số 0 → 1.
   "Mài" là gỡ dần từng lớp, xuống tận **Cốt** (đất sét). Lớp đầu của mọi bức luôn là Cốt (`id: 'cot'`).
-- **Bức tranh**: một tác phẩm làm bằng kỹ thuật đó. Bức 1 là Ao Sen Đêm (`src/paintings/ao-sen-dem/`).
+- **Bức tranh**: một tác phẩm làm bằng kỹ thuật đó. Bức 1 là Ao Sen Đêm (`src/paintings/ao-sen-dem/`, trang `index.html`); Bức 2 là
+  Đèn Kéo Quân (`src/paintings/den-keo-quan/`, trang `tranh/den-keo-quan/index.html`).
 - **Ba vùng:**
 
   | Vùng | Thư mục | Quy tắc |
@@ -21,7 +22,7 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
 - Chất lượng: `engine/quality.js` chọn mức; `engine/tuner.js` QUYẾT định hạ/nâng nấc (hàm thuần, test bằng chuỗi khung giả;
   GĐ 4: máy đo được ms GPU thì chẩn đoán theo tải; sau GĐ 5: đường nhịp thử ngừng vẽ 6 khung trước lần hạ đầu, để tách trình duyệt
   khóa nhịp khỏi máy không kịp); `engine/gpu/ladder.js` ÁP nấc (`'dpr'` và `layer.degrade`);
-  `engine/gpu/gpu-timer.js` đo ms GPU. Bảng số và thứ tự nấc của Bức 1: `paintings/ao-sen-dem/quality.js`.
+  `engine/gpu/gpu-timer.js` đo ms GPU. Bảng số và thứ tự nấc của mỗi bức: `paintings/<slug>/quality.js`.
 - Lớp dùng chung (thuộc kỹ thuật, bức nào cũng lắp được): `src/engine/stock/<id>/`, hiện có Phủ bóng.
 - `src/paintings/registry.js`: danh sách các bức. Node đọc (vite.config, test, e2e); trình duyệt không import.
 - `src/paintings/_mau/`: tranh mẫu 2 lớp, KHÔNG deploy (không có trong registry). Là fixture của test hợp đồng và là
@@ -42,7 +43,7 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
 
 | Việc | Lệnh |
 |---|---|
-| Chạy dev | `npm run dev`, mở http://localhost:5173/son-mai-anh-sang/ |
+| Chạy dev | `npm run dev`, mở http://localhost:5173/son-mai-anh-sang/ (Bức 2: `…/tranh/den-keo-quan/`) |
 | Unit + luật + hợp đồng | `npm test` (một file: `npx vitest run tests/unit/flags.test.js`) |
 | Build | `npm run build` (ra `dist/`) |
 | E2E | `npm run e2e` (build rồi chạy Playwright); một project: `npm run build && npx playwright test --project=webgl2-swiftshader` |
@@ -185,6 +186,25 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   trang, `__sma`, sân khấu hay cảnh: boot chỉ khóa vỏ trang khi lần mở trang quá hạn hay hỏng, còn hạn 10 s của "Dựng lại cảnh"
   là của run.js. Sự kiện GPU đến khi `stopped()` (`onLost`, `onError`) thì bỏ qua: không về tĩnh lần hai, lý do đã báo giữ nguyên.
 
+### Đèn có node bóng tự viết, lật tranh, CI chia phần (GĐ 6)
+- Đèn có node bóng tự viết (`light.shadow.shadowNode`, spec Phụ lục A.77): `light.castShadow` và `renderer.shadowMap.enabled` bật lúc
+  dựng (thiếu một trong hai thì three bỏ qua node), vật nhận bóng có `receiveShadow`. Có node thì three không dựng shadow map nào;
+  không có thì đèn điểm dựng cube shadow map, 6 lượt vẽ mỗi khung. Three đọc node MỘT lần ở lần biên dịch đầu: các lớp góp vào bằng
+  phép nhân lúc dựng (`shadowNode = node trước × mix(1, phần của lớp, w)`); node là vec3 được (ánh sáng có màu).
+- Thêm hay bớt đèn lúc chạy là đổi bộ đèn trong cache key: mọi material biên dịch lại. Thí nghiệm "Shadow map thật" của Bức 2 chấp nhận
+  một lần ở lần bật đầu (đèn dựng lười), từ đó tắt bằng `intensity` 0 và `shadow.autoUpdate = false`. Camera bóng của đèn điểm mặc
+  định thấy từ 0,5 m: vật đổ bóng gần đèn hơn thì hạ `shadow.camera.near`.
+- `smoothstep(a, b, x)` luôn a < b (GLSL không định nghĩa a ≥ b): cạnh mềm có bề rộng có thể về 0 thì cộng một `EPS` (như cỡ nguồn sáng
+  của gobo). `atan(y, x)` với cả hai bằng 0 không định nghĩa: cộng `EPS` vào x.
+- Test dịch shader cần biết uniform nào thật sự được đọc (kể cả trong thân một `Fn`, nơi `nodesOf` không thấy) thì dùng
+  `compileMaterial(...).uniforms`. Mảng uniform (`uniformArray`) chỉ giữ tên ở WGSL; GLSL đặt nó vào khối buffer và đổi tên node thành
+  `NodeBuffer_<id>`.
+- Lật tranh: `<nav class="series">` ngay dưới `<h1>` của mỗi trang, link tương đối viết tay trong HTML (chạy cả ở tầng tĩnh), registry
+  xếp theo `meta.no` (`tests/paintings/html.test.js` so link với registry). Thêm bức mới thì sửa nav của bức kề trước. Chỗ bấm được
+  trong `.frame` phải bật lại `pointer-events: auto` (khung tắt nó cho canvas).
+- CI: e2e chặn và e2e WebGPU chia hai phần (`--shard=N/2 --fully-parallel`), mỗi project chia riêng: `--shard` chia theo SỐ test và
+  theo thứ tự project, chia chung thì một phần nhận trọn project nặng. Thêm test e2e không cần sửa workflow.
+
 ### Chuyển động và ngẫu nhiên
 - Không dùng `time`/`deltaTime` của TSL; dùng `ctx.u.time` và `ctx.u.delta` (nhờ vậy `?freeze` cho ảnh tất định).
 - Không dùng `Math.random`; dùng `src/lib/random.js` (PRNG có hạt giống).
@@ -229,4 +249,5 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   (draw call, ms, ms CPU, ms GPU), `__sma.quality()` (nấc đang hạ, `gpu`, nấc bị khóa `locked`), `__sma.degrade()` /
   `__sma.upgrade()` (hạ/nâng tay một nấc), `__sma.tools()` / `__sma.setTool('kinh-mai')` (công cụ học, `null` tắt hết;
   `__sma.setTool('tung-soi')` bật Từng sợi), `__sma.dials()` / `__sma.setDial('gio', 27)` (núm của cả bức), `__sma.readouts(id)`
-  (số đo riêng của một lớp, như Sổ tay đọc: `__sma.readouts('anh-trang')` có số hoa đăng đang trôi).
+  (số đo riêng của một lớp, như Sổ tay đọc: `__sma.readouts('anh-trang')` có số hoa đăng đang trôi, `__sma.readouts('keo-quan')` có
+  số vòng mỗi phút của trống).

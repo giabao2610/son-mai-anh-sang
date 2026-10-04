@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" role="img" aria-labelledby="dg-kq-kq-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-kq-kq-title">Nhìn từ trên xuống: tia từ ngọn lửa tới một điểm trên vách cắt ống trụ của trống ở góc φ = atan(z, x); shader tra mặt nạ ở góc đó. Ngọn lửa có kích thước, nên vùng nửa tối rộng dần từ trống ra vách: gần đèn bóng nét, trên vách xa bóng nhòe.</title>
+  <defs>
+    <marker id="dg-kq-kq-mui" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#F2D48A"/>
+    </marker>
+  </defs>
+  <!-- trống (ống trụ, nhìn từ trên) với một hình nhân -->
+  <circle cx="90" cy="96" r="44" fill="none" stroke="#8A8580" stroke-width="1.5"/>
+  <path d="M127 72 A44 44 0 0 1 133 88" stroke="#D9C7A0" stroke-width="6" fill="none"/>
+  <!-- ngọn lửa có kích thước -->
+  <circle cx="90" cy="96" r="6" fill="#F2D48A"/>
+  <!-- tia qua mép hình nhân tới vách; hai mép lửa cho nửa tối -->
+  <g stroke="#D4A94A" stroke-width="1" stroke-dasharray="3 3">
+    <path d="M90 90 L330 26"/>
+    <path d="M90 102 L330 58"/>
+  </g>
+  <path d="M90 96 L330 42" stroke="#F2D48A" stroke-width="1.6" marker-end="url(#dg-kq-kq-mui)"/>
+  <!-- vách -->
+  <rect x="330" y="14" width="10" height="156" fill="#C9C6BD"/>
+  <rect x="330" y="26" width="10" height="32" fill="#8A8580"/>
+  <text x="326" y="76" fill="#8A8580" text-anchor="end">nửa tối</text>
+  <!-- góc atan -->
+  <path d="M90 96 H150" stroke="#8A8580"/>
+  <path d="M118 96 A28 28 0 0 0 116 85" stroke="#EDE3CF" fill="none"/>
+  <text x="124" y="92" fill="#EDE3CF">φ</text>
+  <text x="90" y="160" fill="#EDE3CF" text-anchor="middle">φ = atan(z, x) → tra mặt nạ</text>
+  <text x="236" y="120" fill="#8A8580" text-anchor="middle">nửa tối ∝ cỡ lửa × khoảng cách</text>
+</svg>

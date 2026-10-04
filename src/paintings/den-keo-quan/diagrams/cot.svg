@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" role="img" aria-labelledby="dg-kq-cot-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-kq-cot-title">Mặt nạ hình nhân là một dải ảnh vẽ bằng code: chỗ có hình là giấy (che ánh nến), chỗ trống để ánh sáng lọt qua. Dải đó cuộn thành ống trụ của trống: cột ảnh u ứng với góc quanh trục.</title>
+  <defs>
+    <marker id="dg-kq-cot-mui" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#F2D48A"/>
+    </marker>
+  </defs>
+  <!-- dải mặt nạ phẳng: nền trống, hình nhân là giấy -->
+  <rect x="16" y="54" width="150" height="40" fill="#1B2A4A" stroke="#8A8580"/>
+  <g fill="#D9C7A0">
+    <ellipse cx="44" cy="76" rx="12" ry="6"/>
+    <path d="M54 74 L60 62 L64 64 L58 76 Z"/>
+    <path d="M36 80 L32 90 M50 80 L54 90" stroke="#D9C7A0" stroke-width="3"/>
+    <rect x="80" y="66" width="7" height="14"/>
+    <circle cx="83.5" cy="62" r="3.5"/>
+    <path d="M81 80 L79 90 M86 80 L88 90" stroke="#D9C7A0" stroke-width="3"/>
+    <path d="M91 58 V88" stroke="#D9C7A0" stroke-width="1.5"/>
+    <path d="M91 58 L104 61 L91 64 Z"/>
+    <ellipse cx="128" cy="74" rx="15" ry="9"/>
+    <path d="M141 70 L147 84" stroke="#D9C7A0" stroke-width="4"/>
+    <path d="M120 82 V90 M134 82 V90" stroke="#D9C7A0" stroke-width="4"/>
+  </g>
+  <text x="91" y="40" fill="#EDE3CF" text-anchor="middle">mặt nạ: giấy = 1, trống = 0</text>
+  <text x="16" y="112" fill="#8A8580">u = 0</text>
+  <text x="166" y="112" fill="#8A8580" text-anchor="end">u = 1</text>
+  <path d="M178 74 L214 74" stroke="#F2D48A" stroke-width="1.5" marker-end="url(#dg-kq-cot-mui)"/>
+  <text x="196" y="64" fill="#F2D48A" text-anchor="middle">cuộn</text>
+  <!-- ống trụ của trống -->
+  <ellipse cx="282" cy="52" rx="50" ry="12" fill="none" stroke="#8A8580"/>
+  <path d="M232 52 V104 A50 12 0 0 0 332 104 V52" fill="#1B2A4A" stroke="#8A8580"/>
+  <g fill="#D9C7A0">
+    <ellipse cx="262" cy="80" rx="9" ry="6"/>
+    <rect x="283" y="70" width="6" height="14"/>
+    <circle cx="286" cy="66" r="3"/>
+    <ellipse cx="312" cy="78" rx="9" ry="7"/>
+  </g>
+  <text x="282" y="134" fill="#EDE3CF" text-anchor="middle">u = góc quanh trục / 2π</text>
+  <text x="282" y="152" fill="#8A8580" text-anchor="middle">mép mịn một texel, mip tự tính</text>
+</svg>

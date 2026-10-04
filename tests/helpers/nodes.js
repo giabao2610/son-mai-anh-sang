@@ -1,5 +1,5 @@
 // tests/helpers/nodes.js — soi đồ thị node của three ngay trong Node (không GPU): duyệt mọi node, và dịch material ra WGSL/GLSL bằng node builder thật.
-import { HalfFloatType, RenderTarget, WebGPURenderer } from 'three/webgpu';
+import { Compatibility, HalfFloatType, RenderTarget, WebGPURenderer } from 'three/webgpu';
 import { makeMRT } from '../../src/engine/gpu/pipeline.js';
 
 /**
@@ -65,15 +65,25 @@ const PASSES = {
  * @param {any} object  Mesh, InstancedMesh hay Sprite (đã dựng trong ctx.scene)
  * @param {{ scene: any, camera: any }} ctx
  * @param {'webgpu' | 'webgl2'} backend
- * @param {{ pass?: 'scene' | 'reflector' }} [options]
- * @returns {{ vertexShader: string, fragmentShader: string, outputs: number, problems: string[] }}
+ * @param {{ pass?: 'scene' | 'reflector', shadows?: boolean, lights?: boolean }} [options]
+ *   shadows (GĐ 6): bật renderer.shadowMap như bức bật lúc dựng. AnalyticLightNode.setupShadow thoát ngay khi cờ đó tắt: không bật
+ *   thì đèn có node bóng tự viết dịch như không có bóng.
+ *   lights (GĐ 6, mặc định = shadows): nạp các đèn đang hiện của scene vào LightsNode, như RenderList làm lúc vẽ
+ *   (`lightsNode.setLights`). Không nạp thì shader không có đèn nào: chỉ kiểm node của bức, không kiểm mô hình chiếu sáng.
+ * @returns {{ vertexShader: string, fragmentShader: string, outputs: number, problems: string[], uniforms: string[] }}
+ *   uniforms (GĐ 6): tên (setName) của mọi uniform mà shader thật sự đọc, kể cả uniform nằm trong thân một Fn (nodesOf không thấy
+ *   chúng); uniform không đặt tên mang tên chung của three (nodeUniformN). Mảng uniform (uniformArray) chỉ giữ tên ở WGSL: GLSL đặt
+ *   nó vào một khối buffer và đổi tên cả node thành NodeBuffer_<id>.
  */
-export function compileMaterial(object, { scene, camera }, backend, { pass = 'scene' } = {}) {
+export function compileMaterial(object, { scene, camera }, backend, { pass = 'scene', shadows = false, lights = shadows } = {}) {
   if (!PASSES[pass]) throw new Error(`compileMaterial: không có lượt vẽ "${pass}" (chỉ có ${Object.keys(PASSES).join(', ')})`);
   const renderer = new WebGPURenderer({ forceWebGL: backend === 'webgl2', canvas: { style: {} } });
   // Chưa init() thì hỏi tính năng là three ném lỗi, còn capabilities của WebGL2 chưa có. Dịch thử không cần tính năng nào;
   // InstancedMesh chỉ hỏi giới hạn uniform buffer để chọn chỗ đặt ma trận (uniform buffer hay thuộc tính).
   renderer.hasFeature = () => false;
+  // Shadow map thật (GĐ 6) hỏi so sánh độ sâu ngay trong texture: cả WebGL2 lẫn WebGPU (chế độ thường) đều có, như lúc chạy thật.
+  renderer.hasCompatibility = (name) => name === Compatibility.TEXTURE_COMPARE;
+  renderer.shadowMap.enabled = shadows;
   const capabilities = renderer.backend.capabilities ?? (renderer.backend.capabilities = {});
   capabilities.getUniformBufferLimit = () => UNIFORM_BUFFER_LIMIT[backend];
   // three chỉ áp MRT của renderer (và mrtNode của material) khi đang vẽ vào một render target (NodeMaterial.setup của
@@ -87,7 +97,7 @@ export function compileMaterial(object, { scene, camera }, backend, { pass = 'sc
     scene,
     camera,
     material: object.material,
-    lightsNode: renderer.lighting.getNode(scene),
+    lightsNode: renderer.lighting.getNode(scene).setLights(lights ? lightsOf(scene) : []),
     environmentNode: null,
     fogNode: scene.fogNode ?? null,
     clippingContext: null,
@@ -103,7 +113,15 @@ export function compileMaterial(object, { scene, camera }, backend, { pass = 'sc
     Object.assign(console, saved);
   }
   const { vertexShader, fragmentShader } = builder;
-  return { vertexShader, fragmentShader, outputs: countOutputs(fragmentShader), problems };
+  const uniforms = [...builder.uniforms.vertex, ...builder.uniforms.fragment].map((u) => u.name);
+  return { vertexShader, fragmentShader, outputs: countOutputs(fragmentShader), problems, uniforms };
+}
+
+/** Các đèn đang hiện trong scene, như RenderList gom lúc vẽ. */
+function lightsOf(scene) {
+  const found = [];
+  scene.traverseVisible((o) => { if (o.isLight) found.push(o); });
+  return found;
 }
 
 /**
