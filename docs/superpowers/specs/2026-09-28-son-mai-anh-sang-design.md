@@ -2649,7 +2649,8 @@ Bức 2. Những gì Bao đã chọn nằm ở §1 (GĐ 6); phần còn lại c�
   Số hex chốt ở lượt màu. LUT của Phủ bóng sinh từ bảng đã ghép, nên tự đổi theo.
 - **Giấy sáu màu** quanh đèn, theo thứ tự: đỏ son, vàng lá, xanh lục, đỏ son, vàng lá, chàm. Tấm chàm làm một góc phòng tối và lạnh
   hơn: cảnh có chỗ nghỉ mắt.
-- **Hình nhân:** mặc định 8 hình. Núm `figures` cho 6–12 hình, lặp lại theo thứ tự này:
+- **Hình nhân:** mặc định 8 hình. Núm `figures` cho 6–10 hình, lặp lại theo thứ tự này (mười hình ngựa và voi đã kín chu vi dải, nên
+  trần là 10):
   1. người cưỡi ngựa phất cờ;
   2. lính vác cờ đuôi nheo;
   3. voi có bành và người quản tượng;
@@ -2715,7 +2716,7 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
     - quay quanh trục theo góc `θ(t)` của `shared` (§18.5); chong chóng quay cùng góc.
 - **Núm:**
   - `sides` (rebuild; 4, 6 hay 8 cạnh): đổi hình đèn và số tấm giấy;
-  - `figures` (rebuild; 6–12): vẽ lại mặt nạ;
+  - `figures` (rebuild; 6–10): vẽ lại mặt nạ vào chính texture đã có (node giữ tham chiếu texture);
   - `wireframe` (rebuild).
 
   Như Bức 1, mọi thứ cấp phát theo trần MỘT lần; rebuild chỉ ghi lại dữ liệu.
@@ -2979,7 +2980,7 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
   - rasterize tất định;
   - độ phủ của hình mẫu: một hình tròn ra đúng diện tích, mép có giá trị trung gian;
   - chuỗi mip đúng cỡ, mỗi mức là trung bình của mức trước;
-  - `figures` từ 6 tới 12 hình đặt đều quanh dải;
+  - `figures` từ 6 tới 10 hình: tổng bề rộng không quá chu vi dải;
   - không hình nào tràn khỏi dải.
 - `keo-quan-quay`:
   - giữ thì ω về gần 0 trong ≤ 1 s; thả thì ω về tốc độ thường;

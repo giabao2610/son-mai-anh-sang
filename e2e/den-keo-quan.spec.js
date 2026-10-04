@@ -3,8 +3,9 @@ import { test, expect } from '@playwright/test';
 import { waitForSettled, waitForFrames, canvasRegions, gpuReport, collectConsole, readSma } from './helpers.js';
 
 const AT = 'at=2026-09-28T21:00';
-// Vùng vách sau, bên trái đèn (tỉ lệ khung 640×400 của e2e): đoàn quân chạy ngang qua đây. Chốt lại theo bố cục cuối.
-const WALL = { x0: 0.06, y0: 0.12, x1: 0.32, y1: 0.55 };
+// Vùng vách sau (tỉ lệ khung 640×400 của e2e), gần hết bề rộng giữa hai cột: bóng đoàn quân phủ vùng này ở mọi khung. Chốt lại
+// theo bố cục cuối.
+const WALL = { x0: 0.15, y0: 0.15, x1: 0.85, y1: 0.85 };
 
 let log;
 test.beforeEach(async ({ page }, testInfo) => {
@@ -34,13 +35,14 @@ async function open(page, testInfo, frames, extra = '') {
 const wallOf = async (page) => (await canvasRegions(page, { wall: WALL })).wall;
 
 /**
- * Bật/tắt một thí nghiệm như người xem. Bấm một phím (lần tương tác đầu, không chạm canvas: chạm là thổi nến) cho lời mời hiện ra,
+ * Bật/tắt một thí nghiệm như người xem. Bấm Tab (lần tương tác đầu, không chạm canvas: chạm là thổi nến; phím bổ trợ đứng một mình
+ * như Shift thì input.js bỏ qua) cho lời mời hiện ra,
  * vào chế độ mài, phủ lại mọi lớp về 1 (chế độ mài đưa chúng về 0), mở trang Phá của lớp rồi bấm nút. KHÔNG thêm hàm nào vào __sma:
  * GĐ 6 không đổi JS của xưởng (spec §18.6).
  */
 async function toggleExperiment(page, layerId, expId, on) {
   if ((await page.locator('[data-rail]').count()) === 0 || !(await page.locator('[data-rail]').isVisible())) {
-    await page.keyboard.press('Shift');
+    await page.keyboard.press('Tab');
     await page.locator('[data-hint] button').click();
     for (const { id } of await page.evaluate(() => window.__sma.layers())) await page.evaluate((l) => window.__sma.setWeight(l, 1), id);
   }
@@ -72,6 +74,16 @@ test.describe('Đèn Kéo Quân · bóng trên vách', () => {
     // Vùng đo có cả cột và dải sáng tối tự nhiên của vách, nên độ lệch chuẩn không về 0 khi hết bóng: đo được 0,055 → 0,036.
     expect(flat.std, 'không còn mép bóng thì vách đều màu hơn hẳn').toBeLessThan(b.std * 0.8);
     expect(flat.mean, 'hết bóng thì vách sáng hơn').toBeGreaterThan(b.mean);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('nửa tối theo cỡ lửa: "Nguồn sáng là một điểm" làm mép bóng trên vách gắt hơn (độ lệch chuẩn tăng)', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    await open(page, testInfo, 60);
+    const soft = await wallOf(page);
+    await toggleExperiment(page, 'keo-quan', 'pointLight', true); // vẽ lại khung đứng yên (?freeze), cùng thời điểm
+    const hard = await wallOf(page);
+    expect(hard.std).toBeGreaterThan(soft.std);
     expect(log.errors).toEqual([]);
   });
 

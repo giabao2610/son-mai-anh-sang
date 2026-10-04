@@ -14,7 +14,7 @@ export default {
         + 'và chiếc đèn lục giác treo ở xà giữa. Mọi lớp sau đều sơn lên những hình khối này; mài hết các lớp thì bức trở về đây.',
       learned: ['Hình khối của cả căn phòng chỉ là vài mặt phẳng, hộp và ống trụ tự sinh bằng code.'],
       readMore: [{ title: 'three.js · CylinderGeometry', url: 'https://threejs.org/docs/#api/en/geometries/CylinderGeometry' }],
-      knobs: { sides: 'Số cạnh của đèn', wireframe: 'Khung dây' },
+      knobs: { sides: 'Số cạnh của đèn', wireframe: 'Khung dây', figures: 'Số hình nhân' },
       experiments: {
         flatNormals: { label: 'Normal phẳng', explain: 'Mỗi tam giác sáng một màu: thấy rõ mọi hình được ghép từ mặt phẳng.' },
         solidDrum: {
@@ -22,7 +22,7 @@ export default {
           explain: 'Cả dải hình nhân thành giấy đặc: bóng trên vách thành một vành tối liền. Bóng là do những chỗ cắt.',
         },
       },
-      readouts: { vertices: 'Số đỉnh' },
+      readouts: { vertices: 'Số đỉnh', mask: 'Mặt nạ (texel)' },
       objects: {
         san: 'Sàn',
         vach: 'Ba vách',

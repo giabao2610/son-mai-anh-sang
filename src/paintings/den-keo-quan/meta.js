@@ -34,6 +34,7 @@ export default {
         'paintings/den-keo-quan/parts/cot-phong.js',
         'paintings/den-keo-quan/parts/cot-den.js',
         'paintings/den-keo-quan/parts/cot-trong.js',
+        'paintings/den-keo-quan/parts/cot-hinh-nhan.js',
       ],
     },
     { id: 'ngon-nen', name: 'Ngọn nến', files: ['paintings/den-keo-quan/layers/l2-ngon-nen.js'] },

@@ -26,19 +26,6 @@ export function createMaskTexture(raster) {
   return tex;
 }
 
-/** Mặt nạ tạm (Task 2): tám ô chữ nhật cao 70% dải, rộng 1/24 chu vi, đặt đều; một mức, không mip. */
-export function placeholderRaster(width) {
-  const height = width / 4;
-  const data = new Uint8Array(width * height);
-  const w = Math.round(width / 24);
-  const [y0, y1] = [Math.round(height * 0.1), Math.round(height * 0.8)];
-  for (let k = 0; k < 8; k += 1) {
-    const x0 = Math.round(((k + 0.5) / 8) * width - w / 2);
-    for (let j = y0; j < y1; j += 1) data.fill(255, j * width + x0, j * width + x0 + w);
-  }
-  return { width, height, levels: [{ width, height, data }] };
-}
-
 /**
  * Trống hình nhân và chong chóng, quay quanh trục đèn theo `theta`. Trống cắt hình bằng maskNode: three dùng maskNode cho cả lượt
  * vẽ bóng khi không có maskShadowNode (spec Phụ lục A.80), nên thí nghiệm "Shadow map thật" thấy đúng hình cắt.
