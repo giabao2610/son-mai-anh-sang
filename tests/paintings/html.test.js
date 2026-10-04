@@ -1,6 +1,7 @@
 // tests/paintings/html.test.js — trang HTML của mỗi dòng registry khớp meta của bức (đọc bằng JSDOM, không chạy script)
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync, existsSync, statSync } from 'node:fs';
+import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
 import { SITE, paintings } from '../../src/paintings/registry.js';
@@ -9,6 +10,23 @@ import { svgColors } from '../helpers/svg.js';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const nfc = (s) => s.normalize('NFC').trim();
+/** Đường dẫn tương đối từ thư mục của trang `from` tới thư mục của trang `to` ('index.html' → '', 'tranh/x/index.html' → 'tranh/x/'). */
+const dirOf = (page) => page.replace(/index\.html$/, '');
+const relative = (from, to) => {
+  const rel = posix.relative(dirOf(from) || '.', dirOf(to) || '.');
+  return rel === '' ? './' : `${rel}/`;
+};
+
+describe('lật tranh (GĐ 6)', () => {
+  it('registry xếp theo meta.no: 1, 2, … liên tiếp', () => {
+    expect(paintings.map((p) => p.meta.no)).toEqual(paintings.map((_, i) => i + 1));
+  });
+
+  it('đường dẫn tương đối: từ Bức 1 tới Bức 2 là tranh/den-keo-quan/, từ Bức 2 về là ../../', () => {
+    expect(relative('index.html', 'tranh/den-keo-quan/index.html')).toBe('tranh/den-keo-quan/');
+    expect(relative('tranh/den-keo-quan/index.html', 'index.html')).toBe('../../');
+  });
+});
 
 
 describe('svgColors (tự kiểm)', () => {
@@ -24,6 +42,25 @@ for (const { meta, page, lang } of paintings) {
     const $ = (sel) => doc.querySelector(sel);
     beforeAll(() => {
       doc = new JSDOM(readFileSync(ROOT + page, 'utf8')).window.document;
+    });
+
+    it('lật tranh: nav.series dưới <h1>, link tới bức kề trước/sau đúng số, tên, đích tương đối và rel', () => {
+      const nav = $('header nav.series');
+      expect(nav, 'thiếu <nav class="series"> trong header').not.toBeNull();
+      expect(nav.getAttribute('aria-label')).toBe('Các bức tranh');
+      expect(nav.previousElementSibling?.tagName).toBe('H1');
+      const i = paintings.findIndex((p) => p.page === page);
+      const expected = [];
+      if (i > 0) {
+        const prev = paintings[i - 1];
+        expected.push({ rel: 'prev', href: relative(page, prev.page), text: `← Bức ${prev.meta.no} · ${prev.meta.title}` });
+      }
+      if (i < paintings.length - 1) {
+        const next = paintings[i + 1];
+        expected.push({ rel: 'next', href: relative(page, next.page), text: `Bức ${next.meta.no} · ${next.meta.title} →` });
+      }
+      const links = [...nav.querySelectorAll('a')].map((a) => ({ rel: a.getAttribute('rel'), href: a.getAttribute('href'), text: nfc(a.textContent) }));
+      expect(links).toEqual(expected.map((e) => ({ ...e, text: nfc(e.text) })));
     });
 
     it('lang, data-painting, data-state đầu, <title> và description khớp meta', () => {
