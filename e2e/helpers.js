@@ -84,7 +84,8 @@ export const FULL = { x0: 0, y0: 0, x1: 1, y1: 1 };
  * Mỗi vùng: checksum, độ sáng trung bình (0–1), độ lệch chuẩn độ sáng, sắc độ trung bình (chroma = (max − min) / 255: đo
  * theo tuyệt đối, vì độ bão hòa (max − min) / max thổi phồng những điểm gần đen như nền đen then), `transparent`: số
  * điểm canvas trong suốt (lúc chụp, nền trang tô màu hồng sen #ff00ff: điểm trong suốt để lộ nền ấy ra), và `warm` (GĐ 5): số
- * điểm sáng màu ấm (R > 150, G > 110, R − B > 40), như ánh nến của hoa đăng và vũng sáng nó hắt xuống nước.
+ * điểm sáng màu ấm (R > 150, G > 110, R − B > 40), như ánh nến của hoa đăng và vũng sáng nó hắt xuống nước; `rgb` (GĐ 6): trung
+ * bình từng kênh (0–255), để so SẮC của hai vùng (tỉ lệ R / G) mà không phụ thuộc độ sáng.
  * @param {import('@playwright/test').Page} page
  * @param {Record<string, { x0: number, y0: number, x1: number, y1: number, ring?: { r: number, inside: boolean } }>} regions
  */
@@ -109,6 +110,7 @@ export async function canvasRegions(page, regions = { all: FULL }, selector = '[
       let sumS = 0;
       let transparent = 0;
       let warm = 0;
+      const rgb = [0, 0, 0];
       const radius = r.ring ? r.ring.r * Math.min(w, h) : 0;
       for (let y = Math.floor(r.y0 * h); y < Math.floor(r.y1 * h); y++) {
         for (let x = Math.floor(r.x0 * w); x < Math.floor(r.x1 * w); x++) {
@@ -123,12 +125,17 @@ export async function canvasRegions(page, regions = { all: FULL }, selector = '[
           sumL += l;
           sumL2 += l * l;
           sumS += (max - min) / 255;
+          rgb[0] += R;
+          rgb[1] += G;
+          rgb[2] += B;
           if (R > 240 && G < 20 && B > 240) transparent += 1;
           if (R > 150 && G > 110 && R - B > 40) warm += 1;
         }
       }
       const mean = sumL / n;
-      out[name] = { checksum: sum, mean, std: Math.sqrt(Math.max(sumL2 / n - mean * mean, 0)), chroma: sumS / n, transparent, warm };
+      out[name] = {
+        checksum: sum, mean, std: Math.sqrt(Math.max(sumL2 / n - mean * mean, 0)), chroma: sumS / n, transparent, warm, rgb: rgb.map((v) => v / n),
+      };
     }
     return out;
   }, { b64: png.toString('base64'), regions });

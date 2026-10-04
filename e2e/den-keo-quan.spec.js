@@ -18,6 +18,11 @@ const FAR = { x0: 0, y0: 0.55, x1: 0.1, y1: 1 };
 const FLOOR_FAR = { x0: 0.02, y0: 0.9, x1: 0.22, y1: 1 };
 // Giữa tấm giấy quay về camera, tránh hai nan tre (tre vàng dưới đèn xưởng cũng là điểm ấm). Tỉ lệ khung 640×400.
 const LANTERN_BOX = { x0: 0.477, y0: 0.45, x1: 0.508, y1: 0.56 };
+// Vách sau, hai bên vạch bóng của nan tre bên phải: sau tấm vàng lá (giữa đèn và vạch) và sau tấm đỏ son (giữa vạch và cột phải).
+const GOLD_ZONE = { x0: 0.56, y0: 0.2, x1: 0.64, y1: 0.8 };
+const RED_ZONE = { x0: 0.68, y0: 0.2, x1: 0.8, y1: 0.8 };
+/** Độ ngả đỏ của một vùng: R / G của màu trung bình (không phụ thuộc độ sáng). */
+const redness = (region) => region.rgb[0] / Math.max(region.rgb[1], 1);
 
 let log;
 test.beforeEach(async ({ page }, testInfo) => {
@@ -183,15 +188,20 @@ test.describe('Đèn Kéo Quân · giấy', () => {
     test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
   });
 
-  test('giấy sáng lên từ bên trong (điểm ấm) và nhuộm màu ánh sáng ra vách; mài Giấy về 0 thì hết cả hai', async ({ page }, testInfo) => {
+  test('giấy sáng lên từ bên trong (điểm ấm) và nhuộm màu ánh sáng ra vách theo tấm; mài Giấy về 0 thì hết cả hai', async ({ page }, testInfo) => {
     test.setTimeout(180_000);
     await open(page, testInfo, 60);
-    const lit = await canvasRegions(page, { lantern: LANTERN_BOX, wall: WALL });
+    const regions = { lantern: LANTERN_BOX, gold: GOLD_ZONE, red: RED_ZONE };
+    const lit = await canvasRegions(page, regions);
     await page.evaluate(() => window.__sma.setWeight('giay', 0));
-    const bare = await canvasRegions(page, { lantern: LANTERN_BOX, wall: WALL });
+    const bare = await canvasRegions(page, regions);
     expect(lit.lantern.warm, 'giấy sáng: có điểm ấm').toBeGreaterThan(0);
     expect(bare.lantern.warm, 'giấy là đất sét: không điểm ấm').toBe(0);
-    expect(lit.wall.chroma, 'ánh sáng qua giấy nhuộm màu vách').toBeGreaterThan(bare.wall.chroma);
+    // So SẮC, không so độ sắc tuyệt đối: giấy nhuộm làm vách tối đi, nên (max − min) giảm dù màu đậm hơn. Cùng một khung (cùng bóng
+    // hình nhân), không có giấy thì hai vùng cùng một ánh nến; có giấy thì vùng sau tấm đỏ son ngả đỏ hơn hẳn vùng sau tấm vàng lá.
+    // Đo lúc làm (khung 60, cả hai backend): 0,27 khi có giấy, 0,05 khi không.
+    const gap = (r) => redness(r.red) - redness(r.gold);
+    expect(gap(lit), 'ánh sáng mang màu tấm giấy nó đi qua').toBeGreaterThan(gap(bare) + 0.1);
     expect(log.errors).toEqual([]);
   });
 

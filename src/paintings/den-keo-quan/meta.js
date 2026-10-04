@@ -18,8 +18,8 @@ export default {
     height: 1000,
     alt: 'Tranh sơn mài đèn kéo quân: ngọn đèn giấy treo giữa gian nhà tối, bóng voi ngựa chạy quanh vách.',
     // scripts/poster.js chụp từ chính cảnh. Bức không có giờ hay trăng trong cảnh: at chỉ để con dấu và trăng SVG giống Bức 1.
-    // freeze là khung mà đoàn quân đứng đẹp trên vách sau.
-    capture: { at: '2026-10-25T21:00', freeze: 240 },
+    // freeze là khung mà đoàn quân đứng đẹp trên vách sau: khung 200 có con ngựa phi và lá cờ ngay giữa vách (lượt màu GĐ 6).
+    capture: { at: '2026-10-25T21:00', freeze: 200 },
   },
   og: 'paintings/den-keo-quan/og.jpg',
   // Hai màu thêm vào bảng sơn mài (spec §18.3): lửa cam, giấy dó.
