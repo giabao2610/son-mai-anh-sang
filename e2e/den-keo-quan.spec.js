@@ -14,6 +14,8 @@ const CEILING = { x0: 0.3, y0: 0, x1: 0.7, y1: 0.07 };
 const FLOOR = { x0: 0.35, y0: 0.93, x1: 0.65, y1: 1 };
 // Góc xa đèn: chân vách trái và sàn sát vách (cách ngọn lửa 2,5–3,2 m). Tỉ lệ khung 640×400.
 const FAR = { x0: 0, y0: 0.55, x1: 0.1, y1: 1 };
+// Sàn bên trái, ngoài vùng tối dưới đế đèn. Tỉ lệ khung 640×400.
+const FLOOR_FAR = { x0: 0.02, y0: 0.9, x1: 0.22, y1: 1 };
 
 let log;
 test.beforeEach(async ({ page }, testInfo) => {
@@ -145,6 +147,22 @@ test.describe('Đèn Kéo Quân · ngọn nến', () => {
     expect(b.checksum, 'nến nhấp nháy: khung 60 và 90 phải khác').not.toBe(a.checksum);
     const [c, d] = [await still(60, true), await still(90, true)];
     expect(d.checksum, 'tắt nhấp nháy: khung 60 và 90 giống hệt').toBe(c.checksum);
+    expect(log.errors).toEqual([]);
+  });
+});
+
+test.describe('Đèn Kéo Quân · gian nhà', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('gạch bát có màu: sàn đậm sắc hơn rõ khi Gian nhà = 1 so với đất sét (Gian nhà = 0)', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    await open(page, testInfo, 60);
+    const painted = (await canvasRegions(page, { floor: FLOOR_FAR })).floor;
+    await page.evaluate(() => window.__sma.setWeight('gian-nha', 0));
+    const clay = (await canvasRegions(page, { floor: FLOOR_FAR })).floor;
+    expect(painted.chroma).toBeGreaterThan(clay.chroma * 1.2);
     expect(log.errors).toEqual([]);
   });
 });

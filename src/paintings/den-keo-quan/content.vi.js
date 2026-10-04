@@ -63,6 +63,31 @@ export default {
       readouts: { backWall: 'Độ rọi ở vách sau', lean: 'Lửa lệch' },
       objects: { 'ngon-lua': 'Ngọn lửa' },
     },
+    'gian-nha': {
+      understand: 'Gian nhà sơn mọi bề mặt bằng texture thủ tục, không dùng ảnh nào: lưới gạch bát là phần lẻ (fract) của tọa độ sàn, '
+        + 'mỗi viên một màu theo hash của số thứ tự viên; vôi loang và vân gỗ là noise cộng nhiều tầng (fbm). Hai cột sơn son có '
+        + 'thêm một lớp phủ bóng (clearcoat) soi vệt sáng của ngọn đèn.',
+      learned: ['Một hàm toán của tọa độ có thể thay cả một tấm ảnh texture: gạch, vôi, gỗ đều tính ngay khi tô.'],
+      readMore: [{ title: 'The Book of Shaders · Patterns', url: 'https://thebookofshaders.com/09/' }],
+      knobs: {
+        tileSize: 'Cỡ viên gạch (m)',
+        stain: 'Vôi loang',
+        grain: 'Vân gỗ cong',
+        clearcoat: 'Lớp phủ bóng của cột',
+        octaves: 'Số tầng noise',
+      },
+      experiments: {
+        flat: {
+          label: 'Một màu cho tất cả',
+          explain: 'Mọi bề mặt về một màu trung bình: thấy texture thủ tục làm được bao nhiêu cho căn phòng.',
+        },
+        rawTiles: {
+          label: 'Xem lưới gạch',
+          explain: 'Sàn hiện số thứ tự của từng viên (màu giả) và mạch vữa: lưới chỉ là phần nguyên và phần lẻ của tọa độ.',
+        },
+      },
+      readouts: { octaves: 'Số tầng noise đang chạy' },
+    },
     'keo-quan': {
       understand: 'Kéo quân là bóng của đoàn quân trên trống, chiếu lên vách. Không có shadow map nào: với mỗi điểm đang tô, shader '
         + 'dựng tia từ ngọn lửa tới điểm đó, tìm chỗ tia cắt ống trụ của trống, đổi chỗ cắt ra góc bằng atan(y, x) rồi tra mặt nạ hình '
