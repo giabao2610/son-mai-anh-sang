@@ -2578,6 +2578,8 @@ Bức 2. Những gì Bao đã chọn nằm ở §1 (GĐ 6); phần còn lại c�
   - phía camera để trống: không có vách thứ tư (camera không bao giờ quay ra sau, §18.2).
 - **Đèn** treo bằng một sợi dây từ xà giữa. Trục đèn ở x = 0, z = −0,6, cách vách sau 1,9 và cách hai vách bên 2,5.
   - Đèn lục giác: khung tre, sáu tấm giấy cao khoảng 0,38, bán kính ngoại tiếp 0,17; chóp và tua ở sáu góc.
+  - Một tấm giấy quay thẳng về camera, không phải một góc. Nhờ vậy không có nan nào che giữa ngọn lửa, và giữa vách sau không có vạch
+    tối của nan: hai vạch nan rơi ra hai bên đoàn quân (chốt lúc làm lớp Giấy, GĐ 6).
   - Đáy kín (đế gỗ giữ nến). Miệng trên hở cho khí nóng thoát ra.
   - Bên trong, từ dưới lên:
     - cây nến đứng trên đế; ngọn lửa ở giữa chiều cao của dải hình nhân;
@@ -2649,6 +2651,9 @@ Bức 2. Những gì Bao đã chọn nằm ở §1 (GĐ 6); phần còn lại c�
   Số hex chốt ở lượt màu. LUT của Phủ bóng sinh từ bảng đã ghép, nên tự đổi theo.
 - **Giấy sáu màu** quanh đèn, theo thứ tự: đỏ son, vàng lá, xanh lục, đỏ son, vàng lá, chàm. Tấm chàm làm một góc phòng tối và lạnh
   hơn: cảnh có chỗ nghỉ mắt.
+  - Tấm quay về camera là vàng lá, rồi theo thứ tự trên: tấm nhìn ra vách sau cũng là vàng lá (sân khấu chính sáng nhất), góc sau
+    bên trái là chàm.
+  - Núm `sides` 4 hay 8 thì sáu màu được rải đều quanh đèn, nên tấm nhìn ra vách sau vẫn là vàng lá.
 - **Hình nhân:** mặc định 8 hình. Núm `figures` cho 6–10 hình, lặp lại theo thứ tự này (mười hình ngựa và voi đã kín chu vi dải, nên
   trần là 10):
   1. người cưỡi ngựa phất cờ;
@@ -2804,8 +2809,13 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
   - ra khỏi đèn, ánh sáng mang màu của tấm giấy nó vừa đi qua, nên trên vách có những mảng đỏ, vàng, xanh, chàm.
 - **Kỹ thuật:**
   - **Ánh sáng xuyên mặt mỏng:** nhìn mặt ngoài nhưng tính ánh nến chiếu vào mặt trong.
-    `emissiveNode` = màu nến × cường độ × độ thấu `exp(−σ × dày)` × `max(0, −N·L)` / r² × màu tấm giấy × sợi giấy.
+    `emissiveNode` = màu nến × cường độ × độ thấu `exp(−σ × dày)` × `max(0, −N·L)` / r² × màu tấm giấy × sợi giấy × hệ số phơi sáng.
     Lớp Kéo quân nhân thêm bóng hình nhân vào node này.
+    - Hệ số phơi sáng (0,05) là lựa chọn của người vẽ. Theo vật lý, giấy cách lửa 15 cm sáng gấp vài trăm lần vách cách 1,9 m; màn hình
+      không chứa nổi khoảng đó, nên AgX nén giấy về trắng và mất màu nhuộm. Hạ riêng độ sáng của giấy thì màu còn đọc được.
+    - Ánh sáng ra phòng đã qua giấy nhuộm nên tối hơn ánh nến trần, vì vậy cường độ mặc định của đèn là 8 (chốt ở lượt màu).
+  - Màu từng tấm là một mảng uniform 8 ô, tính trên CPU theo số cạnh. Đổi số cạnh chỉ ghi lại mảng, không biên dịch lại.
+  - Tia qua miệng trên (lên trần) không đi qua giấy nào, nên giữ màu nến.
   - **Lọc màu:** nhân `mix(1, màu tấm giấy, w4)` vào node bóng của đèn. Tia đi qua tấm nào thì `shared.cot.lantern.paperExit` trả
     về.
   - Sợi giấy: noise kéo dài theo một chiều (`fbm` của tọa độ đã giãn).

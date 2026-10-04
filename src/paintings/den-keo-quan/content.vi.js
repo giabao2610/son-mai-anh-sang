@@ -88,6 +88,22 @@ export default {
       },
       readouts: { octaves: 'Số tầng noise đang chạy' },
     },
+    giay: {
+      understand: 'Giấy sáng lên từ bên trong: shader tô mặt ngoài nhưng tính ánh nến chiếu vào mặt trong, nhân với phần ánh sáng lọt '
+        + 'qua bề dày của giấy. Ra khỏi đèn, ánh sáng mang màu tấm giấy nó vừa đi qua: shader tìm tia từ ngọn lửa tới mỗi điểm trên '
+        + 'vách đi qua tấm nào, rồi nhuộm ánh sáng bằng màu tấm đó. Vì vậy trên vách có những mảng đỏ, vàng, xanh, chàm.',
+      learned: ['Một mặt mỏng như giấy có thể sáng nhờ ánh sáng đi xuyên qua nó, và nhuộm màu ánh sáng đi tiếp.'],
+      readMore: [{ title: 'Định luật Beer–Lambert', url: 'https://vi.wikipedia.org/wiki/%C4%90%E1%BB%8Bnh_lu%E1%BA%ADt_Beer%E2%80%93Lambert' }],
+      knobs: { thickness: 'Độ dày của giấy', dye: 'Độ đậm của màu nhuộm', fiber: 'Sợi giấy' },
+      experiments: {
+        clear: {
+          label: 'Giấy trong suốt',
+          explain: 'Giấy gần như trong: thấy trống hình nhân quay bên trong và ngọn lửa. Bí mật của đèn lộ ra.',
+        },
+        noFiber: { label: 'Tắt sợi giấy', explain: 'Giấy phẳng lì như nhựa: chính những sợi dó làm ánh sáng trên giấy có hồn.' },
+      },
+      readouts: { transmit: 'Ánh sáng qua giấy' },
+    },
     'keo-quan': {
       understand: 'Kéo quân là bóng của đoàn quân trên trống, chiếu lên vách. Không có shadow map nào: với mỗi điểm đang tô, shader '
         + 'dựng tia từ ngọn lửa tới điểm đó, tìm chỗ tia cắt ống trụ của trống, đổi chỗ cắt ra góc bằng atan(y, x) rồi tra mặt nạ hình '

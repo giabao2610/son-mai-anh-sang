@@ -13,7 +13,9 @@ const named = ({ layers }, name) => layers.cot.objects.find((o) => o.name === na
 
 describe('l3-gian-nha', () => {
   it('lớp nằm giữa Ngọn nến và Kéo quân; núm đều là uniform; octave mặc định và trần theo mức', () => {
-    expect(meta.layers.map((l) => l.id)).toEqual(['cot', 'ngon-nen', 'gian-nha', 'keo-quan', 'phu-bong']);
+    const order = meta.layers.map((l) => l.id);
+    expect(order.indexOf('ngon-nen')).toBeLessThan(order.indexOf('gian-nha'));
+    expect(order.indexOf('gian-nha')).toBeLessThan(order.indexOf('keo-quan'));
     expect(gianNha.knobs.map((k) => [k.id, k.via ?? 'uniform'])).toEqual([
       ['tileSize', 'uniform'], ['stain', 'uniform'], ['grain', 'uniform'], ['clearcoat', 'uniform'], ['octaves', 'uniform'],
     ]);

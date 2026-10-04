@@ -1,6 +1,5 @@
 // tests/paintings/den-keo-quan/khung.test.js — Bức 2 dựng được như run.js: đèn nến bật castShadow mà không có shadow map (node bóng giữ chỗ), vật nhận bóng, đất sét khi mọi trọng số bằng 0.
 import { describe, it, expect } from 'vitest';
-import { CylinderGeometry } from 'three/webgpu';
 import meta from '../../../src/paintings/den-keo-quan/meta.js';
 import * as painting from '../../../src/paintings/den-keo-quan/painting.js';
 import { LANTERN, cornerAngles } from '../../../src/paintings/den-keo-quan/parts/cot-den.js';
@@ -17,13 +16,31 @@ describe('Bức 2 · khung', () => {
     expect(Math.hypot(LANTERN.flame[0] - LANTERN.axis[0], LANTERN.flame[2] - LANTERN.axis[1])).toBeLessThan(LANTERN.drum.r);
   });
 
-  it('cornerAngles khớp đỉnh thật của CylinderGeometry (quy ước góc atan(z, x) mà gobo và giấy dùng)', () => {
+  it('cornerAngles khớp đỉnh thật của giấy và đế (quy ước góc atan(z, x) mà gobo và giấy dùng), ở 4, 6 và 8 cạnh', async () => {
+    const built = build();
+    // So trên vòng tròn đơn vị (cos, sin làm tròn): tránh π và −π là hai chuỗi khác nhau.
+    const r4 = (x) => Math.round(x * 1e4) / 1e4 || 0;
+    const key = (c, s) => `${r4(c)},${r4(s)}`;
     for (const sides of [4, 6, 8]) {
-      const pos = new CylinderGeometry(1, 1, 1, sides, 1, true).getAttribute('position');
-      const real = new Set();
-      for (let i = 0; i < pos.count; i += 1) real.add(Math.atan2(pos.getZ(i), pos.getX(i)).toFixed(4));
-      const expected = new Set(cornerAngles(sides).map((a) => Math.atan2(Math.sin(a), Math.cos(a)).toFixed(4)));
-      expect([...real].sort()).toEqual([...expected].sort());
+      await built.knobs.cot.set('sides', sides);
+      const expected = new Set(cornerAngles(sides).map((a) => key(Math.cos(a), Math.sin(a))));
+      for (const name of ['giay', 'de-chop']) {
+        const pos = named(built.layers.cot, name).geometry.getAttribute('position');
+        const real = new Set();
+        for (let i = 0; i < pos.count; i += 1) {
+          const rho = Math.hypot(pos.getX(i), pos.getZ(i));
+          if (rho > LANTERN.paper.r * 0.99) real.add(key(pos.getX(i) / rho, pos.getZ(i) / rho));
+        }
+        expect([...real].sort(), `${name}, ${sides} cạnh`).toEqual([...expected].sort());
+      }
+    }
+  });
+
+  it('một tấm giấy quay thẳng về camera (+z): π/2 nằm giữa hai đỉnh, nên không có nan nào che giữa ngọn lửa hay kẻ giữa vách sau', () => {
+    for (const sides of [4, 6, 8]) {
+      const corners = cornerAngles(sides);
+      const nearest = Math.min(...corners.map((a) => Math.abs(Math.atan2(Math.sin(a - Math.PI / 2), Math.cos(a - Math.PI / 2)))));
+      expect(nearest, `${sides} cạnh`).toBeCloseTo(Math.PI / sides, 9);
     }
   });
 

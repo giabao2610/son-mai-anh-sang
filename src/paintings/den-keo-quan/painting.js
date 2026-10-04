@@ -2,6 +2,7 @@
 import * as cot from './layers/l1-cot.js';
 import * as ngonNen from './layers/l2-ngon-nen.js';
 import * as gianNha from './layers/l3-gian-nha.js';
+import * as giay from './layers/l4-giay.js';
 import * as keoQuan from './layers/l5-keo-quan.js';
 import * as phuBong from '../../engine/stock/phu-bong/layer.js';
 
@@ -9,7 +10,7 @@ import * as phuBong from '../../engine/stock/phu-bong/layer.js';
  * Mỗi lớp là một module { id, knobs, createLayer }; import namespace (`* as`) cho ra đúng object đó.
  * @type {import('../../engine/contracts/runtime.js').LayerModule[]}
  */
-export const layers = [cot, ngonNen, gianNha, keoQuan, phuBong];
+export const layers = [cot, ngonNen, gianNha, giay, keoQuan, phuBong];
 
 /** setup() chạy TRƯỚC mọi createLayer: góc trống, ngọn lửa (shared.js). */
 export { setup } from './shared.js';

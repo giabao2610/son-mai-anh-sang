@@ -53,6 +53,11 @@ export default {
       files: ['paintings/den-keo-quan/layers/l3-gian-nha.js', 'paintings/den-keo-quan/parts/gian-nha-vat-lieu.js'],
     },
     {
+      id: 'giay',
+      name: 'Giấy',
+      files: ['paintings/den-keo-quan/layers/l4-giay.js'],
+    },
+    {
       id: 'keo-quan',
       name: 'Kéo quân',
       files: [

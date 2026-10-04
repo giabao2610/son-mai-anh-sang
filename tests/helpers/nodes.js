@@ -72,7 +72,8 @@ const PASSES = {
  *   (`lightsNode.setLights`). Không nạp thì shader không có đèn nào: chỉ kiểm node của bức, không kiểm mô hình chiếu sáng.
  * @returns {{ vertexShader: string, fragmentShader: string, outputs: number, problems: string[], uniforms: string[] }}
  *   uniforms (GĐ 6): tên (setName) của mọi uniform mà shader thật sự đọc, kể cả uniform nằm trong thân một Fn (nodesOf không thấy
- *   chúng); uniform không đặt tên mang tên chung của three (nodeUniformN).
+ *   chúng); uniform không đặt tên mang tên chung của three (nodeUniformN). Mảng uniform (uniformArray) chỉ giữ tên ở WGSL: GLSL đặt
+ *   nó vào một khối buffer và đổi tên cả node thành NodeBuffer_<id>.
  */
 export function compileMaterial(object, { scene, camera }, backend, { pass = 'scene', shadows = false, lights = shadows } = {}) {
   if (!PASSES[pass]) throw new Error(`compileMaterial: không có lượt vẽ "${pass}" (chỉ có ${Object.keys(PASSES).join(', ')})`);

@@ -31,12 +31,14 @@ const BASE = 0.02;
 const TASSEL = { r: 0.006, length: 0.05 };
 
 /**
- * Góc (atan(z, x)) của các đỉnh lăng trụ `sides` cạnh mà CylinderGeometry dựng: three đặt đỉnh đầu tiên ở +z, tức góc π/2, rồi đi
- * ngược chiều atan theo bước 2π/sides. Gobo (nan tre) và lớp Giấy (tấm nào) dùng cùng quy ước này; test khung so với hình thật.
+ * Góc (atan(z, x)) của các đỉnh lăng trụ `sides` cạnh. CylinderGeometry đặt đỉnh đầu tiên ở +z (góc π/2) rồi đi ngược chiều atan theo
+ * bước 2π/sides; đèn xoay thêm nửa tấm (π/sides), nên đỉnh ở π/2 − π/sides − k·2π/sides và tấm k nằm giữa góc π/2 − k·2π/sides.
+ * Tấm 0 nhìn thẳng ra camera (+z): không có nan nào che giữa ngọn lửa hay in một vạch giữa vách sau. Gobo (nan tre) và lớp Giấy
+ * (tấm nào) dùng cùng quy ước này; test khung so với hình thật.
  * @param {number} sides
  */
 export function cornerAngles(sides) {
-  return Array.from({ length: sides }, (_, k) => Math.PI / 2 - (k * 2 * Math.PI) / sides);
+  return Array.from({ length: sides }, (_, k) => Math.PI / 2 - Math.PI / sides - (k * 2 * Math.PI) / sides);
 }
 
 /**
@@ -68,21 +70,22 @@ export const planeCross = Fn(([P, C, axis, Y]) => {
   return vec3(h.x, h.y, t);
 });
 
-/** Lăng trụ giấy `sides` cạnh, mở hai đầu, đúng độ cao (tọa độ cục bộ: trục ở gốc). */
+/** Lăng trụ giấy `sides` cạnh, mở hai đầu, đúng độ cao (tọa độ cục bộ: trục ở gốc), xoay nửa tấm (cornerAngles). */
 const paperGeometry = (sides) => {
   const { r, y0, y1 } = LANTERN.paper;
-  return new CylinderGeometry(r, r, y1 - y0, sides, 1, true).translate(0, (y0 + y1) / 2, 0);
+  return new CylinderGeometry(r, r, y1 - y0, sides, 1, true).rotateY(Math.PI / sides).translate(0, (y0 + y1) / 2, 0);
 };
 
 /**
  * Đế gỗ (đĩa kín ngay dưới đáy giấy) và vành chóp (vòng từ miệng tới mép giấy, ở đỉnh), gộp làm một hình.
- * RingGeometry nằm ở mặt XY: xoay về mặt ngang rồi xoay quanh trục đứng để đỉnh của nó trùng đỉnh lăng trụ (cornerAngles).
+ * RingGeometry nằm ở mặt XY: xoay về mặt ngang rồi xoay quanh trục đứng để đỉnh của nó trùng đỉnh lăng trụ trước khi xoay nửa
+ * tấm; cả khối gộp rồi xoay nửa tấm như giấy (cornerAngles).
  */
 const woodGeometry = (sides) => {
   const { r, y0, y1 } = LANTERN.paper;
   const base = new CylinderGeometry(r, r, BASE, sides).translate(0, y0 - BASE / 2, 0);
   const rim = new RingGeometry(LANTERN.mouth, r, sides).rotateX(-Math.PI / 2).rotateY(-Math.PI / 2).translate(0, y1, 0);
-  const merged = mergeGeometries([base, rim]); // cả hai đều có chỉ mục (index): gộp được thẳng
+  const merged = mergeGeometries([base, rim]).rotateY(Math.PI / sides); // cả hai đều có chỉ mục (index): gộp được thẳng
   base.dispose();
   rim.dispose();
   return merged;

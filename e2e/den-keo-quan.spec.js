@@ -16,6 +16,8 @@ const FLOOR = { x0: 0.35, y0: 0.93, x1: 0.65, y1: 1 };
 const FAR = { x0: 0, y0: 0.55, x1: 0.1, y1: 1 };
 // Sàn bên trái, ngoài vùng tối dưới đế đèn. Tỉ lệ khung 640×400.
 const FLOOR_FAR = { x0: 0.02, y0: 0.9, x1: 0.22, y1: 1 };
+// Giữa tấm giấy quay về camera, tránh hai nan tre (tre vàng dưới đèn xưởng cũng là điểm ấm). Tỉ lệ khung 640×400.
+const LANTERN_BOX = { x0: 0.477, y0: 0.45, x1: 0.508, y1: 0.56 };
 
 let log;
 test.beforeEach(async ({ page }, testInfo) => {
@@ -163,6 +165,37 @@ test.describe('Đèn Kéo Quân · gian nhà', () => {
     await page.evaluate(() => window.__sma.setWeight('gian-nha', 0));
     const clay = (await canvasRegions(page, { floor: FLOOR_FAR })).floor;
     expect(painted.chroma).toBeGreaterThan(clay.chroma * 1.2);
+    expect(log.errors).toEqual([]);
+  });
+});
+
+test.describe('Đèn Kéo Quân · giấy', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('giấy sáng lên từ bên trong (điểm ấm) và nhuộm màu ánh sáng ra vách; mài Giấy về 0 thì hết cả hai', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    await open(page, testInfo, 60);
+    const lit = await canvasRegions(page, { lantern: LANTERN_BOX, wall: WALL });
+    await page.evaluate(() => window.__sma.setWeight('giay', 0));
+    const bare = await canvasRegions(page, { lantern: LANTERN_BOX, wall: WALL });
+    expect(lit.lantern.warm, 'giấy sáng: có điểm ấm').toBeGreaterThan(0);
+    expect(bare.lantern.warm, 'giấy là đất sét: không điểm ấm').toBe(0);
+    expect(lit.wall.chroma, 'ánh sáng qua giấy nhuộm màu vách').toBeGreaterThan(bare.wall.chroma);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('"Giấy trong suốt" lộ trống bên trong; tắt Ngọn nến thì đèn chỉ còn là giấy và đất, không phát sáng', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    await open(page, testInfo, 60);
+    const before = (await canvasRegions(page, { lantern: LANTERN_BOX })).lantern;
+    await toggleExperiment(page, 'giay', 'clear', true);
+    const clear = (await canvasRegions(page, { lantern: LANTERN_BOX })).lantern;
+    expect(clear.checksum, 'thấy trống và hình nhân bên trong').not.toBe(before.checksum);
+    await page.evaluate(() => window.__sma.setWeight('ngon-nen', 0));
+    const dark = (await canvasRegions(page, { lantern: LANTERN_BOX })).lantern;
+    expect(dark.warm, 'không có ánh nến thì giấy trong suốt cũng không sáng').toBe(0);
     expect(log.errors).toEqual([]);
   });
 });

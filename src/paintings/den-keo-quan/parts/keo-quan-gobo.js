@@ -63,9 +63,10 @@ export function createGobo({ lantern, mask, candle, rest, size, theta, u }) {
     const onBlade = float(1).sub(smoothstep(float(BLADE / 2).sub(pw), float(BLADE / 2).add(pw), abs(f.sub(0.5))));
     const inFan = float(1).sub(smoothstep(float(fan.r).sub(pen), float(fan.r).add(pen), rho));
     const above = mix(float(1), open.mul(float(1).sub(onBlade.mul(inFan))), top);
-    // Nan tre: cung từ chỗ tia ra tới góc gần nhất của lăng trụ (góc ở π/2 − k·2π/sides, xem cornerAngles).
+    // Nan tre: cung từ chỗ tia ra tới góc gần nhất của lăng trụ. Góc ở π/2 − π/sides − m·2π/sides (cornerAngles), tức k = −½ − m:
+    // fract(k) = ½ ở đúng góc, 0 ở giữa tấm.
     const k = out.x.sub(Math.PI / 2).div(TAU).mul(sides);
-    const arc = abs(fract(k.add(0.5)).sub(0.5)).mul(TAU).div(sides).mul(paper.r);
+    const arc = abs(fract(k).sub(0.5)).mul(TAU).div(sides).mul(paper.r);
     const rib = mix(smoothstep(float(RIB).sub(pen), float(RIB).add(pen), arc), float(1), top); // nan chỉ chạy dọc thân
     return base.mul(above).mul(rib).mul(float(1).sub(cover(P, C, s)));
   });

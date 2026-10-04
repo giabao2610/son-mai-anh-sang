@@ -14,8 +14,8 @@ export const knobs = [
 
 /**
  * @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx
- * @param {object} shared  đọc shared.cot (đèn, mặt nạ), shared.ngonNen (đèn, vị trí và cỡ lửa), shared.theta, shared.spin (setup);
- *   ghi shared.keoQuan
+ * @param {object} shared  đọc shared.cot (đèn, mặt nạ, material giấy), shared.ngonNen (đèn, vị trí và cỡ lửa), shared.theta,
+ *   shared.spin (setup); ghi shared.keoQuan
  */
 export function createLayer(ctx, shared) {
   const w = ctx.weight(id);
@@ -31,6 +31,9 @@ export function createLayer(ctx, shared) {
   // Node bóng của đèn nến (Ngọn nến dựng, giữ chỗ bằng 1): ánh sáng tới mỗi điểm nhân với phần lọt qua đoàn quân. Trộn theo
   // trọng số, nên mài lớp về 0 là hết bóng mà không biên dịch lại. Gán TRƯỚC lần biên dịch đầu: node bóng dựng một lần rồi giữ.
   light.shadow.shadowNode = light.shadow.shadowNode.mul(mix(float(1), gobo.all(positionWorld), w));
+  // Ánh sáng xuyên giấy (lớp Giấy, đứng trước lớp này nên node đã có) cũng bị hình nhân che: đoàn quân chạy cả trên giấy.
+  const paper = shared.cot.materials.giay;
+  paper.emissiveNode = paper.emissiveNode.mul(mix(float(1), gobo.figures(positionWorld), w));
   shared.keoQuan = { gobo, u };
   // Tốc độ thường của trống theo núm (setup dựng trống ở tốc độ mặc định; giảm chuyển động thì chậm còn shared.slow).
   const { spin, slow } = shared;
