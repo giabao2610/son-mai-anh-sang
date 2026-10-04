@@ -2322,10 +2322,11 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
       `e2e/.results` là thư mục ẩn, mà `upload-artifact` (từ v4.4) mặc định bỏ file ẩn: cả hai bước giữ ảnh đặt
       `include-hidden-files: true`.
   - (GĐ 6) Hai bức nhân đôi phần e2e chung, mà job `build` đã mất khoảng 22 phút trên trần 40. Vì vậy:
-    - **`build`** (chặn) chỉ còn `npm ci` → `npm test` → `npm run build` → đóng gói Pages, và giữ `dist/` thành artifact cho các job e2e;
-    - **`e2e`** (chặn) chạy hai phần song song (`--shard=1/2`, `--shard=2/2`; `fullyParallel` để chia theo test, không theo file),
-      mỗi phần lấy `dist/` từ `build`;
-    - **`e2e-webgpu`** (không chặn) cũng hai phần;
+    - **`build`** (chặn, trần 20 phút) chỉ còn `npm ci` → `npm test` → `npm run build` → đóng gói Pages;
+    - **`e2e`** (chặn) chạy hai phần song song (`--shard=1/2`, `--shard=2/2`, `--fully-parallel` để chia theo test, không theo file).
+      Mỗi phần tự `npm run build`: build chỉ mất vài giây, nhanh hơn chuyển `dist/` qua artifact, và không thêm action mới
+      (`download-artifact`). Đếm lúc làm: 166 test chia 83 / 83;
+    - **`e2e-webgpu`** (không chặn) cũng hai phần (83 test chia 42 / 41);
     - **`deploy`** cần `build` và cả hai phần của `e2e`.
 
     Thời gian thật đo khi làm (§18.9).
@@ -3053,9 +3054,9 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
 - lật tranh: từ Bức 1 bấm "Bức 2 · Đèn Kéo Quân →" thì tới đúng trang, cả khi `?static`; và đi ngược lại.
 
 **CI.** Hai bức nhân đôi phần e2e chung. Job `build` hiện mất khoảng 22 phút trên trần 40 phút (§13), nên GĐ 6 đổi cách chạy:
-- `build` chỉ còn unit và build, rồi chuyển `dist/` cho các job e2e qua artifact;
-- e2e chặn tách thành 2 phần chạy song song (`--shard=1/2`, `--shard=2/2`). Bật `fullyParallel` để chia theo từng test, không theo
-  file;
+- `build` chỉ còn unit, build và đóng gói Pages; mỗi job e2e tự build (§13);
+- e2e chặn tách thành 2 phần chạy song song (`--shard=1/2`, `--shard=2/2`). Bật `--fully-parallel` để chia theo từng test, không
+  theo file;
 - `deploy` chờ cả hai phần;
 - e2e WebGPU (không chặn) cũng tách 2 phần.
 
