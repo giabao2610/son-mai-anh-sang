@@ -47,8 +47,9 @@ describe('l5-keo-quan', () => {
     const read = (id) => layers['keo-quan'].readouts.find((r) => r.id === id).get();
     const d = shared.cot.lantern.axis[1] + shared.cot.room.half; // 1,9
     expect(read('magnify')).toBeCloseTo(d / shared.cot.lantern.drum.r, 1); // ≈ 21,1
-    // s × (D − r) / r, đổi ra cm: 0,01 × (1,9 − 0,09) / 0,09 × 100 ≈ 20 cm
-    expect(read('penumbra')).toBeCloseTo((0.01 * (d - 0.09)) / 0.09 * 100, 0);
+    // s × (D − r) / r, đổi ra cm (s là cỡ lửa lúc này, núm penumbra mặc định 1): 0,004 × (1,9 − 0,09) / 0,09 × 100 ≈ 8 cm
+    const s = shared.ngonNen.size.value;
+    expect(read('penumbra')).toBeCloseTo((s * (d - 0.09)) / 0.09 * 100, 0);
   });
 
   it.each([

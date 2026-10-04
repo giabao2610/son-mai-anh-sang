@@ -73,4 +73,22 @@ describe('cot-hinh-nhan', () => {
     rasterize(FIGURES, 2048, { count: 8 });
     expect(performance.now() - t0).toBeLessThan(120);
   });
+
+  it('đủ tám hình theo thứ tự của spec §18.3', () => {
+    expect(FIGURES.map((f) => f.id)).toEqual(['cuoi-ngua', 'linh-co', 'voi', 'danh-trong', 'linh-giao', 'ngua', 'cam-long', 'thoi-tu-va']);
+  });
+
+  it('6 tới 10 hình (núm figures): tổng bề rộng không quá chu vi dải', () => {
+    for (const count of [6, 8, 10]) {
+      const total = Array.from({ length: count }, (_, k) => FIGURES[k % FIGURES.length].width).reduce((s, v) => s + v, 0);
+      expect(total, `${count} hình`).toBeLessThanOrEqual(ASPECT);
+    }
+  });
+
+  it('chân của mọi hình chạm vạch đất (có hình cơ bản xuống tới mép trên của vạch)', () => {
+    for (const fig of FIGURES) {
+      const lowest = Math.min(...fig.shapes.map((s) => bounds(s).y0));
+      expect(lowest, fig.id).toBeLessThanOrEqual(MARGIN + GROUND + 0.01);
+    }
+  });
 });

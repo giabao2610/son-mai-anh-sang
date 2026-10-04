@@ -34,6 +34,7 @@ export default {
         'de-chop': 'Đế và vành chóp',
         'cay-nen': 'Cây nến',
         'day-treo': 'Dây treo',
+        tua: 'Tua',
         trong: 'Trống hình nhân',
         'chong-chong': 'Chong chóng',
       },

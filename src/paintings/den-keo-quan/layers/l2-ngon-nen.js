@@ -22,7 +22,7 @@ export function createLayer(ctx, shared) {
   const rest = new Vector3(...lantern.flame);
   const candle = uniform(rest.clone()).setName('candlePos');
   const power = uniform(0).setName('candlePower');
-  const size = uniform(0.01).setName('flameSize'); // cỡ ngọn lửa (m) = cỡ nguồn sáng của gobo
+  const size = uniform(0.004).setName('flameSize'); // cỡ ngọn lửa (m) = cỡ nguồn sáng của gobo; 4 mm: chân tay hình nhân còn đọc được
   // decay 2: ánh sáng giảm theo bình phương khoảng cách (vật lý). distance 0: không cắt ở tầm nào.
   const light = new PointLight(ctx.palette.hex.vangLaSang, 0, 0, 2);
   light.position.copy(rest);

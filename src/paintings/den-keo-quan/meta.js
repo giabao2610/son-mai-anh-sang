@@ -35,6 +35,7 @@ export default {
         'paintings/den-keo-quan/parts/cot-den.js',
         'paintings/den-keo-quan/parts/cot-trong.js',
         'paintings/den-keo-quan/parts/cot-hinh-nhan.js',
+        'paintings/den-keo-quan/parts/cot-doan-quan.js',
       ],
     },
     {

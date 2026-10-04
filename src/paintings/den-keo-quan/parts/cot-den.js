@@ -1,5 +1,5 @@
 // paintings/den-keo-quan/parts/cot-den.js — của lớp Cốt: số đo của chiếc đèn, đỉnh lăng trụ giấy, hai hàm TSL giao tia từ ngọn lửa (ống trụ, mặt phẳng ngang), và các vật của đèn.
-import { CylinderGeometry, InstancedMesh, Mesh, Object3D, RingGeometry } from 'three/webgpu';
+import { CapsuleGeometry, CylinderGeometry, InstancedMesh, Mesh, Object3D, RingGeometry } from 'three/webgpu';
 import { Fn, atan, dot, max, sqrt, vec3 } from 'three/tsl';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -26,6 +26,8 @@ export const LANTERN = Object.freeze({
 const RIB = { r: 0.0045, out: 0.003, max: 8 };
 /** Đế gỗ dày bao nhiêu (m), nằm ngay dưới đáy giấy. */
 const BASE = 0.02;
+/** Tua treo ở các góc đáy đèn: bán kính, chiều dài (m). */
+const TASSEL = { r: 0.006, length: 0.05 };
 
 /**
  * Góc (atan(z, x)) của các đỉnh lăng trụ `sides` cạnh mà CylinderGeometry dựng: three đặt đỉnh đầu tiên ở +z, tức góc π/2, rồi đi
@@ -106,11 +108,16 @@ export function createLantern(materials, sides) {
   candle.name = 'cay-nen';
   const cord = new Mesh(new CylinderGeometry(0.002, 0.002, LANTERN.hang - y1, 4).translate(0, (LANTERN.hang + y1) / 2, 0), materials.go);
   cord.name = 'day-treo';
-  const objects = [paper, frame, wood, candle, cord];
+  // Tua: mỗi góc đáy một tua treo xuống (cấp sẵn 8 bản như nan tre, chỉ đổi count theo số cạnh).
+  const tassels = new InstancedMesh(new CapsuleGeometry(TASSEL.r, TASSEL.length, 2, 6), materials.tre, RIB.max);
+  tassels.name = 'tua';
+  const objects = [paper, frame, wood, candle, cord, tassels];
   for (const o of objects) o.position.set(ax, 0, az);
   // Vật trong đèn đổ bóng cho thí nghiệm "Shadow map thật" (castShadow nằm trong cache key: bật một lần lúc dựng). Gobo không
   // cần cờ này. Giấy không đổ bóng (ánh sáng đi xuyên qua nó), và không vật nào của đèn nhận bóng: giấy tự tính ánh sáng xuyên qua.
-  for (const o of [frame, wood, candle]) o.castShadow = true;
+  for (const o of [frame, wood, candle, tassels]) o.castShadow = true;
+  // Tua treo dưới đế: nhận node bóng của đèn nến để đế che (không thì tua sáng trắng giữa vùng tối dưới đèn).
+  tassels.receiveShadow = true;
 
   const dummy = new Object3D();
   const placeRibs = (n) => {
@@ -123,6 +130,15 @@ export function createLantern(materials, sides) {
     frame.count = n;
     frame.instanceMatrix.needsUpdate = true;
     frame.computeBoundingSphere(); // setMatrixAt không cập nhật khung bao (frustum culling dùng nó)
+    cornerAngles(n).forEach((a, i) => {
+      const rr = LANTERN.paper.r + RIB.out;
+      dummy.position.set(Math.cos(a) * rr, y0 - BASE - TASSEL.length / 2 - TASSEL.r, Math.sin(a) * rr);
+      dummy.updateMatrix();
+      tassels.setMatrixAt(i, dummy.matrix);
+    });
+    tassels.count = n;
+    tassels.instanceMatrix.needsUpdate = true;
+    tassels.computeBoundingSphere();
   };
   placeRibs(sides);
 
