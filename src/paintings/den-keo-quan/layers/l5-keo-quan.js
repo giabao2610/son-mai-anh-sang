@@ -29,9 +29,11 @@ export function createLayer(ctx, shared) {
     strength: ctx.knob('strength'), // @knob strength
   };
   const gobo = createGobo({ lantern, mask, candle, rest: vec3(...lantern.flame), size, theta: shared.theta, u });
+  // Bật "Shadow map thật" thì đèn nến thôi mang bóng gobo: bóng hình nhân do đèn thật lo (xem update()).
+  const goboReal = uniform(0).setName('goboReal');
   // Node bóng của đèn nến (Ngọn nến dựng, giữ chỗ bằng 1): ánh sáng tới mỗi điểm nhân với phần lọt qua đoàn quân. Trộn theo
   // trọng số, nên mài lớp về 0 là hết bóng mà không biên dịch lại. Gán TRƯỚC lần biên dịch đầu: node bóng dựng một lần rồi giữ.
-  light.shadow.shadowNode = light.shadow.shadowNode.mul(mix(float(1), gobo.all(positionWorld), w));
+  light.shadow.shadowNode = light.shadow.shadowNode.mul(mix(float(1), gobo.all(positionWorld), w.mul(float(1).sub(goboReal))));
   // Ánh sáng xuyên giấy (lớp Giấy, đứng trước lớp này nên node đã có) cũng bị hình nhân che: đoàn quân chạy cả trên giấy.
   const paper = shared.cot.materials.giay;
   paper.emissiveNode = paper.emissiveNode.mul(mix(float(1), gobo.figures(positionWorld), w));
@@ -50,9 +52,12 @@ export function createLayer(ctx, shared) {
   return {
     objects: [],
     update() {
-      // Chạy sau Ngọn nến (thứ tự lớp), nên cường độ của đèn nến trong khung này đã có: bật bóng thật thì đèn gobo tắt.
-      if (realOn) light.intensity = 0;
-      real?.sync({ power: shared.ngonNen.power.value, weight: w.value, on: realOn });
+      // Chạy sau Ngọn nến (thứ tự lớp), nên cường độ của đèn nến trong khung này vừa được ghi (không cộng dồn qua các khung). Bật
+      // bóng thật thì hai đèn hòa theo trọng số: đèn nến (mang màu giấy, không còn gobo) giữ 1 − w, đèn thật (bóng thật) nhận w.
+      // Mài Kéo quân về 0 là về đúng bốn lớp dưới: còn đèn nến với màu giấy, không bóng hình nhân.
+      const k = w.value;
+      if (realOn) light.intensity *= 1 - k;
+      real?.sync({ power: shared.ngonNen.power.value * k, on: realOn, strength: u.strength.value });
     },
     onKnob: {
       speed: (v) => spin.setBase(ctx.u.time.value, rpmToOmega(v) * slow), // @knob speed
@@ -67,8 +72,9 @@ export function createLayer(ctx, shared) {
         id: 'shadowMap',
         kind: 'compare',
         toggle(on) {
+          real.toggle(on); // dựng đèn trước: lỗi lúc dựng thì trạng thái vẫn là tắt, đèn nến không bị tắt oan
           realOn = on;
-          real.toggle(on);
+          goboReal.value = on ? 1 : 0;
         },
       }] : []),
     ],
