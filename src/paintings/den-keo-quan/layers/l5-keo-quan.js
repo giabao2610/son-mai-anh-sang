@@ -2,6 +2,7 @@
 import { float, mix, positionWorld, uniform, vec3 } from 'three/tsl';
 import { createGobo } from '../parts/keo-quan-gobo.js';
 import { rpmToOmega } from '../parts/keo-quan-quay.js';
+import { createRealShadow } from '../parts/keo-quan-that.js';
 
 export const id = 'keo-quan';
 
@@ -41,9 +42,18 @@ export function createLayer(ctx, shared) {
   // Vách sau cách trục D (m): bóng to gấp D / r; nửa tối trên vách = cỡ lửa × (D − r) / r (tam giác đồng dạng).
   const D = lantern.axis[1] + room.half;
   const r = lantern.drum.r;
+  // "Shadow map thật": đèn thứ hai dựng lười; mức thấp (budget.shadowMap = 0) không có thí nghiệm này.
+  const mapSize = ctx.budget.shadowMap ?? 0;
+  const real = mapSize > 0 ? createRealShadow(ctx, { source: light, size: mapSize }) : null;
+  let realOn = false;
 
   return {
     objects: [],
+    update() {
+      // Chạy sau Ngọn nến (thứ tự lớp), nên cường độ của đèn nến trong khung này đã có: bật bóng thật thì đèn gobo tắt.
+      if (realOn) light.intensity = 0;
+      real?.sync({ power: shared.ngonNen.power.value, weight: w.value, on: realOn });
+    },
     onKnob: {
       speed: (v) => spin.setBase(ctx.u.time.value, rpmToOmega(v) * slow), // @knob speed
     },
@@ -52,6 +62,15 @@ export function createLayer(ctx, shared) {
       { id: 'pointLight', toggle: (on) => { u.point.value = on ? 1 : 0; } },
       // Lấy góc của chính P thay cho giao tia: đúng khi lửa đứng yên trên trục, sai khi lửa chao.
       { id: 'naive', toggle: (on) => { u.naive.value = on ? 1 : 0; } },
+      // So với cách thường làm: cube shadow map (6 lượt vẽ bóng mỗi khung). Lần bật đầu khựng một nhịp vì biên dịch lại.
+      ...(real ? [{
+        id: 'shadowMap',
+        kind: 'compare',
+        toggle(on) {
+          realOn = on;
+          real.toggle(on);
+        },
+      }] : []),
     ],
     readouts: [
       // Tốc độ lúc này (vòng/phút, một chữ số thập phân): đọc thẳng từ công thức của trống, không đếm theo khung.
@@ -63,6 +82,8 @@ export function createLayer(ctx, shared) {
         unit: 'cm',
       },
     ],
-    dispose() {},
+    dispose() {
+      real?.dispose();
+    },
   };
 }

@@ -200,6 +200,50 @@ test.describe('Đèn Kéo Quân · giấy', () => {
   });
 });
 
+test.describe('Đèn Kéo Quân · Shadow map thật', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  /** Chờ thêm n khung của vòng lặp: draw call chỉ được đo ở khung của vòng lặp, không ở lần vẽ lại khung đứng yên (?freeze). */
+  async function moreFrames(page, n) {
+    const frames = await page.evaluate(() => window.__sma.frames);
+    await waitForFrames(page, frames + n, { timeout: 120_000 });
+  }
+  const drawCalls = (page) => page.evaluate(() => window.__sma.stats().drawCalls);
+
+  test('bật: thêm ít nhất 6 lượt vẽ bóng, cảnh vẫn live, vách vẫn có bóng hình nhân (trống cắt hình trong lượt vẽ bóng); tắt: draw call về như cũ', async ({ page }, testInfo) => {
+    test.setTimeout(300_000);
+    const { query } = testInfo.project.metadata;
+    await page.goto(`./tranh/den-keo-quan/?${query.replace(/^\?/, '')}&${AT}`);
+    const settled = await waitForSettled(page, { timeout: 60_000 });
+    expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+    await toggleExperiment(page, 'keo-quan', 'shadowMap', false); // mở Sổ tay ở trang Phá, chưa bật gì
+    await moreFrames(page, 10);
+    const off = await drawCalls(page);
+    const gobo = await wallOf(page);
+    await toggleExperiment(page, 'keo-quan', 'shadowMap', true); // lần bật đầu: dựng đèn thứ hai, biên dịch lại một lần
+    await moreFrames(page, 10);
+    expect(await page.evaluate(() => window.__sma.state)).toBe('live');
+    expect(await drawCalls(page), 'cube shadow map: 6 mặt × số vật đổ bóng').toBeGreaterThanOrEqual(off + 6);
+    const real = await wallOf(page);
+    expect(real.std, 'vách có bóng hình nhân, không phải một vành tối liền').toBeGreaterThan(gobo.std * 0.7);
+    await toggleExperiment(page, 'keo-quan', 'shadowMap', false);
+    await moreFrames(page, 10);
+    expect(await drawCalls(page), 'tắt: không vẽ bóng nữa').toBe(off);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('mức thấp: Sổ tay › Kéo quân › Phá không có "Shadow map thật"', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    await open(page, testInfo, 30, '&level=thap');
+    await toggleExperiment(page, 'keo-quan', 'naive', false); // mở trang Phá của Kéo quân, không đổi gì
+    await expect(page.locator('[data-notebook] [data-experiment="shadowMap"]')).toHaveCount(0);
+    expect(log.errors).toEqual([]);
+  });
+});
+
 test.describe('Đèn Kéo Quân · cử chỉ', () => {
   test.beforeEach(({}, testInfo) => {
     test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');

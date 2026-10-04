@@ -64,6 +64,7 @@ export default {
         'paintings/den-keo-quan/layers/l5-keo-quan.js',
         'paintings/den-keo-quan/parts/keo-quan-gobo.js',
         'paintings/den-keo-quan/parts/keo-quan-quay.js',
+        'paintings/den-keo-quan/parts/keo-quan-that.js',
       ],
     },
     phuBong,

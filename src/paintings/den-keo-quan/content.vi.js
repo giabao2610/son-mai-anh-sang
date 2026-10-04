@@ -117,6 +117,13 @@ export default {
           label: 'Nguồn sáng là một điểm',
           explain: 'Ngọn lửa coi như không có kích thước: mép bóng gắt ở mọi khoảng cách, không còn nửa tối.',
         },
+        shadowMap: {
+          label: 'Shadow map thật',
+          explain: 'Cách thường làm: một đèn thứ hai vẽ cảnh từ chỗ ngọn lửa ra sáu mặt của một khối lập phương (cube shadow map). '
+            + 'Mỗi khung thêm sáu lượt vẽ bóng, vì trống quay nên không vẽ một lần rồi giữ được; so ms ở hai cột Tắt và Bật. Bóng trên '
+            + 'vách lộ răng cưa theo cỡ map, và nhòe đều khắp nơi chứ không theo khoảng cách; ánh sáng cũng mất màu giấy. Lần bật đầu '
+            + 'cảnh khựng một nhịp vì mọi material phải biên dịch lại.',
+        },
         naive: {
           label: 'Công thức gọn',
           explain: 'Lấy góc của chính điểm trên vách thay cho giao tia: đúng khi lửa đứng yên trên trục, nhưng thổi nến thì bóng thôi chao.',

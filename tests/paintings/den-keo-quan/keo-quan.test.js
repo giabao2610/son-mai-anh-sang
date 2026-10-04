@@ -62,6 +62,62 @@ describe('l5-keo-quan', () => {
     }
   });
 
+  const shadowMap = ({ layers }) => layers['keo-quan'].experiments.find((e) => e.id === 'shadowMap');
+  const realLight = ({ ctx }) => ctx.scene.children.find((o) => o.isPointLight && !o.shadow.shadowNode);
+
+  it('"Shadow map thật": chưa bật thì scene chỉ có MỘT đèn điểm; bật lần đầu thêm đèn thứ hai có castShadow; tắt thì không vẽ bóng', () => {
+    const built = build();
+    const points = () => built.ctx.scene.children.filter((o) => o.isPointLight);
+    expect(points()).toHaveLength(1);
+    const exp = shadowMap(built);
+    expect(exp.kind).toBe('compare');
+    exp.toggle(true);
+    expect(points()).toHaveLength(2);
+    const real = realLight(built);
+    expect(real.castShadow).toBe(true);
+    expect(real.shadow.mapSize.x).toBe(512);
+    // Trống cách lửa 9 cm: camera của cube shadow map phải thấy gần hơn thế (mặc định của three là 0,5 m).
+    expect(real.shadow.camera.near).toBeLessThan(0.05);
+    exp.toggle(false);
+    expect(real.shadow.autoUpdate).toBe(false);
+  });
+
+  it('bật thì đèn gobo tắt và đèn thật mang công suất của nến; tắt thì ngược lại', () => {
+    const built = build();
+    const { light, power } = built.shared.ngonNen;
+    shadowMap(built).toggle(true);
+    built.layers['ngon-nen'].update(0, 1);
+    built.layers['keo-quan'].update(0, 1);
+    expect(light.intensity).toBe(0);
+    expect(realLight(built).intensity).toBeCloseTo(power.value, 6);
+    expect(realLight(built).position.equals(light.position)).toBe(true);
+    shadowMap(built).toggle(false);
+    built.layers['ngon-nen'].update(0, 1);
+    built.layers['keo-quan'].update(0, 1);
+    expect(light.intensity).toBeCloseTo(power.value, 6);
+    expect(realLight(built).intensity).toBe(0);
+  });
+
+  it('mức thấp: không có thí nghiệm "Shadow map thật"', () => {
+    const { layers } = build({ level: 'thap' });
+    expect(layers['keo-quan'].experiments.map((e) => e.id)).not.toContain('shadowMap');
+  });
+
+  it('bật rồi gỡ lớp (như "Dựng lại cảnh", Review Focus 3): không còn đèn nào trong scene', () => {
+    const built = build();
+    shadowMap(built).toggle(true);
+    for (const b of [...built.built].reverse()) b.layer.dispose();
+    expect(built.ctx.scene.children.filter((o) => o.isLight)).toHaveLength(0);
+  });
+
+  it('mài Kéo quân về 0 khi bóng thật đang bật thì bóng thật mờ theo (Review Focus 2): shadow.intensity = trọng số', () => {
+    const built = build();
+    shadowMap(built).toggle(true);
+    built.ctx.weights.set('keo-quan', 0.25);
+    built.layers['keo-quan'].update(0, 1);
+    expect(realLight(built).shadow.intensity).toBeCloseTo(0.25, 6);
+  });
+
   it('sides 4 và 8: góc nan tre theo uniform lanternSides, không cần biên dịch lại', async () => {
     const built = build();
     await built.knobs.cot.set('sides', 8);
