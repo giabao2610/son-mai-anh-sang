@@ -1040,7 +1040,7 @@ son-mai-anh-sang/
         diagrams/*.svg               [2] sơ đồ của tab Hiểu (content.vi.js import '?raw')
       den-keo-quan/                  BỨC 2 (GĐ 6, §18): cùng khuôn với Bức 1
         meta.js index.js painting.js quality.js shared.js content.vi.js   [6] căn cước (+ fence, palette: lua, giayDo); setup: trống, lửa, cử chỉ
-        layers/l1-cot.js             [6] gian nhà, đèn, trống cắt theo mặt nạ; parts/cot-phong.js, cot-den.js (drumHit, paperExit), cot-hinh-nhan.js (mặt nạ, hàm thuần)
+        layers/l1-cot.js             [6] gian nhà, đèn, trống cắt theo mặt nạ; parts/cot-phong.js, cot-den.js (cylinderExit, planeCross), cot-trong.js (trống, chong chóng), cot-hinh-nhan.js (mặt nạ, hàm thuần), cot-doan-quan.js (tám hình nhân, dữ liệu thuần)
         layers/l2-ngon-nen.js        [6] PointLight + node bóng giữ chỗ, ngọn lửa; parts/ngon-nen-lua.js, ngon-nen-thoi.js (nhấp nháy, thổi; hàm thuần)
         layers/l3-gian-nha.js        [6] texture thủ tục: gạch, vôi, gỗ, sơn son; parts/gian-nha-vat-lieu.js
         layers/l4-giay.js            [6] ánh sáng xuyên giấy, lọc màu vào node bóng
@@ -1051,7 +1051,7 @@ son-mai-anh-sang/
                                      [4] tuner gpu-timer lut views toolbox kinh-mai lot-lop dial-set dials rail-tools poster
                                      [5] gesture (double-tap) captions caption-set draws tung-soi moon-progress shell-halo run (vòng đời của run(), jsdom)
     paintings/ao-sen-dem/            [1→5] test của từng lớp Bức 1 (dựng cả bức bằng buildPainting); GĐ 5: anh-trang-drift (hàm thuần), tha-hoa-dang (chạm hai lần)
-    paintings/den-keo-quan/          [6] test của từng lớp Bức 2; cot-hinh-nhan, keo-quan-quay, ngon-nen-thoi (hàm thuần); cử chỉ
+    paintings/den-keo-quan/          [6] test của từng lớp Bức 2 (khung, ngon-nen, gian-nha, giay, keo-quan); cot-hinh-nhan, keo-quan-quay, ngon-nen-thoi (hàm thuần); cử chỉ; chữ; quality
     rules/imports.test.js            [0→5] luật ranh giới, đường nhẹ, hàng rào từ vựng; GĐ 5: phần nhẹ không gọi built-in ES2022 trở lên (Safari 14)
     rules/files.test.js              [0→5] dòng 1 là chú thích, số dòng, API cấm; GĐ 5: chỉ draws.js đặt móc lần vẽ
     paintings/contract.test.js       [0→5] lặp qua registry (+ _mau từ GĐ 2); GĐ 4: mức cùng bộ khóa, Dial, nhãn tap, poster/og; GĐ 5: captions, files của lớp kê đủ parts/ mà lớp import
@@ -1065,13 +1065,14 @@ son-mai-anh-sang/
     helpers/paintings.js             [5] ALL: mọi dòng registry và _mau, kèm cửa vào đã nạp (contract, objects lặp qua đây)
     helpers/caption-rules.js         [5] captionErrors: luật của content.captions (test hợp đồng dùng, captions-rule.test.js tự kiểm)
     helpers/kebab.js                 [5] KEBAB: kebab-case không dấu (slug, id lớp, id Dial, khóa chữ, tên vật)
-    helpers/nodes.js                 [5] nodesOf, compileMaterial: soi đồ thị node; dịch material ra WGSL/GLSL bằng builder thật, có render target + MRT như scene pass
+    helpers/nodes.js                 [5→6] nodesOf, compileMaterial: soi đồ thị node; dịch material ra WGSL/GLSL bằng builder thật, có render target + MRT như scene pass; GĐ 6: nạp đèn, bật shadow map, trả tên uniform shader đọc
     helpers/rays.js                  [5] tia thẳng đứng xuống mặt nước cho test cử chỉ của bức
   e2e/
-    helpers.js                       [0→5] chờ trạng thái, đọc pixel canvas (screenshot), báo GPU; GĐ 5: doubleTapAt (chạm hai lần phát ngay trong trang), điểm sáng ấm (warm)
+    helpers.js                       [0→6] chờ trạng thái, đọc pixel canvas (screenshot), báo GPU; GĐ 5: doubleTapAt (chạm hai lần phát ngay trong trang), điểm sáng ấm (warm); GĐ 6: tapAt, swipeAt, màu trung bình (rgb) của vùng
     painting.spec.js                 [0→5] lặp qua registry: tĩnh, WebGL2, WebGPU; GĐ 3: hạ hết nấc rồi nâng lại; GĐ 4: mài về cốt, Kính mài, Lột lớp, ?poster; GĐ 5: Từng sợi, quầng trăng, chỗ của bảng công cụ (1280/1240/1440, 1024)
     ao-sen-dem.spec.js               [1→5] chạm mặt nước thì ảnh đổi (so ở cùng ?freeze=N); GĐ 3: vuốt, draw call, ?level=thap, CPU vs GPU; GĐ 4: thanh giờ, vuốt → sương xoáy; GĐ 5: thả hoa đăng, draw call khi có đèn
-    den-keo-quan.spec.js             [6] bóng chạy theo ?freeze, mài Kéo quân/Giấy, thổi/giữ/vuốt, draw call, ?level=thap, "Shadow map thật", lật tranh (§18.8)
+    den-keo-quan.spec.js             [6] bóng chạy theo ?freeze, mài Kéo quân/Giấy, ngọn nến, gạch bát, giấy trong suốt, thổi/giữ/vuốt, draw call, ?level=thap, "Shadow map thật" (§18.8)
+    lat-tranh.spec.js                [6] tầng tĩnh: đi qua lại giữa hai bức bằng link lật tranh; ?poster ẩn link
     a11y.spec.js                     [4→5] axe-core (@axe-core/playwright): tĩnh, 3D có thanh lớp + Sổ tay, công cụ đang bật; đi hết bằng bàn phím; GĐ 5: chữ đi theo vật, Từng sợi, đường Tab từ nút Từng sợi
 ```
 
@@ -2605,14 +2606,15 @@ Bức 2. Những gì Bao đã chọn nằm ở §1 (GĐ 6); phần còn lại c�
   - giới hạn xoay ngang, xoay dọc và khoảng cách giữ camera luôn ở trong gian: không bao giờ thấy mép ngoài của vách;
   - `breathe` nhỏ.
 
-  Số chốt lúc làm, cùng lúc với bố cục poster.
+  Số chốt lúc làm (`painting.js`): `position` [0; 1,45; 2,1], `target` [0; 1,55; −0,6], `fov` 50, xoay ngang ±0,6, xoay dọc 1,3–1,75,
+  khoảng cách 1,8–2,75, `breathe` 0,03. Ở khoảng cách lớn nhất và góc ngang lớn nhất, camera vẫn cách mỗi vách hơn 0,9 m.
 - **Gợi ý** (`content.hint`): *"Chạm để thổi nến · vuốt để gạt đèn · giữ để dừng"*.
 - **Ba cử chỉ.** Bức nhận cử chỉ qua `setup().onGesture`. Chạm ở đâu trên tranh cũng được; công cụ học vẫn được ưu tiên như ở mọi
   bức.
   1. **Chạm là thổi nến** (`'tap'`):
      - Ngọn lửa ngả ra xa người xem, theo hướng nhìn của camera chiếu xuống mặt sàn. Lửa chập chờn rồi đứng lại trong khoảng 2 giây;
        đèn tối đi một chút rồi sáng lại.
-     - Nguồn sáng nhích chừng 1–1,5 cm, nên bóng trên vách sau dời cả mảng, chừng 20–30 cm: đúng cảnh "bóng khổng lồ rung theo ngọn
+     - Nguồn sáng nhích tối đa 1,2 cm, nên bóng trên vách sau dời cả mảng, chừng 20–25 cm: đúng cảnh "bóng khổng lồ rung theo ngọn
        lửa".
      - Chạm liền nhiều lần thì các lần thổi cộng lại, tối đa 4 lần cùng lúc (như vòng gợn của Bức 1).
   2. **Giữ là giữ trống** (`'hold-start'` → `'hold-end'`):
@@ -2675,7 +2677,7 @@ Bức 2. Những gì Bao đã chọn nằm ở §1 (GĐ 6); phần còn lại c�
   - Bao duyệt ảnh của đủ 8 hình, cả bóng trên vách, ở điểm duyệt ảnh giữa chừng (§18.9), trước khi làm các lớp còn lại.
 - **Poster:**
   - chụp từ cảnh bằng `scripts/poster.js den-keo-quan`, lúc đoàn quân đang ở chỗ đẹp trên vách sau;
-  - `poster.capture = { at: '2026-10-25T21:00', freeze: N }`, N chốt lúc chụp poster;
+  - `poster.capture = { at: '2026-10-25T21:00', freeze: 200 }`: khung 200 có con ngựa phi và lá cờ giữa vách sau (chốt ở lượt màu);
   - `poster.alt`: "Tranh sơn mài đèn kéo quân: ngọn đèn giấy treo giữa gian nhà tối, bóng voi ngựa chạy quanh vách.".
 - **Lượt màu:**
   - đo như §5: độ sáng trung bình, độ bão hòa, tỉ lệ điểm tối; ở 1280×800 và 390×844, trên GPU thật;
@@ -2722,7 +2724,8 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
     - Hình nhân khai báo bằng dữ liệu: các hình cơ bản, đặt trong khung riêng của từng hình.
     - `rasterize(figures, width)` vẽ ra một dải độ phủ 8 bit, rộng `width`, cao `width / 4`. Tỉ lệ này cho texel vuông trên mặt
       trụ: chu vi 2π × 0,09 ≈ 0,57 m, dải cao 0,14 m.
-    - Mỗi texel lấy mẫu 4 × 4 để mép mịn.
+    - Mép mịn nhờ khoảng cách có dấu tới mép hình: độ phủ của một texel = clamp(0,5 − d / cỡ texel). Không cần lấy mẫu dày (lấy mẫu
+      4 × 4 là thiết kế ban đầu, chậm hơn nhiều).
     - Hàm tự tính chuỗi mipmap (trung bình 2 × 2), không nhờ GPU sinh, để hai backend ra cùng một ảnh.
     - Bọc thành `DataTexture` với `LinearMipmapLinearFilter`, lặp theo chiều ngang (`RepeatWrapping`).
   - **Trống** là một ống trụ hở:
@@ -2740,14 +2743,15 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
     chỗ cắt.
   - *"Normal phẳng"* (`flatNormals`): biên dịch lại một lần.
 - **Số đo:** `vertices`; `mask` ("Mặt nạ": cỡ texture, ví dụ "2048 × 512").
-- **Công bố** `shared.cot = { hemi, lantern, mask, version }`:
-  - `lantern`: hình học của đèn, dưới dạng số và uniform: tâm trục, bán kính trống, dải hình, bán kính giấy, độ cao của đế và của
-    miệng, số cạnh `uSides`. Có thêm hai `Fn` TSL dùng chung:
-    - `drumHit(P, C)`: giao tia từ ngọn lửa C qua điểm P với ống trụ của trống. Trả góc quanh trục và độ cao trong dải, đúng cả khi
-      C lệch trục;
-    - `paperExit(P, C)`: tia ra khỏi đèn ở tấm giấy nào, cách cạnh tấm bao xa, hay đi qua miệng trên, hay vướng đế;
-  - `mask`: texture mặt nạ và uniform `uSolid` của thí nghiệm "Trống không cắt";
-  - `version`: tăng mỗi lần Cốt ghi lại hình (như Bức 1).
+- **Công bố** `shared.cot = { hemi, hemiIntensity, lantern, room, paper, mask, materials, receivers, casters, version }`:
+  - `lantern`: hình học của đèn, dưới dạng số (`LANTERN` của `parts/cot-den.js`) và node: tâm trục `axisNode`, bán kính trống, dải
+    hình, bán kính giấy, độ cao của đế và của miệng, số cạnh `sides` (uniform `lanternSides`). Có thêm hai `Fn` TSL dùng chung:
+    - `cylinderExit(P, C, axis, r)`: giao tia từ ngọn lửa C qua điểm P với một ống trụ đứng (của trống, hay của giấy coi như ống
+      tròn). Trả góc quanh trục bằng `atan(z, x)`, độ cao của điểm cắt, và phần t của đoạn C → P; đúng cả khi C lệch trục;
+    - `planeCross(P, C, axis, Y)`: tia cắt một mặt phẳng ngang phía trên C (miệng đèn, chong chóng);
+  - `materials`: material của từng nhóm bề mặt (lớp Gian nhà và Giấy sơn lên chúng);
+  - `mask`: texture mặt nạ và uniform `drumSolid` của thí nghiệm "Trống không cắt";
+  - `version`: tăng mỗi lần Cốt ghi lại hình (như Bức 1); lớp Giấy dựa vào nó để rải lại màu các tấm khi đổi số cạnh.
 - **Tên vật:** `san`, `vach`, `tran`, `xa`, `cot-go`, `day-treo`, `khung-tre`, `giay`, `de-chop`, `tua`, `trong`, `chong-chong`,
   `cay-nen`.
 
@@ -2787,7 +2791,8 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
 - **Số đo:**
   - `lean` ("Lửa lệch", mm);
   - `backWall` ("Độ rọi ở vách sau", tính bằng % so với một điểm cách đèn 1 m): 1 / 1,9² ≈ 28%.
-- **Công bố** `shared.ngonNen = { light, candle, size, color }`: `candle` là uniform vec3 vị trí lửa, `size` là uniform cỡ lửa.
+- **Công bố** `shared.ngonNen = { light, candle, rest, power, size, color }`: `candle` là uniform vec3 vị trí lửa, `size` là uniform cỡ
+  lửa (núm `flameSize`), `power` là công suất lúc này (lớp Giấy nhân vào ánh sáng xuyên giấy), `color` là uniform `candleColor`.
 - **Tên vật:** `ngon-lua`.
 
 #### Lớp 3 · Gian nhà (`layers/l3-gian-nha.js`)
@@ -2826,8 +2831,8 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
     - Ánh sáng ra phòng đã qua giấy nhuộm nên tối hơn ánh nến trần, vì vậy cường độ mặc định của đèn là 6,3 (lượt màu), không phải 4.
   - Màu từng tấm là một mảng uniform 8 ô, tính trên CPU theo số cạnh. Đổi số cạnh chỉ ghi lại mảng, không biên dịch lại.
   - Tia qua miệng trên (lên trần) không đi qua giấy nào, nên giữ màu nến.
-  - **Lọc màu:** nhân `mix(1, màu tấm giấy, w4)` vào node bóng của đèn. Tia đi qua tấm nào thì `shared.cot.lantern.paperExit` trả
-    về.
+  - **Lọc màu:** nhân `mix(1, màu tấm giấy, w4)` vào node bóng của đèn. Tia đi qua tấm nào thì `cylinderExit` với bán kính của
+    giấy trả về (góc của chỗ ra → số thứ tự tấm).
   - Sợi giấy: noise kéo dài theo một chiều (`fbm` của tọa độ đã giãn).
   - Thí nghiệm "Giấy trong suốt" không được đổi cache key, nên giấy được dựng `transparent = true` ngay từ đầu, với `opacityNode`
     là uniform (bằng 1 khi thường).
@@ -2849,13 +2854,14 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
   - đế đèn để lại một vùng tối dưới sàn;
   - trên trần có vầng sáng với bóng chong chóng xoay.
 - **Kỹ thuật** (`parts/keo-quan-gobo.js`). Node bóng `gobo(P)` tính cho mỗi điểm P đang tô:
-  1. Tia từ ngọn lửa C (đang chao theo `shared.ngonNen.candle`) tới P cắt ống trụ của trống (`drumHit`). Điểm cắt cho:
+  1. Tia từ ngọn lửa C (đang chao theo `shared.ngonNen.candle`) tới P cắt ống trụ của trống (`cylinderExit`). Điểm cắt cho:
      - góc φ quanh trục, tính bằng `atan(z, x)` (TSL không có `atan2`);
      - độ cao v trong dải hình.
 
      Nến nằm đúng trục thì góc của P cũng là góc của tia. Nến lệch trục thì phải giải một phương trình bậc hai: vẫn rẻ, và đúng.
   2. Tra mặt nạ:
-     - tia cắt trống trong dải hình: tra ở `u = fract((φ − θ) / 2π)` và `v`;
+     - tia cắt trống trong dải hình: tra ở `u = fract((φ + θ) / 2π)` và `v`. Trống quay θ (`rotation.y`) thì điểm ở góc cục bộ φ
+       nằm ở góc thế giới φ − θ, nên tra ngược lại ở φ_thế giới + θ (test giữ quy ước này);
      - ngoài dải: tia chỉ đi qua giấy trơn;
      - tia đi xuống dưới đế: tối;
      - tia ra qua miệng trên: tra bóng chong chóng, cũng theo góc.
@@ -2864,7 +2870,7 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
        `s × (D − r) / D`.
      - Đổi bề rộng đó ra số texel, rồi lấy `log2` làm mức mip khi tra mặt nạ.
      - Trên giấy (D gần r), bóng gần như nét. Trên vách (D ≫ r), bóng mờ đúng bằng cỡ lửa: nhòe là do nguồn sáng có kích thước.
-  4. Khung tre: tia ra gần cạnh tấm giấy (`paperExit`) thì tối theo một vạch mảnh, cũng có nửa tối.
+  4. Khung tre: tia ra gần góc của lăng trụ giấy (góc theo `cornerAngles`) thì tối theo một vạch mảnh, cũng có nửa tối.
   - Kết quả nhân vào hai chỗ:
     - node bóng của đèn: `mix(1, gobo, w5)`;
     - ánh sáng xuyên giấy của lớp Giấy, ở phía mặt trong: cùng hàm, với D gần bằng bán kính giấy.
@@ -2917,9 +2923,11 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
 
 **Trống** (`createSpin`):
 - Tốc độ góc ω đi dần về một tốc độ đích ω*, với hằng số thời gian τ:
-  - khi thả: ω* = tốc độ thường (núm `speed`), τ = τ_tự_do (vài giây);
-  - khi giữ: ω* = 0, τ = τ_giữ (khoảng 0,25 s).
-- Vuốt cộng thẳng một lượng Δω vào ω: theo chiều và vận tốc vuốt, có trần.
+  - khi thả: ω* = tốc độ thường (núm `speed`, mặc định 6 vòng/phút), τ = τ_tự_do = 2,5 s;
+  - khi giữ: ω* = 0, τ = τ_giữ = 0,25 s.
+- Vuốt cộng thẳng một lượng Δω vào ω: Δω = 0,35 × vận tốc ngang của cú vuốt, trần ±4 rad/s, và |ω| không quá 6 rad/s. Vận tốc vuốt
+  mà xưởng đưa tới tính bằng NDC mỗi giây (`input.js`), không phải pixel mỗi giây: một cú vuốt nhanh chừng 10 NDC/s.
+- Người xem xin giảm chuyển động thì tốc độ thường và Δω nhân 0,5.
 - Giữa hai sự kiện, θ và ω có dạng đóng (Δ = t − t₀; (t₀, θ₀, ω₀) là trạng thái ở sự kiện gần nhất):
   - ω(t) = ω* + (ω₀ − ω*) × e^(−Δ/τ);
   - θ(t) = θ₀ + ω* × Δ + (ω₀ − ω*) × τ × (1 − e^(−Δ/τ)).
@@ -2928,11 +2936,13 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
 - Thời điểm của sự kiện lấy theo đồng hồ của cảnh (`ctx.u.time`), nên `?freeze` và `update(0, t)` cho đúng khung N.
 
 **Lửa** (`createFlame`):
-- Nhấp nháy: tổng ba sóng sin có tần số không chia hết cho nhau, tính thẳng từ t. Lửa ngả vài mm, độ sáng đổi ±6%.
+- Nhấp nháy: tổng ba sóng sin (1,7; 2,9; 5,3 Hz) tính thẳng từ t. Lửa lệch tối đa 2,5 mm, độ sáng đổi ±6%. Núm `flicker` nhân biên
+  độ; giảm chuyển động thì nhân 0,4.
 - Thổi:
   - vòng đệm 4 lần thổi `{ t, hướng, biên độ }`;
-  - độ ngả = Σ biên độ × hướng × g(t − t_thổi), với g là một dao động tắt dần trong khoảng 2 giây;
-  - độ sáng giảm theo một hàm mũ của cùng lần thổi;
+  - độ ngả = Σ biên độ × hướng × g(t − t_thổi), với g(s) = (1 − e^(−s/0,06)) × e^(−s/0,7) × cos(9s): ngả lên êm trong chừng 0,1 s,
+    dao động rồi tắt dần trong khoảng 2 giây; độ ngả lớn nhất 12 mm;
+  - độ sáng giảm 35% theo e^(−s/0,6) của cùng lần thổi, không dưới 40%;
   - hướng thổi là hướng nhìn của camera chiếu xuống mặt sàn, lấy ở lúc chạm.
 - `flame.at(t)` trả `{ offset, glow, lean }`. Vị trí lửa và vị trí đèn = vị trí gốc + `offset`.
 
@@ -2945,8 +2955,12 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
 
   Node bóng tự viết là chuyện giữa bức và three (`light.shadow.shadowNode`); xưởng không cần biết. Đây là phép thử thật của §0:
   bức thứ hai vào mà xưởng không đổi một dòng JS.
-- **Xưởng chỉ đổi CSS:** thêm kiểu cho link lật tranh (`shell.css`). Ngoài xưởng có đổi test HTML (lật tranh), a11y (đường Tab có
-  thêm link ở đầu), cấu hình Playwright (`fullyParallel`) và CI (§18.8).
+- **Xưởng chỉ đổi CSS:** thêm kiểu cho link lật tranh (`shell.css`; link bật lại `pointer-events`, vì `.frame` tắt nó cho canvas).
+  Ngoài xưởng có đổi:
+  - test HTML (lật tranh); a11y vẫn xanh với link là điểm dừng Tab đầu tiên;
+  - helper của test: `tests/helpers/nodes.js#compileMaterial` nạp đèn và bật shadow map như bức, và trả tên uniform mà shader đọc;
+    `e2e/helpers.js` có `tapAt`, `swipeAt` (phát sự kiện con trỏ ngay trong trang) và trung bình R, G, B của mỗi vùng;
+  - CI chia e2e thành hai phần bằng cờ `--shard`, `--fully-parallel` (§13); cấu hình Playwright không đổi.
 - **Lật tranh** (HTML của từng trang, §8.7):
   - Ngay dưới `<h1>` có `<nav class="series" aria-label="Các bức tranh">`, với tối đa hai link:
     - `<a rel="prev">← Bức {n−1} · {tên}</a>`;
@@ -3048,6 +3062,8 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
   - thí nghiệm "Shadow map thật" dựng đèn thứ hai ở lần bật đầu, và không có ở mức thấp;
   - nấc chỉ có khi có tác dụng.
 - **Cử chỉ** (gọi `setup().onGesture` với cử chỉ giả): chạm là thổi, giữ là giữ trống, vuốt là gạt, `'double-tap'` không làm gì.
+- **Chữ của Sổ tay** (`chu.test.js`): mọi lớp riêng có sơ đồ, đoạn Hiểu nhắc đúng khái niệm của lớp; **chất lượng**
+  (`quality.test.js`): bảng ba mức, thang nấc, trần `figures` ở mức thấp.
 - **Node gobo:** biên dịch được ra WGSL và GLSL (`tests/helpers/nodes.js`). Hành vi của nó kiểm bằng e2e: TSL chưa có bộ tính trên CPU
   (§16).
 
@@ -3055,11 +3071,16 @@ Hai cờ đặt một lần lúc dựng, không đổi lúc chạy:
 
 **E2e riêng** (`e2e/den-keo-quan.spec.js`; WebGL2 trên SwiftShader là cổng chặn, WebGPU không chặn):
 - hai khung `?freeze` khác nhau thì vùng vách sau khác nhau (đoàn quân đã chạy); cùng một khung thì giống nhau;
-- mài Kéo quân về 0 thì độ tương phản của vách sau giảm hẳn (không còn mép bóng); mài Giấy về 0 thì vách hết màu;
+- mài Kéo quân về 0 thì vách sau sáng lên rõ (hết bóng); trần có vầng sáng mang bóng chong chóng xoay; sàn dưới đèn tối vì đế che;
+- giấy sáng lên từ bên trong (điểm ấm ở giữa tấm trước mặt); vách sau tấm đỏ son ngả đỏ hơn hẳn vách sau tấm vàng lá, mài Giấy về 0
+  thì hết khác biệt đó; "Giấy trong suốt" lộ trống bên trong, tắt Ngọn nến thì giấy trong suốt cũng không sáng;
+- "Ánh sáng không suy giảm" làm góc xa sáng lên rõ; "Tắt nhấp nháy" làm hai khung khác nhau giống hệt (khi trống, hạt và bóng đứng yên);
+- gạch bát: sàn đậm sắc hơn hẳn khi Gian nhà = 1 so với đất sét;
 - chạm thì số đo "Lửa lệch" > 0, rồi về gần 0 sau khoảng 3 s; giữ thì `rpm` về gần 0; vuốt thì `rpm` vượt tốc độ thường;
-- draw call ≤ 45 ở mức cao (ước 28);
+- draw call ≤ 30 ở mức cao (đo được 28: không có lượt vẽ bóng nào; trần chung của bức là 45); `?level=thap` chạy được;
 - `?level=thap` không có thí nghiệm "Shadow map thật";
-- bật "Shadow map thật": cảnh vẫn chạy, không có lỗi console, draw call tăng;
+- bật "Shadow map thật": cảnh vẫn chạy, không có lỗi console, draw call tăng ít nhất 6 (đo được 28 → 58), vách vẫn có bóng hình nhân;
+  tắt thì draw call về như cũ;
 - lật tranh: từ Bức 1 bấm "Bức 2 · Đèn Kéo Quân →" thì tới đúng trang, cả khi `?static`; và đi ngược lại.
 
 **CI.** Hai bức nhân đôi phần e2e chung. Job `build` hiện mất khoảng 22 phút trên trần 40 phút (§13), nên GĐ 6 đổi cách chạy:
@@ -3436,7 +3457,8 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - Hệ quả nhỏ, tự hết sau vài khung: `__sma.frames` đếm cả các nhịp không vẽ (`run.js` đếm nhịp của vòng lặp); khung đầu sau lần
       thử có `dt` bị kẹp ở 0,1 giây, nên số ms của `__sma.stats()` nhích lên một khung, và một mẻ của `gpu-timer` có nhịp khung dài
       hơn (Sổ tay mở thì không có lần thử, nên số đo "Tắt / Bật" không bị ảnh hưởng).
-77. **Node bóng tự viết của một đèn** (đọc mã nguồn r186, `nodes/lighting/AnalyticLightNode.js`; GĐ 6 chạy thật ở task đầu):
+77. **Node bóng tự viết của một đèn** (đọc mã nguồn r186, `nodes/lighting/AnalyticLightNode.js`; đã chạy thật ở GĐ 6: WebGPU trên GPU
+    thật và WebGL2 trên SwiftShader cho cùng một ảnh, 28 draw call ở mức cao, không có lượt vẽ bóng nào):
     - `setup()` chỉ gọi `setupShadow` khi `light.castShadow` và `builder.object.receiveShadow` cùng đúng. `setupShadow` thoát ngay khi
       `renderer.shadowMap.enabled` là `false`.
     - Có `light.shadow.shadowNode` thì three dùng node đó (`nodeObject(customShadowNode)`) thay cho `setupShadowNode()`: không tạo
@@ -3445,12 +3467,20 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - `castShadow` của đèn nằm trong khóa của bộ đèn (`LightsNode`: `_hashData.push(light.castShadow ? 1 : 0)`). Bật/tắt nó lúc chạy
       là biên dịch lại; thêm hay bớt một đèn cũng vậy.
     - Node bóng của mỗi đèn được dựng một lần rồi giữ lại (`shadowColorNode`): đổi chế độ bằng uniform, không thay node lúc chạy.
+    - (GĐ 6, chạy thật) Node `vec3` cho ánh sáng có màu: lớp Giấy nhân màu tấm giấy vào, và vách sau mang màu của tấm nó nhìn ra.
+      Test dịch shader trong Node cần nạp đèn của scene vào `LightsNode` như lúc vẽ; không nạp thì shader không có đèn nào và không
+      thấy node bóng (`tests/helpers/nodes.js`).
 78. **`PointLight`** (`nodes/lighting/PointLightNode.js`): `decay` và `distance` là uniform, cập nhật mỗi khung (`decayExponentNode`,
-    `cutoffDistanceNode`). Đổi lúc chạy không biên dịch lại.
+    `cutoffDistanceNode`). Đổi lúc chạy không biên dịch lại. (GĐ 6, chạy thật) Thí nghiệm "Ánh sáng không suy giảm" đổi `decay` lúc
+    chạy; e2e thấy góc xa sáng lên ngay ở khung đứng yên.
 79. **`DataTexture` có mip tự tính** (`renderers/webgpu/utils/WebGPUTextureUtils.js`): với `DataTexture`, backend WebGPU nạp từng mức
-    trong `texture.mipmaps`. `TextureNode` nhận mức mip qua `level()`. GĐ 6 kiểm WebGL2 ở task mặt nạ.
+    trong `texture.mipmaps`. `TextureNode` nhận mức mip qua `level()`. (GĐ 6, chạy thật) WebGL2 cũng nạp đủ các mức; nửa tối của
+    gobo trên vách giống nhau ở hai backend khi so ảnh.
 80. **Vật cắt hình trong lượt vẽ bóng** (`renderers/common/Renderer.js`, `materials/nodes/NodeMaterial.js`):
     - Lượt vẽ bóng dùng `material.maskShadowNode`; không có thì dùng `material.maskNode`. Điểm nào có mặt nạ `false` thì bị bỏ
       (`discard`).
     - `maskNode` cũng cắt ở lượt vẽ thường. Vì vậy một `maskNode` đủ cho trống của Bức 2 ở cả hai lượt.
     - `castShadowNode` cho bóng có màu, và cần `renderer.shadowMap.transmitted = true` (thiếu thì three cảnh báo một lần).
+    - (GĐ 6, chạy thật) Thí nghiệm "Shadow map thật": trống cắt đúng hình trong lượt vẽ bóng trên cả WebGPU và WebGL2 (WebGL2 lộ
+      răng cưa rõ hơn). Camera bóng của `PointLight` mặc định thấy từ 0,5 m: trống cách lửa 9 cm, nên phải hạ `shadow.camera.near`
+      (0,02), không thì cả chiếc đèn nằm ngoài cube map.
