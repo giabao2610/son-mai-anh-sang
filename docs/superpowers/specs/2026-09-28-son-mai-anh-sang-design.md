@@ -2364,7 +2364,8 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
     - `e2e` (chặn) và `e2e-webgpu` (không chặn) chạy một job cho mỗi nhóm (`matrix.group`, `fromJSON`); giá trị của ma trận đi qua
       `env`. Không có `--pass-with-no-tests` (sau GĐ 7): nhóm không khớp test nào thì Playwright báo "No tests found" và job đỏ;
     - `deploy` cần `build` và mọi job của `e2e`;
-    - thêm bức thì thêm job, tự động; test luật giữ quy ước tên `describe`.
+    - thêm bức thì thêm job, tự động; test luật giữ quy ước tên `describe`;
+    - (sau GĐ 7) thời gian thật của lượt CI đầu, và vì sao job WebGPU chỉ chạy test khói của Bức 3: §19.9.
 - **URL:** `https://giabao2610.github.io/son-mai-anh-sang/`.
 - **Luật trong `CLAUDE.md`:**
   - **Nguồn tham chiếu:**
@@ -3722,6 +3723,23 @@ Bức đầu không có link trước, bức cuối không có link sau. Đườ
   - Không dùng `PWTEST_SHARD_WEIGHTS`, vì đó là biến nội bộ của Playwright (Phụ lục A.85).
 - **Ước lượng** từ số đo GĐ 6: mỗi job một bức chừng 15–20 phút, cộng 3 phút cài đặt; job `chung` vài phút. Thêm bức thì thêm job, tự
   động, không sửa workflow. Thời gian thật đo ở task CI.
+- (Sau GĐ 7) **Thời gian thật**, lượt CI đầu của PR #8 (tính cả bước cài đặt):
+
+  | Nhóm | `e2e` (chặn) | `e2e-webgpu` (không chặn) |
+  |---|---|---|
+  | Ao Sen Đêm | 22,4 phút | 23,2 phút |
+  | Đèn Kéo Quân | 15,3 phút | 9,5 phút |
+  | Cung Quế | 28,7 phút, hỏng: hai test quá trần 60 giây (mỗi test chạy hai lần) | quá trần 40 phút, bị hủy |
+  | `chung` | 0,6 phút | 0,6 phút |
+
+  - `build` 0,6 phút; `nhom-e2e` 6 giây. Các job chạy song song, nên cả lượt mất bằng job dài nhất.
+  - Runner vẽ Bức 3 trên SwiftShader chậm hơn Mac M2 nhiều lần. Với WebGL2, nhiều test mất 40–60 giây, thay vì 10–15 giây ở máy local.
+    Với WebGPU, chừng 0,2 khung/giây: đồng hồ của cảnh nhích chừng 1 giây trong 60 giây thật. Vì vậy:
+    - `e2e/cung-que.spec.js` đặt trần chung 180 giây (`test.describe.configure`). Kéo camera dùng 4 bước chuột thay cho 20, vì mỗi sự
+      kiện chuột của Playwright đợi một nhịp khung;
+    - registry có `ciWebgpuSmoke` (tùy chọn). Bức có nó thì job WebGPU chỉ chạy các test mang tag `@khoi` của bức đó (`webgpuGrep` của
+      `scripts/e2e-groups.js`). Bức 3 có ba test khói: độ sâu của hình SDF, các thí nghiệm, mức thấp. Job chặn (WebGL2) vẫn chạy đủ, và
+      cả nhóm chạy đủ trên GPU thật ở máy local (37 test qua).
 - `deploy` cần `build` và mọi job của `e2e`.
 
 **Kiểm tay** (thêm vào §12):

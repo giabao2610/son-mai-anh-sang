@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 // Chính hàm Playwright dùng cho --grep và --grep-invert (cờ 'gi': không phân biệt hoa thường), để test khớp đúng như CI lọc.
 import { createTitleMatcher, forceRegExp } from 'playwright/lib/util';
 import { paintings } from '../../src/paintings/registry.js';
-import { groups } from '../../scripts/e2e-groups.js';
+import { SMOKE_TAG, groups } from '../../scripts/e2e-groups.js';
 
 const E2E = fileURLToPath(new URL('../../e2e/', import.meta.url));
 const WORKFLOW = fileURLToPath(new URL('../../.github/workflows/deploy.yml', import.meta.url));
@@ -49,6 +49,28 @@ describe('e2e gom theo bức (CI, GĐ 7)', () => {
       expect(grep(g.find((x) => x.id === meta.slug).grep)(name), name).toBe(true);
       expect(grep(g[g.length - 1].grepInvert)(name), `nhóm chung loại ${name}`).toBe(true);
     }
+  });
+
+  it('job e2e WebGPU của CI: bức có ciWebgpuSmoke chỉ chạy test mang tag khói của nó; bức khác chạy như job chặn; nhóm chung giữ nguyên', () => {
+    const g = groups();
+    for (const { meta, ciWebgpuSmoke } of paintings) {
+      const { grep: own, webgpuGrep } = g.find((x) => x.id === meta.slug);
+      const name = `webgpu-swiftshader cung-que.spec.js ${meta.title} · khối bao độ sâu`;
+      if (!ciWebgpuSmoke) {
+        expect(webgpuGrep, meta.slug).toBe(own);
+        continue;
+      }
+      expect(grep(webgpuGrep)(`${name} ${SMOKE_TAG}`), `${meta.slug}: test khói`).toBe(true);
+      expect(grep(webgpuGrep)(name), `${meta.slug}: test không có tag thì bỏ`).toBe(false);
+      const file = readFileSync(`${E2E}${meta.slug}.spec.js`, 'utf8');
+      expect(file, `e2e/${meta.slug}.spec.js có test mang tag ${SMOKE_TAG}`).toContain(`tag: '${SMOKE_TAG}'`);
+    }
+    expect(g[g.length - 1].webgpuGrep).toBe('');
+    expect(readFileSync(WORKFLOW, 'utf8')).toMatch(/GREP: \$\{\{ matrix\.group\.webgpuGrep \}\}/);
+    // Nhánh khói, cả khi registry chưa bức nào bật: mẫu lọc bắt tag, bỏ test không tag
+    const [smoke] = groups([{ meta: { slug: 'x', title: 'Tranh X' }, ciWebgpuSmoke: true }]);
+    expect(grep(smoke.webgpuGrep)(`webgpu-swiftshader x.spec.js Tranh X · a ${SMOKE_TAG}`)).toBe(true);
+    expect(grep(smoke.webgpuGrep)('webgpu-swiftshader x.spec.js Tranh X · a')).toBe(false);
   });
 
   it('CI không có --pass-with-no-tests: nhóm không khớp test nào thì Playwright báo "No tests found" và job đỏ, không lặng lẽ xanh', () => {

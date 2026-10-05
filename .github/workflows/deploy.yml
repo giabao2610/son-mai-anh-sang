@@ -159,9 +159,11 @@ jobs:
       - name: Cài Chromium đầy đủ và thư viện hệ thống
         run: npx playwright install --with-deps --no-shell chromium
 
+      # Bức có ciWebgpuSmoke (registry) chỉ chạy test khói ở đây (webgpuGrep): SwiftShader WebGPU trên runner vẽ Bức 3 chừng 0,2
+      # khung/giây, cả bộ test của nó quá trần 40 phút (PR #8). Job chặn (WebGL2) vẫn chạy đủ.
       - name: E2E không chặn · WebGPU trên SwiftShader · ${{ matrix.group.id }}
         env:
-          GREP: ${{ matrix.group.grep }}
+          GREP: ${{ matrix.group.webgpuGrep }}
           GREP_INVERT: ${{ matrix.group.grepInvert }}
         run: |
           args=(--project=webgpu-swiftshader)

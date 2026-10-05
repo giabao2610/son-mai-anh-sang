@@ -231,6 +231,10 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - E2e của một bức nằm trong `describe` bắt đầu bằng `"{tên bức} · "` (`tests/rules/e2e.test.js` giữ): CI gom test theo đó. Nhóm e2e
   sinh từ registry (`scripts/e2e-groups.js`): mỗi bức một job, cộng nhóm `chung`; thêm bức không sửa workflow. Không dùng
   `--pass-with-no-tests`: nhóm không khớp test nào thì job đỏ.
+- Bức vẽ quá chậm trên SwiftShader WebGPU của runner (Bức 3: chừng 0,2 khung/giây) thì đặt `ciWebgpuSmoke: true` ở dòng registry: job
+  e2e WebGPU (không chặn) chỉ chạy các test mang tag `@khoi` (`{ tag: '@khoi' }`, `scripts/e2e-groups.js#SMOKE_TAG`) của bức đó; test
+  luật đòi spec của bức có ít nhất một test như thế. Job chặn (WebGL2) vẫn chạy đủ. Spec e2e của bức nặng đặt trần chung bằng
+  `test.describe.configure({ timeout })`.
 - E2e chờ một trạng thái của cảnh (cây bay đủ cao, lá chạm đất) thì poll theo số đo (`expect.poll`), không chờ một quãng thời gian thật
   cố định: đồng hồ của cảnh theo khung vẽ, mỗi khung tối đa 0,1 s, nên máy vẽ chậm (SwiftShader trên runner CI) cần lâu hơn. Giữ tới
   khi đạt thì dùng `e2e/helpers.js#pressAt` (nhấn, trả hàm nhấc).

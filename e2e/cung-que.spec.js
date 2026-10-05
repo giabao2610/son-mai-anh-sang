@@ -6,6 +6,11 @@ import {
 } from './helpers.js';
 
 const AT = 'at=2026-10-21T21:00';
+// Trần mặc định của mọi test trong file (test nào đặt trần riêng thì theo trần đó): runner CI vẽ Bức 3 trên SwiftShader chậm hơn máy
+// thật nhiều lần (PR #8: nhiều test 40–60 giây, hai test quá trần 60 giây mặc định).
+test.describe.configure({ timeout: 180_000 });
+/** Tag của test khói: job e2e WebGPU của CI chỉ chạy các test này (registry: ciWebgpuSmoke; scripts/e2e-groups.js#SMOKE_TAG). */
+const SMOKE = { tag: '@khoi' };
 /**
  * Vùng (phần của canvas 640×400 mặc định), theo ảnh thật ở khung mặc định. Độ sáng `mean` của canvasRegions ở thang 0–1.
  * PLANET_CORE: thân hành tinh dưới gốc cây, tránh các hố: tia trúng hình.
@@ -58,7 +63,7 @@ test.describe('Cung Quế · khối bao', () => {
     test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
   });
 
-  test('độ sâu là của hình SDF: bật "Hiện khối bao"; trong view Depth, chỗ tia trúng hình gần (sáng) hơn hẳn chỗ tia trượt (mặt sau khối bao)', async ({ page }, testInfo) => {
+  test('độ sâu là của hình SDF: bật "Hiện khối bao"; trong view Depth, chỗ tia trúng hình gần (sáng) hơn hẳn chỗ tia trượt (mặt sau khối bao)', SMOKE, async ({ page }, testInfo) => {
     // Không có depthNode thì mọi điểm của khối bao mang độ sâu của mặt sau quả cầu, và hai vùng sáng gần bằng nhau.
     test.setTimeout(180_000);
     const log = collectConsole(page);
@@ -94,12 +99,13 @@ test.describe('Cung Quế · camera', () => {
     await page.goto(`./tranh/cung-que/?${query}&${AT}`);
     expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
     const before = (await canvasRegions(page)).all.checksum;
-    // OrbitControls xoay 2π mỗi bề cao của canvas (400 px): ba lần kéo 200 px là 1,5 vòng, sang mặt bên kia của hành tinh
+    // OrbitControls xoay 2π mỗi bề cao của canvas (400 px): ba lần kéo 200 px là 1,5 vòng, sang mặt bên kia của hành tinh. Mỗi sự kiện
+    // chuột của Playwright đợi một nhịp khung (Phụ lục A.51): 4 bước mỗi lần kéo, không phải 20 (runner CI vẽ chừng một khung mỗi giây)
     const box = await page.locator('[data-stage] canvas').boundingBox();
     for (let i = 0; i < 3; i += 1) {
       await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.5);
       await page.mouse.down();
-      await page.mouse.move(box.x + box.width * 0.3 + 200, box.y + box.height * 0.5, { steps: 20 });
+      await page.mouse.move(box.x + box.width * 0.3 + 200, box.y + box.height * 0.5, { steps: 4 });
       await page.mouse.up();
     }
     await twoFrames(page);
@@ -314,7 +320,7 @@ test.describe('Cung Quế · thí nghiệm', () => {
     test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
   });
 
-  test('Tô theo số bước tô cả chỗ tia trượt; Hòa khối cứng và Bề mặt Lambert đổi ảnh; Không ghi độ sâu cùng Hiện khối bao không lỗi; tắt hết thì về đúng ảnh cũ', async ({ page }, testInfo) => {
+  test('Tô theo số bước tô cả chỗ tia trượt; Hòa khối cứng và Bề mặt Lambert đổi ảnh; Không ghi độ sâu cùng Hiện khối bao không lỗi; tắt hết thì về đúng ảnh cũ', SMOKE, async ({ page }, testInfo) => {
     test.setTimeout(240_000);
     const log = collectConsole(page);
     await open(page, testInfo, 30);
@@ -361,7 +367,7 @@ test.describe('Cung Quế · chất lượng', () => {
     expect(drawCalls).toBeLessThanOrEqual(30);
   });
 
-  test('mức thấp chạy được: live, không lỗi console, draw call ≤ 30', async ({ page }, testInfo) => {
+  test('mức thấp chạy được: live, không lỗi console, draw call ≤ 30', SMOKE, async ({ page }, testInfo) => {
     test.setTimeout(180_000);
     const log = collectConsole(page);
     await open(page, testInfo, 30, '&level=thap');
