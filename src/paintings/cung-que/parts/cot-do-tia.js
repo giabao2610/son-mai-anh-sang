@@ -97,8 +97,9 @@ export function createSdfVolume({ scene, bounds, steps, shade, showBounds, showS
   material.fog = false;
   material.colorNode = Fn(() => {
     const m = march();
-    // Tia trượt: bỏ điểm ảnh, trừ khi đang "Hiện khối bao" (spec §19.4 lớp 1)
-    If(m.y.lessThan(0.5).and(showBounds.lessThan(0.5)), () => {
+    // Tia trượt: bỏ điểm ảnh, trừ khi đang "Hiện khối bao" hay "Tô theo số bước" (spec §19.4 lớp 1). Tia đi sát mép hình mà trượt là
+    // điểm ảnh tốn bước nhất: bỏ nó thì bản đồ số bước giấu đúng chỗ đắt nhất.
+    If(m.y.lessThan(0.5).and(showBounds.lessThan(0.5)).and(showSteps.lessThan(0.5)), () => {
       Discard();
     });
     const color = shade({ p: pos(), n: normal(), v: rayDir().negate(), id: m.z }).toVar();

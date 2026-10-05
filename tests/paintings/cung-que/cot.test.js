@@ -74,6 +74,14 @@ describe('l1-cot (Bức 3)', () => {
     expect(second.uniforms).toEqual(expect.arrayContaining(['treeLift', 'cot_smooth']));
   });
 
+  it.each(['webgpu', 'webgl2'])('%s: tia trượt chỉ bị bỏ khi cả "Hiện khối bao" lẫn "Tô theo số bước" đều tắt (tia đi sát mép hình mà trượt là điểm ảnh tốn bước nhất)', (backend) => {
+    const built = build();
+    const { fragmentShader } = compileMaterial(volume(built), built.ctx, backend);
+    const [, condition] = /if \(([^{]*)\) \{\s*discard;/.exec(fragmentShader);
+    expect(condition).toMatch(/cotShowBounds/);
+    expect(condition).toMatch(/cotShowSteps/);
+  });
+
   it.each([16, 128])('núm steps mặc định = %s (theo budget): dịch được ở cả hai backend', (steps) => {
     const built = build({ budget: { steps } });
     expect(built.ctx.knobValue?.('steps') ?? steps).toBe(steps);

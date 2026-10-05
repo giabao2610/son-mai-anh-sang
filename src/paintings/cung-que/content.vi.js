@@ -45,7 +45,8 @@ export default {
       experiments: {
         soBuoc: {
           label: 'Tô theo số bước',
-          explain: 'Mỗi điểm ảnh tô theo số bước nó đã dò: mép hình, nơi tia đi sát mặt, sáng rực. Đó là chỗ shader làm việc nhiều nhất.',
+          explain: 'Mỗi điểm ảnh trong khối bao tô theo số bước nó đã dò, cả chỗ tia trượt: mép hình, nơi tia đi sát mặt, sáng rực. Đó '
+            + 'là chỗ shader làm việc nhiều nhất.',
         },
         khoiBao: {
           label: 'Hiện khối bao',

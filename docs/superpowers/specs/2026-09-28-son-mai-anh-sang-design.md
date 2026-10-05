@@ -3415,7 +3415,8 @@ Cảnh không có đèn nào của three, và không bật `renderer.shadowMap` 
   - `smooth` (uniform; 0–0,15, mặc định 0,06): độ hòa khối giữa rễ và đất, giữa các khối của tán.
 - **Phá** (cả ba là uniform, không biên dịch lại):
   - *"Tô theo số bước"* (`soBuoc`): tô mỗi điểm ảnh theo số bước nó đã dò, từ chàm tới vàng lá. Mép hình, nơi tia đi sát bề mặt,
-    sáng rực: thấy chỗ shader làm việc nhiều nhất.
+    sáng rực: thấy chỗ shader làm việc nhiều nhất. (Sau GĐ 7) Điểm ảnh có tia trượt cũng được tô, không bị bỏ: tia đi sát mép hình mà
+    trượt là chỗ tốn bước nhất.
   - *"Hiện khối bao"* (`khoiBao`): điểm ảnh nào có tia trượt thì tô mờ thay cho `Discard()`, nên hiện ra quả cầu chứa cả thế giới.
   - *"Hòa khối cứng"* (`hoaCung`): `smin` thành `min`, lộ đường nối giữa rễ và đất, giữa các khối của tán.
 - **Số đo:** `bay` ("Cây bay lên", m), `buoc` ("Bước dò tối đa"), `hinh` ("Số hình SDF": số hình cơ bản trong `scene`).
