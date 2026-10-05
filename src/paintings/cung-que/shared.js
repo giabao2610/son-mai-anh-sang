@@ -24,11 +24,12 @@ export function setup(ctx) {
   // Ô lá rơi: cấp theo trần của mức một lần; chạm ghi vào, lớp Lá đa đọc ra (spec §19.4 lớp 5)
   const leafFall = createLeafFall({ cap: ctx.budget.leaves, radius: PLANET.radius });
   // Lá tự rụng khi không ai chạm: từ mép dưới của tán, chỗ tất định theo số thứ tự; tán ở độ cao bay của lúc rụng.
-  // Giảm chuyển động thì thôi: chỉ còn lá do người xem chạm.
+  // Giảm chuyển động thì thôi: vài lá nằm yên trên đất từ đầu, ở chỗ của những lá tự rụng đầu tiên (mài Lá đa vẫn thấy khác).
   const autoOrigin = (k, t0) => {
     const rand = mulberry32(911 + k);
     return canopyRim(rand(), rand(), flight.height(t0));
   };
+  if (ctx.reducedMotion) leafFall.settle(autoOrigin);
   return {
     shared: { lift, flight, day, leafFall },
     // Nhãn của Dial chỉ là số ngày; tên pha (trăng mới, thượng huyền, rằm, hạ huyền) là ghi chú, chữ ở content.dials.ngay.notes.

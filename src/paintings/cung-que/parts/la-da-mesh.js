@@ -30,7 +30,8 @@ function leafGeometry() {
  */
 export function createLeafMesh({ fall, time, w, shade, radius, leafId, glow }) {
   const cap = fall.slots.length;
-  // Bốn thuộc tính vec4 mỗi lá: (t0, g, spin, —), (p0, —), (v0, —), (trục quay, —). Chỉ ghi lúc chạm: usage mặc định (Static).
+  // Bốn thuộc tính vec4 mỗi lá: (t0, g, spin, keep), (p0, —), (v0, —), (trục quay, —). Chỉ ghi lúc chạm: usage mặc định (Static).
+  // keep 1 = lá nằm yên của lúc giảm chuyển động: không nhỏ dần.
   const attrs = [0, 1, 2, 3].map(() => new InstancedBufferAttribute(new Float32Array(cap * 4), 4));
   const [A, P, V, X] = attrs.map((a) => instancedBufferAttribute(a));
 
@@ -48,7 +49,8 @@ export function createLeafMesh({ fall, time, w, shade, radius, leafId, glow }) {
     const tf = clamp(tau, 0, landAt);
     const center = p0.add(V.xyz.mul(tf)).sub(u.mul(g.mul(0.5).mul(tf).mul(tf)));
     const after = tau.sub(landAt).sub(FALL.rest);
-    const size = step(0, tau).mul(float(1).sub(clamp(after.div(FALL.fade), 0, 1))).mul(w);
+    const fade = clamp(after.div(FALL.fade), 0, 1).mul(float(1).sub(A.w));
+    const size = step(0, tau).mul(float(1).sub(fade)).mul(w);
     const angle = A.z.mul(tf); // lá thôi quay khi chạm đất
     normalLocal.assign(rotate(normalLocal, X.xyz, angle));
     return center.add(rotate(positionLocal.mul(size), X.xyz, angle));
@@ -70,7 +72,7 @@ export function createLeafMesh({ fall, time, w, shade, radius, leafId, glow }) {
     if (fall.version === seen) return;
     seen = fall.version;
     fall.slots.forEach((s, i) => {
-      attrs[0].array.set([s.t0, s.g, s.spin, 0], i * 4);
+      attrs[0].array.set([s.t0, s.g, s.spin, s.keep], i * 4);
       attrs[1].array.set([...s.p0, 0], i * 4);
       attrs[2].array.set([...s.v0, 0], i * 4);
       attrs[3].array.set([...s.axis, 0], i * 4);

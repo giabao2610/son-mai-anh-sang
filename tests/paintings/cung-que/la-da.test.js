@@ -73,6 +73,26 @@ describe('la-da-roi', () => {
     expect(f.slots.filter((s) => s.t0 === 0).length, 'mỗi lần tự rụng chỉ một lá').toBe(1);
   });
 
+  it('settle (giảm chuyển động): AUTO.still lá nằm yên trên đất từ đầu, không rơi, không nhỏ dần, không đổi chỗ; chạm thì lá mới lấy ô trống trước, hết ô trống mới thay lá nằm yên', () => {
+    const f = createLeafFall({ cap: 8, radius: R, seed: 9 });
+    f.settle(() => top);
+    const still = f.slots.filter((s) => f.state(s, 0).scale > 0);
+    expect(still).toHaveLength(AUTO.still);
+    for (const s of still) {
+      const [now, later] = [f.state(s, 0), f.state(s, 1e3)];
+      expect(now.falling).toBe(false);
+      // Trọng lực lấy theo hướng ở điểm xuất phát, nên lá trôi ngang làm nó nằm cao hơn mặt cầu vài phần nghìn (lá dài 0,07)
+      expect(Math.hypot(...now.pos)).toBeCloseTo(R, 1);
+      expect(later.pos).toEqual(now.pos);
+      expect(later.scale).toBe(1);
+    }
+    const shownAt = (t) => f.slots.filter((s) => f.state(s, t).scale > 0).length;
+    f.burst(1, top, 8 - AUTO.still); // vừa đủ ô trống
+    expect(shownAt(1e3), 'lá nằm yên còn nguyên').toBe(AUTO.still);
+    f.burst(2, top, AUTO.still); // hết ô trống: thay lá nằm yên, và lá mới thì rơi rồi nhỏ dần như thường
+    expect(shownAt(1e3)).toBe(0);
+  });
+
   it('trần số lá phải là số nguyên ≥ 1: thiếu, bằng 0 hay số lẻ thì báo lỗi lúc dựng, không phải lúc chạm', () => {
     for (const cap of [0, undefined, 2.5]) expect(() => createLeafFall({ cap, radius: R }), String(cap)).toThrow(/budget\.leaves/);
   });
@@ -155,14 +175,15 @@ describe('l5-la-da', () => {
     expect(content.layers['la-da'].knobs.gravity.options.traiDat).toBeTruthy();
   });
 
-  it('không chạm gì: khung ?freeze=10 đã có lá tự rụng thấy được (mài Lá đa thì thấy khác); giảm chuyển động thì không có lá tự rụng', () => {
-    const shown = (options) => {
+  it('không chạm gì: khung ?freeze=10 đã có lá tự rụng thấy được (mài Lá đa thì thấy khác); giảm chuyển động thì không lá nào rơi, mà AUTO.still lá nằm yên trên đất từ đầu, khung nào cũng vậy', () => {
+    const at = (options, t) => {
       const { setup, shared } = build(options);
-      setup.update(0, 10 / 60);
-      return shared.leafFall.slots.filter((s) => shared.leafFall.state(s, 10 / 60).scale > 0).length;
+      setup.update(0, t);
+      const f = shared.leafFall;
+      return { shown: f.slots.filter((s) => f.state(s, t).scale > 0).length, falling: f.falling(t) };
     };
-    expect(shown()).toBeGreaterThan(0);
-    expect(shown({ reducedMotion: true })).toBe(0);
+    expect(at({}, 10 / 60).shown).toBeGreaterThan(0);
+    for (const t of [10 / 60, 100]) expect(at({ reducedMotion: true }, t), `t = ${t}`).toEqual({ shown: AUTO.still, falling: 0 });
   });
 
   it('thí nghiệm "Không ghi độ sâu" đổi uniform depthOff của khối bao', () => {
