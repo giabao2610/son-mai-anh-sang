@@ -2447,6 +2447,9 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
    `index.html` rồi sửa tay `data-painting`, title, thơ, poster, og, dòng import và link lật tranh.)
 5. Đặt poster vào `public/paintings/den-keo-quan/`, hoặc chạy `node scripts/poster.js den-keo-quan`.
 6. Chạy `npm test` rồi sửa theo từng lỗi tiếng Việt. Chạy `npm run e2e`: e2e chung tự chạy trên bức mới. Tương tác riêng của bức viết vào `e2e/den-keo-quan.spec.js`.
+   - (GĐ 7) Mọi `describe` trong spec riêng bắt đầu bằng `"{tên bức} · "`: CI gom e2e theo bức (`scripts/e2e-groups.js`), nên bức mới
+     tự có job riêng mà không sửa workflow. `tests/rules/e2e.test.js` giữ quy ước này.
+   - (GĐ 7) Bố cục hẹp bề ngang (vật tròn ở giữa khung) thì khai báo `CameraSpec.minHorizontalFov`, để điện thoại dọc không cắt hai bên.
 7. Cần thứ gì của Ao Sen Đêm thì **không import chéo**; rút nó lên trước theo công thức (e). Cần khả năng mới của xưởng thì thêm **trường tùy chọn** vào hợp đồng (luật 7).
 
 **(b) Thêm một lớp**
@@ -4109,22 +4112,33 @@ Các mục dưới đây đã được kiểm bằng ba cách:
       (`packNormalToRGB(normalView)`, `engine/gpu/pipeline.js`) mang đúng pháp tuyến mà material đưa vào.
     - `MeshBasicNodeMaterial.setupNormal()` luôn trả `normalViewGeometry` và bỏ qua `normalNode`, nên không dùng được cho hình tự dò tia.
     - Lớp gốc có `fog = true` mặc định. Bức 3 không có sương, nhưng vẫn đặt `fog = false` cho rõ.
+    - (GĐ 7, chạy thật) View Normal của Kính mài và Lột lớp thấy pháp tuyến SDF ở cả GPU thật và WebGL2: thân hành tinh quay về camera
+      ra kênh lam trội (`e2e/cung-que.spec.js`, "view Normal của Lột lớp"). Emissive của sao, viền khí quyển, lá vào bloom như dự đoán.
 82. **Ghi độ sâu từ fragment** (`NodeMaterial.setupDepth`, `nodes/display/ViewportDepthNode.js`):
     - Có `depthNode` thì three gán `depth.assign(depthNode)`: fragment ghi độ sâu của chính nó (WGSL `@builtin(frag_depth)`, GLSL
       `gl_FragDepth`).
     - Renderer của xưởng không bật `logarithmicDepthBuffer` hay `reversedDepthBuffer` (`engine/gpu/stage.js`). Khi đó độ sâu của phần
       cứng là `viewZToPerspectiveDepth(viewZ, near, far) = (near + viewZ)·far / ((far − near)·viewZ)`, nằm trong [0; 1], giống nhau ở
       WebGPU và WebGL2: với ma trận chiếu của WebGL, (z_ndc + 1)/2 ra đúng biểu thức này.
+    - (GĐ 7, chạy thật) Mã sinh ra có `frag_depth` (WGSL) và `gl_FragDepth` (GLSL). Bật "Hiện khối bao" rồi xem view Depth: chỗ tia
+      trúng hình gần hơn chỗ tia trượt ở cả hai backend; lá rơi khuất sau thân cây đúng chỗ, và thí nghiệm "Không ghi độ sâu" làm lá đè
+      lên thân.
 83. **Vòng lặp trong TSL** (`nodes/utils/LoopNode.js`, `nodes/utils/Discard.js`):
     - `Loop(n, ({ i }) => …)` nhận `n` là số hay node `int`. Cận là uniform cũng được: đổi lúc chạy mà không biên dịch lại.
     - `Break()` và `Continue()` đặt trong `If`; `Discard()` bỏ điểm ảnh.
+    - (GĐ 7, chạy thật) Cận là uniform chạy đúng ở cả hai backend, và nấc hạ số bước không biên dịch lại. Nhưng vòng có cận động bọc
+      một hàm SDF lớn rất đắt, kể cả khi chỉ chạy một vòng: xem A.88.
 84. **`Fn(...).once()`** (`nodes/tsl/TSLCore.js`): đặt `shaderNode.once = true`, nên lời gọi được giữ lại để dùng chung trong một lần
     dựng shader. Có tham số `subBuilds` (như `normalView` dùng `['NORMAL', 'VERTEX']`). Bức 3 dựa vào đó để vòng dò tia chạy một lần
     cho cả màu, pháp tuyến và độ sâu; task đầu kiểm mã sinh ra (§19.10).
+    - (GĐ 7, chạy thật) Mã fragment của khối bao có đúng một vòng dò chính (một khai báo `sdfT`, WGSL `var<private>`, GLSL `float`):
+      `sdfScene` được gọi 5 lần (4 cho pháp tuyến, 1 trong vòng dò), dù màu, `normalNode` và `depthNode` cùng đọc kết quả.
 85. **Playwright 1.63: lọc và chia test** (`playwright/lib/common/index.js`, `runner/index.js`):
     - `--grep` so với chuỗi ghép từ tên project, đường dẫn file, các `describe`, tên test và tag (`_grepTitleWithTags`).
     - `--shard` chia theo số test, theo thứ tự. Trọng số cho từng phần chỉ có qua biến môi trường `PWTEST_SHARD_WEIGHTS`: biến nội bộ
       Playwright dùng để tự test, không phải API công khai.
+    - (GĐ 7, chạy thật) `--list` theo nhóm: mỗi project 130 test, gom đủ vào bốn nhóm (ao-sen-dem 41, den-keo-quan 42, cung-que 41,
+      chung 6), không test nào ở hai nhóm. Tên bức có dấu cách và dấu "·" đi qua biến môi trường của workflow mà không vỡ.
 86. **OrbitControls xoay trọn vòng** (`examples/jsm/controls/OrbitControls.js`): `minAzimuthAngle` và `maxAzimuthAngle` mặc định là
     `−Infinity` và `Infinity`, tức không giới hạn. Xưởng gán thẳng từ `CameraSpec.azimuth` (`engine/gpu/stage.js`), nên
     `[−Infinity, Infinity]` cho camera đi vòng quanh. (GĐ 7, chạy thật) Kéo ngang 1,5 vòng trên GPU thật và WebGL2: camera sang mặt bên

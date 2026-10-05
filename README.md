@@ -25,7 +25,16 @@ lớp: Cốt (gian nhà, chiếc đèn, trống hình nhân cắt theo một m�
 đảo bình phương), Gian nhà (gạch bát, vôi loang, vân gỗ, cột sơn son, đều là texture thủ tục), Giấy (ánh sáng xuyên giấy dó và
 nhuộm màu ánh sáng ra phòng), Kéo quân (bóng đoàn quân tính bằng gobo `atan(y, x)` làm node bóng của đèn nến, không có shadow map
 nào) và Phủ bóng. Chạm để thổi nến (lửa ngả, bóng khổng lồ chao trên vách); vuốt để gạt trống quay nhanh hơn; giữ để dừng trống.
-Hai bức lật qua lại bằng link ngay dưới tên bức. Các bức sau dùng chung kỹ thuật và chung một "xưởng".
+**Bức 3 · Cung Quế** (giai đoạn 7, trang `tranh/cung-que/`): chú Cuội ngồi gốc cây đa trên một hành tinh nhỏ, con trâu gặm cỏ, Trái
+Đất treo trên trời. Không có một tam giác nào cho hành tinh, cây, Cuội và trâu: cả thế giới là một hàm khoảng cách (SDF), vẽ bằng một
+quả cầu bao mà mỗi điểm ảnh dò tia vào trong. Sáu lớp: Cốt (thế giới SDF bằng đất sét, ghi độ sâu và pháp tuyến như vật thường), Mặt
+trời (nắng theo đúng pha trăng của ngày đang xem, bụi trăng phản xạ kiểu Lommel–Seeliger), Bóng mềm (bóng và AO dò bằng chính hàm
+khoảng cách, không shadow map), Ánh đất (Trái Đất có pha ngược pha trăng, bầu trời sao, ánh Trái Đất trên phần đêm), Lá đa (lá rơi
+theo trọng lực trăng, đường rơi tính trên GPU, xếp lớp với thế giới SDF nhờ độ sâu) và Phủ bóng. Chạm vào tán để lá rơi; giữ để cây đa
+nhổ rễ bay lên mang theo chú Cuội; kéo để đi vòng quanh hành tinh; kéo núm "Ngày âm lịch" để nắng quét qua các pha trăng.
+
+Các bức lật qua lại bằng link ngay dưới tên bức; **Phòng tranh** (`tranh/`) liệt kê mọi bức. Các bức sau dùng chung kỹ thuật và chung
+một "xưởng".
 
 Trong lúc tải cảnh 3D, trăng cạnh con dấu có một vòng quầng mảnh vẽ dần theo từng bước tải (tải code, dựng cảnh, hòa dần), nên
 mạng chậm vẫn thấy trang đang nhích (giai đoạn 5).
@@ -127,21 +136,26 @@ Trong thư mục repo (fnm tự đọc `.nvmrc`):
 ```bash
 node -v                            # v24.x
 npm install
-npm run dev                        # mở http://localhost:5173/son-mai-anh-sang/ (Bức 2: …/tranh/den-keo-quan/)
+npm run dev                        # mở http://localhost:5173/son-mai-anh-sang/ (Bức 2: …/tranh/den-keo-quan/, Bức 3: …/tranh/cung-que/, Phòng tranh: …/tranh/)
 npm test                           # unit, luật ranh giới, hợp đồng
+npm run pages                      # sinh lại trang HTML của mọi bức và Phòng tranh (rồi commit các file đổi)
 npx playwright install chromium    # chỉ cần lần đầu, trước khi chạy e2e
 npm run e2e                        # build rồi chạy e2e (tranh tĩnh, WebGL2, WebGPU)
 ```
 
-Số test (giai đoạn 5): `npm test` chạy 73 file, 860 test. E2e liệt kê 40 test cho mỗi project: `static` chạy 6, mỗi project 3D
-(`webgl2-swiftshader`, `webgpu-swiftshader`, `webgpu-real-gpu`) chạy 33; còn lại Playwright ghi "skipped" vì chúng thuộc project
-khác.
+Số test (giai đoạn 7): `npm test` chạy 97 file, 1128 test. E2e liệt kê 130 test cho mỗi project; test nào không thuộc project đó
+thì tự bỏ qua (Playwright ghi "skipped").
 
 **WebGPU e2e trên CI (ubuntu):** với headless shell của Playwright, mọi test WebGPU rơi về tranh tĩnh vì
 `device-lost: "A valid external Instance reference no longer exists"`. Project `webgpu-swiftshader` vì vậy dùng Chromium
 đầy đủ (`channel: 'chromium'`) và, chỉ khi chạy trên CI, thêm cờ Vulkan của SwiftShader
 (`--enable-features=Vulkan --use-vulkan=swiftshader --use-webgpu-adapter=swiftshader`). Từ giai đoạn 4, e2e WebGPU chạy ở một job
 riêng (`e2e-webgpu`, không chặn deploy, trần 40 phút), song song với job `build` (chặn: unit, build, e2e tĩnh + WebGL2 kèm a11y).
+
+**E2E chia theo bức trên CI (giai đoạn 7):** job `nhom-e2e` chạy `node scripts/e2e-groups.js`, in ma trận các nhóm sinh từ registry:
+mỗi bức một nhóm (test có "{tên bức} · " trong tên), cộng nhóm `chung` (lật tranh, Phòng tranh). Mỗi nhóm một job `e2e` (chặn) và một
+job `e2e-webgpu` (không chặn). Thêm bức là thêm job, không phải sửa workflow. Vì vậy mọi `describe` trong `e2e/<slug>.spec.js` bắt đầu
+bằng `"{tên bức} · "` (test luật giữ quy ước này).
 
 **E2E trên GPU thật của máy mình** (nhanh, bắt được lỗi của driver mà SwiftShader che mất):
 `npm run build && E2E_REAL_GPU=1 npx playwright test --project=webgpu-real-gpu`.
@@ -171,6 +185,9 @@ Thêm vào sau địa chỉ trang, ví dụ `…/son-mai-anh-sang/?webgl&freeze=
 | `src/paintings/_mau/` | **Tranh mẫu** hai lớp, không deploy: khuôn để copy khi làm bức mới, và là fixture của test hợp đồng |
 | `plugins/` | Plugin Vite `?code`: tô màu code của lớp bằng Shiki lúc build cho tab Chỉnh của Sổ tay |
 | `scripts/poster.js` | Chụp poster (WebP) và ảnh chia sẻ (og, JPEG) từ chính cảnh 3D, trên GPU thật |
+| `scripts/pages.js` | Trình sinh trang (`npm run pages`): trang HTML của mọi bức và Phòng tranh từ một khuôn; test giữ từng byte |
+| `scripts/e2e-groups.js` | Ma trận nhóm e2e của CI, sinh từ registry |
+| `tranh/` | Trang của các bức sau Bức 1 (`tranh/<slug>/index.html`) và Phòng tranh (`tranh/index.html`), đều do trình sinh viết |
 | `tests/` | Unit, luật ranh giới (`tests/rules/`), hợp đồng của các bức |
 | `e2e/` | Playwright: tranh tĩnh, WebGL2 và WebGPU trên SwiftShader, trợ năng (axe-core) |
 
@@ -192,10 +209,9 @@ Không phải sửa xưởng, trừ khi bức cần một khả năng mới.
      `shared`, không import part của lớp khác.
    - Tùy chọn: muốn một dòng chữ (thơ, chú thích) hiện cạnh một vật và đi theo nó thì ghi chữ vào `content.captions`
      (`{ lines, source, author? }`, 1–2 dòng) rồi gọi `ctx.captions.show(khóa, anchor)`; code của bức chỉ cầm khóa.
-3. Copy `index.html` thành `tranh/<slug>/index.html`, sửa `data-painting`, tiêu đề, thơ, poster, thẻ og và dòng import. Thêm link
-   lật tranh (`<nav class="series">` ngay dưới `<h1>`, đường dẫn tương đối) ở trang mới và ở trang của bức kề trước; test HTML so
-   link với registry.
-4. Thêm `{ meta, page: 'tranh/<slug>/index.html', lang: 'vi' }` vào `src/paintings/registry.js`.
+3. Thêm `{ meta, page: 'tranh/<slug>/index.html', lang: 'vi' }` vào `src/paintings/registry.js`.
+4. `npm run pages`: trình sinh viết trang của bức mới từ khuôn chung (tiêu đề, thơ, poster, thẻ og, dòng import, dải lật tranh) và
+   viết lại dải link của bức kề trước cùng Phòng tranh. Không sửa trang bằng tay: test so từng byte với trang sinh ra.
 5. Chụp poster từ chính cảnh: `npm run build && node scripts/poster.js <slug>` (máy có GPU thật). Ảnh ghi vào
    `public/paintings/<slug>/`.
 6. `npm test` rồi sửa theo từng lỗi tiếng Việt; `npm run e2e`. E2e chung (mài lớp, hạ nấc, Kính mài, Lột lớp, Từng sợi, quầng
@@ -207,6 +223,16 @@ Công thức đầy đủ (thêm lớp, thêm công cụ học, thêm ngôn ng�
 - Một đèn có thể mang **node bóng tự viết** (`light.shadow.shadowNode`): three dùng node đó thay cho shadow map, nên bóng tính thẳng
   bằng hình học mà không thêm lượt vẽ nào. Các lớp góp vào node đó bằng phép nhân lúc dựng (màu giấy, bóng hình nhân).
 - Lớp không import part của lớp khác: dữ liệu và hàm dùng chung (số đo của đèn, hàm giao tia) đi qua `shared`.
+
+Điều học được khi làm Bức 3 (giai đoạn 7):
+- **Hình tự dò tia** sống chung với mesh thường được, nếu nó ghi độ sâu và pháp tuyến như vật thường: `NodeMaterial` gốc (không phải
+  `MeshBasicNodeMaterial`, vì nó bỏ qua `normalNode`), `depthNode` bằng `viewZToPerspectiveDepth`, vòng dò bọc `Fn().once()` để màu,
+  pháp tuyến và độ sâu dùng chung một lần dò.
+- Hàm shader có layout (`setLayout`) không đọc uniform trực tiếp trong thân: three giữ mã của hàm theo backend, nên lần biên dịch sau
+  thiếu uniform (spec Phụ lục A.87). Truyền uniform vào làm tham số.
+- Vòng lặp có cận là uniform bọc một hàm SDF lớn làm cả khung chậm gấp đôi trên GPU Apple, kể cả khi chỉ chạy một vòng: số mẫu cố
+  định (AO) thì trải thẳng bằng vòng `for` của JS (spec Phụ lục A.88).
+- Không có đèn nào của three: các lớp góp vào một "công thức tô" (`shared.cot.recipe`) lúc dựng.
 
 ## Poster và ảnh chia sẻ
 
@@ -224,38 +250,43 @@ CI không chạy script này: ảnh được commit vào repo.
 
 ## Kích thước bundle
 
-Số gzip do `npm run build` (Vite 8) in ra, đo ngày 2026-10-04 (giai đoạn 6, hai bức). Tên file đã bỏ phần hash. Từ khi có bức thứ
-hai, phần dùng chung của hai trang (phần nhẹ của trang, Phủ bóng) tách thành chunk riêng, nên chunk vào của mỗi trang chỉ còn chừng
-1 kB gzip.
+Số gzip do `npm run build` (Vite 8) in ra, đo ngày 2026-10-05 (giai đoạn 7, ba bức). Tên file đã bỏ phần hash. Phần dùng chung
+của các trang (phần nhẹ của trang, Phủ bóng) là chunk riêng, nên chunk vào của mỗi trang chỉ chừng 1 kB gzip.
 
 | File | Kích thước | gzip |
 |---|---:|---:|
 | `assets/strings-*.css` (CSS chung, kèm chữ đi theo vật, quầng trăng, lật tranh) | 38.85 kB | 13.51 kB |
-| `assets/strings.vi-*.js` (phần nhẹ dùng chung: khởi động, vỏ trang, chữ giao diện) | 21.67 kB | 10.11 kB |
-| `assets/ao-sen-dem-*.js` · `assets/den-keo-quan-*.js` (chunk vào của từng trang) | 2.57 · 2.17 kB | 1.15 · 0.96 kB |
-| `assets/run-*.js` (kèm đồ nghề, Từng sợi, móc lần vẽ, chữ đi theo vật, view, bộ điều chỉnh) | 63.19 kB | 21.98 kB |
-| `assets/workshop-*.js` (thanh lớp + Sổ tay + Đồ nghề) | 17.95 kB | 6.27 kB |
-| `assets/layer-*.js` (Phủ bóng: bloom, LUT, grain, FXAA; dùng chung) | 13.66 kB | 4.95 kB |
+| `assets/phong-tranh-*.css` (Phòng tranh: bảng màu, font, lưới các bức; trang không có script) | 19.55 kB | 8.76 kB |
+| `assets/strings.vi-*.js` (phần nhẹ dùng chung: khởi động, vỏ trang, chữ giao diện) | 22.02 kB | 10.26 kB |
+| `assets/ao-sen-dem-*.js` · `den-keo-quan-*.js` · `cung-que-*.js` (chunk vào của từng trang) | 2.60 · 2.17 · 2.15 kB | 1.16 · 0.97 · 0.99 kB |
+| `assets/run-*.js` (kèm đồ nghề, Từng sợi, móc lần vẽ, chữ đi theo vật, view, bộ điều chỉnh) | 63.44 kB | 22.06 kB |
+| `assets/workshop-*.js` (thanh lớp + Sổ tay + Đồ nghề) | 19.64 kB | 6.57 kB |
+| `assets/layer-*.js` (Phủ bóng: bloom, LUT, grain, FXAA; dùng chung) | 13.66 kB | 4.96 kB |
 | `assets/content.vi-*.js` của Phủ bóng (dùng chung) | 5.56 kB | 2.20 kB |
-| `assets/painting-*.js` của Bức 1 (kèm hoa đăng) | 37.15 kB | 15.33 kB |
+| `assets/painting-*.js` của Bức 1 (kèm hoa đăng) | 37.00 kB | 15.27 kB |
 | `assets/content.vi-*.js` của Bức 1 (chữ + sơ đồ của Sổ tay, thơ của hoa đăng) | 27.45 kB | 8.99 kB |
-| `assets/painting-*.js` của Bức 2 (gobo, mặt nạ hình nhân, ngọn lửa, giấy, gian nhà, "Shadow map thật") | 30.41 kB | 11.52 kB |
+| `assets/painting-*.js` của Bức 2 (gobo, mặt nạ hình nhân, ngọn lửa, giấy, gian nhà, "Shadow map thật") | 31.10 kB | 11.85 kB |
 | `assets/content.vi-*.js` của Bức 2 (chữ + năm sơ đồ của Sổ tay) | 20.15 kB | 6.56 kB |
-| `assets/three-*.js` | 901.75 kB | 246.83 kB |
-| **Tổng đường 3D của Bức 1** (chunk vào + phần nhẹ + run + workshop + Phủ bóng + painting + content + three) | | **317.81 kB** |
-| **Tổng đường 3D của Bức 2** (cùng cách tính) | | **311.38 kB** |
+| `assets/painting-*.js` của Bức 3 (thế giới SDF, khối bao dò tia, pha trăng, bóng mềm, Trái Đất, lá rơi) | 21.01 kB | 8.73 kB |
+| `assets/content.vi-*.js` của Bức 3 (chữ + năm sơ đồ của Sổ tay) | 18.68 kB | 5.99 kB |
+| `assets/three-*.js` | 925.76 kB | 253.73 kB |
+| **Tổng đường 3D của Bức 1** (chunk vào + phần nhẹ + run + workshop + Phủ bóng + painting + content + three) | | **325.20 kB** |
+| **Tổng đường 3D của Bức 2** (cùng cách tính) | | **319.16 kB** |
+| **Tổng đường 3D của Bức 3** (cùng cách tính) | | **315.49 kB** |
 | `assets/knobs-*.js` (Tweakpane, chỉ tải khi mở tab Chỉnh lần đầu) | 149.30 kB | 30.96 kB |
-| 38 chunk `?code` (code đã tô màu của từng file lớp, của cả hai bức, tải theo lớp) | | 1.6–8.0 kB mỗi file |
+| 53 chunk `?code` (code đã tô màu của từng file lớp, của cả ba bức, tải theo lớp) | | 1.2–8.0 kB mỗi file |
 | `assets/Inspector-*.js` (chỉ tải khi có `?debug`) | 172.83 kB | 38.67 kB |
 | `assets/main-*.js` (stats-gl, chỉ tải khi có `?debug=stats`) | 33.10 kB | 8.95 kB |
 
-Mục tiêu của spec (§10): cả đường 3D ≤ 450 KB gzip (kể cả Tweakpane: Bức 1 348.77 kB, Bức 2 342.34 kB). Giai đoạn 6 thêm 3.84 kB
-gzip cho đường 3D của Bức 1 (giai đoạn 5: 313.97 kB), chủ yếu vì chunk dùng chung lớn hơn chút để phục vụ cả hai bức.
+Mục tiêu của spec (§10): cả đường 3D ≤ 450 KB gzip (kể cả Tweakpane: Bức 1 356.16 kB, Bức 2 350.12 kB, Bức 3 346.45 kB). Giai đoạn 7
+thêm 7.39 kB gzip cho đường 3D của Bức 1 (giai đoạn 6: 317.81 kB), phần lớn là chunk `three` (+6.90 kB): Bức 3 dùng thêm nhiều node của
+TSL (vòng lặp, độ sâu, thuộc tính theo bản) mà chunk dùng chung phải chở cho mọi bức.
 
 Tầng tĩnh chỉ tải CSS (kèm font), poster, chunk vào của trang và phần nhẹ dùng chung; mở Sổ tay chỉ đọc thì tải thêm `workshop` và
 `content`. Chunk `three-*.js` và phần 3D chỉ tải khi máy dùng được GPU.
 
 ## Giấy phép
 
-MIT, xem [LICENSE](LICENSE). Mọi hình ảnh đều sinh bằng code. Thơ: ca dao (cả hai câu "Đèn cù" của Bức 2); Truyện Kiều
-(Nguyễn Du); thơ của hoa đăng là ca dao và thơ cổ điển đã hết bản quyền (Nguyễn Trãi, Hồ Xuân Hương, Nguyễn Du, Nguyễn Khuyến).
+MIT, xem [LICENSE](LICENSE). Mọi hình ảnh đều sinh bằng code. Thơ: ca dao (cả hai câu "Đèn cù" của Bức 2, hai câu chú Cuội của Bức 3);
+Truyện Kiều (Nguyễn Du); thơ của hoa đăng là ca dao và thơ cổ điển đã hết bản quyền (Nguyễn Trãi, Hồ Xuân Hương, Nguyễn Du, Nguyễn
+Khuyến).

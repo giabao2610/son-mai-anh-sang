@@ -8,7 +8,8 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
 - **Kỹ thuật** "Sơn Mài Ánh Sáng": dựng tranh 3D bằng nhiều **lớp** ánh sáng, mỗi lớp có trọng số 0 → 1.
   "Mài" là gỡ dần từng lớp, xuống tận **Cốt** (đất sét). Lớp đầu của mọi bức luôn là Cốt (`id: 'cot'`).
 - **Bức tranh**: một tác phẩm làm bằng kỹ thuật đó. Bức 1 là Ao Sen Đêm (`src/paintings/ao-sen-dem/`, trang `index.html`); Bức 2 là
-  Đèn Kéo Quân (`src/paintings/den-keo-quan/`, trang `tranh/den-keo-quan/index.html`).
+  Đèn Kéo Quân (`src/paintings/den-keo-quan/`, trang `tranh/den-keo-quan/index.html`); Bức 3 là Cung Quế (`src/paintings/cung-que/`,
+  trang `tranh/cung-que/index.html`, thế giới SDF dò tia). Phòng tranh: `tranh/index.html`, trang tĩnh liệt kê mọi bức.
 - **Ba vùng:**
 
   | Vùng | Thư mục | Quy tắc |
@@ -43,7 +44,8 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
 
 | Việc | Lệnh |
 |---|---|
-| Chạy dev | `npm run dev`, mở http://localhost:5173/son-mai-anh-sang/ (Bức 2: `…/tranh/den-keo-quan/`) |
+| Chạy dev | `npm run dev`, mở http://localhost:5173/son-mai-anh-sang/ (Bức 2: `…/tranh/den-keo-quan/`, Bức 3: `…/tranh/cung-que/`) |
+| Sinh trang HTML | `npm run pages` (mọi trang của các bức và Phòng tranh, từ registry; rồi commit các file đổi) |
 | Unit + luật + hợp đồng | `npm test` (một file: `npx vitest run tests/unit/flags.test.js`) |
 | Build | `npm run build` (ra `dist/`) |
 | E2E | `npm run e2e` (build rồi chạy Playwright); một project: `npm run build && npx playwright test --project=webgl2-swiftshader` |
@@ -199,11 +201,32 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - Test dịch shader cần biết uniform nào thật sự được đọc (kể cả trong thân một `Fn`, nơi `nodesOf` không thấy) thì dùng
   `compileMaterial(...).uniforms`. Mảng uniform (`uniformArray`) chỉ giữ tên ở WGSL; GLSL đặt nó vào khối buffer và đổi tên node thành
   `NodeBuffer_<id>`.
-- Lật tranh: `<nav class="series">` ngay dưới `<h1>` của mỗi trang, link tương đối viết tay trong HTML (chạy cả ở tầng tĩnh), registry
-  xếp theo `meta.no` (`tests/paintings/html.test.js` so link với registry). Thêm bức mới thì sửa nav của bức kề trước. Chỗ bấm được
-  trong `.frame` phải bật lại `pointer-events: auto` (khung tắt nó cho canvas).
-- CI: e2e chặn và e2e WebGPU chia hai phần (`--shard=N/2 --fully-parallel`), mỗi project chia riêng: `--shard` chia theo SỐ test và
-  theo thứ tự project, chia chung thì một phần nhận trọn project nặng. Thêm test e2e không cần sửa workflow.
+- Lật tranh: `<nav class="series">` ngay dưới `<h1>` của mỗi trang: bức trước, Phòng tranh, bức sau; link tương đối (chạy cả ở tầng
+  tĩnh), registry xếp theo `meta.no` (`tests/paintings/html.test.js` so link với registry). GĐ 7: trang do `npm run pages` sinh, không
+  sửa tay. Chỗ bấm được trong `.frame` phải bật lại `pointer-events: auto` (khung tắt nó cho canvas).
+- CI (GĐ 6, GĐ 7 đã thay, xem mục dưới): e2e từng chia hai phần bằng `--shard`. `--shard` chia theo SỐ test và theo thứ tự file, nên
+  phần 1 nhận mọi spec riêng của các bức.
+
+### Hình tự dò tia, trình sinh trang, CI theo bức (GĐ 7)
+- Hình tự dò tia (khối bao của Bức 3) dùng `NodeMaterial` gốc: `MeshBasicNodeMaterial` bỏ qua `normalNode`. Ghi `depthNode` bằng
+  `viewZToPerspectiveDepth` (renderer không dùng depth logarit, không reversed) và `normalNode` ở view space, nên mesh thường (lá, Trái
+  Đất) xếp lớp đúng với nó và view Normal thấy pháp tuyến SDF.
+- Vòng dò chính bọc `Fn().once()`: màu, pháp tuyến, độ sâu dùng chung MỘT lần dò. Test đếm biến `sdfT` trong mã sinh ra.
+- `scene` là hàm có layout (`setLayout`): mỗi chỗ gọi là một lời gọi hàm, không chép thân. Hàm có layout KHÔNG đọc uniform trực tiếp
+  trong thân: three giữ mã của hàm theo backend, lần biên dịch sau thiếu uniform, WGSL báo "struct member … not found" (spec Phụ lục
+  A.87). Truyền uniform vào làm tham số; hàm nào gọi hàm như thế mà đọc uniform thì không có layout. Test dịch lại trên CÙNG renderer
+  (`tests/helpers/nodes.js#compileRenderer`). Tên tham số tránh từ khóa của WGSL và GLSL (`smooth` là từ khóa).
+- Vòng lặp có cận là uniform (`Loop(uniform, …)`) chỉ dùng khi cần thoát sớm (dò tia, dò bóng). Bọc một hàm SDF lớn, nó làm cả khung
+  chậm gấp đôi trên GPU Apple kể cả khi chỉ chạy một vòng (spec Phụ lục A.88). Số mẫu cố định (AO) thì trải thẳng bằng vòng `for` của
+  JS; số đó cố định theo mức lúc dựng, không có nấc nào đổi nó. Test đếm `for (` trong mã sinh ra.
+- Cảnh SDF không có đèn của three: các lớp góp vào `shared.cot.recipe` (clay, albedo, sun, sunWeight, visibility, ambient, occlusion)
+  lúc dựng, trước lần biên dịch đầu.
+- `CameraSpec.minHorizontalFov` (tùy chọn, độ): khung hẹp (điện thoại dọc) thì xưởng nới fov dọc vừa đủ để góc ngang bằng số này
+  (`engine/gpu/fov.js`, tính lại mỗi lần resize); khung đủ rộng giữ nguyên fov.
+- Trang HTML do `npm run pages` (`scripts/pages.js`) sinh từ registry, `meta` và `strings.vi.js`; không sửa tay. Test so từng byte
+  trang trên đĩa với trang sinh ra (`tests/scripts/pages.test.js`): lệch thì chạy `npm run pages` rồi commit.
+- E2e của một bức nằm trong `describe` bắt đầu bằng `"{tên bức} · "` (`tests/rules/e2e.test.js` giữ): CI gom test theo đó. Nhóm e2e
+  sinh từ registry (`scripts/e2e-groups.js`): mỗi bức một job, cộng nhóm `chung`; thêm bức không sửa workflow.
 
 ### Chuyển động và ngẫu nhiên
 - Không dùng `time`/`deltaTime` của TSL; dùng `ctx.u.time` và `ctx.u.delta` (nhờ vậy `?freeze` cho ảnh tất định).
@@ -250,4 +273,5 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   `__sma.upgrade()` (hạ/nâng tay một nấc), `__sma.tools()` / `__sma.setTool('kinh-mai')` (công cụ học, `null` tắt hết;
   `__sma.setTool('tung-soi')` bật Từng sợi), `__sma.dials()` / `__sma.setDial('gio', 27)` (núm của cả bức), `__sma.readouts(id)`
   (số đo riêng của một lớp, như Sổ tay đọc: `__sma.readouts('anh-trang')` có số hoa đăng đang trôi, `__sma.readouts('keo-quan')` có
-  số vòng mỗi phút của trống).
+  số vòng mỗi phút của trống; `__sma.readouts('cot')` của Bức 3 có độ cao cây đang bay). Bức 3: `__sma.setDial('ngay', 15)` đặt ngày
+  âm lịch (rằm).
