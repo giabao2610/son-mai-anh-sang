@@ -13,6 +13,22 @@ const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const dirOf = (page) => page.replace(/index\.html$/, '');
 
+/** Trường của meta mà khuôn in ra (og thì tùy chọn). Thiếu thì báo lỗi nêu tên trường, không in chữ "undefined" vào trang. */
+const REQUIRED = ['slug', 'no', 'title', 'tagline', 'poem.lines', 'poem.source', 'poster.src', 'poster.width', 'poster.height', 'poster.alt'];
+function checkMeta({ meta, page }) {
+  for (const field of REQUIRED) {
+    const value = field.split('.').reduce((o, k) => o?.[k], meta);
+    if (value === undefined || value === null || value === '') throw new Error(`scripts/pages.js: ${page} thiếu meta.${field}`);
+  }
+}
+
+/** Ảnh og 1200×630 là tùy chọn (bức chưa chụp poster thì chưa có): không có thì bỏ các thẻ og:image, thẻ Twitter là thẻ nhỏ. */
+const ogTags = (og) => (og ? `
+    <meta property="og:image" content="${SITE}${og}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />` : '');
+const card = (og) => (og ? 'summary_large_image' : 'summary');
+
 /** Đường dẫn tương đối từ thư mục của trang `from` tới thư mục của trang `to` (như tests/paintings/html.test.js). */
 export function relative(from, to) {
   const rel = posix.relative(dirOf(from) || '.', dirOf(to) || '.');
@@ -21,7 +37,9 @@ export function relative(from, to) {
 
 /** Dải link dưới <h1>: bức trước, Phòng tranh, bức sau. Viết liền, không khoảng trắng: .series là flex có gap (shell.css). */
 function seriesLinks(entry, list, strings) {
-  const i = list.indexOf(entry);
+  // Theo slug, không theo tham chiếu: bản chép của một dòng registry vẫn ra đúng bức trước, bức sau
+  const i = list.findIndex((p) => p.meta.slug === entry.meta.slug);
+  if (i < 0) throw new Error(`scripts/pages.js: bức "${entry.meta.slug}" không có trong danh sách các bức`);
   const [prev, next] = [list[i - 1], list[i + 1]];
   const links = [];
   if (prev) links.push(`<a rel="prev" href="${relative(entry.page, prev.page)}">${esc(strings.series.prev(prev.meta.no, prev.meta.title))}</a>`);
@@ -37,6 +55,7 @@ function seriesLinks(entry, list, strings) {
  * @param {object} [strings]  chữ giao diện (strings.<lang>.js)
  */
 export function renderPainting(entry, list = paintings, strings = t) {
+  checkMeta(entry);
   const { meta, page, lang } = entry;
   if (meta.poem.author) throw new Error(`scripts/pages.js: khuôn chưa in tác giả của thơ (${meta.slug}); thêm vào khuôn trước`);
   const title = esc(`${meta.title} · ${strings.site.name}`);
@@ -53,11 +72,8 @@ export function renderPainting(entry, list = paintings, strings = t) {
     <meta property="og:title" content="${title}" />
     <meta property="og:description" content="${tagline}" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="${SITE}${dirOf(page)}" />
-    <meta property="og:image" content="${SITE}${meta.og}" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="og:url" content="${SITE}${dirOf(page)}" />${ogTags(meta.og)}
+    <meta name="twitter:card" content="${card(meta.og)}" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/src/styles/shell.css" />
   </head>
@@ -115,6 +131,9 @@ ${poem}
  * theo thứ tự registry (meta.no). Poster có alt rỗng: tên bức đã là chữ của link.
  */
 export function renderGallery(list = paintings, strings = t) {
+  if (list.length === 0) throw new Error('scripts/pages.js: Phòng tranh cần ít nhất một bức trong registry');
+  list.forEach(checkMeta);
+  const og = list.find((p) => p.meta.og)?.meta.og; // ảnh og của bức đầu tiên có nó
   const items = list.map(({ meta, page }) => `        <li>
           <a href="${relative(GALLERY_PAGE, page)}">
             <img src="${meta.poster.src}" width="${meta.poster.width}" height="${meta.poster.height}" alt="" loading="lazy" />
@@ -136,11 +155,8 @@ export function renderGallery(list = paintings, strings = t) {
     <meta property="og:title" content="${title}" />
     <meta property="og:description" content="${intro}" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="${SITE}${dirOf(GALLERY_PAGE)}" />
-    <meta property="og:image" content="${SITE}${list[0].meta.og}" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="og:url" content="${SITE}${dirOf(GALLERY_PAGE)}" />${ogTags(og)}
+    <meta name="twitter:card" content="${card(og)}" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/src/styles/gallery.css" />
   </head>
