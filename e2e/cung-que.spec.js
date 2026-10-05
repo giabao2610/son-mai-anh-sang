@@ -1,6 +1,8 @@
 // e2e/cung-que.spec.js — Bức 3 · Cung Quế: khối bao dò tia ghi độ sâu và pháp tuyến của hình SDF; pha trăng; bóng; ánh đất; cử chỉ; chất lượng.
 import { test, expect } from '@playwright/test';
-import { waitForSettled, waitForFrames, canvasRegions, collectConsole, gpuReport, twoFrames, toggleExperiment } from './helpers.js';
+import {
+  waitForSettled, waitForFrames, canvasRegions, collectConsole, gpuReport, holdAt, twoFrames, toggleExperiment,
+} from './helpers.js';
 
 const AT = 'at=2026-10-21T21:00';
 /**
@@ -91,6 +93,28 @@ test.describe('Cung Quế · camera', () => {
     await twoFrames(page);
     expect((await canvasRegions(page)).all.checksum, 'camera đã sang chỗ khác').not.toBe(before);
     expect(await page.evaluate(() => window.__sma.state)).toBe('live');
+    expect(log.errors).toEqual([]);
+  });
+});
+
+test.describe('Cung Quế · cử chỉ', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('giữ: cây bay lên (số đo "Cây bay lên" > 3 m); thả: rơi về dưới 0,5 m', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const log = collectConsole(page);
+    const query = (testInfo.project.metadata.query ?? '').replace(/^\?/, '');
+    await page.goto(`./tranh/cung-que/?${query}&${AT}`); // live: đồng hồ của cảnh phải chạy
+    expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
+    const bay = () => page.evaluate(() => Number(window.__sma.readouts('cot').find((r) => r.id === 'bay')?.value));
+    expect(await bay()).toBe(0);
+    const held = holdAt(page, 0.5, 0.75, 4000);
+    // Đồng hồ của cảnh theo khung vẽ: SwiftShader vẽ chậm nên cho rộng thời gian
+    await expect.poll(bay, { timeout: 15_000 }).toBeGreaterThan(3);
+    await held;
+    await expect.poll(bay, { timeout: 30_000 }).toBeLessThan(0.5);
     expect(log.errors).toEqual([]);
   });
 });

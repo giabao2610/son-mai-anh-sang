@@ -3444,7 +3444,9 @@ Như hai bức trước. Thứ có emissive là sao và viền khí quyển củ
 
 ### 19.5 Chuyển động tất định (`shared.js` của bức)
 - **Cây bay** (`parts/cot-cay-bay.js`, hàm thuần) có dạng đóng theo các mốc giữ và thả, như trống của Bức 2:
-  - đang giữ (từ t0, độ cao L0): `lift = L0 + (H − L0)·(1 − e^(−(t − t0)/τ))`, với H = 0,45 và τ = 0,5 s;
+  - đang giữ (từ t0, độ cao L0, vận tốc v0): lò xo tắt dần tới hạn kéo về H, `lift = H + (A + B·s)·e^(−s/τ)` với s = t − t0,
+    A = L0 − H, B = v0 + A/τ; H = 0,45, τ = 0,3 s. Cây lên tới 95% trong chừng 1,4 s.
+    (GĐ 7, Task 3) Thiết kế đầu dùng `L0 + (H − L0)(1 − e^(−s/τ))`: công thức đó làm vận tốc nhảy ở mốc giữ, nên đổi sang lò xo;
   - thả ở t1 (độ cao L1, vận tốc v1 lấy từ đoạn trước): rơi tự do `L1 + v1·Δ − ½·g·Δ²` với g của trăng, tới khi chạm 0; nảy một lần
     với vận tốc còn 0,3 lần; rồi đứng yên;
   - mỗi mốc lưu (t, độ cao, vận tốc) tính từ đoạn trước, nên độ cao và vận tốc liên tục. Gọi `lift(t)` bao nhiêu lần, theo thứ tự nào,
@@ -3588,7 +3590,9 @@ Bức đầu không có link trước, bức cuối không có link sau. Đườ
   - Không có `depthNode` thì hai chỗ cùng mang độ sâu của mặt sau quả cầu. Nhìn chỗ trượt là nền thì không chứng minh được gì, vì
     `Discard()` đã cho nền ở đó.
   - Pháp tuyến SDF: test chung "Normal" (Kính mài) chạy trên Bức 3.
-- Chạm vào tán thì số đo `la` > 0. Giữ thì số đo `bay` > 0,3 sau 2 giây; thả thì về 0 trong 4 giây.
+- Chạm vào tán thì số đo `la` > 0.
+- Giữ thì số đo `bay` ("Cây bay lên", m) vượt 3 m. Thả thì về dưới 0,5 m: rơi từ 0,45 mất chừng 2,4 s, nảy thêm chừng 1,4 s. E2e
+  chạy live và chờ rộng tay, vì đồng hồ của cảnh theo khung vẽ, mà SwiftShader vẽ chậm.
 - Draw call ≤ 30 ở mức cao; `?level=thap` chạy được; bật từng thí nghiệm không có lỗi console.
 
 **E2e Phòng tranh** (`e2e/phong-tranh.spec.js`, ở project tĩnh, không cần GPU):

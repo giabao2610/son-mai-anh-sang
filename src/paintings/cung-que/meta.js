@@ -33,6 +33,7 @@ export default {
         'paintings/cung-que/parts/cot-the-gioi.js',
         'paintings/cung-que/parts/cot-sdf.js',
         'paintings/cung-que/parts/cot-do-tia.js',
+        'paintings/cung-que/parts/cot-cay-bay.js',
       ],
     },
     phuBong,

@@ -28,6 +28,25 @@ describe('l1-cot (Bức 3)', () => {
     expect(PRIMITIVES).toBeGreaterThanOrEqual(30);
   });
 
+  it('cử chỉ (Task 3): giữ thì cây bay lên (> 0,4 sau 2 s); thả thì rơi về 0; vuốt và chạm đúp không làm cây bay', () => {
+    const { setup, shared, ctx } = build();
+    ctx.u.time.value = 1;
+    setup.onGesture({ kind: 'hold-start' });
+    setup.update(0, 3);
+    expect(shared.lift.value).toBeGreaterThan(0.4);
+    ctx.u.time.value = 3;
+    setup.onGesture({ kind: 'hold-end' });
+    setup.update(0, 12);
+    expect(shared.lift.value).toBe(0);
+
+    const other = build();
+    other.ctx.u.time.value = 1;
+    other.setup.onGesture({ kind: 'swipe', velocity: { x: 900, y: 0 } });
+    other.setup.onGesture({ kind: 'double-tap' });
+    other.setup.update(0, 3);
+    expect(other.shared.lift.value).toBe(0);
+  });
+
   it('cảnh không có đèn nào của three, shadowMap không bật', () => {
     const { ctx } = build();
     const lights = [];

@@ -203,6 +203,24 @@ export function tapAt(page, fx, fy, { pointerType = 'mouse' } = {}) {
 }
 
 /**
+ * (GĐ 7) Giữ tại (fx, fy) trong `ms` mili giây rồi nhấc, phát sự kiện con trỏ ngay trong trang như tapAt (pointerId 1). Xưởng nhận
+ * 'hold-start' sau GESTURE.holdMs (350 ms) và 'hold-end' lúc nhấc. Trả Promise xong khi đã nhấc: gọi mà chưa await để đo giữa chừng.
+ */
+export function holdAt(page, fx, fy, ms, { pointerType = 'mouse' } = {}) {
+  return page.evaluate(async ({ x, y, type, wait }) => {
+    const canvas = document.querySelector('[data-stage] canvas');
+    const box = canvas.getBoundingClientRect();
+    const at = {
+      pointerId: 1, pointerType: type, isPrimary: true, button: 0, bubbles: true, cancelable: true, composed: true,
+      clientX: box.left + box.width * x, clientY: box.top + box.height * y,
+    };
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { ...at, buttons: 1 }));
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    canvas.dispatchEvent(new PointerEvent('pointerup', { ...at, buttons: 0 }));
+  }, { x: fx, y: fy, type: pointerType, wait: ms });
+}
+
+/**
  * Vuốt ngang trên canvas từ (fx, fy) một đoạn dx px trong `ms` mili giây, bằng PointerEvent phát ngay trong trang. Mỗi sự kiện chuột
  * của Playwright đợi một nhịp khung (Phụ lục A.51), nên trên GPU phần mềm một cú vuốt dễ quá GESTURE.swipeMs (300 ms) và thành kéo
  * (camera). Xuống, hai lần dời cách nhau ms / 2, rồi nhấc; pointerId 1 như doubleTapAt (OrbitControls gọi setPointerCapture).
