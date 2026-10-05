@@ -78,7 +78,13 @@ const t = {
   series: {
     label: 'Các bức tranh',
     prev: (n, title) => `← Bức ${n} · ${title}`,
+    gallery: 'Phòng tranh',
     next: (n, title) => `Bức ${n} · ${title} →`,
+  },
+  /** Phòng tranh (GĐ 7): trang tĩnh liệt kê mọi bức. */
+  gallery: {
+    title: 'Phòng tranh',
+    intro: 'Mỗi bức sơn từ nhiều lớp ánh sáng; mài dần từng lớp để thấy cốt đất sét bên dưới.',
   },
   /** Mất GPU lần đầu (GĐ 2): poster hiện lại kèm nút dựng lại. */
   lost: {

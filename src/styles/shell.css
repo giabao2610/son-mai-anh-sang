@@ -16,9 +16,6 @@
 
 :root {
   --gutter: 32px;
-  --serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
-  --sans: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
   --veil: color-mix(in srgb, var(--den-then) 78%, transparent);
   --veil-strong: color-mix(in srgb, var(--den-then) 92%, transparent);
   --ink-shadow: 0 1px 2px var(--den-then), 0 0 18px color-mix(in srgb, var(--den-then) 85%, transparent);

@@ -1,4 +1,4 @@
-// scripts/pages.js — trình sinh trang (spec §19.7): viết trang HTML của mọi bức từ MỘT khuôn, đọc registry, meta và chữ giao diện. Chạy: npm run pages (rồi commit các file đổi).
+// scripts/pages.js — trình sinh trang (spec §19.7): viết trang HTML của mọi bức và Phòng tranh từ MỘT khuôn, đọc registry, meta và chữ giao diện. Chạy: npm run pages (rồi commit các file đổi).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, posix } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -19,12 +19,13 @@ export function relative(from, to) {
   return rel === '' ? './' : `${rel}/`;
 }
 
-/** Dải link dưới <h1>: bức trước, bức sau. Viết liền, không khoảng trắng: .series là flex có gap (shell.css). */
+/** Dải link dưới <h1>: bức trước, Phòng tranh, bức sau. Viết liền, không khoảng trắng: .series là flex có gap (shell.css). */
 function seriesLinks(entry, list, strings) {
   const i = list.indexOf(entry);
   const [prev, next] = [list[i - 1], list[i + 1]];
   const links = [];
   if (prev) links.push(`<a rel="prev" href="${relative(entry.page, prev.page)}">${esc(strings.series.prev(prev.meta.no, prev.meta.title))}</a>`);
+  links.push(`<a href="${relative(entry.page, GALLERY_PAGE)}">${esc(strings.series.gallery)}</a>`);
   if (next) links.push(`<a rel="next" href="${relative(entry.page, next.page)}">${esc(strings.series.next(next.meta.no, next.meta.title))}</a>`);
   return links.join('');
 }
@@ -109,9 +110,59 @@ ${poem}
 `;
 }
 
-/** Mọi trang sinh ra: [đường dẫn từ gốc repo, nội dung]. */
+/**
+ * Phòng tranh: trang tĩnh, không script (chạy cả ở trình duyệt cũ của tầng tĩnh); mỗi bức một mục (poster, số, tên, câu giới thiệu),
+ * theo thứ tự registry (meta.no). Poster có alt rỗng: tên bức đã là chữ của link.
+ */
+export function renderGallery(list = paintings, strings = t) {
+  const items = list.map(({ meta, page }) => `        <li>
+          <a href="${relative(GALLERY_PAGE, page)}">
+            <img src="${meta.poster.src}" width="${meta.poster.width}" height="${meta.poster.height}" alt="" loading="lazy" />
+            <span class="no">${esc(strings.site.no(meta.no))}</span>
+            <span class="name">${esc(meta.title)}</span>
+            <span class="line">${esc(meta.tagline)}</span>
+          </a>
+        </li>`).join('\n');
+  const title = esc(`${strings.gallery.title} · ${strings.site.name}`);
+  const intro = esc(strings.gallery.intro);
+  return `<!doctype html>
+<html lang="${list[0].lang}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${title}</title>
+    <meta name="description" content="${intro}" />
+    <meta name="theme-color" content="#0E0A08" />
+    <meta property="og:title" content="${title}" />
+    <meta property="og:description" content="${intro}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="${SITE}${dirOf(GALLERY_PAGE)}" />
+    <meta property="og:image" content="${SITE}${list[0].meta.og}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styles/gallery.css" />
+  </head>
+  <body class="gallery">
+    <main>
+      <header>
+        <small>${esc(strings.site.name)}</small>
+        <h1>${esc(strings.gallery.title)}</h1>
+        <p>${intro}</p>
+      </header>
+      <ol class="works">
+${items}
+      </ol>
+    </main>
+  </body>
+</html>
+`;
+}
+
+/** Mọi trang sinh ra: [đường dẫn từ gốc repo, nội dung]; trang của các bức rồi Phòng tranh. */
 export function allPages(list = paintings, strings = t) {
-  return list.map((entry) => [entry.page, renderPainting(entry, list, strings)]);
+  return [...list.map((entry) => [entry.page, renderPainting(entry, list, strings)]), [GALLERY_PAGE, renderGallery(list, strings)]];
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

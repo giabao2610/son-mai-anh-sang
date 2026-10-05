@@ -3553,6 +3553,8 @@ Bức đầu không có link trước, bức cuối không có link sau. Đườ
   - một danh sách có thứ tự (`<ol>`) các bức theo `meta.no`. Mỗi mục là một link gồm poster, "Bức N", tên và `tagline`. Poster có
     `loading="lazy"`, `width`, `height`, và `alt=""` vì chữ của link đã nói đủ.
 - Kiểu: `src/styles/gallery.css`, dùng `tokens.css` và font của trang tranh; một cột trên điện thoại, nhiều cột trên máy tính.
+  - (GĐ 7, Task 10) Ba biến font (`--serif`, `--sans`, `--mono`) chuyển từ `shell.css` sang `tokens.css`, để `shell.css` và
+    `gallery.css` cùng dùng một chỗ. Trang Phòng tranh không import `notebook.css`, `tools.css`, `captions.css`.
 - Thẻ og: `og:title` "Phòng tranh · Sơn Mài Ánh Sáng", `og:url` = `SITE + 'tranh/'`, `og:image` lấy của Bức 1.
 - `vite.config.js` thêm trang này vào `input` (khóa `phong-tranh`).
 - URL gốc vẫn là Bức 1.

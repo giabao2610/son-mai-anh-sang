@@ -1,0 +1,23 @@
+/* styles/gallery.css — Phòng tranh (trang tĩnh, không script): danh sách các bức, mỗi bức một ô có poster, số, tên, câu giới thiệu */
+@import './tokens.css';
+@import '@fontsource/cormorant-garamond/500.css';
+@import '@fontsource/cormorant-garamond/500-italic.css';
+@import '@fontsource/be-vietnam-pro/400.css';
+@import '@fontsource/be-vietnam-pro/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+
+body.gallery { margin: 0; min-height: 100vh; background: var(--den-then); color: var(--nga); font: 400 15px/1.5 var(--sans); }
+.gallery main { max-width: 1120px; margin: 0 auto; padding: 32px 16px 48px; }
+.gallery header small { color: var(--bac-la); }
+.gallery h1 { margin: 4px 0 8px; font: 500 40px/1.1 var(--serif); color: var(--vang-la-sang); }
+.gallery header p { max-width: 60ch; margin: 0; color: var(--bac-la); }
+.works { display: grid; grid-template-columns: 1fr; gap: 24px; margin: 28px 0 0; padding: 0; list-style: none; }
+@media (min-width: 720px) { .works { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1080px) { .works { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.works a { display: grid; gap: 4px; color: inherit; text-decoration: none; }
+.works img { width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 4px; background: var(--canh-gian); }
+.works .no { color: var(--bac-la); font-size: 13px; }
+.works .name { font: 500 24px/1.2 var(--serif); color: var(--vang-la-sang); }
+.works .line { color: var(--bac-la); }
+.works a:hover .name { color: var(--vang-la); }
+.works a:focus-visible { outline: 2px solid var(--vang-la-sang); outline-offset: 4px; }

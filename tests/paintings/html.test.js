@@ -16,6 +16,8 @@ const relative = (from, to) => {
   const rel = posix.relative(dirOf(from) || '.', dirOf(to) || '.');
   return rel === '' ? './' : `${rel}/`;
 };
+/** Trang Phòng tranh (GĐ 7). */
+const GALLERY = 'tranh/index.html';
 
 describe('lật tranh (GĐ 6)', () => {
   it('registry xếp theo meta.no: 1, 2, … liên tiếp', () => {
@@ -28,6 +30,55 @@ describe('lật tranh (GĐ 6)', () => {
   });
 });
 
+
+describe('Phòng tranh (GĐ 7): tranh/index.html', () => {
+  let doc;
+  beforeAll(() => {
+    doc = new JSDOM(readFileSync(ROOT + GALLERY, 'utf8')).window.document;
+  });
+
+  it('<h1> "Phòng tranh"; mỗi bức một mục theo meta.no: link tương đối tới trang của bức, tên, poster tải lười với alt rỗng', () => {
+    expect(nfc(doc.querySelector('h1').textContent)).toBe('Phòng tranh');
+    const items = [...doc.querySelectorAll('ol.works > li')];
+    expect(items).toHaveLength(paintings.length);
+    items.forEach((li, i) => {
+      const { meta, page } = paintings[i];
+      expect(li.querySelector('a').getAttribute('href')).toBe(relative(GALLERY, page));
+      expect(nfc(li.querySelector('.name').textContent)).toBe(nfc(meta.title));
+      const img = li.querySelector('img');
+      // alt rỗng: tên bức đã là chữ của link, đọc hai lần thì thừa
+      expect([img.getAttribute('src'), img.getAttribute('alt'), img.getAttribute('loading')]).toEqual([meta.poster.src, '', 'lazy']);
+      expect([img.getAttribute('width'), img.getAttribute('height')]).toEqual([String(meta.poster.width), String(meta.poster.height)]);
+    });
+  });
+
+  it('trang tĩnh: không có <script>', () => {
+    expect(doc.querySelectorAll('script')).toHaveLength(0);
+  });
+
+  it('thẻ chia sẻ: og:url = SITE + tranh/, og:image = SITE + og của Bức 1; lang theo registry', () => {
+    const og = (prop) => doc.querySelector(`meta[property="${prop}"]`)?.getAttribute('content');
+    expect(og('og:url')).toBe(`${SITE}tranh/`);
+    expect(og('og:image')).toBe(SITE + paintings[0].meta.og);
+    expect(doc.documentElement.getAttribute('lang')).toBe(paintings[0].lang);
+  });
+
+  it('stylesheet gallery.css có thật: @import tokens.css và đủ font như shell.css, không kéo Sổ tay, công cụ hay chữ đi theo vật', () => {
+    const href = doc.querySelector('link[rel="stylesheet"]').getAttribute('href');
+    expect(href).toBe('/src/styles/gallery.css');
+    const css = readFileSync(ROOT + href.slice(1), 'utf8');
+    const imports = [...css.matchAll(/@import\s+'([^']+)'/g)].map((m) => m[1]);
+    expect(imports).toEqual([
+      './tokens.css',
+      '@fontsource/cormorant-garamond/500.css',
+      '@fontsource/cormorant-garamond/500-italic.css',
+      '@fontsource/be-vietnam-pro/400.css',
+      '@fontsource/be-vietnam-pro/600.css',
+      '@fontsource/jetbrains-mono/400.css',
+    ]);
+    expect(css.indexOf('{')).toBeGreaterThan(css.lastIndexOf('@import'));
+  });
+});
 
 describe('svgColors (tự kiểm)', () => {
   it('bắt màu thật, bỏ qua tham chiếu id', () => {
@@ -44,7 +95,7 @@ for (const { meta, page, lang } of paintings) {
       doc = new JSDOM(readFileSync(ROOT + page, 'utf8')).window.document;
     });
 
-    it('lật tranh: nav.series dưới <h1>, link tới bức kề trước/sau đúng số, tên, đích tương đối và rel', () => {
+    it('lật tranh: nav.series dưới <h1>, link tới bức kề trước, Phòng tranh, bức kề sau: đúng số, tên, đích tương đối và rel', () => {
       const nav = $('header nav.series');
       expect(nav, 'thiếu <nav class="series"> trong header').not.toBeNull();
       expect(nav.getAttribute('aria-label')).toBe('Các bức tranh');
@@ -55,6 +106,8 @@ for (const { meta, page, lang } of paintings) {
         const prev = paintings[i - 1];
         expected.push({ rel: 'prev', href: relative(page, prev.page), text: `← Bức ${prev.meta.no} · ${prev.meta.title}` });
       }
+      // GĐ 7: Phòng tranh nằm giữa bức trước và bức sau
+      expected.push({ rel: null, href: relative(page, GALLERY), text: 'Phòng tranh' });
       if (i < paintings.length - 1) {
         const next = paintings[i + 1];
         expected.push({ rel: 'next', href: relative(page, next.page), text: `Bức ${next.meta.no} · ${next.meta.title} →` });
