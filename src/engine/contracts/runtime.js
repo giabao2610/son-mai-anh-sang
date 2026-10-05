@@ -18,7 +18,7 @@
  * @property {[number, number, number]} position
  * @property {[number, number, number]} target
  * @property {number} fov
- * @property {[number, number]} azimuth     giới hạn xoay ngang (rad)
+ * @property {[number, number]} azimuth     giới hạn xoay ngang (rad); [-Infinity, Infinity] là xoay trọn vòng (GĐ 7)
  * @property {[number, number]} polar       giới hạn xoay dọc (rad)
  * @property {[number, number]} distance
  * @property {number} [breathe]             [1] biên độ "thở"; xưởng ép về 0 khi prefers-reduced-motion

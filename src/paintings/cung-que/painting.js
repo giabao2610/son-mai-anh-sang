@@ -15,12 +15,12 @@ export const layers = [cot, phuBong];
  * @type {import('../../engine/contracts/runtime.js').CameraSpec}
  */
 export const camera = {
-  position: [0, 0.7, 5],
+  position: [0, 0.95, 4.6],
   target: [0, 1.2, 0],
-  fov: 50,
+  fov: 48,
   azimuth: [-Infinity, Infinity],
   polar: [1.2, 1.95],
-  distance: [3.8, 6.5],
+  distance: [3.6, 6.5],
   breathe: 0.05,
 };
 

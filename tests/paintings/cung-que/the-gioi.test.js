@@ -1,6 +1,8 @@
 // tests/paintings/cung-que/the-gioi.test.js — số của thế giới Bức 3: khối bao chứa mọi vật (kể cả khi cây bay cao nhất); cú chạm tìm đúng điểm trên tán.
 import { describe, it, expect } from 'vitest';
-import { BOUNDS, TREE, PLANET, canopyEllipsoid, canopyHit, partBounds } from '../../../src/paintings/cung-que/parts/cot-the-gioi.js';
+import {
+  BOUNDS, CUOI, TRAU, TREE, PLANET, canopyEllipsoid, canopyHit, cuoiToWorld, partBounds, trauToWorld,
+} from '../../../src/paintings/cung-que/parts/cot-the-gioi.js';
 
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
@@ -33,6 +35,25 @@ describe('cot-the-gioi', () => {
     // Tia đứng yên, tán dời lên: điểm gần tia nhất không dời thẳng đúng bằng lift, nhưng vẫn lên gần bằng
     expect(p1[1] - p0[1]).toBeGreaterThan(0.4);
     expect(p0[0]).toBeGreaterThan(0); // về phía tia
+  });
+
+  it('Cuội và trâu: mọi phần có số hữu hạn, và nằm gọn trong hình bao mà shader dùng để bỏ qua (cả khi cây bay cao nhất)', () => {
+    const finite = (part) => [...part.a, ...(part.b ?? []), ...[].concat(part.r)].every(Number.isFinite);
+    /** Bán kính bao của một phần quanh tâm c: khoảng cách xa nhất của hai đầu, cộng bán kính (bầu dục: bán kính lớn nhất). */
+    const reach = (part, c) => Math.max(dist(part.a, c), dist(part.b ?? part.a, c)) + Math.max(...[].concat(part.r));
+    for (const lift of [0, TREE.maxLift]) {
+      const bounds = Object.fromEntries(partBounds(lift).map((b) => [b.name, b]));
+      for (const part of CUOI.parts) {
+        expect(finite(part)).toBe(true);
+        const world = { ...part, a: cuoiToWorld(part.a, lift), b: part.b && cuoiToWorld(part.b, lift) };
+        expect(reach(world, bounds['Cuội'].center), `Cuội ${part.kind}`).toBeLessThanOrEqual(bounds['Cuội'].radius);
+      }
+      for (const part of TRAU.parts) {
+        expect(finite(part)).toBe(true);
+        const world = { ...part, a: trauToWorld(part.a), b: part.b && trauToWorld(part.b) };
+        expect(reach(world, bounds['trâu'].center), `trâu ${part.kind}`).toBeLessThanOrEqual(bounds['trâu'].radius);
+      }
+    }
   });
 
   it('hành tinh bán kính 1, cây đứng ở đỉnh (+Y)', () => {

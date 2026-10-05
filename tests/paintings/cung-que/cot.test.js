@@ -5,6 +5,7 @@ import meta from '../../../src/paintings/cung-que/meta.js';
 import * as painting from '../../../src/paintings/cung-que/painting.js';
 import { buildPainting } from '../../helpers/fake-ctx.js';
 import { compileMaterial, compileRenderer } from '../../helpers/nodes.js';
+import { PRIMITIVES } from '../../../src/paintings/cung-que/parts/cot-sdf.js';
 
 const build = (options) => buildPainting(painting, meta, { until: 'cot', ...options });
 const volume = ({ layers }) => layers.cot.objects.find((o) => o.name === 'khoi-bao');
@@ -21,6 +22,10 @@ describe('l1-cot (Bức 3)', () => {
     expect(m).not.toBeInstanceOf(MeshBasicNodeMaterial);
     for (const k of ['colorNode', 'normalNode', 'depthNode', 'emissiveNode']) expect(m[k], k).toBeTruthy();
     expect(m.side).toBe(BackSide);
+  });
+
+  it('đủ hình (Task 2): ít nhất 30 hình cơ bản trong scene (rễ, cành, Cuội, trâu)', () => {
+    expect(PRIMITIVES).toBeGreaterThanOrEqual(30);
   });
 
   it('cảnh không có đèn nào của three, shadowMap không bật', () => {

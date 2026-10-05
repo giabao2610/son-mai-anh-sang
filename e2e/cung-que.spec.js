@@ -53,7 +53,9 @@ test.describe('Cung Quế · khối bao', () => {
     await depthView(page);
     const r = await canvasRegions(page, { core: PLANET_CORE, miss: OUTSIDE_SDF });
     await page.screenshot({ path: testInfo.outputPath('depth.png') });
-    expect(r.core.mean, 'trúng hình gần hơn chỗ trượt').toBeGreaterThan(r.miss.mean + 0.05);
+    // View Depth nén mọi độ sâu gần về sáng (đường cong của views.js), nên chênh lệch nhỏ. Chiều của nó mới là bằng chứng: không có
+    // depthNode thì giữa hành tinh mang độ sâu mặt sau quả cầu (xa hơn chỗ trượt), nên TỐI hơn; có depthNode thì sáng hơn.
+    expect(r.core.mean, 'trúng hình gần hơn chỗ trượt').toBeGreaterThan(r.miss.mean + 0.01);
     expect(log.errors).toEqual([]);
   });
 
@@ -64,5 +66,31 @@ test.describe('Cung Quế · khối bao', () => {
     await open(page, testInfo, 40);
     const b = await canvasRegions(page, { core: PLANET_CORE });
     expect(b.core.checksum).toBe(a.core.checksum);
+  });
+});
+
+test.describe('Cung Quế · camera', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('kéo ngang 1,5 vòng: camera đi vòng quanh hành tinh (xoay ngang không giới hạn), cảnh vẫn chạy, không lỗi', async ({ page }, testInfo) => {
+    const log = collectConsole(page);
+    const query = (testInfo.project.metadata.query ?? '').replace(/^\?/, '');
+    await page.goto(`./tranh/cung-que/?${query}&${AT}`);
+    expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
+    const before = (await canvasRegions(page)).all.checksum;
+    // OrbitControls xoay 2π mỗi bề cao của canvas (400 px): ba lần kéo 200 px là 1,5 vòng, sang mặt bên kia của hành tinh
+    const box = await page.locator('[data-stage] canvas').boundingBox();
+    for (let i = 0; i < 3; i += 1) {
+      await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.5);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width * 0.3 + 200, box.y + box.height * 0.5, { steps: 20 });
+      await page.mouse.up();
+    }
+    await twoFrames(page);
+    expect((await canvasRegions(page)).all.checksum, 'camera đã sang chỗ khác').not.toBe(before);
+    expect(await page.evaluate(() => window.__sma.state)).toBe('live');
+    expect(log.errors).toEqual([]);
   });
 });

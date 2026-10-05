@@ -3195,30 +3195,37 @@ shader đó: cảnh không có đèn nào của three.
   - Mặt đất gồ ghề chỉ có ở pháp tuyến lúc tô (bump từ noise, tính một lần ở điểm chạm), không có trong hình dò tia. Dò tia qua noise
     nhiều tầng là cái giá lớn nhất của SDF.
 - **Cây đa** đứng ở đỉnh (+Y), chỗ luôn hướng về Trái Đất:
-  - thân là một nón tròn hơi cong, cao 0,45, bán kính 0,085 ở gốc, 0,05 ở ngọn; năm chân rễ bạnh ra ở gốc và hòa vào đất (hòa khối,
-    §19.4 lớp 1);
-  - bốn cành chính tỏa ra ở độ cao 0,4;
-  - tán là bảy khối bầu dục hòa vào nhau thành một vòm rộng chừng 0,9, từ độ cao 0,45 tới 0,8 trên mặt đất;
-  - rễ phụ: chừng mười sợi mảnh buông từ cành xuống, không chạm đất. Rễ phụ lặp quanh trục bằng phép chia góc (domain repetition):
-    một hình cho nhiều bản, mà giá chỉ như một.
-- **Chú Cuội** ngồi tựa gốc đa, quay về phía camera mặc định: thân, đầu, tay ôm gối, chân co; cao chừng 0,11 khi ngồi.
-- **Con trâu** gặm cỏ, cách gốc đa chừng 0,35 trên mặt đất (lệch về phía +X): mình bầu dục, đầu cúi, hai sừng cong, bốn chân, đuôi;
-  dài chừng 0,15.
+  - thân là một nón tròn, cao 0,42, bán kính 0,11 ở gốc, 0,06 ở ngọn;
+  - năm chân rễ bạnh ra sát đất, hòa vào thân; góc của chúng chừa một khe ở phía camera cho Cuội ngồi;
+  - chân cây hòa vào đất (hòa khối, §19.4 lớp 1);
+  - bốn cành chính tỏa ra ở độ cao chừng 0,37;
+  - tán là bảy khối bầu dục hòa vào nhau thành một vòm thấp, xòe rộng chừng 1,1, từ độ cao 0,39 tới 0,78 trên mặt đất, như cây đa đầu
+    làng;
+  - rễ phụ: mười sợi mảnh buông từ cành xuống, không chạm đất. Rễ phụ lặp quanh trục bằng phép chia góc (domain repetition): một hình
+    cho nhiều bản, mà giá chỉ như một.
+  - (GĐ 7, Task 2) Thiết kế đầu có tán rộng 0,9, cao tới 0,8. Ảnh đầu tiên cho thấy cây nhỏ quá so với hành tinh, nên tán to và thấp
+    hơn, thân to hơn.
+- **Chú Cuội** ngồi tựa gốc đa, quay về phía camera mặc định: hông, mình, đầu, hai tay ôm gối, chân co; cao chừng 0,17 khi ngồi.
+- **Con trâu** gặm cỏ, cách gốc đa chừng 0,42 trên mặt đất (lệch về phía +X), đứng nghiêng với camera: mình bầu dục, đầu cúi, hai
+  sừng cong, bốn chân, đuôi; dài chừng 0,2.
+- Mỗi vật (cây, Cuội, trâu) có một hình cầu bao rẻ trong shader. Hình của Cuội và trâu là dữ liệu (`parts/cot-the-gioi.js`): test
+  kiểm mọi phần nằm gọn trong hình cầu bao của vật.
 - **Trái Đất** treo thẳng trên đỉnh cây, ở (0; 3,1; 0), bán kính 0,28. Đây là một mesh cầu bình thường, có biển, lục địa, mây và
   viền khí quyển, tự quay chậm. Tỉ lệ là của truyện cổ tích, không phải của thiên văn.
 - **Bầu trời** đen sơn mài, có sao vàng li ti: một mesh cầu lớn vẽ mặt trong, sao sinh bằng hàm băm theo hướng nhìn.
 - **Mặt Trời** không có trong khung; chỉ có hướng nắng (§19.2, pha trăng).
-- **Khối bao** là một mesh cầu tâm (0; 0,8; 0), bán kính 1,82. Nó chứa trọn hành tinh, Cuội, trâu, và cả cây đa khi bay lên cao nhất
+- **Khối bao** là một mesh cầu tâm (0; 0,82; 0), bán kính 1,86. Nó chứa trọn hành tinh, Cuội, trâu, và cả cây đa khi bay lên cao nhất
   (§19.5). Lá rơi, Trái Đất và bầu trời là mesh riêng, nằm ngoài khối bao.
   - (GĐ 7, Task 1) Thiết kế đầu là tâm (0; 0,6; 0), bán kính 1,75. Test thấy hình cầu bao của tán lúc bay cao nhất lọt ra ngoài.
-  - Số mới gần như là quả cầu nhỏ nhất chứa hai cầu: hành tinh (bán kính 1,02, kể cả gờ hố) và tán đang bay (bán kính 0,46, cộng
-    0,04 cho chỗ phình của hòa khối).
+  - Số mới gần như là quả cầu nhỏ nhất chứa hai cầu: hành tinh (bán kính 1,02, kể cả gờ hố) và tán đang bay cao nhất (tâm cao 2,035,
+    bán kính 0,6), cộng lề cho chỗ phình của hòa khối.
 - **Trang có trăng SVG cạnh con dấu**, như hai bức trước.
 
 ### 19.2 Trải nghiệm riêng của Bức 3
 - **Camera** (`CameraSpec`):
-  - đứng ngang hành tinh, nhìn hơi ngước lên, nên khung mặc định có hành tinh ở dưới, cây ở giữa, Trái Đất ở trên;
-  - số thiết kế: `position` [0; 0,7; 5], `target` [0; 1,2; 0], `fov` 50; xoay dọc 1,2–1,95; khoảng cách 3,8–6,5; `breathe` 0,05;
+  - đứng ngang hành tinh, nhìn hơi ngước lên, nên khung mặc định có hành tinh ở dưới (đáy bị cắt nhẹ), cây ở giữa, Trái Đất ở trên;
+  - số thiết kế: `position` [0; 0,95; 4,6], `target` [0; 1,2; 0], `fov` 48; xoay dọc 1,2–1,95; khoảng cách 3,6–6,5; `breathe` 0,05.
+    (GĐ 7, Task 2) Thiết kế đầu đứng xa hơn ([0; 0,7; 5], `fov` 50), nên cây, Cuội và trâu quá nhỏ trong khung;
   - **xoay ngang trọn vòng**: `azimuth` [−Infinity, Infinity]. OrbitControls coi đó là không giới hạn (Phụ lục A.86). Tiểu hành
     tinh thì phải đi vòng quanh được.
 
@@ -4034,7 +4041,8 @@ Các mục dưới đây đã được kiểm bằng ba cách:
       Playwright dùng để tự test, không phải API công khai.
 86. **OrbitControls xoay trọn vòng** (`examples/jsm/controls/OrbitControls.js`): `minAzimuthAngle` và `maxAzimuthAngle` mặc định là
     `−Infinity` và `Infinity`, tức không giới hạn. Xưởng gán thẳng từ `CameraSpec.azimuth` (`engine/gpu/stage.js`), nên
-    `[−Infinity, Infinity]` cho camera đi vòng quanh. GĐ 7 chạy thật ở task camera.
+    `[−Infinity, Infinity]` cho camera đi vòng quanh. (GĐ 7, chạy thật) Kéo ngang 1,5 vòng trên GPU thật và WebGL2: camera sang mặt bên
+    kia của hành tinh, cảnh vẫn chạy, không lỗi (`e2e/cung-que.spec.js`).
 87. **Hàm có layout không được đọc uniform trực tiếp** (r186: `NodeBuilder.buildFunctionNode`; GĐ 7, chạy thật):
     - Mã của mỗi hàm `Fn(...).setLayout(...)` được giữ trong một bộ nhớ đệm cấp module, theo BACKEND (`_functionNodeCache`: backend →
       WeakMap theo shaderNode). Mã chỉ dựng một lần.
