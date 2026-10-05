@@ -1,6 +1,8 @@
 // tests/paintings/cung-que/cot-cay-bay.test.js — cây bay: giữ thì lên gần 0,45 trong 1,5 s; thả thì rơi theo trọng lực trăng, nảy một lần, đứng yên; liên tục ở mọi mốc; bão giữ thả không làm hỏng.
 import { describe, it, expect } from 'vitest';
 import { LIFT, createLift } from '../../../src/paintings/cung-que/parts/cot-cay-bay.js';
+import { TREE } from '../../../src/paintings/cung-que/parts/cot-the-gioi.js';
+import { GRAVITY } from '../../../src/paintings/cung-que/parts/la-da-roi.js';
 import { mulberry32 } from '../../../src/lib/random.js';
 
 describe('cot-cay-bay', () => {
@@ -47,22 +49,45 @@ describe('cot-cay-bay', () => {
     expect(b).toEqual(a);
   });
 
-  it('bão giữ thả (PRNG): giữ hai lần, thả khi chưa giữ, mốc lùi: luôn hữu hạn, trong [0; H + 0,05], cuối cùng về 0 (Review Focus 2)', () => {
-    const f = createLift();
-    const rand = mulberry32(11);
-    let t = 0;
-    for (let i = 0; i < 60; i += 1) {
-      t += rand() * 0.6 - 0.05; // có lúc lùi một chút
-      (rand() < 0.5 ? f.grip : f.release)(t);
+  it('bão giữ thả (PRNG, 40 hạt giống): giữ hai lần, thả khi chưa giữ, mốc lùi: luôn hữu hạn, trong [0; H + 0,05], cuối cùng về 0 (Review Focus 2)', () => {
+    // Review cuối: với một hạt giống duy nhất (11) test qua, mà 11 trong 40 hạt giống làm cây bay quá 0,5.
+    for (let seed = 1; seed <= 40; seed += 1) {
+      const f = createLift();
+      const rand = mulberry32(seed);
+      let t = 0;
+      for (let i = 0; i < 60; i += 1) {
+        t += rand() * 0.6 - 0.05; // có lúc lùi một chút
+        (rand() < 0.5 ? f.grip : f.release)(t);
+      }
+      f.release(t + 0.1);
+      // Lấy mẫu thưa (0,1 s) cho nhẹ khi máy bận: đỉnh vượt H mà lỗi cũ gây ra kéo dài cả giây, cao hơn H tới 0,06–0,4
+      for (let s = 0; s < t + 20; s += 0.1) {
+        const y = f.height(s);
+        expect(Number.isFinite(y), `hạt ${seed}`).toBe(true);
+        expect(y, `hạt ${seed}`).toBeGreaterThanOrEqual(0);
+        expect(y, `hạt ${seed}, t = ${s.toFixed(2)}`).toBeLessThanOrEqual(LIFT.height + 0.05);
+      }
+      expect(f.height(t + 20), `hạt ${seed}`).toBe(0);
     }
-    f.release(t + 0.1);
-    for (let s = 0; s < t + 20; s += 0.05) {
-      const y = f.height(s);
-      expect(Number.isFinite(y)).toBe(true);
-      expect(y).toBeGreaterThanOrEqual(0);
-      expect(y).toBeLessThanOrEqual(LIFT.height + 0.05);
+  });
+
+  it.each([false, true])('thả sớm lúc nào cũng vậy (giảm chuyển động: %s): cây không bay quá H, dù lúc thả lò xo đang đẩy lên nhanh', (reduced) => {
+    // Review cuối (Critical): giữ chừng 0,5–1 s rồi thả, cây mang vận tốc lên của lò xo vào lúc rơi tự do và bay tới 1,06: tán ló ra
+    // ngoài khối bao (bị cắt phẳng) và đâm vào Trái Đất.
+    for (let s = 0.05; s <= 3; s += 0.05) {
+      const f = createLift({ reduced });
+      f.grip(0);
+      f.release(s);
+      let top = 0;
+      // Đỉnh tới trong vài giây sau lúc thả (giảm chuyển động: g chia 4, chừng 5 s): 15 s là đủ
+      for (let t = s; t < s + 15; t += 0.02) top = Math.max(top, f.height(t));
+      expect(top, `thả sau ${s.toFixed(2)} s`).toBeLessThanOrEqual(LIFT.height + 1e-3);
     }
-    expect(f.height(t + 20)).toBe(0);
+  });
+
+  it('một nguồn số: độ cao bay tối đa là TREE.maxLift (khối bao, khe với Trái Đất tính theo nó); g của trăng trùng với lá rơi', () => {
+    expect(LIFT.height).toBe(TREE.maxLift);
+    expect(LIFT.gravity).toBe(GRAVITY.trang);
   });
 
   it('giảm chuyển động: lên và rơi chậm hơn', () => {

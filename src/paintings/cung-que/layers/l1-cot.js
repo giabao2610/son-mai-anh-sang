@@ -1,6 +1,6 @@
 // paintings/cung-que/layers/l1-cot.js — Lớp 1 · Cốt của Bức 3: thế giới SDF (hành tinh, cây đa) bằng đất sét, vẽ bằng một khối bao dò tia; công bố hàm khoảng cách và "công thức tô" cho các lớp sau.
 import { color, dot, float, int, max, min, mix, normalize, uniform, vec3 } from 'three/tsl';
-import { BOUNDS, EARTH, PLANET, TREE } from '../parts/cot-the-gioi.js';
+import { BOUNDS, CUOI, EARTH, PLANET, TREE } from '../parts/cot-the-gioi.js';
 import { ID, PRIMITIVES, createScene } from '../parts/cot-sdf.js';
 import { createSdfVolume, makeShade } from '../parts/cot-do-tia.js';
 
@@ -61,7 +61,7 @@ export function createLayer(ctx, shared) {
 
   shared.cot = {
     mesh: volume.mesh, material: volume.material, scene, recipe, shade, bounds: BOUNDS, lift: shared.lift, smooth, depthOff,
-    world: { PLANET, TREE, EARTH }, ID,
+    world: { PLANET, TREE, EARTH, CUOI }, ID,
   };
 
   return {

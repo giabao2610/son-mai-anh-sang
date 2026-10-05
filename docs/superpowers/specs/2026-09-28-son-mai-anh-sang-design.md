@@ -3306,6 +3306,15 @@ shader đó: cảnh không có đèn nào của three.
 - **Thơ của cả bức** (`meta.poem`, in sẵn trong HTML): *"Thằng Cuội ngồi gốc cây đa / Để trâu ăn lúa gọi cha ời ời"* (ca dao).
   - Câu thơ hợp đúng cảnh: chú Cuội, gốc đa, con trâu.
   - Dị bản đã biết: "Để trâu ăn lúa" và "Bỏ trâu ăn lúa". Nguồn được đối chiếu ở cuối GĐ (§19.10); Bao chốt trước khi merge, như GĐ 6.
+  - (GĐ 7, đối chiếu ngày 2026-10-05) "Thằng Cuội ngồi gốc cây đa / Để trâu ăn lúa gọi cha ời ời" là bản được in nhiều hơn:
+    - Wikipedia tiếng Việt, bài "Cuội (cung trăng)", cạnh truyện "Cây thuốc cải tử hoàn sinh hay sự tích thằng Cuội cung trăng" của
+      Nguyễn Đổng Chi (có dấu phẩy sau "lúa");
+    - báo Công an Nhân dân, bài "Có hai chú Cuội!" của Nguyễn Thanh Tú (18/09/2021);
+    - sách "Đồng dao Việt Nam" (bản trên Thư viện Đáng Nhớ).
+  - Dị bản "Chú Cuội ngồi gốc cây đa / Bỏ trâu ăn lúa gọi cha ời ời" có ở bài "Con trâu trong nền văn hoá Việt Nam" của VUSTA
+    (18/06/2009). Vài trang cho trẻ em in "Chú Cuội" cùng "Để trâu".
+  - Chưa đối chiếu với bản số hóa của các bộ sách ca dao (Kho tàng ca dao người Việt; Tục ngữ ca dao dân ca Việt Nam của Vũ Ngọc Phan).
+  - Bức giữ "Thằng Cuội… / Để trâu ăn lúa…", không dấu phẩy sau "lúa" (như báo Công an Nhân dân và sách đồng dao). Bao chốt.
 - **Lật tranh và Phòng tranh** (§19.7):
   - header của Bức 3 có "← Bức 2 · Đèn Kéo Quân" và "Phòng tranh";
   - Bức 2 có thêm "Bức 3 · Cung Quế →";
@@ -3516,8 +3525,12 @@ Như hai bức trước. Thứ có emissive là sao và viền khí quyển củ
     (GĐ 7, Task 3) Thiết kế đầu dùng `L0 + (H − L0)(1 − e^(−s/τ))`: công thức đó làm vận tốc nhảy ở mốc giữ, nên đổi sang lò xo;
   - thả ở t1 (độ cao L1, vận tốc v1 lấy từ đoạn trước): rơi tự do `L1 + v1·Δ − ½·g·Δ²` với g của trăng, tới khi chạm 0; nảy một lần
     với vận tốc còn 0,3 lần; rồi đứng yên;
-  - mỗi mốc lưu (t, độ cao, vận tốc) tính từ đoạn trước, nên độ cao và vận tốc liên tục. Gọi `lift(t)` bao nhiêu lần, theo thứ tự nào,
-    cũng ra cùng một số;
+    - (GĐ 7, review cuối) vận tốc lên lúc thả có trần `v1 ≤ √(2g(H − L1))`, để đỉnh của đường rơi không quá H. Không có trần thì giữ chừng
+      0,5–1 giây rồi thả, cây mang vận tốc lên của lò xo (chừng 0,55 đơn vị/giây) vào lúc rơi tự do với g của trăng và bay tới 1,06: tán ló
+      ra ngoài khối bao (bị cắt phẳng) và đâm vào Trái Đất. Test cũ chỉ chạy một hạt giống, nên không bắt được; giờ quét lúc thả và chạy
+      40 hạt giống;
+  - mỗi mốc lưu (t, độ cao, vận tốc) tính từ đoạn trước, nên độ cao liên tục; vận tốc liên tục trừ khi thả sớm chạm trần ở trên. Gọi
+    `lift(t)` bao nhiêu lần, theo thứ tự nào, cũng ra cùng một số;
   - giảm chuyển động: τ và thời gian rơi gấp đôi.
 - **Lá:** §19.4 lớp 5. Mốc rơi là `ctx.u.time` lúc chạm.
 - **Trái Đất** tự quay một vòng mỗi 120 giây theo `ctx.u.time`; sao nhấp nháy theo `ctx.u.time`.

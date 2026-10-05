@@ -76,7 +76,7 @@ function scaleFigure({ parts, bound, ...sizes }, anchor, s) {
  * Mỗi phần: hình cầu (a, r), viên thuốc (a, b, r), bầu dục (a, r = [rx, ry, rz]). Phóng quanh chỗ ngồi: trên mặt đất, sát thân cây
  * (bán kính gốc 0,11), nên lưng vẫn tựa thân và hông vẫn chạm đất.
  */
-export const CUOI = scaleFigure({
+const cuoi = scaleFigure({
   height: 0.17,
   blend: 0.012,
   bound: { center: [0, 0.09, 0.19], radius: 0.13 },
@@ -92,6 +92,9 @@ export const CUOI = scaleFigure({
     { kind: 'capsule', a: [-0.034, 0.1, 0.155], b: [-0.016, 0.078, 0.236], r: 0.01 },
   ],
 }, [0, 0, 0.12], FIGURE_SCALE);
+const cuoiHead = cuoi.parts.filter((p) => p.kind === 'sphere').reduce((a, b) => (b.a[1] > a.a[1] ? b : a));
+/** Cuội đã phóng, kèm `neck`: độ cao của cổ (đáy của đầu, quả cầu cao nhất), nơi lớp Mặt trời đổi màu áo sang màu da. */
+export const CUOI = Object.freeze({ ...cuoi, neck: cuoiHead.a[1] - cuoiHead.r });
 
 /**
  * Con trâu gặm cỏ, đứng trên mặt đất ở góc `angle` (rad, tính từ đỉnh, lệch về +X). Khung riêng: x về phía trước (dọc mặt đất, ra

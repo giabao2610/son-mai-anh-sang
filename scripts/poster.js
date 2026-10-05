@@ -7,7 +7,7 @@
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { paintings } from '../src/paintings/registry.js';
 
@@ -144,7 +144,9 @@ async function main(slug) {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+// import.meta.main (Node ≥ 24.2): so import.meta.url với process.argv[1] thì lệch khi gọi thiếu đuôi .js hay qua symlink, và script
+// lặng lẽ không làm gì mà vẫn thoát 0 (review cuối GĐ 7). Khi được import (test, vite.config.js) thì false.
+if (import.meta.main) {
   main(process.argv[2]).catch((err) => {
     console.error(err.message);
     process.exitCode = 1;

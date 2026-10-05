@@ -1,5 +1,4 @@
 // scripts/e2e-groups.js — ma trận nhóm e2e cho CI (spec §19.9): mỗi bức một nhóm (lọc test theo "{tên bức} · "), cộng nhóm "chung" cho test không thuộc bức nào. Chạy trực tiếp thì in một dòng groups=<JSON> cho $GITHUB_OUTPUT.
-import { pathToFileURL } from 'node:url';
 import { paintings } from '../src/paintings/registry.js';
 
 /** Thoát ký tự đặc biệt của regex trong tên bức. */
@@ -18,4 +17,6 @@ export function groups(list = paintings) {
   ];
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) console.log(`groups=${JSON.stringify(groups())}`);
+// import.meta.main (Node ≥ 24.2): so import.meta.url với process.argv[1] thì lệch khi gọi thiếu đuôi .js hay qua symlink, và script
+// lặng lẽ không làm gì mà vẫn thoát 0 (review cuối GĐ 7). Khi được import (test, vite.config.js) thì false.
+if (import.meta.main) console.log(`groups=${JSON.stringify(groups())}`);

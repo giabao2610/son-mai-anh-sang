@@ -1,7 +1,11 @@
-// paintings/cung-que/parts/cot-cay-bay.js — cây đa bay (giữ) và rơi về (thả): độ cao tính thẳng từ thời gian theo các mốc giữ/thả, liên tục cả độ cao lẫn vận tốc; không import three.
+// paintings/cung-que/parts/cot-cay-bay.js — cây đa bay (giữ) và rơi về (thả): độ cao tính thẳng từ thời gian theo các mốc giữ/thả, liên tục độ cao; không import three.
+import { TREE } from './cot-the-gioi.js';
 
-/** Số của spec §19.5: lên tới 0,45; lò xo τ 0,3 s; g của trăng 0,162 đơn vị/s² (1,62 m/s²); nảy còn 0,3 lần vận tốc. */
-export const LIFT = Object.freeze({ height: 0.45, tau: 0.3, gravity: 0.162, bounce: 0.3 });
+/**
+ * Số của spec §19.5: lên tới TREE.maxLift (0,45: khối bao và khe với Trái Đất tính theo số này); lò xo τ 0,3 s; g của trăng 0,162
+ * đơn vị/s² (1,62 m/s², bằng GRAVITY.trang của lá rơi); nảy còn 0,3 lần vận tốc.
+ */
+export const LIFT = Object.freeze({ height: TREE.maxLift, tau: 0.3, gravity: 0.162, bounce: 0.3 });
 /** Giữ tối đa chừng này mốc: độ cao chỉ phụ thuộc mốc cuối trước t, nên mốc rất cũ bỏ được. */
 const KEEP = 32;
 
@@ -49,7 +53,12 @@ export function createLift({ reduced = false } = {}) {
   const last = () => marks[marks.length - 1];
   function push(kind, t) {
     const tt = Math.max(t, last()?.t ?? t); // mốc không lùi
-    marks.push({ t: tt, kind, ...at(tt) });
+    const state = at(tt);
+    // Thả lúc lò xo còn đẩy lên nhanh (giữ chừng 0,3–1 s): rơi tự do với vận tốc đó thì cây bay vút tới gấp đôi H, tán ló ra ngoài
+    // khối bao và đâm vào Trái Đất (review cuối GĐ 7). Giới hạn vận tốc lên để đỉnh của đường rơi không quá H: y + v²/2g ≤ H. Độ cao
+    // vẫn liên tục; chỉ vận tốc gãy khi thả sớm.
+    if (kind === 'release') state.v = Math.min(state.v, Math.sqrt(2 * g * Math.max(LIFT.height - state.y, 0)));
+    marks.push({ t: tt, kind, ...state });
     if (marks.length > KEEP) marks.splice(0, marks.length - KEEP);
   }
   return {

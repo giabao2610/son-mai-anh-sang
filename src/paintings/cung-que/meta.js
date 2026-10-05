@@ -10,7 +10,7 @@ export default {
   no: 3,
   title: 'Cung Quế',
   tagline: 'Chú Cuội ngồi gốc cây đa trên một mặt trăng nhỏ, sơn từ sáu lớp ánh sáng.',
-  // Ca dao về chú Cuội. Dị bản "Để trâu ăn lúa" / "Bỏ trâu ăn lúa": đối chiếu nguồn trước khi merge (spec §19.2).
+  // Ca dao về chú Cuội. Dị bản "Để trâu ăn lúa" / "Bỏ trâu ăn lúa" đã đối chiếu (spec §19.2): "Để trâu" được in nhiều hơn.
   poem: { lines: ['Thằng Cuội ngồi gốc cây đa', 'Để trâu ăn lúa gọi cha ời ời'], source: 'Ca dao' },
   poster: {
     src: '/paintings/cung-que/poster.webp',

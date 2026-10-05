@@ -1,5 +1,6 @@
 // tests/paintings/cung-que/the-gioi.test.js — số của thế giới Bức 3: khối bao chứa mọi vật (kể cả khi cây bay cao nhất); cú chạm tìm đúng điểm trên tán; Cuội và trâu đủ to; khung dọc thấy trọn hành tinh.
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   BOUNDS, CUOI, TRAU, TREE, PLANET, canopyEllipsoid, canopyHit, cuoiToWorld, partBounds, trauToWorld,
 } from '../../../src/paintings/cung-que/parts/cot-the-gioi.js';
@@ -86,6 +87,16 @@ describe('cot-the-gioi', () => {
     const [trauLow] = range(TRAU.parts, 1);
     expect(trauLow, 'bốn chân chạm đất').toBeLessThanOrEqual(0.005);
     expect(trauLow, 'không lún').toBeGreaterThan(-0.03);
+  });
+
+  it('ranh áo và da của Cuội nằm ở cổ của hình đã phóng; lớp Mặt trời đọc số đó, không viết cứng (review cuối GĐ 7)', () => {
+    // Số cứng 0,11–0,12 của Task 4 nằm giữa ngực sau khi Cuội phóng 1,4 lần: nửa trên của áo thành màu da.
+    const head = CUOI.parts.filter((part) => part.kind === 'sphere').reduce((a, b) => (b.a[1] > a.a[1] ? b : a));
+    expect(CUOI.neck).toBeCloseTo(head.a[1] - head.r, 9);
+    const arms = CUOI.parts.filter((part) => part.kind === 'capsule' && Math.abs(part.a[0]) > 0.04);
+    for (const arm of arms) expect(Math.max(arm.a[1], arm.b[1]) + arm.r, 'tay vẫn mặc áo').toBeLessThan(CUOI.neck);
+    const src = readFileSync(new URL('../../../src/paintings/cung-que/layers/l2-mat-troi.js', import.meta.url), 'utf8');
+    expect(src).toMatch(/CUOI\.neck/);
   });
 
   it('khung dọc 390×844 thấy trọn bề ngang hành tinh ở khoảng cách mặc định; khung máy tính giữ nguyên fov (spec §19.2)', () => {

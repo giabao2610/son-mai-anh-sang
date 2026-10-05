@@ -7,7 +7,7 @@
   "author": "Bao Nguyen",
   "type": "module",
   "engines": {
-    "node": ">=24"
+    "node": ">=24.2"
   },
   "scripts": {
     "dev": "vite",

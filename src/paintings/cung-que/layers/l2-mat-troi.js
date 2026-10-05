@@ -52,7 +52,9 @@ export function createLayer(ctx, shared) {
       c.assign(mix(bark, foliage, smoothstep(0.34, 0.4, above)));
     });
     If(isId(h, ID.CUOI), () => {
-      c.assign(mix(bark.mul(0.75), mix(nga, bark, 0.3), smoothstep(0.11, 0.12, above))); // áo nâu; đầu da ngà
+      // Áo nâu dưới cổ, da ngà từ cổ lên: cổ lấy từ hình đã phóng (world.CUOI.neck), không viết cứng
+      const neck = world.CUOI.neck;
+      c.assign(mix(bark.mul(0.75), mix(nga, bark, 0.3), smoothstep(neck - 0.006, neck + 0.004, above)));
     });
     If(isId(h, ID.TRAU), () => {
       c.assign(mix(denThen, clay, 0.25));

@@ -1,7 +1,7 @@
 // scripts/pages.js — trình sinh trang (spec §19.7): viết trang HTML của mọi bức và Phòng tranh từ MỘT khuôn, đọc registry, meta và chữ giao diện. Chạy: npm run pages (rồi commit các file đổi).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, posix } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { SITE, paintings } from '../src/paintings/registry.js';
 import t from '../src/ui/strings.vi.js';
 
@@ -165,7 +165,9 @@ export function allPages(list = paintings, strings = t) {
   return [...list.map((entry) => [entry.page, renderPainting(entry, list, strings)]), [GALLERY_PAGE, renderGallery(list, strings)]];
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+// import.meta.main (Node ≥ 24.2): so import.meta.url với process.argv[1] thì lệch khi gọi thiếu đuôi .js hay qua symlink, và script
+// lặng lẽ không làm gì mà vẫn thoát 0 (review cuối GĐ 7). Khi được import (test, vite.config.js) thì false.
+if (import.meta.main) {
   for (const [page, html] of allPages()) {
     mkdirSync(dirname(ROOT + page), { recursive: true });
     writeFileSync(ROOT + page, html);
