@@ -3508,7 +3508,8 @@ Như hai bức trước. Thứ có emissive là sao và viền khí quyển củ
 
   Raymarching là chuyện giữa bức và three (`NodeMaterial`, `depthNode`, `normalNode`); xưởng không cần biết. Đây là phép thử của §0 lần
   thứ hai: một bức vẽ theo lối khác hẳn vẫn vào được xưởng mà không đổi một dòng logic.
-  - Chỉ thêm chữ: `ui/strings.vi.js` có thêm khóa `series` (nhãn của dải link lật tranh) và `gallery` (chữ của Phòng tranh), §19.7.
+  - Chỉ thêm chữ: `ui/strings.vi.js` có thêm khóa `site` (tên trang, "Bức N"), `series` (nhãn và chữ của dải link lật tranh) và
+    `gallery` (chữ của Phòng tranh), §19.7. Trình sinh trang đọc chúng; không file nào trong `src/` import `strings.vi.js`.
   - `CameraSpec.azimuth` nhận `±Infinity` (Phụ lục A.86); JSDoc ghi thêm điều này.
 - **Luật hai lần:**
   - Bức 3 dùng của hộp màu `lib/astro/moon.js` (pha trăng) và `lib/tsl/noise.js` (biển, đất, mây của Trái Đất; bump của mặt đất), cùng

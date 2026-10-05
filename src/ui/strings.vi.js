@@ -72,6 +72,14 @@ const t = {
   },
   /** Lời mời sau lần chạm đầu tiên (là một nút: bấm để vào chế độ mài); n = số lớp của bức. */
   invite: (n) => `Bức tranh này có ${n} lớp — mài thử?`,
+  /** Tên trang và số thứ tự của một bức: trình sinh trang (scripts/pages.js, GĐ 7) in vào HTML của mọi trang. */
+  site: { name: 'Sơn Mài Ánh Sáng', no: (n) => `Bức ${n}` },
+  /** Dải lật tranh dưới tên bức (GĐ 6; GĐ 7 sinh bằng scripts/pages.js). */
+  series: {
+    label: 'Các bức tranh',
+    prev: (n, title) => `← Bức ${n} · ${title}`,
+    next: (n, title) => `Bức ${n} · ${title} →`,
+  },
   /** Mất GPU lần đầu (GĐ 2): poster hiện lại kèm nút dựng lại. */
   lost: {
     text: 'Trình duyệt vừa dừng GPU của trang (máy ngủ, đổi card đồ họa, hoặc thiếu bộ nhớ). Cảnh có thể dựng lại như cũ.',
