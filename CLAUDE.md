@@ -97,6 +97,9 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   sprite về `count` 0 hay 1.
 - `DynamicDrawUsage` chỉ dùng cho thuộc tính ghi lại MỖI khung: three r186 tải lại thuộc tính đó ở mọi lần render, bất kể version
   (`renderers/common/Attributes.js`). Thuộc tính chỉ đổi lúc có việc thì để usage mặc định và đặt `needsUpdate` khi ghi.
+  `instancedBufferAttribute(a)` của TSL tự ghi `StaticDrawUsage` lên chính `a` (setUsage trước đó mất tác dụng); thuộc tính ghi mỗi
+  khung thì dùng `instancedDynamicBufferAttribute`. Thuộc tính đọc qua node không nằm trong `geometry.attributes`: test tìm chúng bằng
+  `compileMaterial(...).bufferAttributes`.
 - InstancedMesh: `setMatrixAt` không cập nhật `boundingSphere` (frustum culling dùng nó): ghi ma trận xong thì
   `computeBoundingSphere()`; ô trống (ma trận cỡ 0) đặt ở chỗ không làm phình hình cầu.
 - Vẽ lại ngoài vòng lặp (khi `?freeze=N` đã dừng) phải đợi nhịp `requestAnimationFrame` kế tiếp: scene pass và
@@ -226,7 +229,11 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - Trang HTML do `npm run pages` (`scripts/pages.js`) sinh từ registry, `meta` và `strings.vi.js`; không sửa tay. Test so từng byte
   trang trên đĩa với trang sinh ra (`tests/scripts/pages.test.js`): lệch thì chạy `npm run pages` rồi commit.
 - E2e của một bức nằm trong `describe` bắt đầu bằng `"{tên bức} · "` (`tests/rules/e2e.test.js` giữ): CI gom test theo đó. Nhóm e2e
-  sinh từ registry (`scripts/e2e-groups.js`): mỗi bức một job, cộng nhóm `chung`; thêm bức không sửa workflow.
+  sinh từ registry (`scripts/e2e-groups.js`): mỗi bức một job, cộng nhóm `chung`; thêm bức không sửa workflow. Không dùng
+  `--pass-with-no-tests`: nhóm không khớp test nào thì job đỏ.
+- E2e chờ một trạng thái của cảnh (cây bay đủ cao, lá chạm đất) thì poll theo số đo (`expect.poll`), không chờ một quãng thời gian thật
+  cố định: đồng hồ của cảnh theo khung vẽ, mỗi khung tối đa 0,1 s, nên máy vẽ chậm (SwiftShader trên runner CI) cần lâu hơn. Giữ tới
+  khi đạt thì dùng `e2e/helpers.js#pressAt` (nhấn, trả hàm nhấc).
 
 ### Chuyển động và ngẫu nhiên
 - Không dùng `time`/`deltaTime` của TSL; dùng `ctx.u.time` và `ctx.u.delta` (nhờ vậy `?freeze` cho ảnh tất định).

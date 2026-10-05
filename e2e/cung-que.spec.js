@@ -1,7 +1,7 @@
-// e2e/cung-que.spec.js — Bức 3 · Cung Quế: khối bao dò tia ghi độ sâu và pháp tuyến của hình SDF; pha trăng; bóng; ánh đất; cử chỉ; chất lượng.
+// e2e/cung-que.spec.js — Bức 3 · Cung Quế: khối bao dò tia ghi độ sâu và pháp tuyến của hình SDF; pha trăng; bóng; ánh đất; cử chỉ; lá đa (cả lúc giảm chuyển động); thí nghiệm; chất lượng.
 import { test, expect } from '@playwright/test';
 import {
-  waitForSettled, waitForFrames, canvasRegions, collectConsole, gpuReport, holdAt, tapAt, twoFrames, toggleExperiment,
+  waitForSettled, waitForFrames, canvasRegions, collectConsole, gpuReport, pressAt, tapAt, twoFrames, toggleExperiment, STAGE_ONLY,
 } from './helpers.js';
 
 const AT = 'at=2026-10-21T21:00';
@@ -23,6 +23,8 @@ const SHADOW = { x0: 0.45, y0: 0.55, x1: 0.5, y1: 0.575 };
 const PLANET_NIGHT = { x0: 0.42, y0: 0.58, x1: 0.58, y1: 0.66 };
 /** Trái Đất ở khung mặc định (tâm chừng (0,5; 0,145)). */
 const EARTH_BOX = { x0: 0.47, y0: 0.1, x1: 0.53, y1: 0.2 };
+/** Cả khung: canvasRegions chỉ thêm vùng `all` khi không truyền vùng nào. */
+const FULL = { x0: 0, y0: 0, x1: 1, y1: 1 };
 
 async function open(page, testInfo, frames, extra = '') {
   const query = testInfo.project.metadata.query ?? '';
@@ -143,18 +145,19 @@ test.describe('Cung Quế · cử chỉ', () => {
   });
 
   test('giữ: cây bay lên (số đo "Cây bay lên" > 3 m); thả: rơi về dưới 0,5 m', async ({ page }, testInfo) => {
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
     const log = collectConsole(page);
     const query = (testInfo.project.metadata.query ?? '').replace(/^\?/, '');
     await page.goto(`./tranh/cung-que/?${query}&${AT}`); // live: đồng hồ của cảnh phải chạy
     expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
     const bay = () => page.evaluate(() => Number(window.__sma.readouts('cot').find((r) => r.id === 'bay')?.value));
     expect(await bay()).toBe(0);
-    const held = holdAt(page, 0.5, 0.75, 4000);
-    // Đồng hồ của cảnh theo khung vẽ: SwiftShader vẽ chậm nên cho rộng thời gian
-    await expect.poll(bay, { timeout: 15_000 }).toBeGreaterThan(3);
-    await held;
-    await expect.poll(bay, { timeout: 30_000 }).toBeLessThan(0.5);
+    // Giữ tới khi cây bay quá 3 m rồi mới thả. Đồng hồ của cảnh theo khung vẽ, mỗi khung tối đa 0,1 s: lên quá 3 m cần chừng 0,7 s của
+    // cảnh, tức tám khung, nên giữ một quãng cố định (4 s) thì máy vẽ dưới 2 khung/giây (SwiftShader trên runner CI) chưa kịp.
+    const release = await pressAt(page, 0.5, 0.75);
+    await expect.poll(bay, { timeout: 60_000 }).toBeGreaterThan(3);
+    await release();
+    await expect.poll(bay, { timeout: 60_000 }).toBeLessThan(0.5);
     expect(log.errors).toEqual([]);
   });
 });
@@ -282,6 +285,67 @@ test.describe('Cung Quế · lá đa', () => {
     await page.evaluate(() => window.__sma.setWeight('la-da', 0));
     await twoFrames(page);
     expect(await page.evaluate(() => window.__sma.state)).toBe('live');
+    expect(log.errors).toEqual([]);
+  });
+});
+
+test.describe('Cung Quế · lá đa lúc giảm chuyển động', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('không lá nào rơi, mà ba lá dừng giữa lúc rơi, trước thân cây: mài Lá đa về 0 thì ảnh khác, không lỗi', async ({ page }, testInfo) => {
+    test.setTimeout(150_000);
+    const log = collectConsole(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await open(page, testInfo, 30);
+    const la = await page.evaluate(() => Number(window.__sma.readouts('la-da').find((r) => r.id === 'la')?.value));
+    expect(la, 'không lá nào đang rơi').toBe(0);
+    const before = await canvasRegions(page);
+    await page.screenshot({ path: testInfo.outputPath('la-dung.png') });
+    await page.evaluate(() => window.__sma.setWeight('la-da', 0));
+    await twoFrames(page);
+    expect((await canvasRegions(page)).all.checksum, 'mài Lá đa thì lá dừng biến mất').not.toBe(before.all.checksum);
+    expect(log.errors).toEqual([]);
+  });
+});
+
+test.describe('Cung Quế · thí nghiệm', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('Tô theo số bước tô cả chỗ tia trượt; Hòa khối cứng và Bề mặt Lambert đổi ảnh; Không ghi độ sâu cùng Hiện khối bao không lỗi; tắt hết thì về đúng ảnh cũ', async ({ page }, testInfo) => {
+    test.setTimeout(240_000);
+    const log = collectConsole(page);
+    await open(page, testInfo, 30);
+    // Mở thanh lớp và Sổ tay trước (thí nghiệm này vốn tắt), để ảnh gốc chụp cùng bố cục với các ảnh sau
+    await toggleExperiment(page, 'cot', 'soBuoc', false);
+    await twoFrames(page);
+    const base = await canvasRegions(page, { all: FULL, miss: OUTSIDE_SDF });
+    // Chỗ tia trượt (bên trái tán, trong khối bao) không còn bị bỏ: mang màu số bước thay cho trời đen
+    await toggleExperiment(page, 'cot', 'soBuoc', true);
+    await twoFrames(page);
+    const steps = await canvasRegions(page, { miss: OUTSIDE_SDF });
+    const canvas = page.locator('[data-stage] canvas');
+    await canvas.screenshot({ path: testInfo.outputPath('so-buoc.png'), style: STAGE_ONLY });
+    expect(steps.miss.mean, 'chỗ tia trượt được tô theo số bước').toBeGreaterThan(base.miss.mean + 0.03);
+    await toggleExperiment(page, 'cot', 'soBuoc', false);
+    for (const [layer, id] of [['cot', 'hoaCung'], ['mat-troi', 'lambert']]) {
+      await toggleExperiment(page, layer, id, true);
+      await twoFrames(page);
+      expect((await canvasRegions(page)).all.checksum, `"${id}" đổi ảnh`).not.toBe(base.all.checksum);
+      await toggleExperiment(page, layer, id, false);
+    }
+    await toggleExperiment(page, 'cot', 'khoiBao', true);
+    await toggleExperiment(page, 'la-da', 'doSau', true);
+    await twoFrames(page);
+    await canvas.screenshot({ path: testInfo.outputPath('khoi-bao-do-sau.png'), style: STAGE_ONLY });
+    expect(await page.evaluate(() => window.__sma.state)).toBe('live');
+    await toggleExperiment(page, 'la-da', 'doSau', false);
+    await toggleExperiment(page, 'cot', 'khoiBao', false);
+    await twoFrames(page);
+    expect((await canvasRegions(page)).all.checksum, 'tắt hết thì về đúng ảnh cũ').toBe(base.all.checksum);
     expect(log.errors).toEqual([]);
   });
 });

@@ -43,7 +43,8 @@ export async function waitForFrames(page, n, { timeout = 30_000 } = {}) {
  * Stylesheet chỉ áp lúc chụp: ẩn mọi con của body trừ [data-stage] (poster, tên, thơ, huy hiệu, con dấu), và chữ đi theo vật
  * (GĐ 5): vùng chữ nằm TRONG [data-stage], ngay trên chỗ chạm, nên không ẩn thì ảnh quanh chỗ chạm đổi vì chữ chứ không vì cảnh.
  */
-const STAGE_ONLY = 'body > :not([data-stage]), [data-captions] { visibility: hidden !important; }';
+/** CSS lúc chụp: chỉ còn canvas (ẩn thanh lớp, Sổ tay, chữ đi theo vật). Spec dùng để lưu ảnh canvas khi Sổ tay đang mở. */
+export const STAGE_ONLY = 'body > :not([data-stage]), [data-captions] { visibility: hidden !important; }';
 
 /**
  * Chụp canvas bằng locator.screenshot() rồi giải mã PNG ngay trong trang (không cần thư viện PNG ở Node).
@@ -203,21 +204,25 @@ export function tapAt(page, fx, fy, { pointerType = 'mouse' } = {}) {
 }
 
 /**
- * (GĐ 7) Giữ tại (fx, fy) trong `ms` mili giây rồi nhấc, phát sự kiện con trỏ ngay trong trang như tapAt (pointerId 1). Xưởng nhận
- * 'hold-start' sau GESTURE.holdMs (350 ms) và 'hold-end' lúc nhấc. Trả Promise xong khi đã nhấc: gọi mà chưa await để đo giữa chừng.
+ * Nhấn xuống canvas tại (fx, fy) và giữ yên, bằng PointerEvent phát ngay trong trang (pointerId 1 như doubleTapAt: OrbitControls gọi setPointerCapture); trả hàm nhấc lên. Dùng
+ * khi phải giữ tới lúc cảnh đạt một điều kiện: đồng hồ của cảnh theo khung vẽ (mỗi khung tối đa 0,1 s), nên giữ một quãng cố định thì
+ * máy vẽ chậm chưa đủ khung.
+ * @returns {Promise<() => Promise<void>>}
  */
-export function holdAt(page, fx, fy, ms, { pointerType = 'mouse' } = {}) {
-  return page.evaluate(async ({ x, y, type, wait }) => {
+export async function pressAt(page, fx, fy, { pointerType = 'mouse' } = {}) {
+  const at = await page.evaluate(({ x, y, type }) => {
     const canvas = document.querySelector('[data-stage] canvas');
     const box = canvas.getBoundingClientRect();
-    const at = {
+    const init = {
       pointerId: 1, pointerType: type, isPrimary: true, button: 0, bubbles: true, cancelable: true, composed: true,
       clientX: box.left + box.width * x, clientY: box.top + box.height * y,
     };
-    canvas.dispatchEvent(new PointerEvent('pointerdown', { ...at, buttons: 1 }));
-    await new Promise((resolve) => setTimeout(resolve, wait));
-    canvas.dispatchEvent(new PointerEvent('pointerup', { ...at, buttons: 0 }));
-  }, { x: fx, y: fy, type: pointerType, wait: ms });
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { ...init, buttons: 1 }));
+    return init;
+  }, { x: fx, y: fy, type: pointerType });
+  return () => page.evaluate((init) => {
+    document.querySelector('[data-stage] canvas').dispatchEvent(new PointerEvent('pointerup', { ...init, buttons: 0 }));
+  }, at);
 }
 
 /**
