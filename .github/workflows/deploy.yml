@@ -46,17 +46,36 @@ jobs:
         with:
           path: dist
 
-  # Cổng chặn phần 2: tranh tĩnh + WebGL2 trên SwiftShader (kèm a11y), chia hai phần chạy song song theo từng test
-  # (--fully-parallel: chia theo test, không theo file). Mỗi project chia riêng: --shard chia theo SỐ test và theo thứ tự project,
-  # nên chia chung hai project thì phần 1 nhận trọn project tĩnh (vài giây) và phần 2 nhận trọn WebGL2 (cả chục phút).
-  # GĐ 3 đo được khoảng 12 phút e2e cho một bức.
+  # Nhóm e2e (GĐ 7, spec §19.9): mỗi bức một nhóm (test có "{tên bức} · " trong tên), cộng nhóm "chung" cho phần còn lại. Sinh từ
+  # registry (scripts/e2e-groups.js), nên thêm bức là thêm job, không phải sửa file này. Trước GĐ 7 dùng --shard: nó chia theo SỐ test
+  # và theo thứ tự file, nên phần 1 nhận mọi spec riêng của các bức (26 và 32 phút, sát trần 40).
+  nhom-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      groups: ${{ steps.nhom.outputs.groups }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - id: nhom
+        run: node scripts/e2e-groups.js >> "$GITHUB_OUTPUT"
+
+  # Cổng chặn phần 2: tranh tĩnh + WebGL2 trên SwiftShader (kèm a11y), mỗi nhóm một job chạy song song. GĐ 3 đo được khoảng 12 phút
+  # e2e cho một bức.
   e2e:
+    needs: nhom-e2e
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        group: ${{ fromJSON(needs.nhom-e2e.outputs.groups) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -75,36 +94,52 @@ jobs:
       - name: Cài Chromium headless shell và thư viện hệ thống
         run: npx playwright install --with-deps --only-shell chromium
 
-      - name: E2E chặn · tranh tĩnh · phần ${{ matrix.shard }}/2
-        run: npx playwright test --project=static --shard=${{ matrix.shard }}/2 --fully-parallel
+      # Lọc đi qua biến môi trường, không chèn thẳng vào lệnh: tên bức có dấu cách và ký tự lạ.
+      - name: E2E chặn · tranh tĩnh · ${{ matrix.group.id }}
+        env:
+          GREP: ${{ matrix.group.grep }}
+          GREP_INVERT: ${{ matrix.group.grepInvert }}
+        run: |
+          args=(--project=static --pass-with-no-tests)
+          [ -n "$GREP" ] && args+=(--grep "$GREP")
+          [ -n "$GREP_INVERT" ] && args+=(--grep-invert "$GREP_INVERT")
+          npx playwright test "${args[@]}"
 
-      - name: E2E chặn · WebGL2 trên SwiftShader (kèm a11y) · phần ${{ matrix.shard }}/2
+      - name: E2E chặn · WebGL2 trên SwiftShader (kèm a11y) · ${{ matrix.group.id }}
         # Chạy cả khi phần tĩnh hỏng: job vẫn đỏ, mà vẫn có kết quả và ảnh của phần nặng.
         if: ${{ !cancelled() }}
-        run: npx playwright test --project=webgl2-swiftshader --shard=${{ matrix.shard }}/2 --fully-parallel
+        env:
+          GREP: ${{ matrix.group.grep }}
+          GREP_INVERT: ${{ matrix.group.grepInvert }}
+        run: |
+          args=(--project=webgl2-swiftshader --pass-with-no-tests)
+          [ -n "$GREP" ] && args+=(--grep "$GREP")
+          [ -n "$GREP_INVERT" ] && args+=(--grep-invert "$GREP_INVERT")
+          npx playwright test "${args[@]}"
 
       - name: Giữ ảnh chụp và trace của e2e
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: e2e-results-${{ matrix.shard }}
+          name: e2e-results-${{ matrix.group.id }}
           path: e2e/.results/
           # e2e/.results là thư mục ẩn: upload-artifact (từ v4.4) mặc định bỏ file ẩn, nên trước đây không lượt nào có artifact.
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
 
-  # WebGPU trên SwiftShader (Chromium đầy đủ): KHÔNG chặn, chia hai phần như e2e chặn. Tách job riêng từ GĐ 3: hỏng hay treo cũng
-  # không kéo cổng chặn theo. Trần 40 phút cho mỗi phần: trước khi chia, riêng e2e đã mất khoảng 18,5 phút cho một bức, còn bước cài
+  # WebGPU trên SwiftShader (Chromium đầy đủ): KHÔNG chặn, chia theo nhóm như e2e chặn. Tách job riêng từ GĐ 3: hỏng hay treo cũng
+  # không kéo cổng chặn theo. Trần 40 phút cho mỗi nhóm: trước khi chia, riêng e2e đã mất khoảng 18,5 phút cho một bức, còn bước cài
   # Chromium kèm thư viện hệ thống lúc 19 giây, lúc gần 7 phút (PR #5 bị hủy ở trần 25 phút dù mọi test đã chạy đều qua).
   e2e-webgpu:
+    needs: nhom-e2e
     runs-on: ubuntu-latest
     continue-on-error: true
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        group: ${{ fromJSON(needs.nhom-e2e.outputs.groups) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -123,21 +158,28 @@ jobs:
       - name: Cài Chromium đầy đủ và thư viện hệ thống
         run: npx playwright install --with-deps --no-shell chromium
 
-      - name: E2E không chặn · WebGPU trên SwiftShader · phần ${{ matrix.shard }}/2
-        run: npx playwright test --project=webgpu-swiftshader --shard=${{ matrix.shard }}/2 --fully-parallel
+      - name: E2E không chặn · WebGPU trên SwiftShader · ${{ matrix.group.id }}
+        env:
+          GREP: ${{ matrix.group.grep }}
+          GREP_INVERT: ${{ matrix.group.grepInvert }}
+        run: |
+          args=(--project=webgpu-swiftshader --pass-with-no-tests)
+          [ -n "$GREP" ] && args+=(--grep "$GREP")
+          [ -n "$GREP_INVERT" ] && args+=(--grep-invert "$GREP_INVERT")
+          npx playwright test "${args[@]}"
 
       - name: Giữ ảnh chụp và trace của e2e WebGPU
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: e2e-results-webgpu-${{ matrix.shard }}
+          name: e2e-results-webgpu-${{ matrix.group.id }}
           path: e2e/.results/
           include-hidden-files: true # thư mục ẩn, như ở job e2e
           if-no-files-found: ignore
           retention-days: 7
 
   deploy:
-    # Chỉ deploy từ main, và chỉ khi build và CẢ HAI phần e2e chặn đều qua (không chờ e2e-webgpu).
+    # Chỉ deploy từ main, và chỉ khi build và MỌI nhóm e2e chặn đều qua (không chờ e2e-webgpu).
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: [build, e2e]
     runs-on: ubuntu-latest
