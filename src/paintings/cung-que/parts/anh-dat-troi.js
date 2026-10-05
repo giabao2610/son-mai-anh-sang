@@ -21,15 +21,16 @@ const STAR_CELLS = 220;
  */
 export function createEarth({ ctx, earth, sunDir, w }) {
   const pal = (token) => color(ctx.palette.color(token));
-  const [sea, land, cloud, rim] = ['cham', 'xanhLuc', 'nga', 'anhDat'].map(pal);
+  const [sea, land, cloud, rim] = ['cham', 'xanhLuc', 'bacLa', 'anhDat'].map(pal); // mây bạc: ngà qua LUT thành cam (lượt màu)
   const spin = ctx.u.time.mul(TAU / earth.spinPeriod);
   const d0 = normalize(positionLocal);
   // Xoay hướng mẫu quanh Y: lục địa và mây trôi qua mặt sáng
   const d = vec3(d0.x.mul(cos(spin)).sub(d0.z.mul(sin(spin))), d0.y, d0.x.mul(sin(spin)).add(d0.z.mul(cos(spin))));
   const isLand = smoothstep(0.02, 0.12, fbm(d.mul(2.2), { octaves: 3 }));
-  const clouds = smoothstep(0.25, 0.45, fbm(d.mul(4).add(vec3(ctx.u.time.mul(0.01))), { octaves: 2 }));
+  // Mây mỏng, trải rộng: ngưỡng thấp và mép mềm (lượt màu: ngưỡng cao cho vài đốm nhỏ mép gắt, trông như vết bẩn)
+  const clouds = smoothstep(0.1, 0.45, fbm(d.mul(4).add(vec3(ctx.u.time.mul(0.01))), { octaves: 2 }));
   const lit = max(dot(normalWorld, sunDir), 0);
-  const albedo = mix(mix(sea, land, isLand), cloud, clouds.mul(0.8));
+  const albedo = mix(mix(sea, land, isLand), cloud, clouds.mul(0.6));
 
   const material = new NodeMaterial();
   material.fog = false;

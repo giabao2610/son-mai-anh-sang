@@ -3316,6 +3316,10 @@ shader đó: cảnh không có đèn nào của three.
   - Bụi trăng: `bacLa` (bạc lá). Thân và rễ đa, áo chú Cuội: `canhGian`. Tán đa và lá rơi: `xanhLuc`. Trâu: `denThen` sáng lên một
     chút.
   - Trái Đất: biển `cham`, đất `xanhLuc`, mây `nga`. Sao: `vangLaSang`. Nắng: `nga`.
+    - (GĐ 7, lượt màu Task 13) Mây đổi sang `bacLa`, mỏng và trải rộng hơn: mây `nga` đi qua LUT thành những đốm cam nhỏ, mép gắt.
+    - Nắng là `nga` pha 35% `anhDat`: nắng ngoài không gian thì trắng. Với nắng `nga`, 95–99% vùng được nắng của hành tinh "ấm" (kênh
+      đỏ hơn kênh lam quá 20), nên bụi trăng đọc là kem, không phải bạc. Hạ LUT của Phủ bóng gần như không đổi gì.
+    - Lá rơi: vàng lá pha chút xanh lục, có tỏa nhẹ (§19.2, Task 7).
   - Bức thêm một token qua `meta.palette`: `anhDat` (xanh ánh đất, khoảng `#7E9CC8`), cho ánh đất và viền khí quyển. Số hex chốt ở lượt
     màu.
 - **Dáng:** khối tròn, mềm, như tượng đất nặn rồi sơn mài, vì đó là thứ SDF làm đẹp nhất (hòa khối). Không cố tả từng chiếc lá trên
@@ -3324,10 +3328,27 @@ shader đó: cảnh không có đèn nào của three.
   - chụp từ cảnh bằng `scripts/poster.js cung-que`;
   - `poster.capture` thiết kế là `{ at: '2026-10-21T21:00', freeze: 120 }`: chừng ngày 11 âm lịch, trăng gần tròn, đường ranh sáng
     tối cắt chéo hành tinh nên thấy được bóng mềm của cây. Chốt ở lượt màu, Bao duyệt;
+    - (GĐ 7, lượt màu Task 13) Chốt `{ at: '2026-10-19T21:00', freeze: 120 }`: ngày 9,5. Đã thử bốn khung: ngày 9,5, 11,4, 13,3 và rằm.
+      Từ ngày 11 trở đi, nắng lên cao nên Cuội nằm trong bóng tán. Ở ngày 9,5, nắng xiên từ bên phải, nên Cuội, cây và trâu cùng được
+      nắng; đường ranh sáng tối rõ, phía đêm có ánh đất. Poster 70 KB (WebP), og 30 KB;
   - `poster.alt`: "Tranh sơn mài cung trăng: chú Cuội ngồi gốc cây đa trên một hành tinh nhỏ, con trâu gặm cỏ, Trái Đất treo trên
     trời.".
 - **Lượt màu:** đo như §5 và §18.3 (độ sáng trung bình, độ bão hòa, tỉ lệ điểm tối; 1280×800 và 390×844; GPU thật). Riêng Bức 3 đo ở
   ba pha: mùng 3 (lưỡi liềm, có ánh đất), mùng 8 (thượng huyền), rằm. Bao duyệt ảnh.
+  - (GĐ 7, Task 13) Bầu trời đen chiếm phần lớn khung, nên số đo cả khung ít nói lên điều gì. Đo thêm vùng được nắng (điểm có độ sáng
+    trên 120): độ sáng trung bình, tỉ lệ cháy trắng (cả ba kênh trên 240), tỉ lệ "ấm".
+
+    | Pha | Trước (1280×800) | Sau (1280×800) | Sau (390×844) |
+    |---|---|---|---|
+    | mùng 3 | 9,5 · 0,12 · 89,6% · nắng 155,8, ấm 98% | 8,6 · 0,12 · 90,9% · nắng 149,3, ấm 12% | 19,3 · 0,19 · 78,9% · ấm 3% |
+    | mùng 8 | 11,5 · 0,11 · 90,8% · nắng 164,0, ấm 95% | 10,7 · 0,11 · 91,8% · nắng 158,0, ấm 21% | 21,8 · 0,17 · 82,0% · ấm 14% |
+    | rằm | 13,1 · 0,09 · 91,2% · nắng 163,3, ấm 99% | 12,3 · 0,08 · 91,2% · nắng 155,8, ấm 13% | 23,9 · 0,12 · 82,3% · ấm 13% |
+
+    (sáng trung bình 0–255 · bão hòa · tỉ lệ điểm tối · vùng nắng; không pha nào có điểm cháy trắng.)
+  - Đổi: nắng `nga` pha 35% `anhDat`; `anh-dat.earthshine` 0,25 → 0,18 (mùng 3: phần đêm đọc được nhưng tối, lưỡi liềm nổi lên); mây
+    Trái Đất. Giữ: `mat-troi.intensity` 1,6, `surge` 0,5, `bong-mem.ao` 0,8, hex `anhDat`.
+  - Rằm: thân cây và Cuội nằm trong bóng tán, in đen trên trăng sáng. Giữ, vì đó đúng là bóng "chú Cuội ngồi gốc cây đa" người ta thấy
+    trên trăng rằm. Không thêm ánh hắt từ mặt đất.
 
 ### 19.4 Sáu lớp
 **Một shader cho cả thế giới.** Khối bao là MỘT mesh với MỘT material. Mọi lớp góp vào material đó lúc dựng, như các lớp của Bức 2

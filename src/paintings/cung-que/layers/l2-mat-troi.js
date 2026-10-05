@@ -18,6 +18,8 @@ const TAU = Math.PI * 2;
 const BUMP_FREQ = 18;
 const BUMP_HEIGHT = 0.0025;
 const BUMP_EPS = 0.002;
+/** Phần xanh ánh đất pha vào màu nắng (ngà) cho nắng trung tính (lượt màu, Task 13). */
+const SUN_COOL = 0.35;
 
 /**
  * @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx
@@ -37,7 +39,8 @@ export function createLayer(ctx, shared) {
 
   const pal = (token) => color(ctx.palette.color(token));
   const [clay, bacLa, bark, leaf, nga, denThen, vangLa] = ['datSet', 'bacLa', 'canhGian', 'xanhLuc', 'nga', 'denThen', 'vangLa'].map(pal);
-  const sunColor = nga;
+  // Nắng ngoài không gian thì trắng: ngà pha chút xanh ánh đất cho trung tính, nên bụi trăng đọc là bạc, không phải kem (lượt màu, Task 13)
+  const sunColor = mix(nga, pal('anhDat'), SUN_COOL);
   const isId = (h, k) => abs(h.id.sub(k)).lessThan(0.5);
 
   /** Màu thật theo vật. Độ cao tính từ gốc cây (đã dời theo độ cao bay): thân, rễ màu cánh gián; tán xanh lục có cụm lá. */

@@ -17,8 +17,9 @@ export default {
     width: 1600,
     height: 1000,
     alt: 'Tranh sơn mài cung trăng: chú Cuội ngồi gốc cây đa trên một hành tinh nhỏ, con trâu gặm cỏ, Trái Đất treo trên trời.',
-    // scripts/poster.js chụp từ chính cảnh. at quyết định pha trăng (Dial mặc định theo ngày giờ); chốt ở lượt màu (spec §19.3).
-    capture: { at: '2026-10-21T21:00', freeze: 120 },
+    // scripts/poster.js chụp từ chính cảnh. at quyết định pha trăng (Dial mặc định theo ngày giờ). Lượt màu (Task 13) chọn ngày âm
+    // 9,5: nắng xiên từ bên phải nên Cuội, cây và trâu cùng được nắng, đường ranh sáng tối rõ; ở ngày 11 Cuội chìm trong bóng tán.
+    capture: { at: '2026-10-19T21:00', freeze: 120 },
   },
   og: 'paintings/cung-que/og.jpg',
   // Một màu thêm vào bảng sơn mài (spec §19.3): xanh ánh đất, cho ánh đất và viền khí quyển của Trái Đất.

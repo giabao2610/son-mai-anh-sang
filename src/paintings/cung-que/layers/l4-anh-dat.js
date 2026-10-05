@@ -6,7 +6,7 @@ export const id = 'anh-dat';
 
 export const knobs = [
   // Cường độ ánh đất: ánh Trái Đất hắt xuống hành tinh, rõ nhất ở phần đêm lúc trăng non.
-  { id: 'earthshine', min: 0, max: 1, step: 0.01, value: 0.25 },
+  { id: 'earthshine', min: 0, max: 1, step: 0.01, value: 0.18 },
   // Mật độ sao: phần ô của lưới hướng có sao (×2%).
   { id: 'stars', min: 0, max: 1, step: 0.01, value: 0.6 },
 ];
