@@ -1,4 +1,5 @@
 // e2e/helpers.js — Tiện ích e2e: chờ __sma ổn định, chờ khung, đọc pixel canvas (cả khung và từng vùng), chạm hai lần trong trang, báo GPU, gom lỗi console.
+import { expect } from '@playwright/test';
 
 /** Cảnh báo API cũ mà three in ra lúc chạy (spec §3: e2e bắt các cảnh báo này). */
 export const DEPRECATION = /deprecated|renamed|has been removed/i;
@@ -261,4 +262,24 @@ export function collectConsole(page) {
     log.errors.push(err.message);
   });
   return log;
+}
+
+/**
+ * Bật/tắt một thí nghiệm như người xem. Bấm Tab (lần tương tác đầu, không chạm canvas: chạm là thổi nến; phím bổ trợ đứng một mình
+ * như Shift thì input.js bỏ qua) cho lời mời hiện ra,
+ * vào chế độ mài, phủ lại mọi lớp về 1 (chế độ mài đưa chúng về 0), mở trang Phá của lớp rồi bấm nút. KHÔNG thêm hàm nào vào __sma:
+ * GĐ 6 không đổi JS của xưởng (spec §18.6). (GĐ 7) Chuyển từ e2e của Bức 2 sang đây: Bức 3 cũng cần.
+ */
+export async function toggleExperiment(page, layerId, expId, on) {
+  if ((await page.locator('[data-rail]').count()) === 0 || !(await page.locator('[data-rail]').isVisible())) {
+    await page.keyboard.press('Tab');
+    await page.locator('[data-hint] button').click();
+    for (const { id } of await page.evaluate(() => window.__sma.layers())) await page.evaluate((l) => window.__sma.setWeight(l, 1), id);
+  }
+  await page.locator(`[data-rail] [data-layer="${layerId}"] .rail-name`).click();
+  const notebook = page.locator('[data-notebook]');
+  await notebook.locator('[data-tab="pha"]').click();
+  const button = notebook.locator(`[data-experiment="${expId}"]`);
+  if ((await button.getAttribute('aria-pressed')) !== String(on)) await button.click();
+  await expect(button).toHaveAttribute('aria-pressed', String(on));
 }

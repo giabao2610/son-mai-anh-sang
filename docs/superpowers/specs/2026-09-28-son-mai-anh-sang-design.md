@@ -3208,8 +3208,11 @@ shader đó: cảnh không có đèn nào của three.
   viền khí quyển, tự quay chậm. Tỉ lệ là của truyện cổ tích, không phải của thiên văn.
 - **Bầu trời** đen sơn mài, có sao vàng li ti: một mesh cầu lớn vẽ mặt trong, sao sinh bằng hàm băm theo hướng nhìn.
 - **Mặt Trời** không có trong khung; chỉ có hướng nắng (§19.2, pha trăng).
-- **Khối bao** là một mesh cầu tâm (0; 0,6; 0), bán kính 1,75. Nó chứa trọn hành tinh, Cuội, trâu, và cả cây đa khi bay lên cao nhất
+- **Khối bao** là một mesh cầu tâm (0; 0,8; 0), bán kính 1,82. Nó chứa trọn hành tinh, Cuội, trâu, và cả cây đa khi bay lên cao nhất
   (§19.5). Lá rơi, Trái Đất và bầu trời là mesh riêng, nằm ngoài khối bao.
+  - (GĐ 7, Task 1) Thiết kế đầu là tâm (0; 0,6; 0), bán kính 1,75. Test thấy hình cầu bao của tán lúc bay cao nhất lọt ra ngoài.
+  - Số mới gần như là quả cầu nhỏ nhất chứa hai cầu: hành tinh (bán kính 1,02, kể cả gờ hố) và tán đang bay (bán kính 0,46, cộng
+    0,04 cho chỗ phình của hòa khối).
 - **Trang có trăng SVG cạnh con dấu**, như hai bức trước.
 
 ### 19.2 Trải nghiệm riêng của Bức 3
@@ -3320,6 +3323,8 @@ Cảnh không có đèn nào của three, và không bật `renderer.shadowMap` 
     - phép hòa mềm `smin` (Inigo Quilez, dạng đa thức), phép chia góc cho rễ phụ;
     - `scene(p)` trả khoảng cách và id của vật gần nhất (đất, cây, Cuội, trâu). Trước khi tính hình đắt (tán, rễ), nó tính khoảng
       cách tới một hình bao rẻ; còn xa thì trả luôn khoảng cách đó.
+    - `scene` là MỘT hàm shader có layout (`sdfScene`). Uniform (độ cao bay, độ hòa khối) đi vào làm tham số, không đọc thẳng trong thân
+      hàm (Phụ lục A.87); tên tham số tránh từ khóa của WGSL và GLSL (`smooth` là từ khóa, nên dùng `blend`).
   - **Dò tia** (`parts/cot-do-tia.js`):
     - tia đi từ `cameraPosition` qua điểm trên mặt khối bao; giao giải tích với quả cầu bao cho đoạn [t0; t1];
     - sphere tracing từ t0: mỗi bước tiến đúng bằng khoảng cách SDF, nhân 0,9 cho an toàn, vì hố và bump làm SDF không còn chính xác;
@@ -3327,6 +3332,8 @@ Cảnh không có đèn nào của three, và không bật `renderer.shadowMap` 
     - quá `steps` bước hay đi quá t1 thì `Discard()`.
   - Khối bao vẽ mặt TRONG (`BackSide`), nên camera ở trong khối vẫn có điểm ảnh để dò; tia bắt đầu từ max(t0; 0).
   - Pháp tuyến là gradient của SDF, lấy theo bốn điểm hình tứ diện (bốn lần gọi `scene`), rồi đổi sang view space cho `normalNode`.
+    Hàm pháp tuyến không có layout, vì lời gọi `scene` đọc uniform (Phụ lục A.87). Nó được bọc trong `Fn().once()`, nên vẫn chỉ tính một
+    lần cho mỗi điểm ảnh.
   - Độ sâu: `viewZToPerspectiveDepth(viewZ của điểm chạm, cameraNear, cameraFar)` (Phụ lục A.82).
   - **Cây bay:** hình cây (thân, cành, tán, rễ phụ) và chú Cuội dời lên theo uniform `treeLift` (§19.5). Chân rễ hòa với đất bằng
     `smin` với độ hòa `smooth`: cây lên thấp hơn độ hòa thì đất kéo dài theo, lên cao hơn thì đứt.
@@ -3568,8 +3575,12 @@ Bức đầu không có link trước, bức cuối không có link sau. Đườ
 - Ánh đất: ở ngày 1, phần đêm của hành tinh có ánh khi Ánh đất bằng 1, đen kịt khi bằng 0. Vùng Trái Đất có màu lam.
 - Bóng mềm: ở ngày 10 (nắng xiên từ bên phải, chừng 20° trên chân trời ở gốc cây), vùng bóng cây trên mặt đất tối hơn rõ khi Bóng
   mềm bằng 1 so với 0. Trước thượng huyền (ngày < 8,4), mặt trời còn dưới chân trời ở đỉnh hành tinh, nên cây chưa đổ bóng.
-- Độ sâu và pháp tuyến của SDF: tại một điểm nằm trong khối bao nhưng ngoài hình SDF, view Depth và view Normal (Lột lớp) là nền, không
-  phải mặt quả cầu bao.
+- Độ sâu của SDF:
+  - Bật "Hiện khối bao". Trong view Depth của Lột lớp, chỗ tia trúng hình phải gần (sáng) hơn hẳn chỗ tia trượt, vì chỗ trượt mang độ sâu
+    của mặt sau khối bao.
+  - Không có `depthNode` thì hai chỗ cùng mang độ sâu của mặt sau quả cầu. Nhìn chỗ trượt là nền thì không chứng minh được gì, vì
+    `Discard()` đã cho nền ở đó.
+  - Pháp tuyến SDF: test chung "Normal" (Kính mài) chạy trên Bức 3.
 - Chạm vào tán thì số đo `la` > 0. Giữ thì số đo `bay` > 0,3 sau 2 giây; thả thì về 0 trong 4 giây.
 - Draw call ≤ 30 ở mức cao; `?level=thap` chạy được; bật từng thí nghiệm không có lỗi console.
 
@@ -4024,3 +4035,14 @@ Các mục dưới đây đã được kiểm bằng ba cách:
 86. **OrbitControls xoay trọn vòng** (`examples/jsm/controls/OrbitControls.js`): `minAzimuthAngle` và `maxAzimuthAngle` mặc định là
     `−Infinity` và `Infinity`, tức không giới hạn. Xưởng gán thẳng từ `CameraSpec.azimuth` (`engine/gpu/stage.js`), nên
     `[−Infinity, Infinity]` cho camera đi vòng quanh. GĐ 7 chạy thật ở task camera.
+87. **Hàm có layout không được đọc uniform trực tiếp** (r186: `NodeBuilder.buildFunctionNode`; GĐ 7, chạy thật):
+    - Mã của mỗi hàm `Fn(...).setLayout(...)` được giữ trong một bộ nhớ đệm cấp module, theo BACKEND (`_functionNodeCache`: backend →
+      WeakMap theo shaderNode). Mã chỉ dựng một lần.
+    - Uniform đọc thẳng trong thân hàm chỉ được đăng ký vào khối uniform ở lần dựng đầu. Lần dựng sau (một material khác, hay chính
+      material đó được biên dịch lại, ví dụ khi đổi MRT) dùng lại mã hàm mà không đăng ký. Kết quả: WGSL báo "struct member … not found",
+      cảnh về tĩnh (`gpu-error`).
+    - Dịch thử trong Node không thấy lỗi nếu mỗi lần dịch một renderer mới. Phải dịch lại trên CÙNG renderer mới tái hiện được
+      (`tests/helpers/nodes.js#compileRenderer`).
+    - Cách làm: truyền uniform vào làm tham số của hàm; chỗ gọi (trong hàm chính) đọc uniform. Hàm nào gọi một hàm như thế mà phải đọc
+      uniform thì không có layout (viết thẳng, bọc `Fn().once()` nếu cần tính một lần).
+    - Tên tham số của hàm có layout tránh từ khóa của WGSL và GLSL: `smooth` là từ khóa của cả hai.

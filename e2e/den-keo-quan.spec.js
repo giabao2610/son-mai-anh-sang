@@ -1,7 +1,7 @@
 // e2e/den-keo-quan.spec.js — tương tác và hình ảnh riêng của Bức 2: bóng hình nhân chạy trên vách, mài lớp, cử chỉ, chất lượng, thí nghiệm.
 import { test, expect } from '@playwright/test';
 import {
-  waitForSettled, waitForFrames, canvasRegions, gpuReport, collectConsole, readSma, tapAt, swipeAt,
+  waitForSettled, waitForFrames, canvasRegions, gpuReport, collectConsole, readSma, tapAt, swipeAt, toggleExperiment,
 } from './helpers.js';
 
 const AT = 'at=2026-09-28T21:00';
@@ -59,26 +59,6 @@ const wallOf = async (page) => (await canvasRegions(page, { wall: WALL })).wall;
 async function onlyDrum(page) {
   await page.evaluate(() => window.__sma.restore({ knobs: { 'ngon-nen.flicker': 0 } }));
   await page.evaluate(() => window.__sma.setWeight('phu-bong', 0)); // vẽ lại khung đứng yên
-}
-
-/**
- * Bật/tắt một thí nghiệm như người xem. Bấm Tab (lần tương tác đầu, không chạm canvas: chạm là thổi nến; phím bổ trợ đứng một mình
- * như Shift thì input.js bỏ qua) cho lời mời hiện ra,
- * vào chế độ mài, phủ lại mọi lớp về 1 (chế độ mài đưa chúng về 0), mở trang Phá của lớp rồi bấm nút. KHÔNG thêm hàm nào vào __sma:
- * GĐ 6 không đổi JS của xưởng (spec §18.6).
- */
-async function toggleExperiment(page, layerId, expId, on) {
-  if ((await page.locator('[data-rail]').count()) === 0 || !(await page.locator('[data-rail]').isVisible())) {
-    await page.keyboard.press('Tab');
-    await page.locator('[data-hint] button').click();
-    for (const { id } of await page.evaluate(() => window.__sma.layers())) await page.evaluate((l) => window.__sma.setWeight(l, 1), id);
-  }
-  await page.locator(`[data-rail] [data-layer="${layerId}"] .rail-name`).click();
-  const notebook = page.locator('[data-notebook]');
-  await notebook.locator('[data-tab="pha"]').click();
-  const button = notebook.locator(`[data-experiment="${expId}"]`);
-  if ((await button.getAttribute('aria-pressed')) !== String(on)) await button.click();
-  await expect(button).toHaveAttribute('aria-pressed', String(on));
 }
 
 test.describe('Đèn Kéo Quân · bóng trên vách', () => {
