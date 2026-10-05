@@ -3422,11 +3422,15 @@ Cảnh không có đèn nào của three, và không bật `renderer.shadowMap` 
       bỏ, giữ code dò tia chính như cũ.
   - **AO từ trường khoảng cách:** lấy năm điểm cách đều dọc pháp tuyến. Điểm nào có khoảng cách nhỏ hơn quãng đã đi thì quanh đó có
     vật che; cộng dồn lại thành độ che.
+    - (GĐ 7, Task 8) Các mẫu trải thẳng bằng vòng `for` của JS, không dùng `Loop` của TSL: số mẫu là `budget.ao` (5, 4, 3), cố định
+      theo mức lúc dựng (Phụ lục A.88).
   - Bọc `recipe.visibility` (nhân `mix(1, bóng, w3)`) và `recipe.occlusion` (nhân `mix(1, AO, w3)`).
 - **Núm:** `softness` (k, 2–32, mặc định 8), `ao` (độ đậm AO, 0–1, mặc định 0,8).
 - **Phá:** *"Bóng cứng"* (`bongCung`): k = 128, nửa tối gần như biến mất. Đem so với bóng shadow map của Bức 2.
 - **Số đo:** `buocBong` ("Bước dò bóng"), `mauAo` ("Số mẫu AO").
-- **Nấc** `chi-tiet`: số bước dò bóng và số mẫu AO giảm một nửa (hạ trần, không ghi vào núm).
+- **Nấc** `chi-tiet`: số bước dò bóng giảm một nửa (hạ trần, không ghi vào núm).
+  - (GĐ 7, Task 8) Thiết kế đầu hạ cả số mẫu AO. Mẫu AO giờ trải thẳng trong shader, nên đổi số mẫu là biên dịch lại; số mẫu AO cố
+    định theo mức.
 
 #### Lớp 4 · Ánh đất (`layers/l4-anh-dat.js`)
 - **Thấy gì:** Trái Đất treo trên trời và bầu trời sao. Phần đêm của hành tinh không còn đen hẳn mà có ánh xanh lam nhạt.
@@ -3572,6 +3576,17 @@ Bức đầu không có link trước, bức cuối không có link sau. Đườ
     tới `shadowSteps` lần cho bóng, `ao` lần cho AO;
   - mục tiêu như §2: 60 khung/giây trên laptop (Mac M2, 1280×800, DPR 2, mức cao), 45 trên điện thoại tầm trung (mức vừa và thấp);
   - đo ở task đầu với một hình SDF đại diện (§19.10), rồi đo lại khi đủ sáu lớp.
+  - (GĐ 7, Task 8) Đo khi đủ sáu lớp, sau khi trải thẳng AO (Phụ lục A.88). Mac M2, Chrome, WebGPU, cảnh live 10 giây:
+
+    | Mức | 1280×800, DPR 2 | 390×844, DPR 3, isMobile | Draw call | ms CPU |
+    |---|---|---|---|---|
+    | **cao** | 60,1 | 59,6 | 18 | 0,9–1,7 |
+    | **vừa** | 60,2 | 60,5 | 18 | 1,0–1,8 |
+    | **thấp** | 60,2 | 60,5 | 18 | 0,8–1,0 |
+
+    - Đo nặng: 2560×1600, DPR 2, mức cao: 24,2 khung/giây sau khi bộ điều chỉnh hạ DPR về 1,75 (41,3 ms cho 12,5 triệu điểm ảnh,
+      chừng 3,3 ns mỗi điểm ảnh).
+    - Trước khi trải thẳng AO: mức cao ở 1280×800, DPR 2 chỉ được 40 khung/giây; ở 2560×1600, 80,8 ms.
   - (GĐ 7, Task 5) Có Bóng mềm (32 bước bóng, 5 mẫu AO): 60 khung/giây ở cả ba mức, 1280×800, DPR 2. Ở 2560×1600, DPR 2, mức cao:
     24,5 khung/giây sau khi bộ điều chỉnh hạ DPR về 1,75 (chừng 3,3 ns mỗi điểm ảnh; trước Bóng mềm chừng 2 ns). Suy ra ở 1280×800,
     DPR 2 GPU bận chừng 13,4 ms mỗi khung, dư chừng 20%. Chrome headless không báo ms GPU trên máy này (`gpuMs` null), nên khoảng dư
@@ -4101,3 +4116,14 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - Cách làm: truyền uniform vào làm tham số của hàm; chỗ gọi (trong hàm chính) đọc uniform. Hàm nào gọi một hàm như thế mà phải đọc
       uniform thì không có layout (viết thẳng, bọc `Fn().once()` nếu cần tính một lần).
     - Tên tham số của hàm có layout tránh từ khóa của WGSL và GLSL: `smooth` là từ khóa của cả hai.
+88. **Vòng lặp có cận là uniform bọc một hàm SDF lớn rất đắt** (GĐ 7 Task 8, đo trên Mac M2, Chrome, WebGPU):
+    - AO của Bức 3 viết bằng `Loop(aoCap, …)`, mỗi vòng gọi `scene`. Cả khung chậm gấp đôi so với không có AO: 2560×1600, mức cao,
+      80,8 ms so với 45,8 ms.
+    - Chi phí không theo số vòng: chạy 1 vòng (78,8 ms), 3 vòng (74,9 ms), 5 vòng (80,8 ms) gần như nhau. Vòng có mặt nhưng chạy
+      0 vòng: 45,8 ms.
+    - Trải thẳng năm mẫu bằng vòng `for` của JS (năm lời gọi `scene` liền nhau, không vòng lặp trong shader): 41,1 ms, rẻ hơn cả bản
+      có vòng mà chạy 0 vòng.
+    - Đoán nguyên nhân: hàm SDF được inline; một bản chép nữa nằm trong vòng lặp động làm tăng thanh ghi, GPU chạy ít luồng song song
+      hơn. Chưa kiểm bằng số đo của GPU (Chrome headless không báo ms GPU trên máy này).
+    - Luật: vòng lặp có cận động chỉ dùng khi cần thoát sớm (dò tia chính, dò bóng). Số mẫu cố định (AO, gradient) thì trải thẳng bằng
+      JS; số đó cố định theo mức lúc dựng, không có nấc nào đổi nó. Test đếm `for (` trong mã sinh ra giữ luật này cho Bức 3.

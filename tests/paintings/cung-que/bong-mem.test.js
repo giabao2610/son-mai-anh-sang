@@ -20,7 +20,7 @@ describe('l3-bong-mem', () => {
       const { fragmentShader, problems, uniforms } = compileMaterial(volume(built), built.ctx, backend);
       expect(problems).toEqual([]);
       expect(marchDecls(fragmentShader), 'số vòng dò chính').toBe(1);
-      expect(uniforms).toEqual(expect.arrayContaining(['bong_mem_softness', 'bong_mem_ao', 'w_bong_mem', 'bongMemShadowCap', 'bongMemAoCap']));
+      expect(uniforms).toEqual(expect.arrayContaining(['bong_mem_softness', 'bong_mem_ao', 'w_bong_mem', 'bongMemShadowCap']));
     }
   });
 
@@ -33,7 +33,7 @@ describe('l3-bong-mem', () => {
     expect(second.uniforms).toEqual(expect.arrayContaining(['bong_mem_softness', 'bongMemShadowCap', 'treeLift']));
   });
 
-  it.each(['cao', 'vua', 'thap'])('mức %s: có nấc chi-tiet; apply giảm một nửa số bước bóng và số mẫu AO (AO ít nhất 2); revert trả về như cũ', (level) => {
+  it.each(['cao', 'vua', 'thap'])('mức %s: có nấc chi-tiet; apply giảm một nửa số bước bóng (số mẫu AO cố định theo mức); revert trả về như cũ', (level) => {
     const { layers, ctx } = build({ level });
     const layer = layers['bong-mem'];
     expect(layer.degrade.map((d) => d.id)).toEqual(['chi-tiet']);
@@ -42,9 +42,17 @@ describe('l3-bong-mem', () => {
     expect(full).toEqual({ buocBong: ctx.budget.shadowSteps, mauAo: ctx.budget.ao });
     const [step] = layer.degrade;
     step.apply();
-    expect(read()).toEqual({ buocBong: ctx.budget.shadowSteps / 2, mauAo: Math.max(2, Math.ceil(ctx.budget.ao / 2)) });
+    expect(read()).toEqual({ buocBong: ctx.budget.shadowSteps / 2, mauAo: ctx.budget.ao });
     step.revert();
     expect(read()).toEqual(full);
+  });
+
+  it.each(['webgpu', 'webgl2'])('%s: AO trải thẳng, không vòng lặp: shader chỉ có hai vòng (dò tia chính, dò bóng) (Phụ lục A.88)', (backend) => {
+    // Vòng có cận là uniform bọc hàm SDF làm cả khung chậm gấp đôi trên GPU Apple, kể cả khi chỉ chạy một vòng (đo ở Task 8:
+    // 2560×1600 mức cao 80,8 ms với vòng AO; 41,1 ms khi trải thẳng năm mẫu).
+    const built = build();
+    const { fragmentShader } = compileMaterial(volume(built), built.ctx, backend);
+    expect((fragmentShader.match(/\bfor\s*\(/g) ?? []).length).toBe(2);
   });
 
   it('thang hạ nấc: chi-tiet của Bóng mềm ngay sau dpr (bóng đắt mà ít người để ý số bước)', () => {

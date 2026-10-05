@@ -285,3 +285,56 @@ test.describe('Cung Quế · lá đa', () => {
     expect(log.errors).toEqual([]);
   });
 });
+
+test.describe('Cung Quế · chất lượng', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('mức cao: draw call ≤ 30 (khối bao, Trái Đất, bầu trời, lá, cộng bloom, FXAA, quad)', async ({ page }, testInfo) => {
+    await open(page, testInfo, 30, '&level=cao');
+    const { drawCalls } = await page.evaluate(() => window.__sma.stats());
+    expect(drawCalls).toBeGreaterThan(0);
+    expect(drawCalls).toBeLessThanOrEqual(30);
+  });
+
+  test('mức thấp chạy được: live, không lỗi console, draw call ≤ 30', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    const log = collectConsole(page);
+    await open(page, testInfo, 30, '&level=thap');
+    expect(await page.evaluate(() => window.__sma.level)).toBe('thap');
+    expect((await page.evaluate(() => window.__sma.stats())).drawCalls).toBeLessThanOrEqual(30);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('núm ở biên: cot.steps 16 thì hành tinh vẫn hiện (không đen), không lỗi (Review Focus 4)', async ({ page }, testInfo) => {
+    const log = collectConsole(page);
+    await open(page, testInfo, 30);
+    await page.evaluate(() => window.__sma.restore({ knobs: { 'cot.steps': 16 } }));
+    await twoFrames(page);
+    const r = await canvasRegions(page, { core: PLANET_CORE });
+    expect(r.core.mean, 'hành tinh vẫn hiện').toBeGreaterThan(0.1);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('view Normal của Lột lớp: thân hành tinh mang màu của pháp tuyến SDF (không phải nền), không lỗi (Review Focus 4)', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    const log = collectConsole(page);
+    await open(page, testInfo, 30);
+    await page.evaluate(() => window.__sma.setTool('lot-lop'));
+    const range = page.locator('[data-tool-slot="lot-lop"] input[type="range"]');
+    // Nấc đầu bên trái là Depth, kế đó là Normal; Normal phải "mài" (biên dịch lại MỘT lần) rồi nhãn mới đổi
+    await range.evaluate((el) => {
+      el.value = '1';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await expect(range).toHaveAttribute('aria-valuetext', 'Normal', { timeout: 60_000 });
+    await twoFrames(page);
+    const r = await canvasRegions(page, { core: PLANET_CORE });
+    await page.screenshot({ path: testInfo.outputPath('normal.png') });
+    // Pháp tuyến quay về camera (z ≈ 1) ra kênh B trội. Không có normalNode thì đây là mặt sau của khối bao, quay ra xa: B không trội.
+    expect(r.core.chroma, 'có màu của pháp tuyến').toBeGreaterThan(0.15);
+    expect(r.core.rgb[2], 'pháp tuyến quay về camera').toBeGreaterThan(r.core.rgb[0]);
+    expect(log.errors).toEqual([]);
+  });
+});

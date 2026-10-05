@@ -43,20 +43,21 @@ export function softShadow(scene, bounds) {
 }
 
 /**
- * AO: `samples` điểm cách đều dọc pháp tuyến; điểm nào có khoảng cách nhỏ hơn quãng đã đi thì quanh đó có vật che. Mẫu xa nặng nhẹ
- * dần (×0,85 mỗi mẫu).
+ * AO: `samples` điểm cách đều dọc pháp tuyến; điểm nào có khoảng cách nhỏ hơn quãng đã đi thì quanh đó có vật che. Mẫu xa nhẹ dần
+ * (×0,85 mỗi mẫu).
+ * Các mẫu TRẢI THẲNG bằng vòng for của JS, không phải Loop của TSL: một vòng có cận là uniform bọc hàm SDF làm cả khung chậm gấp đôi
+ * trên GPU Apple, kể cả khi chỉ chạy một vòng (Phụ lục A.88). Vì vậy số mẫu cố định theo mức lúc dựng; không có nấc nào đổi nó.
  * @param {(p: any) => any} scene
- * @returns {(p: any, n: any, samples: any) => any}  1: không che; 0: che kín
+ * @param {number} samples  số mẫu (budget.ao)
+ * @returns {(p: any, n: any) => any}  1: không che; 0: che kín
  */
-export function ambientOcclusion(scene) {
-  return Fn(([p, n, samples]) => {
-    const occ = float(0).toVar();
-    const weight = float(1).toVar();
-    Loop(samples, ({ i }) => {
-      const hr = float(0.01).add(float(i).mul(0.03));
-      occ.addAssign(hr.sub(scene(p.add(n.mul(hr))).x).mul(weight));
-      weight.mulAssign(0.85);
-    });
+export function ambientOcclusion(scene, samples) {
+  return Fn(([p, n]) => {
+    let occ = float(0);
+    for (let i = 0; i < samples; i += 1) {
+      const hr = 0.01 + 0.03 * i;
+      occ = occ.add(float(hr).sub(scene(p.add(n.mul(hr))).x).mul(0.85 ** i));
+    }
     return clamp(float(1).sub(occ.mul(3)), 0, 1);
   });
 }

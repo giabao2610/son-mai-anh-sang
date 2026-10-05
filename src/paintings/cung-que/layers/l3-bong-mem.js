@@ -23,40 +23,38 @@ export function createLayer(ctx, shared) {
   const softness = ctx.knob('softness'); // @knob softness
   const aoKnob = ctx.knob('ao'); // @knob ao
   const hard = uniform(0).setName('bongMemHard');
-  // Số bước dò bóng và số mẫu AO theo mức; nấc chi-tiet hạ trần (uniform), không ghi vào núm
+  // Số bước dò bóng theo mức; nấc chi-tiet hạ trần (uniform), không ghi vào núm. Số mẫu AO cố định theo mức: các mẫu trải thẳng
+  // trong shader (Phụ lục A.88), đổi số mẫu là biên dịch lại, nên không có nấc nào đổi nó.
   const fullShadow = ctx.budget.shadowSteps ?? 32;
-  const fullAo = ctx.budget.ao ?? 5;
+  const aoSamples = ctx.budget.ao ?? 5;
   const shadowCap = uniform(fullShadow).setName('bongMemShadowCap');
-  const aoCap = uniform(fullAo).setName('bongMemAoCap');
   const { recipe, scene, bounds } = shared.cot;
   const { sunDir } = shared.matTroi;
   const k = mix(softness, float(HARD_K), hard);
 
   const shadow = softShadow(scene, bounds);
-  const occlusion = ambientOcclusion(scene);
+  const occlusion = ambientOcclusion(scene, aoSamples);
   // Bọc recipe (spec §19.4): bóng nhân vào phần nắng không bị che, AO nhân vào ánh nền. w = 0 thì như chưa có lớp này.
   const prevVisibility = recipe.visibility;
   recipe.visibility = (h) => prevVisibility(h).mul(mix(float(1), shadow(h.p, h.n, sunDir, k, int(shadowCap)), w));
   const prevOcclusion = recipe.occlusion;
-  recipe.occlusion = (h) => prevOcclusion(h).mul(mix(float(1), mix(float(1), occlusion(h.p, h.n, int(aoCap)), aoKnob), w));
+  recipe.occlusion = (h) => prevOcclusion(h).mul(mix(float(1), mix(float(1), occlusion(h.p, h.n), aoKnob), w));
 
   return {
     objects: [],
     experiments: [{ id: 'bongCung', toggle: (on) => { hard.value = on ? 1 : 0; } }],
     readouts: [
       { id: 'buocBong', get: () => shadowCap.value },
-      { id: 'mauAo', get: () => aoCap.value },
+      { id: 'mauAo', get: () => aoSamples },
     ],
     degrade: [
       {
         id: 'chi-tiet',
         apply() {
           shadowCap.value = Math.round(fullShadow / 2);
-          aoCap.value = Math.max(2, Math.ceil(fullAo / 2));
         },
         revert() {
           shadowCap.value = fullShadow;
-          aoCap.value = fullAo;
         },
       },
     ],
