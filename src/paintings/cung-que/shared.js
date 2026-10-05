@@ -6,6 +6,8 @@ import { PLANET, canopyHit, canopyRim } from './parts/cot-the-gioi.js';
 import { createLeafFall } from './parts/la-da-roi.js';
 import { defaultDay, formatDay, phaseNote } from './parts/mat-troi-pha.js';
 
+/** Góc quanh trục cây (phần của vòng) của các lá dừng lúc giảm chuyển động: 61°, 90°, 119°, quanh hướng camera mặc định. */
+const STILL_U = [0.17, 0.25, 0.33];
 /** Bước của Dial Ngày âm lịch (ngày). */
 const DAY_STEP = 0.25;
 const snap = (day) => 1 + Math.round((day - 1) / DAY_STEP) * DAY_STEP;
@@ -24,12 +26,13 @@ export function setup(ctx) {
   // Ô lá rơi: cấp theo trần của mức một lần; chạm ghi vào, lớp Lá đa đọc ra (spec §19.4 lớp 5)
   const leafFall = createLeafFall({ cap: ctx.budget.leaves, radius: PLANET.radius });
   // Lá tự rụng khi không ai chạm: từ mép dưới của tán, chỗ tất định theo số thứ tự; tán ở độ cao bay của lúc rụng.
-  // Giảm chuyển động thì thôi: vài lá nằm yên trên đất từ đầu, ở chỗ của những lá tự rụng đầu tiên (mài Lá đa vẫn thấy khác).
   const autoOrigin = (k, t0) => {
     const rand = mulberry32(911 + k);
     return canopyRim(rand(), rand(), flight.height(t0));
   };
-  if (ctx.reducedMotion) leafFall.settle(autoOrigin);
+  // Giảm chuyển động thì thôi: thay vào đó vài lá dừng giữa lúc rơi (mài Lá đa vẫn thấy khác, mà không có gì chuyển động). Chúng rụng
+  // từ mép tán phía camera mặc định (painting.js: camera ở +z, góc 90° quanh trục cây), nên nằm trước thân cây.
+  if (ctx.reducedMotion) leafFall.still((k) => canopyRim(STILL_U[k % STILL_U.length], 0.5));
   return {
     shared: { lift, flight, day, leafFall },
     // Nhãn của Dial chỉ là số ngày; tên pha (trăng mới, thượng huyền, rằm, hạ huyền) là ghi chú, chữ ở content.dials.ngay.notes.

@@ -2361,8 +2361,8 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
     test và theo thứ tự file, nên phần 1 nhận mọi spec riêng của các bức. GĐ 7 chia **theo bức** (§19.9):
     - job `nhom-e2e` chạy `node scripts/e2e-groups.js`, in ra ma trận các nhóm từ registry: mỗi bức một nhóm (`--grep "{tên bức} · "`),
       cộng nhóm `chung` (`--grep-invert` mọi tên bức: lật tranh, Phòng tranh);
-    - `e2e` (chặn) và `e2e-webgpu` (không chặn) chạy một job cho mỗi nhóm (`matrix.group`, `fromJSON`), kèm `--pass-with-no-tests`;
-      giá trị của ma trận đi qua `env`;
+    - `e2e` (chặn) và `e2e-webgpu` (không chặn) chạy một job cho mỗi nhóm (`matrix.group`, `fromJSON`); giá trị của ma trận đi qua
+      `env`. Không có `--pass-with-no-tests` (sau GĐ 7): nhóm không khớp test nào thì Playwright báo "No tests found" và job đỏ;
     - `deploy` cần `build` và mọi job của `e2e`;
     - thêm bức thì thêm job, tự động; test luật giữ quy ước tên `describe`.
 - **URL:** `https://giabao2610.github.io/son-mai-anh-sang/`.
@@ -3266,9 +3266,10 @@ shader đó: cảnh không có đèn nào của three.
        của lá. Cảnh mở ra giữa chừng (lá đầu rụng từ 5 giây trước), nên khung đầu đã có lá đang rơi và lá nằm trên đất.
        - Lý do: chưa chạm thì lớp Lá đa không có vật nào, nên mài lớp này không đổi gì. Người xem mài thấy một lớp "không làm gì",
          và test chung "mài từng lớp" bắt được điều đó.
-       - Giảm chuyển động thì không có lá tự rụng. (Sau GĐ 7) Thay vào đó ba lá nằm yên trên đất từ đầu, ở chỗ của ba lá tự rụng đầu
-         tiên, và không nhỏ dần: mài Lá đa vẫn thấy khác mà không có gì chuyển động. Lá do người xem chạm vẫn rơi; chạm dồn hết ô
-         trống thì lá mới thay ba lá đó.
+       - Giảm chuyển động thì không có lá tự rụng. (Sau GĐ 7) Thay vào đó ba lá dừng giữa lúc rơi, ở 0,3, 0,55 và 0,8 quãng rơi của
+         chúng, như lá trong một bức tranh: mài Lá đa vẫn thấy khác mà không có gì chuyển động. Chúng rụng từ mép tán phía camera mặc
+         định, nên nằm trước thân cây. Lá nằm trên đất thì gần như khuất: camera thấp hơn đỉnh hành tinh, nhìn mặt đất quanh gốc cây
+         gần như song song. Lá do người xem chạm vẫn rơi; chạm dồn hết ô trống thì lá mới thay ba lá dừng.
      - (GĐ 7, Task 7) **Lá vàng tỏa nhẹ:** lá đa thần trong truyện Cuội có lá thuốc. Lá rụng màu vàng lá pha chút xanh, có emissive
        nhỏ (0,35 × vàng lá), nên Phủ bóng làm nó lấp lánh.
        - Lý do: ảnh thật cho thấy lá xanh thẫm vừa rơi nằm trong bóng của chính tán, lại trên nền trời đen, nên vô hình tới khi chạm
@@ -3710,8 +3711,9 @@ Bức đầu không có link trước, bức cuối không có link sau. Đườ
 - **Cách mới:** mỗi bức một job, cộng một job `chung` cho các test không thuộc bức nào (lật tranh, Phòng tranh).
   - Job `nhom-e2e` chạy `node scripts/e2e-groups.js`. Script này đọc registry rồi in ra ma trận `[{ id, grep }, …, { id: 'chung',
     grepInvert }]`; tên bức đã được thoát ký tự đặc biệt của regex.
-  - `e2e` và `e2e-webgpu` lấy `matrix.group` từ đó (`fromJSON`), rồi chạy `--grep` (hay `--grep-invert`) theo nhóm, kèm
-    `--pass-with-no-tests`.
+  - `e2e` và `e2e-webgpu` lấy `matrix.group` từ đó (`fromJSON`), rồi chạy `--grep` (hay `--grep-invert`) theo nhóm. (Sau GĐ 7) Không
+    kèm `--pass-with-no-tests`: mọi nhóm đều có test ở cả ba project, nên cờ đó chỉ che lỗi (đặt sai tên `describe`, đổi tên bức thì
+    nhóm rỗng mà vẫn xanh). Test luật khớp regex bằng chính hàm của Playwright (`forceRegExp`, cờ `gi`: không phân biệt hoa thường).
   - Giá trị của ma trận đi qua `env`, không chèn thẳng vào lệnh shell.
   - Gom được vì mọi test của một bức đều nằm trong `describe` bắt đầu bằng `"{tên bức} · "`: e2e chung, a11y và spec riêng đều đã như
     vậy. Test luật giữ quy ước này.

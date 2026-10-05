@@ -1,7 +1,7 @@
 // tests/paintings/cung-que/la-da.test.js — lá đa rơi: thời gian rơi theo trọng lực trăng và Trái Đất; chạm đất đúng chỗ; nằm yên rồi biến mất; chạm dồn thay ô cũ nhất; mỗi lá giữ g của nó; lá tự rụng; lớp Lá đa dịch được và chạm thì có lá rơi.
 import { describe, it, expect } from 'vitest';
 import { InstancedMesh, NodeMaterial, StaticDrawUsage } from 'three/webgpu';
-import { AUTO, FALL, GRAVITY, createLeafFall } from '../../../src/paintings/cung-que/parts/la-da-roi.js';
+import { AUTO, FALL, GRAVITY, STILL, createLeafFall } from '../../../src/paintings/cung-que/parts/la-da-roi.js';
 import meta from '../../../src/paintings/cung-que/meta.js';
 import * as painting from '../../../src/paintings/cung-que/painting.js';
 import content from '../../../src/paintings/cung-que/content.vi.js';
@@ -73,23 +73,25 @@ describe('la-da-roi', () => {
     expect(f.slots.filter((s) => s.t0 === 0).length, 'mỗi lần tự rụng chỉ một lá').toBe(1);
   });
 
-  it('settle (giảm chuyển động): AUTO.still lá nằm yên trên đất từ đầu, không rơi, không nhỏ dần, không đổi chỗ; chạm thì lá mới lấy ô trống trước, hết ô trống mới thay lá nằm yên', () => {
+  it('still (giảm chuyển động): STILL.length lá dừng giữa lúc rơi, lơ lửng giữa tán và đất: không đổi chỗ, không nhỏ dần, không tính là đang rơi; chạm thì lá mới lấy ô trống trước, hết ô trống mới thay lá dừng', () => {
     const f = createLeafFall({ cap: 8, radius: R, seed: 9 });
-    f.settle(() => top);
+    f.still(() => top);
     const still = f.slots.filter((s) => f.state(s, 0).scale > 0);
-    expect(still).toHaveLength(AUTO.still);
+    expect(still).toHaveLength(STILL.length);
     for (const s of still) {
       const [now, later] = [f.state(s, 0), f.state(s, 1e3)];
       expect(now.falling).toBe(false);
-      // Trọng lực lấy theo hướng ở điểm xuất phát, nên lá trôi ngang làm nó nằm cao hơn mặt cầu vài phần nghìn (lá dài 0,07)
-      expect(Math.hypot(...now.pos)).toBeCloseTo(R, 1);
+      const height = Math.hypot(...now.pos) - R;
+      expect(height, 'chưa chạm đất').toBeGreaterThan(0.05);
+      expect(height, 'dưới tán (tán cách đất 0,6)').toBeLessThan(0.65);
       expect(later.pos).toEqual(now.pos);
       expect(later.scale).toBe(1);
     }
+    expect(f.falling(0)).toBe(0);
     const shownAt = (t) => f.slots.filter((s) => f.state(s, t).scale > 0).length;
-    f.burst(1, top, 8 - AUTO.still); // vừa đủ ô trống
-    expect(shownAt(1e3), 'lá nằm yên còn nguyên').toBe(AUTO.still);
-    f.burst(2, top, AUTO.still); // hết ô trống: thay lá nằm yên, và lá mới thì rơi rồi nhỏ dần như thường
+    f.burst(1, top, 8 - STILL.length); // vừa đủ ô trống
+    expect(shownAt(1e3), 'lá dừng còn nguyên').toBe(STILL.length);
+    f.burst(2, top, STILL.length); // hết ô trống: thay lá dừng; lá mới thì rơi, nằm xuống rồi nhỏ dần như thường
     expect(shownAt(1e3)).toBe(0);
   });
 
@@ -175,7 +177,7 @@ describe('l5-la-da', () => {
     expect(content.layers['la-da'].knobs.gravity.options.traiDat).toBeTruthy();
   });
 
-  it('không chạm gì: khung ?freeze=10 đã có lá tự rụng thấy được (mài Lá đa thì thấy khác); giảm chuyển động thì không lá nào rơi, mà AUTO.still lá nằm yên trên đất từ đầu, khung nào cũng vậy', () => {
+  it('không chạm gì: khung ?freeze=10 đã có lá tự rụng thấy được (mài Lá đa thì thấy khác); giảm chuyển động thì không lá nào rơi, mà STILL.length lá dừng giữa lúc rơi từ đầu, khung nào cũng vậy', () => {
     const at = (options, t) => {
       const { setup, shared } = build(options);
       setup.update(0, t);
@@ -183,7 +185,7 @@ describe('l5-la-da', () => {
       return { shown: f.slots.filter((s) => f.state(s, t).scale > 0).length, falling: f.falling(t) };
     };
     expect(at({}, 10 / 60).shown).toBeGreaterThan(0);
-    for (const t of [10 / 60, 100]) expect(at({ reducedMotion: true }, t), `t = ${t}`).toEqual({ shown: AUTO.still, falling: 0 });
+    for (const t of [10 / 60, 100]) expect(at({ reducedMotion: true }, t), `t = ${t}`).toEqual({ shown: STILL.length, falling: 0 });
   });
 
   it('thí nghiệm "Không ghi độ sâu" đổi uniform depthOff của khối bao', () => {

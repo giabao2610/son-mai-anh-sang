@@ -8,12 +8,17 @@ export const GRAVITY = Object.freeze({ trang: 0.162, traiDat: 0.981 });
 /**
  * Lá tự rụng khi không ai chạm: mỗi `every` giây một lá. Cảnh mở ra giữa chừng: lá đầu rụng từ `lead` giây trước, nên khung đầu tiên đã
  * có lá đang rơi và lá nằm trên đất (lớp Lá đa thấy được ngay, kể cả khi mài).
- * Giảm chuyển động thì không lá nào tự rụng: thay vào đó `still` lá nằm yên trên đất từ đầu, không nhỏ dần (settle), nên lớp Lá đa vẫn
- * có vật để mài mà không có gì chuyển động.
+ * Giảm chuyển động thì không lá nào tự rụng (xem STILL).
  */
-export const AUTO = Object.freeze({ every: 2.5, lead: 5, still: 3 });
-/** Lúc rụng của lá nằm yên: rất xa trong quá khứ (đã chạm đất), nhưng sau ô trống (−1e4), nên chạm dồn lấy ô trống trước. */
-const SETTLED = -1e3;
+export const AUTO = Object.freeze({ every: 2.5, lead: 5 });
+/**
+ * Giảm chuyển động: thay cho lá tự rụng, mỗi số ở đây là một lá dừng giữa lúc rơi, ở chừng ấy phần quãng rơi của nó (như lá trong một
+ * bức tranh). Lớp Lá đa vẫn có vật để mài mà không có gì chuyển động. Nằm trên đất thì gần như khuất: camera thấp hơn đỉnh hành tinh,
+ * nhìn mặt đất quanh gốc cây gần như song song.
+ */
+export const STILL = Object.freeze([0.3, 0.55, 0.8]);
+/** Lúc rụng ghi cho lá dừng: sau ô trống (−1e4), nên chạm dồn lấy ô trống trước. Vị trí của lá dừng không đọc số này. */
+const PAUSED = -1e3;
 
 const add = (a, b, k = 1) => a.map((v, i) => v + b[i] * k);
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -32,16 +37,17 @@ export function createLeafFall({ cap, radius, seed = 7 }) {
   if (!Number.isInteger(cap) || cap < 1) throw new Error(`createLeafFall: trần số lá (budget.leaves) phải là số nguyên ≥ 1, nhận ${cap}`);
   // Ô trống: lúc rơi rất xa trong quá khứ, nằm ở nửa bán kính trong lòng hành tinh (không ở tâm: normalize(0) là NaN), cỡ 0
   const slots = Array.from({ length: cap }, () => ({
-    t0: -1e4, g: GRAVITY.trang, p0: [0, radius * 0.5, 0], v0: [0, 0, 0], axis: [0, 1, 0], spin: 0, keep: 0,
+    t0: -1e4, g: GRAVITY.trang, p0: [0, radius * 0.5, 0], v0: [0, 0, 0], axis: [0, 1, 0], spin: 0, pause: 0,
   }));
   let taps = 0;
   let version = 0;
   let auto = 0; // số lá đã tự rụng
 
-  /** `n` lá rụng lúc t quanh `origin`, mỗi lá chiếm ô có lúc rơi cũ nhất; keep 1 = nằm mãi trên đất, không nhỏ dần (settle). */
-  function fill(t, origin, n, keep) {
+  /** `n` lá rụng lúc t quanh `origin`, mỗi lá chiếm ô có lúc rơi cũ nhất; trả các ô đã ghi. */
+  function fill(t, origin, n) {
     const rand = mulberry32(seed * 7919 + taps);
     taps += 1;
+    const filled = [];
     for (let k = 0; k < n; k += 1) {
       const slot = slots.reduce((a, b) => (b.t0 < a.t0 ? b : a));
       const jitter = [randRange(rand, -0.06, 0.06), randRange(rand, -0.03, 0.03), randRange(rand, -0.06, 0.06)];
@@ -51,9 +57,11 @@ export function createLeafFall({ cap, radius, seed = 7 }) {
       slot.v0 = [randRange(rand, -0.04, 0.04), randRange(rand, 0, 0.03), randRange(rand, -0.04, 0.04)];
       slot.axis = unit([randRange(rand, -1, 1), randRange(rand, -1, 1), randRange(rand, -1, 1)]);
       slot.spin = randRange(rand, 1.5, 4);
-      slot.keep = keep;
+      slot.pause = 0;
+      filled.push(slot);
     }
     version += 1;
+    return filled;
   }
 
   const api = {
@@ -68,14 +76,17 @@ export function createLeafFall({ cap, radius, seed = 7 }) {
      * rụng: tất định.
      */
     burst(t, origin, n = api.count) {
-      fill(t, origin, n, 0);
+      fill(t, origin, n);
     },
     /**
-     * Giảm chuyển động (thay cho drift): AUTO.still lá nằm yên trên đất từ đầu, ở chỗ của lá tự rụng thứ k (`origin(k, t0)`). Chúng
-     * nhường ô như mọi lá: chạm dồn hết ô trống thì thay chúng.
+     * Giảm chuyển động (thay cho drift): lá thứ k rụng từ `origin(k)` rồi dừng ở STILL[k] quãng rơi của nó, mãi mãi. Chúng nhường ô
+     * như mọi lá: chạm dồn hết ô trống thì thay chúng.
      */
-    settle(origin) {
-      for (let k = 0; k < AUTO.still; k += 1) fill(SETTLED, origin(k, SETTLED), 1, 1);
+    still(origin) {
+      STILL.forEach((part, k) => {
+        const [slot] = fill(PAUSED, origin(k), 1);
+        slot.pause = part * api.state(slot, 0).landAt;
+      });
     },
     /**
      * Lá tự rụng tới thời điểm t: lá thứ k rụng lúc k·every − lead, mỗi lần một lá, từ `origin(k, t0)`. Gọi mỗi khung; gọi lại với cùng
@@ -96,13 +107,12 @@ export function createLeafFall({ cap, radius, seed = 7 }) {
       const vu = dot(slot.v0, u);
       const h0 = Math.max(Math.hypot(...slot.p0) - radius, 0);
       const landAt = (vu + Math.sqrt(Math.max(vu * vu + 2 * slot.g * h0, 0))) / slot.g;
-      const tau = t - slot.t0;
+      const tau = slot.pause > 0 ? slot.pause : t - slot.t0; // lá dừng (still) giữ mãi một khoảnh khắc của đường rơi
       const tf = Math.min(Math.max(tau, 0), landAt);
       const pos = add(add(slot.p0, slot.v0, tf), u, -0.5 * slot.g * tf * tf);
       const after = tau - landAt - FALL.rest;
-      const fade = slot.keep ? 0 : Math.min(Math.max(after / FALL.fade, 0), 1); // lá nằm yên (settle) không nhỏ dần
-      const scale = tau < 0 ? 0 : 1 - fade;
-      return { pos, scale, landAt, falling: tau >= 0 && tau < landAt };
+      const scale = tau < 0 ? 0 : 1 - Math.min(Math.max(after / FALL.fade, 0), 1);
+      return { pos, scale, landAt, falling: !(slot.pause > 0) && tau >= 0 && tau < landAt };
     },
     /** Số lá đang rơi (số đo "Lá đang rơi"). */
     falling: (t) => slots.filter((s) => api.state(s, t).falling).length,
