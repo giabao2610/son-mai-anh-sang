@@ -5,6 +5,7 @@ import { AUTO, FALL, GRAVITY, createLeafFall } from '../../../src/paintings/cung
 import meta from '../../../src/paintings/cung-que/meta.js';
 import * as painting from '../../../src/paintings/cung-que/painting.js';
 import content from '../../../src/paintings/cung-que/content.vi.js';
+import { knobs as laDaKnobs } from '../../../src/paintings/cung-que/layers/l5-la-da.js';
 import { buildPainting } from '../../helpers/fake-ctx.js';
 import { compileMaterial } from '../../helpers/nodes.js';
 
@@ -72,6 +73,10 @@ describe('la-da-roi', () => {
     expect(f.slots.filter((s) => s.t0 === 0).length, 'mỗi lần tự rụng chỉ một lá').toBe(1);
   });
 
+  it('trần số lá phải là số nguyên ≥ 1: thiếu, bằng 0 hay số lẻ thì báo lỗi lúc dựng, không phải lúc chạm', () => {
+    for (const cap of [0, undefined, 2.5]) expect(() => createLeafFall({ cap, radius: R }), String(cap)).toThrow(/budget\.leaves/);
+  });
+
   it('tất định: cùng chuỗi chạm thì cùng ô; ô trống an toàn (không NaN, cỡ 0)', () => {
     const run = () => {
       const f = createLeafFall({ cap: 8, radius: R, seed: 5 });
@@ -101,9 +106,30 @@ describe('l5-la-da', () => {
     expect(mesh.material).toBeInstanceOf(NodeMaterial);
     expect(mesh.material.positionNode).toBeTruthy();
     expect(mesh.material.emissiveNode).toBeTruthy();
-    const attrs = Object.entries(mesh.geometry.attributes).filter(([, a]) => a.isInstancedBufferAttribute);
-    for (const [, a] of attrs) expect(a.usage).toBe(StaticDrawUsage);
+    // Bốn thuộc tính vec4 của lá không nằm trong geometry.attributes: shader đọc qua instancedBufferAttribute trong thân một Fn, nên
+    // tìm trong lần dịch. DynamicDrawUsage thì three tải lại chúng ở mọi lần vẽ, dù chỉ đổi lúc chạm. (instancedBufferAttribute của TSL
+    // tự ghi Static lên thuộc tính, setUsage trước đó không còn tác dụng; instancedDynamicBufferAttribute thì ghi Dynamic.)
+    const attrs = compileMaterial(mesh, built.ctx, 'webgpu').bufferAttributes
+      .filter((a) => a.isInstancedBufferAttribute && a !== mesh.instanceMatrix);
+    expect(attrs, 'bốn thuộc tính vec4 của lá').toHaveLength(4);
+    for (const a of attrs) expect(a.usage).toBe(StaticDrawUsage);
     expect(content.layers['la-da'].objects['la-roi']).toBeTruthy();
+  });
+
+  it('trần số lá đọc từ budget.leaves của bảng chất lượng, không có số dự phòng viết cứng', () => {
+    expect(() => build({ budget: { leaves: undefined } })).toThrow(/budget\.leaves/);
+    expect(build({ budget: { leaves: 20 } }).shared.leafFall.slots).toHaveLength(20);
+  });
+
+  it('núm gravity lấy lựa chọn từ bảng GRAVITY (một nguồn): lựa chọn nào cũng có g và có nhãn trong Sổ tay', async () => {
+    const { options } = laDaKnobs.find((k) => k.id === 'gravity');
+    expect(options).toEqual(Object.keys(GRAVITY));
+    const { knobs, shared } = build();
+    for (const option of options) {
+      await knobs['la-da'].set('gravity', option);
+      expect(shared.leafFall.g, option).toBe(GRAVITY[option]);
+      expect(content.layers['la-da'].knobs.gravity.options[option], option).toBeTruthy();
+    }
   });
 
   it.each(['webgpu', 'webgl2'])('%s: lá và khối bao dịch được', (backend) => {

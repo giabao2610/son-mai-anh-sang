@@ -22,7 +22,7 @@ export function setup(ctx) {
   // mặc định lệch lưới thì một lần bấm mũi tên không cộng đúng một bước.
   const day = uniform(snap(defaultDay(ctx.now))).setName('lunarDay');
   // Ô lá rơi: cấp theo trần của mức một lần; chạm ghi vào, lớp Lá đa đọc ra (spec §19.4 lớp 5)
-  const leafFall = createLeafFall({ cap: ctx.budget.leaves ?? 64, radius: PLANET.radius });
+  const leafFall = createLeafFall({ cap: ctx.budget.leaves, radius: PLANET.radius });
   // Lá tự rụng khi không ai chạm: từ mép dưới của tán, chỗ tất định theo số thứ tự; tán ở độ cao bay của lúc rụng.
   // Giảm chuyển động thì thôi: chỉ còn lá do người xem chạm.
   const autoOrigin = (k, t0) => {

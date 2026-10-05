@@ -3,7 +3,7 @@
 /**
  * Lớp đọc các số này qua ctx.budget (ghép lên mức mặc định của xưởng: engine/quality.js#budgetFor). Ba mức luôn cùng bộ khóa.
  * steps: số bước dò tối đa của mỗi tia (trần của núm cot.steps). shadowSteps, ao: số bước dò bóng và số mẫu AO (lớp Bóng mềm).
- * leaves: trần số lá đang rơi (lớp Lá đa). bloom: resolutionScale của bloom (Phủ bóng).
+ * leaves: trần số lá đang rơi (lớp Lá đa; số nguyên ≥ 1). bloom: resolutionScale của bloom (Phủ bóng).
  * @type {import('../../engine/contracts/runtime.js').QualitySpec}
  */
 export const quality = {

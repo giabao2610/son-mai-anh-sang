@@ -70,10 +70,13 @@ const PASSES = {
  *   thì đèn có node bóng tự viết dịch như không có bóng.
  *   lights (GĐ 6, mặc định = shadows): nạp các đèn đang hiện của scene vào LightsNode, như RenderList làm lúc vẽ
  *   (`lightsNode.setLights`). Không nạp thì shader không có đèn nào: chỉ kiểm node của bức, không kiểm mô hình chiếu sáng.
- * @returns {{ vertexShader: string, fragmentShader: string, outputs: number, problems: string[], uniforms: string[] }}
+ * @returns {{ vertexShader: string, fragmentShader: string, outputs: number, problems: string[], uniforms: string[],
+ *   bufferAttributes: any[] }}
  *   uniforms (GĐ 6): tên (setName) của mọi uniform mà shader thật sự đọc, kể cả uniform nằm trong thân một Fn (nodesOf không thấy
  *   chúng); uniform không đặt tên mang tên chung của three (nodeUniformN). Mảng uniform (uniformArray) chỉ giữ tên ở WGSL: GLSL đặt
  *   nó vào một khối buffer và đổi tên cả node thành NodeBuffer_<id>.
+ *   bufferAttributes (GĐ 7): mọi BufferAttribute mà shader đọc qua node (bufferAttribute, instancedBufferAttribute), kể cả trong thân
+ *   một Fn; thuộc tính đó không nằm trong geometry.attributes.
  */
 export function compileMaterial(object, { scene, camera }, backend, {
   pass = 'scene', shadows = false, lights = shadows, renderer = compileRenderer(backend, { shadows }),
@@ -107,7 +110,8 @@ export function compileMaterial(object, { scene, camera }, backend, {
   }
   const { vertexShader, fragmentShader } = builder;
   const uniforms = [...builder.uniforms.vertex, ...builder.uniforms.fragment].map((u) => u.name);
-  return { vertexShader, fragmentShader, outputs: countOutputs(fragmentShader), problems, uniforms };
+  const bufferAttributes = builder.bufferAttributes.map((a) => a.node.attribute ?? a.node.value);
+  return { vertexShader, fragmentShader, outputs: countOutputs(fragmentShader), problems, uniforms, bufferAttributes };
 }
 
 /**

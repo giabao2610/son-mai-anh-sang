@@ -85,8 +85,8 @@ export default {
     'bong-mem': {
       understand: 'Bóng ở đây không cần shadow map, cũng không cần đèn. Từ mỗi điểm chạm, shader dò thêm một tia về phía Mặt Trời bằng '
         + 'chính hàm khoảng cách của Cốt. Tia chạm vật thì điểm nằm trong bóng. Tia đi sát mép vật mà không chạm thì điểm nằm trong '
-        + 'nửa tối: càng sát càng tối. Nhờ vậy bóng mềm dần khi xa vật che, như bóng thật. Thêm năm mẫu dọc pháp tuyến để đo độ che '
-        + 'quanh mỗi điểm (AO): khe rễ, đáy hố, chỗ Cuội tựa gốc cây tối hơn.',
+        + 'nửa tối: càng sát càng tối. Nhờ vậy bóng mềm dần khi xa vật che, như bóng thật. Thêm ba đến năm mẫu (tùy mức của máy) dọc pháp '
+        + 'tuyến để đo độ che quanh mỗi điểm (AO): khe rễ, đáy hố, chỗ Cuội tựa gốc cây tối hơn.',
       diagram: bongMemDiagram,
       learned: [
         'Trường khoảng cách cho bóng mềm gần như miễn phí: chỉ cần nhớ tia đã đi sát vật tới đâu.',

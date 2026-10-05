@@ -24,6 +24,8 @@ const unit = (a) => {
  * @param {{ cap: number, radius: number, seed?: number }} p  cap: trần số lá (budget.leaves); radius: bán kính hành tinh
  */
 export function createLeafFall({ cap, radius, seed = 7 }) {
+  // Không có ô nào thì cú chạm đầu tiên mới hỏng (burst không có ô để ghi): báo ngay lúc dựng, kèm tên số trong bảng chất lượng.
+  if (!Number.isInteger(cap) || cap < 1) throw new Error(`createLeafFall: trần số lá (budget.leaves) phải là số nguyên ≥ 1, nhận ${cap}`);
   // Ô trống: lúc rơi rất xa trong quá khứ, nằm ở nửa bán kính trong lòng hành tinh (không ở tâm: normalize(0) là NaN), cỡ 0
   const slots = Array.from({ length: cap }, () => ({
     t0: -1e4, g: GRAVITY.trang, p0: [0, radius * 0.5, 0], v0: [0, 0, 0], axis: [0, 1, 0], spin: 0,

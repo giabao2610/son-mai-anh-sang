@@ -8,8 +8,9 @@ export const id = 'la-da';
 export const knobs = [
   // Số lá mỗi lần chạm. Số lá đang rơi đã có trần theo mức (budget.leaves), nên núm này không cần trần theo mức.
   { id: 'burst', via: 'js', min: 1, max: 8, step: 1, value: 4 },
-  // Trọng lực: trăng (1,62 m/s²) hay Trái Đất (9,81 m/s²). Chỉ áp cho lá rơi từ lúc đổi: lá đang rơi giữ g của nó.
-  { id: 'gravity', kind: 'select', via: 'js', options: ['trang', 'traiDat'], value: 'trang' },
+  // Trọng lực: trăng (1,62 m/s²) hay Trái Đất (9,81 m/s²). Chỉ áp cho lá rơi từ lúc đổi: lá đang rơi giữ g của nó. Lựa chọn lấy
+  // từ bảng GRAVITY (một nguồn): thêm một trọng lực là thêm một lựa chọn, không có lựa chọn nào thiếu g.
+  { id: 'gravity', kind: 'select', via: 'js', options: Object.keys(GRAVITY), value: 'trang' },
 ];
 
 /** Độ cao từ tán xuống đất mà số đo "Thời gian rơi" lấy làm mốc (0,6 đơn vị = 6 m). */

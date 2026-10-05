@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import meta from '../../../src/paintings/cung-que/meta.js';
 import content from '../../../src/paintings/cung-que/content.vi.js';
+import { quality } from '../../../src/paintings/cung-que/quality.js';
 
 const own = meta.layers.map((l) => l.id).filter((id) => id !== 'phu-bong');
 const understand = (id) => content.layers[id].understand.normalize('NFC');
@@ -30,6 +31,12 @@ describe('chữ của Bức 3', () => {
     expect(understand('bong-mem')).toMatch(/AO/);
     expect(understand('anh-dat')).toMatch(/Trái Đất/);
     expect(understand('la-da')).toMatch(/độ sâu/);
+  });
+
+  it('Bóng mềm nói đúng số mẫu AO của bảng chất lượng: mỗi mức một số (spec §19.8)', () => {
+    const words = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín', 'mười'];
+    const counts = Object.values(quality.levels).map((l) => l.ao);
+    expect(understand('bong-mem')).toContain(`${words[Math.min(...counts)]} đến ${words[Math.max(...counts)]} mẫu`);
   });
 
   it('id trong các sơ đồ không trùng nhau (Sổ tay chèn sơ đồ vào cùng một trang)', () => {
