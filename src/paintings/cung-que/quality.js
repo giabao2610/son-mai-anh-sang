@@ -12,6 +12,6 @@ export const quality = {
     vua: { dpr: 1.5, steps: 96, shadowSteps: 24, ao: 4, leaves: 48, bloom: 0.25 },
     thap: { dpr: 1.25, steps: 64, shadowSteps: 16, ao: 3, leaves: 32, bloom: 0.25 },
   },
-  // Máy chậm thì hạ theo thứ tự này: độ nét trước, rồi số bước dò, rồi bloom.
-  ladder: ['dpr', 'cot.buoc', 'phu-bong.bloom'],
+  // Máy chậm thì hạ theo thứ tự này: độ nét trước, rồi chi tiết của bóng và AO (đắt mà ít ai để ý), rồi số bước dò, rồi bloom.
+  ladder: ['dpr', 'bong-mem.chi-tiet', 'cot.buoc', 'phu-bong.bloom'],
 };

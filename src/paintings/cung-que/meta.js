@@ -45,6 +45,11 @@ export default {
         'paintings/cung-que/parts/mat-troi-brdf.js',
       ],
     },
+    {
+      id: 'bong-mem',
+      name: 'Bóng mềm',
+      files: ['paintings/cung-que/layers/l3-bong-mem.js', 'paintings/cung-que/parts/bong-mem-tia.js'],
+    },
     phuBong,
   ],
   // Từ vựng riêng của bức: test luật cấm xưởng (engine/, ui/, lib/tsl/) nhắc tới. Không rào sdf, raymarch: đó là tên kỹ thuật.

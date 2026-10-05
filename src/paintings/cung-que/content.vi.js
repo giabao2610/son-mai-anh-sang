@@ -74,6 +74,29 @@ export default {
       },
       readouts: { tuoi: 'Tuổi trăng (ngày)', sang: 'Phần sáng nhìn từ Trái Đất', goc: 'Góc tuổi trăng' },
     },
+    'bong-mem': {
+      understand: 'Bóng ở đây không cần shadow map, cũng không cần đèn. Từ mỗi điểm chạm, shader dò thêm một tia về phía Mặt Trời bằng '
+        + 'chính hàm khoảng cách của Cốt. Tia chạm vật thì điểm nằm trong bóng. Tia đi sát mép vật mà không chạm thì điểm nằm trong '
+        + 'nửa tối: càng sát càng tối. Nhờ vậy bóng mềm dần khi xa vật che, như bóng thật. Thêm năm mẫu dọc pháp tuyến để đo độ che '
+        + 'quanh mỗi điểm (AO): khe rễ, đáy hố, chỗ Cuội tựa gốc cây tối hơn.',
+      learned: [
+        'Trường khoảng cách cho bóng mềm gần như miễn phí: chỉ cần nhớ tia đã đi sát vật tới đâu.',
+        'AO đo bằng vài mẫu dọc pháp tuyến: chỗ nào khoảng cách nhỏ hơn quãng đã đi thì quanh đó có vật che.',
+      ],
+      readMore: [
+        { title: 'Inigo Quilez · soft shadows in raymarched SDFs', url: 'https://iquilezles.org/articles/rmshadows/' },
+        { title: 'Ambient occlusion (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Ambient_occlusion' },
+      ],
+      knobs: { softness: 'Hệ số k của bóng (nhỏ: nửa tối rộng)', ao: 'Độ đậm AO' },
+      experiments: {
+        bongCung: {
+          label: 'Bóng cứng',
+          explain: 'k thành 128: nửa tối gần như biến mất, bóng sắc như bóng của shadow map ở Đèn Kéo Quân. Bóng thật thì mềm dần khi '
+            + 'xa vật che.',
+        },
+      },
+      readouts: { buocBong: 'Bước dò bóng', mauAo: 'Số mẫu AO' },
+    },
     'phu-bong': { ...phuBong.layers['phu-bong'] },
   },
 };

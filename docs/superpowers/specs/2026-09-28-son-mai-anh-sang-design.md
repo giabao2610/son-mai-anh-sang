@@ -3400,6 +3400,11 @@ Cảnh không có đèn nào của three, và không bật `renderer.shadowMap` 
   - **Bóng mềm từ trường khoảng cách:** từ điểm chạm, dò tia về phía `S` bằng chính `scene`. Ở mỗi bước, khoảng cách h tới vật gần
     nhất cho biết tia đi sát vật tới đâu: `bóng = min(bóng, k·h/t)`. Tia đi sát mép vật mà không chạm thì rơi vào nửa tối; k càng
     nhỏ thì nửa tối càng rộng. Không cần shadow map, không cần đèn: chỉ thêm một vòng dò.
+    - Tia bóng dừng ở mép khối bao (giao giải tích, như tia chính), không đi đủ 3 đơn vị: ngoài khối bao không còn gì che nắng (lá và
+      Trái Đất là mesh riêng). Bước bị kẹp dưới 0,2, nên trong khoảng trống mỗi tia đi hết 3 đơn vị mất ít nhất 15 lần gọi `scene`.
+    - (GĐ 7, Task 5) Đo trên M2, 1280×800, DPR 2, mức cao: dò đủ 3 đơn vị chỉ được 54 khung/giây (18,5 ms); dừng ở mép khối bao thì
+      lại đủ 60. Thử thêm cách chỉ tô ở điểm chạm (bọc phần tô trong `If(chạm)`, vì `Discard` không dừng luồng): không đổi số đo, nên
+      bỏ, giữ code dò tia chính như cũ.
   - **AO từ trường khoảng cách:** lấy năm điểm cách đều dọc pháp tuyến. Điểm nào có khoảng cách nhỏ hơn quãng đã đi thì quanh đó có
     vật che; cộng dồn lại thành độ che.
   - Bọc `recipe.visibility` (nhân `mix(1, bóng, w3)`) và `recipe.occlusion` (nhân `mix(1, AO, w3)`).
@@ -3551,6 +3556,10 @@ Bức đầu không có link trước, bức cuối không có link sau. Đườ
     tới `shadowSteps` lần cho bóng, `ao` lần cho AO;
   - mục tiêu như §2: 60 khung/giây trên laptop (Mac M2, 1280×800, DPR 2, mức cao), 45 trên điện thoại tầm trung (mức vừa và thấp);
   - đo ở task đầu với một hình SDF đại diện (§19.10), rồi đo lại khi đủ sáu lớp.
+  - (GĐ 7, Task 5) Có Bóng mềm (32 bước bóng, 5 mẫu AO): 60 khung/giây ở cả ba mức, 1280×800, DPR 2. Ở 2560×1600, DPR 2, mức cao:
+    24,5 khung/giây sau khi bộ điều chỉnh hạ DPR về 1,75 (chừng 3,3 ns mỗi điểm ảnh; trước Bóng mềm chừng 2 ns). Suy ra ở 1280×800,
+    DPR 2 GPU bận chừng 13,4 ms mỗi khung, dư chừng 20%. Chrome headless không báo ms GPU trên máy này (`gpuMs` null), nên khoảng dư
+    là số suy ra.
 - **JS:** chunk của bức cộng chunk content; chunk `three` dùng chung. Số đo ghi vào README.
 
 ### 19.9 Kiểm thử

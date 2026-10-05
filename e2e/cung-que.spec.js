@@ -16,6 +16,9 @@ const OUTSIDE_SDF = { x0: 0.3, y0: 0.3, x1: 0.36, y1: 0.36 };
 const CANOPY = { x0: 0.45, y0: 0.37, x1: 0.55, y1: 0.42 };
 const PLANET_LEFT = { x0: 0.38, y0: 0.6, x1: 0.45, y1: 0.68 };
 const PLANET_RIGHT = { x0: 0.55, y0: 0.6, x1: 0.62, y1: 0.68 };
+/** Mặt đất ngay bên trái gốc cây: ngày 10, nắng xiên thấp từ bên phải nên bóng cây đổ sang đây (chốt theo ảnh thật, Task 5: có bóng
+ * chừng 0,26, không bóng chừng 0,49). */
+const SHADOW = { x0: 0.45, y0: 0.55, x1: 0.5, y1: 0.575 };
 
 async function open(page, testInfo, frames, extra = '') {
   const query = testInfo.project.metadata.query ?? '';
@@ -174,6 +177,30 @@ test.describe('Cung Quế · pha trăng', () => {
     const q = await canvasRegions(page, { left: PLANET_LEFT, right: PLANET_RIGHT });
     await page.screenshot({ path: testInfo.outputPath('thuong-huyen.png') });
     expect(q.right.mean, 'thượng huyền: nắng từ bên phải').toBeGreaterThan(q.left.mean + 0.06); // mean ở thang 0–1
+    expect(log.errors).toEqual([]);
+  });
+});
+
+test.describe('Cung Quế · bóng', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('ngày 10: mặt đất bên trái gốc cây tối hơn rõ khi Bóng mềm bằng 1 so với 0 (bóng cây); bật "Bóng cứng" không lỗi', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const log = collectConsole(page);
+    await open(page, testInfo, 30);
+    await page.evaluate(() => window.__sma.setDial('ngay', 10));
+    await twoFrames(page);
+    const on = await canvasRegions(page, { shadow: SHADOW });
+    await page.screenshot({ path: testInfo.outputPath('bong.png') });
+    await page.evaluate(() => window.__sma.setWeight('bong-mem', 0));
+    await twoFrames(page);
+    const off = await canvasRegions(page, { shadow: SHADOW });
+    expect(on.shadow.mean, 'bóng cây làm mặt đất tối đi').toBeLessThan(off.shadow.mean * 0.75);
+    await page.evaluate(() => window.__sma.setWeight('bong-mem', 1));
+    await toggleExperiment(page, 'bong-mem', 'bongCung', true);
+    await twoFrames(page);
     expect(log.errors).toEqual([]);
   });
 });

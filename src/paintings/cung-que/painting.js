@@ -1,13 +1,14 @@
 // paintings/cung-que/painting.js — phần nặng của Bức 3: chồng lớp (cùng thứ tự với meta.layers), camera, bảng chất lượng.
 import * as cot from './layers/l1-cot.js';
 import * as matTroi from './layers/l2-mat-troi.js';
+import * as bongMem from './layers/l3-bong-mem.js';
 import * as phuBong from '../../engine/stock/phu-bong/layer.js';
 
 /**
  * Mỗi lớp là một module { id, knobs, createLayer }; import namespace (`* as`) cho ra đúng object đó.
  * @type {import('../../engine/contracts/runtime.js').LayerModule[]}
  */
-export const layers = [cot, matTroi, phuBong];
+export const layers = [cot, matTroi, bongMem, phuBong];
 
 /**
  * Dữ liệu thuần; xưởng dựng PerspectiveCamera + OrbitControls có giới hạn từ đây.
