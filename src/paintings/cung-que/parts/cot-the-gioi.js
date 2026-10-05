@@ -50,14 +50,37 @@ export const TREE = Object.freeze({
   maxLift: 0.45,
 });
 
+/** Cỡ của Cuội và trâu so với số thiết kế đầu viết bên dưới (điểm duyệt ảnh Task 4: ở khung máy tính, Cuội chỉ chừng 2% bề cao). */
+const FIGURE_SCALE = 1.4;
+
+/**
+ * Phóng một vật ghép quanh điểm neo (chỗ vật chạm đất), giữ nguyên dáng: tọa độ, bán kính, hình bao, các kích thước (`height`,
+ * `length`) và độ hòa khớp `blend` đều nhân với s.
+ */
+function scaleFigure({ parts, bound, ...sizes }, anchor, s) {
+  const at = (v) => v.map((x, i) => anchor[i] + (x - anchor[i]) * s);
+  return Object.freeze({
+    ...Object.fromEntries(Object.entries(sizes).map(([k, v]) => [k, v * s])),
+    bound: Object.freeze({ center: at(bound.center), radius: bound.radius * s }),
+    parts: Object.freeze(parts.map((p) => Object.freeze({
+      ...p,
+      a: at(p.a),
+      ...(p.b && { b: at(p.b) }),
+      r: Array.isArray(p.r) ? p.r.map((x) => x * s) : p.r * s,
+    }))),
+  });
+}
+
 /**
  * Chú Cuội ngồi tựa gốc đa, quay về +Z (camera mặc định), ôm gối. Tọa độ trong khung của cây (dời theo lift như cây: Cuội níu rễ).
- * Mỗi phần: hình cầu (a, r), viên thuốc (a, b, r), bầu dục (a, r = [rx, ry, rz]).
+ * Mỗi phần: hình cầu (a, r), viên thuốc (a, b, r), bầu dục (a, r = [rx, ry, rz]). Phóng quanh chỗ ngồi: trên mặt đất, sát thân cây
+ * (bán kính gốc 0,11), nên lưng vẫn tựa thân và hông vẫn chạm đất.
  */
-export const CUOI = Object.freeze({
+export const CUOI = scaleFigure({
   height: 0.17,
-  bound: Object.freeze({ center: [0, 0.09, 0.19], radius: 0.13 }),
-  parts: Object.freeze([
+  blend: 0.012,
+  bound: { center: [0, 0.09, 0.19], radius: 0.13 },
+  parts: [
     { kind: 'sphere', a: [0, 0.03, 0.16], r: 0.032 }, // hông
     { kind: 'capsule', a: [0, 0.045, 0.155], b: [0, 0.1, 0.148], r: 0.03 }, // mình
     { kind: 'sphere', a: [0, 0.143, 0.155], r: 0.027 }, // đầu
@@ -67,30 +90,34 @@ export const CUOI = Object.freeze({
     { kind: 'capsule', a: [-0.024, 0.075, 0.23], b: [-0.024, 0.012, 0.25], r: 0.012 },
     { kind: 'capsule', a: [0.034, 0.1, 0.155], b: [0.016, 0.078, 0.236], r: 0.01 }, // tay ôm gối
     { kind: 'capsule', a: [-0.034, 0.1, 0.155], b: [-0.016, 0.078, 0.236], r: 0.01 },
-  ]),
-});
+  ],
+}, [0, 0, 0.12], FIGURE_SCALE);
 
 /**
  * Con trâu gặm cỏ, đứng trên mặt đất ở góc `angle` (rad, tính từ đỉnh, lệch về +X). Khung riêng: x về phía trước (dọc mặt đất, ra
- * xa gốc cây), y hướng ra ngoài hành tinh, z sang bên (+Z, về phía camera mặc định): camera thấy trâu đứng nghiêng.
+ * xa gốc cây), y hướng ra ngoài hành tinh, z sang bên (+Z, về phía camera mặc định): camera thấy trâu đứng nghiêng. Phóng quanh gốc
+ * khung (giữa bốn chân, trên mặt đất).
  */
 export const TRAU = Object.freeze({
   angle: 0.42,
-  length: 0.2,
-  bound: Object.freeze({ center: [0, 0.06, 0], radius: 0.15 }),
-  parts: Object.freeze([
-    { kind: 'ellipsoid', a: [0, 0.075, 0], r: [0.085, 0.045, 0.042] }, // mình
-    { kind: 'ellipsoid', a: [0.098, 0.04, 0], r: [0.036, 0.022, 0.022] }, // đầu cúi gặm cỏ
-    { kind: 'capsule', a: [0.085, 0.058, 0.018], b: [0.07, 0.075, 0.05], r: 0.006 }, // sừng cong: hai đoạn mỗi bên
-    { kind: 'capsule', a: [0.07, 0.075, 0.05], b: [0.045, 0.08, 0.036], r: 0.005 },
-    { kind: 'capsule', a: [0.085, 0.058, -0.018], b: [0.07, 0.075, -0.05], r: 0.006 },
-    { kind: 'capsule', a: [0.07, 0.075, -0.05], b: [0.045, 0.08, -0.036], r: 0.005 },
-    { kind: 'capsule', a: [0.05, 0.06, 0.026], b: [0.05, 0, 0.026], r: 0.012 }, // bốn chân
-    { kind: 'capsule', a: [0.05, 0.06, -0.026], b: [0.05, 0, -0.026], r: 0.012 },
-    { kind: 'capsule', a: [-0.05, 0.06, 0.026], b: [-0.05, 0, 0.026], r: 0.012 },
-    { kind: 'capsule', a: [-0.05, 0.06, -0.026], b: [-0.05, 0, -0.026], r: 0.012 },
-    { kind: 'capsule', a: [-0.082, 0.09, 0], b: [-0.098, 0.04, 0], r: 0.004 }, // đuôi
-  ]),
+  ...scaleFigure({
+    length: 0.2,
+    blend: 0.01,
+    bound: { center: [0, 0.06, 0], radius: 0.15 },
+    parts: [
+      { kind: 'ellipsoid', a: [0, 0.075, 0], r: [0.085, 0.045, 0.042] }, // mình
+      { kind: 'ellipsoid', a: [0.098, 0.04, 0], r: [0.036, 0.022, 0.022] }, // đầu cúi gặm cỏ
+      { kind: 'capsule', a: [0.085, 0.058, 0.018], b: [0.07, 0.075, 0.05], r: 0.006 }, // sừng cong: hai đoạn mỗi bên
+      { kind: 'capsule', a: [0.07, 0.075, 0.05], b: [0.045, 0.08, 0.036], r: 0.005 },
+      { kind: 'capsule', a: [0.085, 0.058, -0.018], b: [0.07, 0.075, -0.05], r: 0.006 },
+      { kind: 'capsule', a: [0.07, 0.075, -0.05], b: [0.045, 0.08, -0.036], r: 0.005 },
+      { kind: 'capsule', a: [0.05, 0.06, 0.026], b: [0.05, 0, 0.026], r: 0.012 }, // bốn chân
+      { kind: 'capsule', a: [0.05, 0.06, -0.026], b: [0.05, 0, -0.026], r: 0.012 },
+      { kind: 'capsule', a: [-0.05, 0.06, 0.026], b: [-0.05, 0, 0.026], r: 0.012 },
+      { kind: 'capsule', a: [-0.05, 0.06, -0.026], b: [-0.05, 0, -0.026], r: 0.012 },
+      { kind: 'capsule', a: [-0.082, 0.09, 0], b: [-0.098, 0.04, 0], r: 0.004 }, // đuôi
+    ],
+  }, [0, 0, 0], FIGURE_SCALE),
 });
 
 /** Trái Đất treo thẳng trên đỉnh cây (spec §19.1). */

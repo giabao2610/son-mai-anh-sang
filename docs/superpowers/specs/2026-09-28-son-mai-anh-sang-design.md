@@ -1217,10 +1217,12 @@ son-mai-anh-sang/
  * @property {[number, number, number]} position
  * @property {[number, number, number]} target
  * @property {number} fov
- * @property {[number, number]} azimuth     giới hạn xoay ngang (rad)
+ * @property {[number, number]} azimuth     giới hạn xoay ngang (rad); [-Infinity, Infinity] là xoay trọn vòng (GĐ 7)
  * @property {[number, number]} polar       giới hạn xoay dọc (rad)
  * @property {[number, number]} distance
  * @property {number} [breathe]             [1] biên độ "thở"; xưởng ép về 0 khi prefers-reduced-motion
+ * @property {number} [minHorizontalFov]    [7] góc nhìn ngang tối thiểu (độ): khung hẹp (điện thoại dọc) thì xưởng nới fov dọc để
+ *                                          bề ngang vẫn thấy đủ góc này; khung đủ rộng giữ nguyên fov (engine/gpu/fov.js)
  */
 /** @typedef {Object} QualitySpec
  * @property {Record<'cao'|'vua'|'thap', Record<string, number>>} levels   ghép lên mức mặc định của xưởng; lớp đọc qua ctx.budget
@@ -3205,9 +3207,12 @@ shader đó: cảnh không có đèn nào của three.
     cho nhiều bản, mà giá chỉ như một.
   - (GĐ 7, Task 2) Thiết kế đầu có tán rộng 0,9, cao tới 0,8. Ảnh đầu tiên cho thấy cây nhỏ quá so với hành tinh, nên tán to và thấp
     hơn, thân to hơn.
-- **Chú Cuội** ngồi tựa gốc đa, quay về phía camera mặc định: hông, mình, đầu, hai tay ôm gối, chân co; cao chừng 0,17 khi ngồi.
+- **Chú Cuội** ngồi tựa gốc đa, quay về phía camera mặc định: hông, mình, đầu, hai tay ôm gối, chân co; cao chừng 0,24 khi ngồi.
 - **Con trâu** gặm cỏ, cách gốc đa chừng 0,42 trên mặt đất (lệch về phía +X), đứng nghiêng với camera: mình bầu dục, đầu cúi, hai
-  sừng cong, bốn chân, đuôi; dài chừng 0,2.
+  sừng cong, bốn chân, đuôi; dài chừng 0,28 (thân), 0,33 từ đuôi tới mõm.
+  - (GĐ 7, điểm duyệt ảnh Task 4) Thiết kế đầu: Cuội cao 0,17, trâu dài 0,2. Ở khung máy tính, Cuội chỉ chừng 2% bề cao khung. Bao để
+    Claude chỉnh theo đề xuất: cả hai phóng 1,4 lần, giữ nguyên dáng. Số trong `parts/cot-the-gioi.js` vẫn là cỡ thiết kế đầu;
+    `scaleFigure` phóng quanh chỗ vật chạm đất (Cuội: chỗ ngồi sát thân cây; trâu: giữa bốn chân), kể cả hình bao và độ hòa khớp.
 - Mỗi vật (cây, Cuội, trâu) có một hình cầu bao rẻ trong shader. Hình của Cuội và trâu là dữ liệu (`parts/cot-the-gioi.js`): test
   kiểm mọi phần nằm gọn trong hình cầu bao của vật.
 - **Trái Đất** treo thẳng trên đỉnh cây, ở (0; 3,1; 0), bán kính 0,28. Đây là một mesh cầu bình thường, có biển, lục địa, mây và
@@ -3230,6 +3235,14 @@ shader đó: cảnh không có đèn nào của three.
     tinh thì phải đi vòng quanh được.
 
   Chốt ở điểm duyệt ảnh (§19.10), kể cả khung dọc của điện thoại: ở 390×844, hành tinh vừa khít bề ngang.
+  - (GĐ 7, điểm duyệt ảnh Task 4) Bố cục máy tính giữ nguyên. Ở 390×844, fov dọc 48° chỉ cho góc ngang chừng 23°, nên hành tinh bị cắt
+    hai bên (chiếm 110% bề ngang). Cách sửa là một trường tùy chọn mới của `CameraSpec`: `minHorizontalFov` (độ).
+    - Khung hẹp thì xưởng nới fov dọc vừa đủ để góc ngang bằng số này, có trần 100° (`engine/gpu/fov.js#fitFov`, tính lại mỗi lần
+      resize). Khung đủ rộng thì giữ nguyên fov của bức.
+    - Camera không dời, nên khoảng cách vẫn do người xem chọn.
+    - Bức 3 khai báo 30°: ở 390×844, fov dọc thành chừng 60° và hành tinh chiếm chừng 84% bề ngang. Ở máy tính 16:10 (góc ngang chừng
+      71°) và iPad dọc (chừng 37°), không có gì đổi.
+    - Bức 1 và Bức 2 không khai báo trường này, nên không đổi gì.
 - **Gợi ý** (`content.hint`): *"Chạm vào tán đa · giữ để cây bay lên · kéo để xoay"*.
 - **Hai cử chỉ** (`setup().onGesture`). Công cụ học vẫn được ưu tiên như ở mọi bức.
   1. **Chạm là lá rơi** (`'tap'`):

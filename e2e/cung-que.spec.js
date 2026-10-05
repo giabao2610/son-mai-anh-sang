@@ -101,6 +101,35 @@ test.describe('Cung Quế · camera', () => {
   });
 });
 
+test.describe('Cung Quế · khung dọc', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('điện thoại dọc thấy trọn bề ngang hành tinh: hai mép khung là nền, giữa là đất sét (CameraSpec.minHorizontalFov)', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    const log = collectConsole(page);
+    await open(page, testInfo, 20);
+    // Chỉ còn Cốt: hành tinh đất sét sáng đều dưới đèn xưởng, nền tối, nên mép khung đọc ra ngay là nền hay hành tinh
+    for (const { id } of await page.evaluate(() => window.__sma.layers())) {
+      if (id !== 'cot') await page.evaluate((l) => window.__sma.setWeight(l, 0), id);
+    }
+    await twoFrames(page);
+    // Dải mép cao từ giữa khung xuống gần đáy: chỗ hành tinh rộng nhất nằm trong dải, ở khung dọc nào cũng vậy
+    const r = await canvasRegions(page, {
+      left: { x0: 0, y0: 0.55, x1: 0.02, y1: 0.95 },
+      right: { x0: 0.98, y0: 0.55, x1: 1, y1: 0.95 },
+      planet: { x0: 0.4, y0: 0.7, x1: 0.6, y1: 0.8 },
+    });
+    await page.screenshot({ path: testInfo.outputPath('khung-doc.png') });
+    expect(r.planet.mean, 'giữa khung là hành tinh đất sét').toBeGreaterThan(0.25);
+    expect(r.left.mean, 'mép trái là nền').toBeLessThan(0.08);
+    expect(r.right.mean, 'mép phải là nền').toBeLessThan(0.08);
+    expect(log.errors).toEqual([]);
+  });
+});
+
 test.describe('Cung Quế · cử chỉ', () => {
   test.beforeEach(({}, testInfo) => {
     test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');

@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createClock } from './clock.js';
 import { createLatch } from './guards.js';
 import { breathAmplitude, breathOffset } from './breath.js';
+import { fitFov } from './fov.js';
 
 /**
  * Dựng sân khấu cho một bức. Chỉ chạy trong trình duyệt có GPU (e2e kiểm, không có unit test).
@@ -48,6 +49,7 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
   renderer.onError = (info) => errorCallbacks.forEach((cb) => cb(info));
 
   let controls = null;
+  let cameraSpec = null; // CameraSpec của bức: fov tính lại theo tỉ lệ khung mỗi lần resize (minHorizontalFov)
   let breathAmp = 0; // biên độ "thở" của camera (CameraSpec.breathe; 0 khi giảm chuyển động)
   const base = new Vector3(); // điểm nhìn gốc của bức; thở = lệch quanh điểm này
   let dprMax = 1;
@@ -64,6 +66,7 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
     renderer.setPixelRatio(ratio);
     renderer.setSize(width, height);
     camera.aspect = width / height;
+    if (cameraSpec) camera.fov = fitFov(cameraSpec, camera.aspect);
     camera.updateProjectionMatrix();
     renderer.getDrawingBufferSize(u.resolution.value);
   };
@@ -84,10 +87,11 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
       return controls;
     },
 
-    /** Áp CameraSpec của bức: vị trí, điểm nhìn, fov, rồi OrbitControls bị chặn trong giới hạn bức khai báo. */
+    /** Áp CameraSpec của bức: vị trí, điểm nhìn, fov (nới theo khung, fov.js), rồi OrbitControls bị chặn trong giới hạn bức khai báo. */
     useCamera(spec) {
       controls?.dispose();
-      camera.fov = spec.fov;
+      cameraSpec = spec;
+      camera.fov = fitFov(spec, camera.aspect);
       camera.position.set(...spec.position);
       camera.updateProjectionMatrix();
       controls = new OrbitControls(camera, renderer.domElement);

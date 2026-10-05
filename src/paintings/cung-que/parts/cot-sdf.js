@@ -127,7 +127,7 @@ export function createScene({ lift, smooth }) {
       d.assign(smin(d, tree, blend)); // chân rễ hòa với đất: cây bay lên quá độ hòa thì đứt
     });
     If(length(q.sub(v3(CUOI.bound.center))).sub(CUOI.bound.radius).lessThan(d), () => {
-      const body = figure(q, CUOI.parts, 0.012);
+      const body = figure(q, CUOI.parts, CUOI.blend);
       If(body.lessThan(d), () => {
         id.assign(ID.CUOI);
       });
@@ -137,7 +137,7 @@ export function createScene({ lift, smooth }) {
     const o = p.sub(v3(frame.origin));
     const b = vec3(dot(o, v3(frame.forward)), dot(o, v3(frame.up)), o.z);
     If(length(b.sub(v3(TRAU.bound.center))).sub(TRAU.bound.radius).lessThan(d), () => {
-      const body = figure(b, TRAU.parts, 0.01);
+      const body = figure(b, TRAU.parts, TRAU.blend);
       If(body.lessThan(d), () => {
         id.assign(ID.TRAU);
       });

@@ -22,6 +22,8 @@
  * @property {[number, number]} polar       giới hạn xoay dọc (rad)
  * @property {[number, number]} distance
  * @property {number} [breathe]             [1] biên độ "thở"; xưởng ép về 0 khi prefers-reduced-motion
+ * @property {number} [minHorizontalFov]    [7] góc nhìn ngang tối thiểu (độ): khung hẹp (điện thoại dọc) thì xưởng nới fov dọc để
+ *                                          bề ngang vẫn thấy đủ góc này; khung đủ rộng giữ nguyên fov (engine/gpu/fov.js)
  */
 /** @typedef {Object} QualitySpec
  * @property {Record<'cao'|'vua'|'thap', Record<string, number>>} levels   ghép lên mức mặc định của xưởng; lớp đọc qua ctx.budget
