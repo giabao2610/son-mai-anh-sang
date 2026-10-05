@@ -1,4 +1,5 @@
 // e2e/helpers.js — Tiện ích e2e: chờ __sma ổn định, chờ khung, đọc pixel canvas (cả khung và từng vùng), chạm hai lần trong trang, báo GPU, gom lỗi console.
+import { expect } from '@playwright/test';
 
 /** Cảnh báo API cũ mà three in ra lúc chạy (spec §3: e2e bắt các cảnh báo này). */
 export const DEPRECATION = /deprecated|renamed|has been removed/i;
@@ -39,10 +40,11 @@ export async function waitForFrames(page, n, { timeout = 30_000 } = {}) {
 }
 
 /**
- * Stylesheet chỉ áp lúc chụp: ẩn mọi con của body trừ [data-stage] (poster, tên, thơ, huy hiệu, con dấu), và chữ đi theo vật
- * (GĐ 5): vùng chữ nằm TRONG [data-stage], ngay trên chỗ chạm, nên không ẩn thì ảnh quanh chỗ chạm đổi vì chữ chứ không vì cảnh.
+ * Stylesheet chỉ áp lúc chụp: ẩn mọi con của body trừ [data-stage] (poster, tên, thơ, huy hiệu, con dấu, thanh lớp, Sổ tay), và chữ đi
+ * theo vật (GĐ 5): vùng chữ nằm TRONG [data-stage], ngay trên chỗ chạm, nên không ẩn thì ảnh quanh chỗ chạm đổi vì chữ chứ không vì
+ * cảnh. Spec dùng nó để lưu ảnh riêng canvas khi Sổ tay đang mở (GĐ 7).
  */
-const STAGE_ONLY = 'body > :not([data-stage]), [data-captions] { visibility: hidden !important; }';
+export const STAGE_ONLY = 'body > :not([data-stage]), [data-captions] { visibility: hidden !important; }';
 
 /**
  * Chụp canvas bằng locator.screenshot() rồi giải mã PNG ngay trong trang (không cần thư viện PNG ở Node).
@@ -202,6 +204,28 @@ export function tapAt(page, fx, fy, { pointerType = 'mouse' } = {}) {
 }
 
 /**
+ * Nhấn xuống canvas tại (fx, fy) và giữ yên, bằng PointerEvent phát ngay trong trang (pointerId 1 như doubleTapAt: OrbitControls gọi setPointerCapture); trả hàm nhấc lên. Dùng
+ * khi phải giữ tới lúc cảnh đạt một điều kiện: đồng hồ của cảnh theo khung vẽ (mỗi khung tối đa 0,1 s), nên giữ một quãng cố định thì
+ * máy vẽ chậm chưa đủ khung.
+ * @returns {Promise<() => Promise<void>>}
+ */
+export async function pressAt(page, fx, fy, { pointerType = 'mouse' } = {}) {
+  const at = await page.evaluate(({ x, y, type }) => {
+    const canvas = document.querySelector('[data-stage] canvas');
+    const box = canvas.getBoundingClientRect();
+    const init = {
+      pointerId: 1, pointerType: type, isPrimary: true, button: 0, bubbles: true, cancelable: true, composed: true,
+      clientX: box.left + box.width * x, clientY: box.top + box.height * y,
+    };
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { ...init, buttons: 1 }));
+    return init;
+  }, { x: fx, y: fy, type: pointerType });
+  return () => page.evaluate((init) => {
+    document.querySelector('[data-stage] canvas').dispatchEvent(new PointerEvent('pointerup', { ...init, buttons: 0 }));
+  }, at);
+}
+
+/**
  * Vuốt ngang trên canvas từ (fx, fy) một đoạn dx px trong `ms` mili giây, bằng PointerEvent phát ngay trong trang. Mỗi sự kiện chuột
  * của Playwright đợi một nhịp khung (Phụ lục A.51), nên trên GPU phần mềm một cú vuốt dễ quá GESTURE.swipeMs (300 ms) và thành kéo
  * (camera). Xuống, hai lần dời cách nhau ms / 2, rồi nhấc; pointerId 1 như doubleTapAt (OrbitControls gọi setPointerCapture).
@@ -261,4 +285,24 @@ export function collectConsole(page) {
     log.errors.push(err.message);
   });
   return log;
+}
+
+/**
+ * Bật/tắt một thí nghiệm như người xem. Bấm Tab (lần tương tác đầu, không chạm canvas: chạm là thổi nến; phím bổ trợ đứng một mình
+ * như Shift thì input.js bỏ qua) cho lời mời hiện ra,
+ * vào chế độ mài, phủ lại mọi lớp về 1 (chế độ mài đưa chúng về 0), mở trang Phá của lớp rồi bấm nút. KHÔNG thêm hàm nào vào __sma:
+ * GĐ 6 không đổi JS của xưởng (spec §18.6). (GĐ 7) Chuyển từ e2e của Bức 2 sang đây: Bức 3 cũng cần.
+ */
+export async function toggleExperiment(page, layerId, expId, on) {
+  if ((await page.locator('[data-rail]').count()) === 0 || !(await page.locator('[data-rail]').isVisible())) {
+    await page.keyboard.press('Tab');
+    await page.locator('[data-hint] button').click();
+    for (const { id } of await page.evaluate(() => window.__sma.layers())) await page.evaluate((l) => window.__sma.setWeight(l, 1), id);
+  }
+  await page.locator(`[data-rail] [data-layer="${layerId}"] .rail-name`).click();
+  const notebook = page.locator('[data-notebook]');
+  await notebook.locator('[data-tab="pha"]').click();
+  const button = notebook.locator(`[data-experiment="${expId}"]`);
+  if ((await button.getAttribute('aria-pressed')) !== String(on)) await button.click();
+  await expect(button).toHaveAttribute('aria-pressed', String(on));
 }

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cung Quế · Sơn Mài Ánh Sáng</title>
+    <meta name="description" content="Chú Cuội ngồi gốc cây đa trên một mặt trăng nhỏ, sơn từ sáu lớp ánh sáng." />
+    <meta name="theme-color" content="#0E0A08" />
+    <meta property="og:title" content="Cung Quế · Sơn Mài Ánh Sáng" />
+    <meta property="og:description" content="Chú Cuội ngồi gốc cây đa trên một mặt trăng nhỏ, sơn từ sáu lớp ánh sáng." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://giabao2610.github.io/son-mai-anh-sang/tranh/cung-que/" />
+    <meta property="og:image" content="https://giabao2610.github.io/son-mai-anh-sang/paintings/cung-que/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styles/shell.css" />
+  </head>
+  <body data-painting="cung-que" data-state="poster">
+    <img
+      class="poster"
+      data-poster
+      src="/paintings/cung-que/poster.webp"
+      width="1600"
+      height="1000"
+      alt="Tranh sơn mài cung trăng: chú Cuội ngồi gốc cây đa trên một hành tinh nhỏ, con trâu gặm cỏ, Trái Đất treo trên trời."
+      fetchpriority="high"
+    />
+    <div class="stage" data-stage></div>
+    <main class="frame">
+      <div class="top">
+        <header>
+          <small>Sơn Mài Ánh Sáng · Bức 3</small>
+          <h1>Cung Quế</h1>
+          <nav class="series" aria-label="Các bức tranh"><a rel="prev" href="../den-keo-quan/">← Bức 2 · Đèn Kéo Quân</a><a href="../">Phòng tranh</a></nav>
+        </header>
+        <div class="badge-box">
+          <button data-badge hidden type="button" aria-expanded="false" aria-controls="badge-note"></button>
+          <p id="badge-note" data-badge-note aria-live="polite"></p>
+        </div>
+      </div>
+      <section data-static aria-live="polite"></section>
+      <p class="hint" data-hint aria-live="polite"></p>
+      <footer class="foot">
+        <figure class="poem">
+          <blockquote data-poem>
+            <p>Thằng Cuội ngồi gốc cây đa</p>
+            <p>Để trâu ăn lúa gọi cha ời ời</p>
+          </blockquote>
+          <figcaption><cite>Ca dao</cite></figcaption>
+        </figure>
+        <div class="marks">
+          <svg data-moon viewBox="-1.1 -1.1 2.2 2.2" aria-hidden="true"></svg>
+          <span class="dau" data-seal></span>
+        </div>
+      </footer>
+    </main>
+    <script type="module">
+      import { boot } from '/src/engine/boot.js';
+      import entry from '/src/paintings/cung-que/index.js';
+      import t from '/src/ui/strings.vi.js';
+      boot(entry, { lang: 'vi', t });
+    </script>
+  </body>
+</html>

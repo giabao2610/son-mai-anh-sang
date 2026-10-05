@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" role="img" aria-labelledby="dg-cq-ad-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-cq-ad-title">Ánh đất: nắng chiếu vào Trái Đất, Trái Đất hắt lại một phần xuống phía đêm của trăng, thành một thứ ánh xanh lam nhạt. Lúc trăng non, phía Trái Đất của trăng chìm trong đêm, còn Trái Đất nhìn từ trăng lại gần tròn, nên ánh đất mạnh nhất: pha Trái Đất ngược với pha trăng.</title>
+  <defs>
+    <marker id="dg-cq-ad-nang" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#F2D48A"/>
+    </marker>
+    <marker id="dg-cq-ad-anh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#7E9CC8"/>
+    </marker>
+  </defs>
+  <!-- Mặt Trời -->
+  <circle cx="30" cy="44" r="16" fill="#F2D48A"/>
+  <text x="30" y="80" fill="#F2D48A" text-anchor="middle">Mặt Trời</text>
+  <!-- nắng tới Trái Đất và tới trăng -->
+  <g stroke="#F2D48A" stroke-width="1.4">
+    <path d="M50 44 H178" marker-end="url(#dg-cq-ad-nang)"/>
+    <path d="M46 58 L170 128" marker-end="url(#dg-cq-ad-nang)"/>
+  </g>
+  <!-- Trái Đất: nửa trái (phía nắng) sáng -->
+  <circle cx="200" cy="44" r="18" fill="#1B2A4A" stroke="#7E9CC8"/>
+  <path d="M200 26 A18 18 0 0 0 200 62 Z" fill="#7E9CC8"/>
+  <text x="226" y="40" fill="#7E9CC8">Trái Đất</text>
+  <!-- trăng: nửa trái được nắng, nửa phải là đêm có ánh đất -->
+  <circle cx="204" cy="140" r="26" fill="#1B2A4A" stroke="#7E9CC8"/>
+  <path d="M204 114 A26 26 0 0 0 204 166 Z" fill="#EDE3CF"/>
+  <!-- ánh đất: từ Trái Đất xuống phía đêm của trăng -->
+  <path d="M208 64 L216 110" stroke="#7E9CC8" stroke-width="1.6" marker-end="url(#dg-cq-ad-anh)"/>
+  <text x="226" y="92" fill="#7E9CC8">ánh đất</text>
+  <text x="236" y="146" fill="#EDE3CF">phần đêm</text>
+  <text x="236" y="162" fill="#8A8580">sáng lam nhạt</text>
+  <text x="12" y="172" fill="#8A8580">pha Trái Đất ngược pha trăng</text>
+</svg>

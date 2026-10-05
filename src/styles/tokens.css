@@ -1,4 +1,4 @@
-/* styles/tokens.css — Bảng màu sơn mài dạng biến CSS; tests/unit/tokens-css.test.js giữ cho khớp engine/palette.js. */
+/* styles/tokens.css — Bảng màu sơn mài và bộ font dạng biến CSS (vỏ trang và Phòng tranh cùng dùng); tests/unit/tokens-css.test.js giữ màu khớp engine/palette.js. */
 :root {
   --den-then: #0E0A08;     /* đen then: nền sơn */
   --canh-gian: #3B1F14;    /* nâu cánh gián */
@@ -10,4 +10,8 @@
   --cham: #1B2A4A;         /* chàm */
   --xanh-luc: #2E4A3A;     /* xanh lục (màu lá) */
   --dat-set: #8A8580;      /* đất sét: màu của cốt khi mài hết mọi lớp */
+  /* Bộ font (GĐ 7: chuyển từ shell.css sang đây để Phòng tranh dùng chung) */
+  --serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --sans: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
 }

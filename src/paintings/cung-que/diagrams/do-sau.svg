@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" role="img" aria-labelledby="dg-cq-ds-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-cq-ds-title">Hai lối vẽ, một bộ đệm độ sâu: khối bao dò tia tới thân cây rồi ghi độ sâu của điểm chạm, như một vật thường. Lá là mesh: GPU so độ sâu của lá với số đã ghi. Lá trước thân cây gần hơn nên được vẽ; lá sau thân cây xa hơn nên bị che. Không ghi độ sâu thì lá nào cũng vẽ đè lên thân.</title>
+  <defs>
+    <marker id="dg-cq-ds-mui" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#8A8580"/>
+    </marker>
+  </defs>
+  <!-- mắt và đường nhìn -->
+  <circle cx="24" cy="90" r="6" fill="#EDE3CF"/>
+  <text x="24" y="114" fill="#EDE3CF" text-anchor="middle">mắt</text>
+  <path d="M34 90 H340" stroke="#8A8580" stroke-dasharray="3 4"/>
+  <!-- thân cây: khối bao dò tia, ghi độ sâu của điểm chạm -->
+  <rect x="196" y="36" width="18" height="108" fill="#3B1F14"/>
+  <text x="205" y="24" fill="#EDE3CF" text-anchor="middle">thân cây (dò tia) ghi độ sâu</text>
+  <!-- lá trước: vẽ; lá sau: bị che -->
+  <ellipse cx="140" cy="90" rx="14" ry="6" fill="#D4A94A"/>
+  <text x="140" y="120" fill="#D4A94A" text-anchor="middle">lá trước: vẽ</text>
+  <ellipse cx="268" cy="90" rx="14" ry="6" fill="none" stroke="#D4A94A" stroke-dasharray="2 2"/>
+  <text x="268" y="120" fill="#8A8580" text-anchor="middle">lá sau: bị che</text>
+  <!-- trục độ sâu -->
+  <path d="M34 158 H344" stroke="#8A8580" marker-end="url(#dg-cq-ds-mui)"/>
+  <g stroke="#8A8580">
+    <path d="M140 153 V163"/>
+    <path d="M205 153 V163"/>
+    <path d="M268 153 V163"/>
+  </g>
+  <text x="344" y="176" fill="#8A8580" text-anchor="end">độ sâu (xa dần)</text>
+</svg>

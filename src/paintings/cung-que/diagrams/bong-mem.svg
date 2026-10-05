@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" role="img" aria-labelledby="dg-cq-bm-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-cq-bm-title">Bóng mềm từ trường khoảng cách: từ điểm P trên mặt đất, dò một tia về phía nắng. Tia không chạm tán cây nhưng đi sát mép tán: ở quãng t, khoảng hở tới vật gần nhất chỉ còn h. Tỉ số k·h/t nhỏ nhất dọc tia cho độ sáng: đi càng sát và càng xa P thì càng tối, nên P nằm trong nửa tối.</title>
+  <defs>
+    <marker id="dg-cq-bm-mui" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#F2D48A"/>
+    </marker>
+  </defs>
+  <!-- mặt đất, vùng nửa tối quanh P -->
+  <rect x="0" y="150" width="360" height="30" fill="#8A8580"/>
+  <rect x="64" y="150" width="72" height="7" fill="#3B1F14"/>
+  <!-- cây: thân và tán -->
+  <rect x="244" y="82" width="12" height="68" fill="#3B1F14"/>
+  <ellipse cx="250" cy="64" rx="48" ry="20" fill="#2E4A3A"/>
+  <!-- tia bóng từ P về phía nắng, đi sát mép trên bên trái của tán -->
+  <path d="M100 150 L246 4" stroke="#F2D48A" stroke-width="1.6" marker-end="url(#dg-cq-bm-mui)"/>
+  <circle cx="100" cy="150" r="3.2" fill="#EDE3CF"/>
+  <!-- khoảng hở h ở quãng t -->
+  <path d="M198.9 51.1 L204.9 57.2" stroke="#B3261E" stroke-width="2.4"/>
+  <text x="186" y="72" fill="#EDE3CF">h</text>
+  <path d="M92 142 L190.9 43.1" stroke="#D4A94A" stroke-dasharray="3 3"/>
+  <text x="128" y="94" fill="#D4A94A">t</text>
+  <text x="258" y="14" fill="#F2D48A">về phía nắng</text>
+  <text x="100" y="172" fill="#0E0A08" text-anchor="middle">P · nửa tối</text>
+  <text x="12" y="22" fill="#EDE3CF">bóng = min(k·h/t) dọc tia</text>
+  <text x="12" y="40" fill="#8A8580">sát mép, xa P: tối hơn</text>
+</svg>

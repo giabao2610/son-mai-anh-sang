@@ -70,22 +70,18 @@ const PASSES = {
  *   thì đèn có node bóng tự viết dịch như không có bóng.
  *   lights (GĐ 6, mặc định = shadows): nạp các đèn đang hiện của scene vào LightsNode, như RenderList làm lúc vẽ
  *   (`lightsNode.setLights`). Không nạp thì shader không có đèn nào: chỉ kiểm node của bức, không kiểm mô hình chiếu sáng.
- * @returns {{ vertexShader: string, fragmentShader: string, outputs: number, problems: string[], uniforms: string[] }}
+ * @returns {{ vertexShader: string, fragmentShader: string, outputs: number, problems: string[], uniforms: string[],
+ *   bufferAttributes: any[] }}
  *   uniforms (GĐ 6): tên (setName) của mọi uniform mà shader thật sự đọc, kể cả uniform nằm trong thân một Fn (nodesOf không thấy
  *   chúng); uniform không đặt tên mang tên chung của three (nodeUniformN). Mảng uniform (uniformArray) chỉ giữ tên ở WGSL: GLSL đặt
  *   nó vào một khối buffer và đổi tên cả node thành NodeBuffer_<id>.
+ *   bufferAttributes (GĐ 7): mọi BufferAttribute mà shader đọc qua node (bufferAttribute, instancedBufferAttribute), kể cả trong thân
+ *   một Fn; thuộc tính đó không nằm trong geometry.attributes.
  */
-export function compileMaterial(object, { scene, camera }, backend, { pass = 'scene', shadows = false, lights = shadows } = {}) {
+export function compileMaterial(object, { scene, camera }, backend, {
+  pass = 'scene', shadows = false, lights = shadows, renderer = compileRenderer(backend, { shadows }),
+} = {}) {
   if (!PASSES[pass]) throw new Error(`compileMaterial: không có lượt vẽ "${pass}" (chỉ có ${Object.keys(PASSES).join(', ')})`);
-  const renderer = new WebGPURenderer({ forceWebGL: backend === 'webgl2', canvas: { style: {} } });
-  // Chưa init() thì hỏi tính năng là three ném lỗi, còn capabilities của WebGL2 chưa có. Dịch thử không cần tính năng nào;
-  // InstancedMesh chỉ hỏi giới hạn uniform buffer để chọn chỗ đặt ma trận (uniform buffer hay thuộc tính).
-  renderer.hasFeature = () => false;
-  // Shadow map thật (GĐ 6) hỏi so sánh độ sâu ngay trong texture: cả WebGL2 lẫn WebGPU (chế độ thường) đều có, như lúc chạy thật.
-  renderer.hasCompatibility = (name) => name === Compatibility.TEXTURE_COMPARE;
-  renderer.shadowMap.enabled = shadows;
-  const capabilities = renderer.backend.capabilities ?? (renderer.backend.capabilities = {});
-  capabilities.getUniformBufferLimit = () => UNIFORM_BUFFER_LIMIT[backend];
   // three chỉ áp MRT của renderer (và mrtNode của material) khi đang vẽ vào một render target (NodeMaterial.setup của
   // r186). Không đặt target là dịch biến thể vẽ thẳng ra canvas: một đầu ra, bỏ qua mrtNode, mà cảnh không bao giờ vẽ
   // như thế. setRenderTarget chỉ ghi lại target (chưa cấp phát gì trên GPU), nên chưa init() vẫn dùng được.
@@ -114,7 +110,28 @@ export function compileMaterial(object, { scene, camera }, backend, { pass = 'sc
   }
   const { vertexShader, fragmentShader } = builder;
   const uniforms = [...builder.uniforms.vertex, ...builder.uniforms.fragment].map((u) => u.name);
-  return { vertexShader, fragmentShader, outputs: countOutputs(fragmentShader), problems, uniforms };
+  const bufferAttributes = builder.bufferAttributes.map((a) => a.node.attribute ?? a.node.value);
+  return { vertexShader, fragmentShader, outputs: countOutputs(fragmentShader), problems, uniforms, bufferAttributes };
+}
+
+/**
+ * Renderer để dịch thử (chưa init). compileMaterial tạo mới mỗi lần gọi; (GĐ 7) truyền cùng một renderer qua tùy chọn `renderer`
+ * để dịch lại như renderer thật: three giữ mã của hàm có layout (setLayout) THEO BACKEND (`_functionNodeCache` của NodeBuilder), nên
+ * lần dịch thứ hai dùng lại mã đó (Phụ lục A.87).
+ * @param {'webgpu' | 'webgl2'} backend
+ * @param {{ shadows?: boolean }} [options]
+ */
+export function compileRenderer(backend, { shadows = false } = {}) {
+  const renderer = new WebGPURenderer({ forceWebGL: backend === 'webgl2', canvas: { style: {} } });
+  // Chưa init() thì hỏi tính năng là three ném lỗi, còn capabilities của WebGL2 chưa có. Dịch thử không cần tính năng nào;
+  // InstancedMesh chỉ hỏi giới hạn uniform buffer để chọn chỗ đặt ma trận (uniform buffer hay thuộc tính).
+  renderer.hasFeature = () => false;
+  // Shadow map thật (GĐ 6) hỏi so sánh độ sâu ngay trong texture: cả WebGL2 lẫn WebGPU (chế độ thường) đều có, như lúc chạy thật.
+  renderer.hasCompatibility = (name) => name === Compatibility.TEXTURE_COMPARE;
+  renderer.shadowMap.enabled = shadows;
+  const capabilities = renderer.backend.capabilities ?? (renderer.backend.capabilities = {});
+  capabilities.getUniformBufferLimit = () => UNIFORM_BUFFER_LIMIT[backend];
+  return renderer;
 }
 
 /** Các đèn đang hiện trong scene, như RenderList gom lúc vẽ. */
