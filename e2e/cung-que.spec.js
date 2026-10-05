@@ -12,6 +12,10 @@ const AT = 'at=2026-10-21T21:00';
  */
 const PLANET_CORE = { x0: 0.46, y0: 0.66, x1: 0.54, y1: 0.74 };
 const OUTSIDE_SDF = { x0: 0.3, y0: 0.3, x1: 0.36, y1: 0.36 };
+/** Tán đa (giữa khung, phía trên hành tinh) và hai nửa thân hành tinh, để so pha trăng. */
+const CANOPY = { x0: 0.45, y0: 0.37, x1: 0.55, y1: 0.42 };
+const PLANET_LEFT = { x0: 0.38, y0: 0.6, x1: 0.45, y1: 0.68 };
+const PLANET_RIGHT = { x0: 0.55, y0: 0.6, x1: 0.62, y1: 0.68 };
 
 async function open(page, testInfo, frames, extra = '') {
   const query = testInfo.project.metadata.query ?? '';
@@ -115,6 +119,32 @@ test.describe('Cung Quế · cử chỉ', () => {
     await expect.poll(bay, { timeout: 15_000 }).toBeGreaterThan(3);
     await held;
     await expect.poll(bay, { timeout: 30_000 }).toBeLessThan(0.5);
+    expect(log.errors).toEqual([]);
+  });
+});
+
+test.describe('Cung Quế · pha trăng', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('rằm: tán đa sáng hơn hẳn mùng 1; thượng huyền: nửa phải hành tinh sáng hơn nửa trái', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const log = collectConsole(page);
+    await open(page, testInfo, 30);
+    const setDay = async (d) => {
+      await page.evaluate((v) => window.__sma.setDial('ngay', v), d);
+      await twoFrames(page);
+    };
+    await setDay(15);
+    const full = await canvasRegions(page, { canopy: CANOPY });
+    await setDay(1);
+    const dark = await canvasRegions(page, { canopy: CANOPY });
+    expect(full.canopy.mean, 'rằm sáng hơn mùng 1').toBeGreaterThan(dark.canopy.mean * 2);
+    await setDay(8.4);
+    const q = await canvasRegions(page, { left: PLANET_LEFT, right: PLANET_RIGHT });
+    await page.screenshot({ path: testInfo.outputPath('thuong-huyen.png') });
+    expect(q.right.mean, 'thượng huyền: nắng từ bên phải').toBeGreaterThan(q.left.mean + 0.06); // mean ở thang 0–1
     expect(log.errors).toEqual([]);
   });
 });

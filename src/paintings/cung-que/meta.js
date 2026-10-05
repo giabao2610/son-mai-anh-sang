@@ -36,6 +36,15 @@ export default {
         'paintings/cung-que/parts/cot-cay-bay.js',
       ],
     },
+    {
+      id: 'mat-troi',
+      name: 'Mặt trời',
+      files: [
+        'paintings/cung-que/layers/l2-mat-troi.js',
+        'paintings/cung-que/parts/mat-troi-pha.js',
+        'paintings/cung-que/parts/mat-troi-brdf.js',
+      ],
+    },
     phuBong,
   ],
   // Từ vựng riêng của bức: test luật cấm xưởng (engine/, ui/, lib/tsl/) nhắc tới. Không rào sdf, raymarch: đó là tên kỹ thuật.

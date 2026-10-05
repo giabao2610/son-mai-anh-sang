@@ -3262,8 +3262,13 @@ shader đó: cảnh không có đèn nào của three.
   - Dial `ngay` đi từ 1 tới 30, bước 0,25, và φ = 2π(ngày − 1)/29,53.
   - Mặc định là tuổi trăng của `ctx.now` (`?at` hay giờ thật): `1 + moonPhase(now).fraction × 29,53`. Nhờ vậy lúc mở trang, hành
     tinh sáng đúng như trăng ngoài trời đêm nay.
-  - Nhãn (`format`, cũng là `aria-valuetext`): "mùng 1" … "mùng 10", "ngày 11" … "ngày 14", "rằm", "ngày 16" … "ngày 30". Không có
-    ghi chú (`note`).
+  - Số mặc định được làm tròn về lưới bước 0,25, lệch tối đa 0,125 ngày (chừng 1,5° góc pha). Ô trượt HTML làm tròn về lưới khi bấm
+    phím, nên mặc định lệch lưới thì một lần bấm mũi tên không cộng đúng một bước. Test a11y chung đã bắt lỗi này ở GĐ 7, Task 4.
+  - Nhãn (`format`, cũng là `aria-valuetext`) chỉ là số ngày: "1" … "30". Thanh trượt đã mang nhãn "Ngày âm lịch".
+  - Tên pha là ghi chú của Dial: `note()` trả khóa `trangMoi`, `thuongHuyen`, `ram`, `haHuyen` khi ngày ở gần bốn pha chính (±0,9 ngày),
+    `null` ở giữa; chữ ở `content.dials.ngay.notes` ("Rằm: trăng tròn"…).
+  - (GĐ 7, Task 4) Thiết kế đầu in "mùng 1", "rằm" trong `format`. Đó là chữ người xem thấy, nên phải nằm trong `content`, không nằm
+    trong code.
   - Hệ trục khác `sunDirection` của hộp màu: hàm đó trả hướng trong view space, để vẽ một quả cầu trăng nhìn từ Trái Đất (Bức 1).
     Bức 3 cần hướng trong world space quanh một hành tinh. Công thức chỉ một dòng nên viết trong bức (`parts/mat-troi-pha.js`), không
     đổi hộp màu.

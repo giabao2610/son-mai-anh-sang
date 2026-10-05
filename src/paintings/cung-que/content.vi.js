@@ -8,6 +8,17 @@ import phuBong from '../../engine/stock/phu-bong/content.vi.js';
  */
 export default {
   hint: 'Chạm vào tán đa · giữ để cây bay lên · kéo để xoay',
+  dials: {
+    ngay: {
+      label: 'Ngày âm lịch',
+      notes: {
+        trangMoi: 'Trăng mới: phía Trái Đất chìm trong đêm',
+        thuongHuyen: 'Thượng huyền: nắng từ bên phải',
+        ram: 'Rằm: trăng tròn',
+        haHuyen: 'Hạ huyền: nắng từ bên trái',
+      },
+    },
+  },
   layers: {
     cot: {
       understand: 'Cốt là cả thế giới bằng đất sét: một hành tinh nhỏ có hố, cây đa ở đỉnh. Ở đây không có một tam giác nào. Thế giới '
@@ -40,6 +51,28 @@ export default {
       },
       readouts: { bay: 'Cây bay lên', buoc: 'Bước dò tối đa', hinh: 'Số hình SDF' },
       objects: { 'khoi-bao': 'Khối bao (cả thế giới SDF)' },
+    },
+    'mat-troi': {
+      understand: 'Mặt trời chiếu theo đúng pha trăng của ngày đang xem. Pha là góc giữa hướng nắng và hướng về Trái Đất: rằm thì nắng '
+        + 'rọi thẳng xuống đỉnh cây, trăng mới thì phía Trái Đất chìm trong đêm. Kéo núm Ngày âm lịch để thấy vệt sáng quét qua hành '
+        + 'tinh. Bụi trăng không phản xạ như mặt Lambert: nó không tối dần ra mép, nên trăng rằm trông như một đĩa phẳng sáng đều, và '
+        + 'bừng lên khi nắng ở sau lưng người nhìn.',
+      learned: [
+        'Pha trăng chỉ là góc chiếu của nắng so với hướng nhìn từ Trái Đất.',
+        'Mỗi bề mặt có một BRDF riêng: bụi trăng (Lommel–Seeliger) khác hẳn mặt Lambert.',
+      ],
+      readMore: [
+        { title: 'NASA · Moon phases', url: 'https://science.nasa.gov/moon/moon-phases/' },
+        { title: 'Opposition surge (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Opposition_surge' },
+      ],
+      knobs: { intensity: 'Cường độ nắng', surge: 'Độ bừng khi trăng tròn' },
+      experiments: {
+        lambert: {
+          label: 'Bề mặt Lambert',
+          explain: 'Bụi trăng thành mặt Lambert: trăng rằm tối dần ra mép như một quả bóng thạch cao, không còn là đĩa phẳng sáng đều.',
+        },
+      },
+      readouts: { tuoi: 'Tuổi trăng (ngày)', sang: 'Phần sáng nhìn từ Trái Đất', goc: 'Góc tuổi trăng' },
     },
     'phu-bong': { ...phuBong.layers['phu-bong'] },
   },
