@@ -120,6 +120,33 @@ export default {
       readouts: { traiDat: 'Trái Đất sáng (nhìn từ trăng)' },
       objects: { 'trai-dat': 'Trái Đất', 'bau-troi': 'Bầu trời sao' },
     },
+    'la-da': {
+      understand: 'Chạm vào tán đa thì lá rơi. Trên trăng không có không khí, trọng lực chỉ bằng một phần sáu Trái Đất, nên lá rơi thẳng '
+        + 'và chậm, không chao lượn: từ tán xuống đất mất gần ba giây. Đường rơi là một công thức theo thời gian, tính ngay trong shader '
+        + 'của từng lá; máy chỉ ghi lại chỗ và lúc lá bắt đầu rơi khi bạn chạm. Lá là mesh thường, còn hành tinh là hình dò tia, vậy mà '
+        + 'lá vẫn khuất sau thân cây đúng chỗ: khối bao ghi độ sâu của điểm chạm, như mọi vật khác.',
+      learned: [
+        'Chuyển động dạng đóng: vị trí là hàm của thời gian, GPU tự tính, không phải cập nhật từng khung.',
+        'Độ sâu là thứ giúp hai cách vẽ khác nhau (mesh và dò tia) xếp lớp đúng với nhau.',
+      ],
+      readMore: [
+        { title: 'NASA · Apollo 15: búa và lông chim rơi trên trăng', url: 'https://nssdc.gsfc.nasa.gov/planetary/lunar/apollo_15_feather_drop.html' },
+        { title: 'Gravitation of the Moon (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Gravitation_of_the_Moon' },
+      ],
+      knobs: {
+        burst: 'Số lá mỗi lần chạm',
+        gravity: { label: 'Trọng lực', options: { trang: 'Trăng (1,62 m/s²)', traiDat: 'Trái Đất (9,81 m/s²)' } },
+      },
+      experiments: {
+        doSau: {
+          label: 'Không ghi độ sâu',
+          explain: 'Khối bao thôi ghi độ sâu của điểm chạm: lá rơi sau thân cây vẫn hiện đè lên thân cây, vì máy không còn biết cái nào '
+            + 'gần hơn.',
+        },
+      },
+      readouts: { la: 'Lá đang rơi', roi: 'Thời gian rơi 6 m' },
+      objects: { 'la-roi': 'Lá đa đang rơi' },
+    },
     'phu-bong': { ...phuBong.layers['phu-bong'] },
   },
 };

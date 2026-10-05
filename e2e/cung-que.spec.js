@@ -1,7 +1,7 @@
 // e2e/cung-que.spec.js — Bức 3 · Cung Quế: khối bao dò tia ghi độ sâu và pháp tuyến của hình SDF; pha trăng; bóng; ánh đất; cử chỉ; chất lượng.
 import { test, expect } from '@playwright/test';
 import {
-  waitForSettled, waitForFrames, canvasRegions, collectConsole, gpuReport, holdAt, twoFrames, toggleExperiment,
+  waitForSettled, waitForFrames, canvasRegions, collectConsole, gpuReport, holdAt, tapAt, twoFrames, toggleExperiment,
 } from './helpers.js';
 
 const AT = 'at=2026-10-21T21:00';
@@ -254,5 +254,34 @@ test.describe('Cung Quế · ánh đất', () => {
     await twoFrames(page);
     const r = await canvasRegions(page, { core: PLANET_CORE });
     expect(r.core.chroma).toBeLessThan(0.05);
+  });
+});
+
+test.describe('Cung Quế · lá đa', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('chạm vào tán: 4 lá rơi (số đo "Lá đang rơi" ≥ 4) rồi chạm đất hết, còn lại lá tự rụng; mài Lá đa về 0 khi lá đang rơi và bật "Không ghi độ sâu": không lỗi', async ({ page }, testInfo) => {
+    test.setTimeout(150_000);
+    const log = collectConsole(page);
+    const query = (testInfo.project.metadata.query ?? '').replace(/^\?/, '');
+    await page.goto(`./tranh/cung-que/?${query}&${AT}`); // live: đồng hồ của cảnh phải chạy
+    expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
+    const la = () => page.evaluate(() => Number(window.__sma.readouts('la-da').find((r) => r.id === 'la')?.value));
+    // Lá tự rụng: mỗi 2,5 s một lá, rơi chừng 2,7 s, nên lúc nào cũng có một, hai lá đang rơi
+    expect(await la()).toBeLessThanOrEqual(2);
+    await tapAt(page, 0.5, 0.4);
+    await expect.poll(la, { timeout: 15_000 }).toBeGreaterThanOrEqual(4);
+    await page.screenshot({ path: testInfo.outputPath('la-roi.png') });
+    // Rơi 0,6 đơn vị mất chừng 2,7 s của cảnh; đồng hồ của cảnh theo khung vẽ, SwiftShader vẽ chậm nên cho rộng thời gian
+    await expect.poll(la, { timeout: 60_000 }).toBeLessThanOrEqual(2);
+    await tapAt(page, 0.5, 0.4);
+    await expect.poll(la, { timeout: 15_000 }).toBeGreaterThanOrEqual(4);
+    await toggleExperiment(page, 'la-da', 'doSau', true);
+    await page.evaluate(() => window.__sma.setWeight('la-da', 0));
+    await twoFrames(page);
+    expect(await page.evaluate(() => window.__sma.state)).toBe('live');
+    expect(log.errors).toEqual([]);
   });
 });

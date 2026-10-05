@@ -36,7 +36,7 @@ export function createLayer(ctx, shared) {
   shared.matTroi = { sunDir, phi, earthLit: (day) => earthLit(phaseOfDay(day)) };
 
   const pal = (token) => color(ctx.palette.color(token));
-  const [clay, bacLa, bark, leaf, nga, denThen] = ['datSet', 'bacLa', 'canhGian', 'xanhLuc', 'nga', 'denThen'].map(pal);
+  const [clay, bacLa, bark, leaf, nga, denThen, vangLa] = ['datSet', 'bacLa', 'canhGian', 'xanhLuc', 'nga', 'denThen', 'vangLa'].map(pal);
   const sunColor = nga;
   const isId = (h, k) => abs(h.id.sub(k)).lessThan(0.5);
 
@@ -55,7 +55,7 @@ export function createLayer(ctx, shared) {
       c.assign(mix(denThen, clay, 0.25));
     });
     If(isId(h, ID.LEAF), () => {
-      c.assign(leaf);
+      c.assign(mix(vangLa, leaf, 0.25)); // lá đa già vàng rồi mới rụng: sáng hơn tán, nên thấy được lá rơi trên nền trời đen
     });
     return c;
   })();

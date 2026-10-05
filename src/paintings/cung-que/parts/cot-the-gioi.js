@@ -189,6 +189,21 @@ export function canopyHit(origin, dir, lift = 0) {
   return q.map((v, i) => center[i] + v * radii[i]);
 }
 
+/**
+ * Một điểm ở mép dưới của tán (dưới "đường xích đạo" của hình bầu dục bao tán), chỗ lá tự rụng: u chọn góc quanh trục, v chọn độ cao
+ * trong dải 100°–125° tính từ đỉnh của hình bầu dục. u, v trong [0; 1).
+ */
+export function canopyRim(u, v, lift = 0) {
+  const { center, radii } = canopyEllipsoid(lift);
+  const a = u * Math.PI * 2;
+  const polar = ((100 + v * 25) * Math.PI) / 180;
+  return [
+    center[0] + radii[0] * Math.sin(polar) * Math.cos(a),
+    center[1] + radii[1] * Math.cos(polar),
+    center[2] + radii[2] * Math.sin(polar) * Math.sin(a),
+  ];
+}
+
 /** Hình bao (cầu) của từng vật, cho test "khối bao chứa mọi thứ" và test "mọi phần nằm trong hình bao của vật". */
 export function partBounds(lift = 0) {
   const { center, radii } = canopyEllipsoid(lift);

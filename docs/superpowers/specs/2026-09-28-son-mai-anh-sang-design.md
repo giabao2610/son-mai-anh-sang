@@ -3259,6 +3259,16 @@ shader đó: cảnh không có đèn nào của three.
      - Lá không chao lượn, vì trên trăng không có không khí: lá vừa quay đều vừa rơi thẳng, như chiếc lông chim rơi cùng cây búa
        trong thí nghiệm của Apollo 15.
      - Lá nằm lại trên mặt đất vài giây rồi nhỏ dần và biến mất. Cùng lúc có tối đa `budget.leaves` lá; lá cũ nhất nhường chỗ.
+     - (GĐ 7, Task 7) **Lá tự rụng:** không ai chạm thì cứ 2,5 giây một lá rụng từ mép dưới của tán, ở chỗ tất định theo số thứ tự
+       của lá. Cảnh mở ra giữa chừng (lá đầu rụng từ 5 giây trước), nên khung đầu đã có lá đang rơi và lá nằm trên đất.
+       - Lý do: chưa chạm thì lớp Lá đa không có vật nào, nên mài lớp này không đổi gì. Người xem mài thấy một lớp "không làm gì",
+         và test chung "mài từng lớp" bắt được điều đó.
+       - Giảm chuyển động thì không có lá tự rụng, chỉ còn lá do người xem chạm.
+     - (GĐ 7, Task 7) **Lá vàng tỏa nhẹ:** lá đa thần trong truyện Cuội có lá thuốc. Lá rụng màu vàng lá pha chút xanh, có emissive
+       nhỏ (0,35 × vàng lá), nên Phủ bóng làm nó lấp lánh.
+       - Lý do: ảnh thật cho thấy lá xanh thẫm vừa rơi nằm trong bóng của chính tán, lại trên nền trời đen, nên vô hình tới khi chạm
+         đất chỗ có nắng. Về đêm thì chạm mà không thấy gì.
+       - Lá dài chừng 0,07, to hơn thiết kế đầu (0,055) 1,3 lần.
   2. **Giữ là cây bay** (`'hold-start'` → `'hold-end'`), theo truyền thuyết cây đa bay lên trời mang theo chú Cuội:
      - Cây nhổ lên, cao dần tới 0,45 trong chừng 1,5 giây; chú Cuội níu theo một rễ và lên cùng cây.
      - Chân rễ hòa khối với mặt đất, nên đất bị kéo dài lên như đất sét, rồi đứt khi cây lên cao quá độ hòa (`smooth`). Đây là cảnh
@@ -3438,7 +3448,8 @@ Cảnh không có đèn nào của three, và không bật `renderer.shadowMap` 
 - **Vật:** `trai-dat`, `bau-troi`.
 
 #### Lớp 5 · Lá đa (`layers/l5-la-da.js`)
-- **Thấy gì:** chạm thì lá rơi (§19.2). Lá khuất sau thân cây thì bị che, lá trước thân thì nằm trên.
+- **Thấy gì:** chạm thì lá rơi (§19.2); không ai chạm thì thỉnh thoảng một lá tự rụng. Lá vàng, tỏa nhẹ. Lá khuất sau thân cây thì
+  bị che, lá trước thân thì nằm trên.
 - **Kỹ thuật:**
   - **Đường rơi** (`parts/la-da-roi.js`, hàm thuần, không import three) có dạng đóng:
     - `p(t) = p0 + v0·τ + ½·g·τ²`, với τ = t − lúc rơi, và g hướng về tâm hành tinh, lấy tại điểm xuất phát;

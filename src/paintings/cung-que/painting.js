@@ -3,13 +3,14 @@ import * as cot from './layers/l1-cot.js';
 import * as matTroi from './layers/l2-mat-troi.js';
 import * as bongMem from './layers/l3-bong-mem.js';
 import * as anhDat from './layers/l4-anh-dat.js';
+import * as laDa from './layers/l5-la-da.js';
 import * as phuBong from '../../engine/stock/phu-bong/layer.js';
 
 /**
  * Mỗi lớp là một module { id, knobs, createLayer }; import namespace (`* as`) cho ra đúng object đó.
  * @type {import('../../engine/contracts/runtime.js').LayerModule[]}
  */
-export const layers = [cot, matTroi, bongMem, anhDat, phuBong];
+export const layers = [cot, matTroi, bongMem, anhDat, laDa, phuBong];
 
 /**
  * Dữ liệu thuần; xưởng dựng PerspectiveCamera + OrbitControls có giới hạn từ đây.

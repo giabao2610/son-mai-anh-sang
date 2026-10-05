@@ -55,6 +55,15 @@ export default {
       name: 'Ánh đất',
       files: ['paintings/cung-que/layers/l4-anh-dat.js', 'paintings/cung-que/parts/anh-dat-troi.js'],
     },
+    {
+      id: 'la-da',
+      name: 'Lá đa',
+      files: [
+        'paintings/cung-que/layers/l5-la-da.js',
+        'paintings/cung-que/parts/la-da-roi.js',
+        'paintings/cung-que/parts/la-da-mesh.js',
+      ],
+    },
     phuBong,
   ],
   // Từ vựng riêng của bức: test luật cấm xưởng (engine/, ui/, lib/tsl/) nhắc tới. Không rào sdf, raymarch: đó là tên kỹ thuật.
