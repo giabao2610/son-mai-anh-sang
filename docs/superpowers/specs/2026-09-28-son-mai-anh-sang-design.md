@@ -3266,10 +3266,12 @@ shader đó: cảnh không có đèn nào của three.
        của lá. Cảnh mở ra giữa chừng (lá đầu rụng từ 5 giây trước), nên khung đầu đã có lá đang rơi và lá nằm trên đất.
        - Lý do: chưa chạm thì lớp Lá đa không có vật nào, nên mài lớp này không đổi gì. Người xem mài thấy một lớp "không làm gì",
          và test chung "mài từng lớp" bắt được điều đó.
-       - Giảm chuyển động thì không có lá tự rụng. (Sau GĐ 7) Thay vào đó ba lá dừng giữa lúc rơi, ở 0,3, 0,55 và 0,8 quãng rơi của
-         chúng, như lá trong một bức tranh: mài Lá đa vẫn thấy khác mà không có gì chuyển động. Chúng rụng từ mép tán phía camera mặc
-         định, nên nằm trước thân cây. Lá nằm trên đất thì gần như khuất: camera thấp hơn đỉnh hành tinh, nhìn mặt đất quanh gốc cây
-         gần như song song. Lá do người xem chạm vẫn rơi; chạm dồn hết ô trống thì lá mới thay ba lá dừng.
+       - Giảm chuyển động thì không có lá tự rụng. (Sau GĐ 7) Thay vào đó ba lá dừng giữa lúc rơi, ở 0,3, 0,55 và 0,8 thời gian rơi
+         của chúng (chừng 9%, 30% và 64% quãng từ tán xuống đất), như lá trong một bức tranh: mài Lá đa vẫn thấy khác mà không có gì
+         chuyển động. Chúng rụng từ mép tán phía camera mặc định, nên nằm trước thân cây. Lá nằm trên đất thì gần như khuất: camera
+         thấp hơn đỉnh hành tinh, nhìn mặt đất quanh gốc cây gần như song song. Lá do người xem chạm vẫn rơi. Ô nhường chỗ theo thứ
+         tự: ô trống hay lá đã tan, rồi lá cũ nhất đang hiện; lá dừng sau cùng (chỉ nhường khi mọi ô đều là lá dừng), nên chạm bao
+         nhiêu lần ba lá dừng vẫn còn.
      - (GĐ 7, Task 7) **Lá vàng tỏa nhẹ:** lá đa thần trong truyện Cuội có lá thuốc. Lá rụng màu vàng lá pha chút xanh, có emissive
        nhỏ (0,35 × vàng lá), nên Phủ bóng làm nó lấp lánh.
        - Lý do: ảnh thật cho thấy lá xanh thẫm vừa rơi nằm trong bóng của chính tán, lại trên nền trời đen, nên vô hình tới khi chạm

@@ -73,7 +73,7 @@ describe('la-da-roi', () => {
     expect(f.slots.filter((s) => s.t0 === 0).length, 'mỗi lần tự rụng chỉ một lá').toBe(1);
   });
 
-  it('still (giảm chuyển động): STILL.length lá dừng giữa lúc rơi, lơ lửng giữa tán và đất: không đổi chỗ, không nhỏ dần, không tính là đang rơi; chạm thì lá mới lấy ô trống trước, hết ô trống mới thay lá dừng', () => {
+  it('still (giảm chuyển động): STILL.length lá dừng giữa lúc rơi, lơ lửng giữa tán và đất: không đổi chỗ, không nhỏ dần, không tính là đang rơi; chạm thì lá mới lấy ô trống trước, rồi ô của lá cũ nhất đang hiện; lá dừng nhường ô sau cùng', () => {
     const f = createLeafFall({ cap: 8, radius: R, seed: 9 });
     f.still(() => top);
     const still = f.slots.filter((s) => f.state(s, 0).scale > 0);
@@ -91,8 +91,26 @@ describe('la-da-roi', () => {
     const shownAt = (t) => f.slots.filter((s) => f.state(s, t).scale > 0).length;
     f.burst(1, top, 8 - STILL.length); // vừa đủ ô trống
     expect(shownAt(1e3), 'lá dừng còn nguyên').toBe(STILL.length);
-    f.burst(2, top, STILL.length); // hết ô trống: thay lá dừng; lá mới thì rơi, nằm xuống rồi nhỏ dần như thường
-    expect(shownAt(1e3)).toBe(0);
+    f.burst(2, top, STILL.length); // hết ô trống: thay lá đang rơi cũ nhất, không thay lá dừng
+    expect(f.slots.filter((x) => x.pause > 0), 'lá dừng còn nguyên').toHaveLength(STILL.length);
+    expect(shownAt(1e3), 'lá mới rơi, nằm xuống rồi nhỏ dần như thường').toBe(STILL.length);
+  });
+
+  it('lá dừng nhường ô sau cùng: chạm thưa (lá lần trước đã tan) bao nhiêu lần cũng không thay lá dừng; chỉ khi mọi ô đều là lá dừng thì lá dừng cũ nhất mới nhường', () => {
+    const f = createLeafFall({ cap: 8, radius: R, seed: 10 });
+    f.still(() => top);
+    for (let i = 0; i < 10; i += 1) f.burst(i * 20, top, 4); // cách nhau 20 s: lá lần trước đã nằm xuống và tan
+    expect(f.slots.filter((x) => x.pause > 0), 'lúc giảm chuyển động, lá dừng là vật duy nhất của lớp khi chưa chạm').toHaveLength(STILL.length);
+    const full = createLeafFall({ cap: STILL.length, radius: R, seed: 11 });
+    full.still(() => top);
+    full.burst(1, top, 1);
+    expect(full.slots.filter((x) => x.pause > 0)).toHaveLength(STILL.length - 1);
+    expect(full.slots.filter((x) => full.state(x, 1e3).scale > 0)).toHaveLength(STILL.length - 1);
+  });
+
+  it('lá dừng phải lơ lửng: điểm xuất phát dưới mặt đất (thời gian rơi bằng 0) thì báo lỗi, không lặng lẽ thành lá thường vô hình', () => {
+    const f = createLeafFall({ cap: 8, radius: R, seed: 12 });
+    expect(() => f.still(() => [0, -0.5, 0])).toThrow(/lơ lửng/);
   });
 
   it('trần số lá phải là số nguyên ≥ 1: thiếu, bằng 0 hay số lẻ thì báo lỗi lúc dựng, không phải lúc chạm', () => {

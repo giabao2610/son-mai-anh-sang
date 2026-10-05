@@ -1,10 +1,10 @@
 // paintings/cung-que/parts/la-da-mesh.js — mesh lá đa: InstancedMesh cấp theo trần một lần; positionNode tính đường rơi và độ xoay trên GPU từ thời gian (thuộc tính chỉ ghi lúc chạm); tô bằng recipe của khối bao.
 import { DoubleSide, InstancedBufferAttribute, InstancedMesh, NodeMaterial, Shape, ShapeGeometry } from 'three/webgpu';
 import {
-  Fn, cameraPosition, clamp, cos, cross, dot, faceDirection, float, instancedBufferAttribute, length, max, mix, normalLocal, normalWorld,
+  Fn, cameraPosition, clamp, cos, cross, dot, faceDirection, float, instancedBufferAttribute, length, max, normalLocal, normalWorld,
   normalize, positionLocal, positionWorld, sin, sqrt, step,
 } from 'three/tsl';
-import { FALL } from './la-da-roi.js';
+import { FALL, PAUSE_MIN } from './la-da-roi.js';
 
 /** Xoay v quanh trục đơn vị k một góc a (công thức Rodrigues). */
 const rotate = (v, k, a) => v.mul(cos(a)).add(cross(k, v).mul(sin(a))).add(k.mul(dot(k, v)).mul(float(1).sub(cos(a))));
@@ -45,7 +45,10 @@ export function createLeafMesh({ fall, time, w, shade, radius, leafId, glow }) {
     const vu = dot(V.xyz, u);
     const h0 = max(length(p0).sub(radius), 0);
     const landAt = vu.add(sqrt(max(vu.mul(vu).add(g.mul(2).mul(h0)), 0))).div(g);
-    const tau = mix(time.sub(A.x), A.w, step(1e-6, A.w)); // lá dừng (fall.still) không theo đồng hồ
+    // Lá dừng (fall.still) không theo đồng hồ. Không dùng mix(): vài GPU tính mix(x, y, 1) = x + (y − x)·1, lệch vài ULP của x (lúc
+    // rơi của lá dừng là −1000, nên x = time + 1000), và lá dừng sẽ rung nhẹ khi trang mở lâu.
+    const paused = step(PAUSE_MIN, A.w);
+    const tau = time.sub(A.x).mul(float(1).sub(paused)).add(A.w.mul(paused));
     const tf = clamp(tau, 0, landAt);
     const center = p0.add(V.xyz.mul(tf)).sub(u.mul(g.mul(0.5).mul(tf).mul(tf)));
     const after = tau.sub(landAt).sub(FALL.rest);

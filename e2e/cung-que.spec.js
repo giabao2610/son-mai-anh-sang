@@ -2,6 +2,7 @@
 import { test, expect } from '@playwright/test';
 import {
   waitForSettled, waitForFrames, canvasRegions, collectConsole, gpuReport, pressAt, tapAt, twoFrames, toggleExperiment, STAGE_ONLY,
+  FULL,
 } from './helpers.js';
 
 const AT = 'at=2026-10-21T21:00';
@@ -23,8 +24,6 @@ const SHADOW = { x0: 0.45, y0: 0.55, x1: 0.5, y1: 0.575 };
 const PLANET_NIGHT = { x0: 0.42, y0: 0.58, x1: 0.58, y1: 0.66 };
 /** Trái Đất ở khung mặc định (tâm chừng (0,5; 0,145)). */
 const EARTH_BOX = { x0: 0.47, y0: 0.1, x1: 0.53, y1: 0.2 };
-/** Cả khung: canvasRegions chỉ thêm vùng `all` khi không truyền vùng nào. */
-const FULL = { x0: 0, y0: 0, x1: 1, y1: 1 };
 
 async function open(page, testInfo, frames, extra = '') {
   const query = testInfo.project.metadata.query ?? '';

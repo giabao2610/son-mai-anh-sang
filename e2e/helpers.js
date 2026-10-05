@@ -40,10 +40,10 @@ export async function waitForFrames(page, n, { timeout = 30_000 } = {}) {
 }
 
 /**
- * Stylesheet chỉ áp lúc chụp: ẩn mọi con của body trừ [data-stage] (poster, tên, thơ, huy hiệu, con dấu), và chữ đi theo vật
- * (GĐ 5): vùng chữ nằm TRONG [data-stage], ngay trên chỗ chạm, nên không ẩn thì ảnh quanh chỗ chạm đổi vì chữ chứ không vì cảnh.
+ * Stylesheet chỉ áp lúc chụp: ẩn mọi con của body trừ [data-stage] (poster, tên, thơ, huy hiệu, con dấu, thanh lớp, Sổ tay), và chữ đi
+ * theo vật (GĐ 5): vùng chữ nằm TRONG [data-stage], ngay trên chỗ chạm, nên không ẩn thì ảnh quanh chỗ chạm đổi vì chữ chứ không vì
+ * cảnh. Spec dùng nó để lưu ảnh riêng canvas khi Sổ tay đang mở (GĐ 7).
  */
-/** CSS lúc chụp: chỉ còn canvas (ẩn thanh lớp, Sổ tay, chữ đi theo vật). Spec dùng để lưu ảnh canvas khi Sổ tay đang mở. */
 export const STAGE_ONLY = 'body > :not([data-stage]), [data-captions] { visibility: hidden !important; }';
 
 /**

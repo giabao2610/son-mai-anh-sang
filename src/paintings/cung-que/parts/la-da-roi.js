@@ -12,13 +12,15 @@ export const GRAVITY = Object.freeze({ trang: 0.162, traiDat: 0.981 });
  */
 export const AUTO = Object.freeze({ every: 2.5, lead: 5 });
 /**
- * Giảm chuyển động: thay cho lá tự rụng, mỗi số ở đây là một lá dừng giữa lúc rơi, ở chừng ấy phần quãng rơi của nó (như lá trong một
- * bức tranh). Lớp Lá đa vẫn có vật để mài mà không có gì chuyển động. Nằm trên đất thì gần như khuất: camera thấp hơn đỉnh hành tinh,
+ * Giảm chuyển động: thay cho lá tự rụng, mỗi số ở đây là một lá dừng giữa lúc rơi, ở chừng ấy phần THỜI GIAN rơi của nó (như lá trong
+ * một bức tranh): rơi nhanh dần, nên lá ở chừng 9%, 30% và 64% quãng từ tán xuống đất. Lớp Lá đa vẫn có vật để mài mà không có gì chuyển động. Nằm trên đất thì gần như khuất: camera thấp hơn đỉnh hành tinh,
  * nhìn mặt đất quanh gốc cây gần như song song.
  */
 export const STILL = Object.freeze([0.3, 0.55, 0.8]);
-/** Lúc rụng ghi cho lá dừng: sau ô trống (−1e4), nên chạm dồn lấy ô trống trước. Vị trí của lá dừng không đọc số này. */
+/** Lúc rụng ghi cho lá dừng: sau ô trống (−1e4). Vị trí của lá dừng không đọc số này. */
 const PAUSED = -1e3;
+/** Ô có pause từ số này trở lên là lá dừng: một ngưỡng cho cả state() lẫn positionNode (la-da-mesh.js), để hai bên không lệch nhau. */
+export const PAUSE_MIN = 1e-6;
 
 const add = (a, b, k = 1) => a.map((v, i) => v + b[i] * k);
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -43,13 +45,22 @@ export function createLeafFall({ cap, radius, seed = 7 }) {
   let version = 0;
   let auto = 0; // số lá đã tự rụng
 
-  /** `n` lá rụng lúc t quanh `origin`, mỗi lá chiếm ô có lúc rơi cũ nhất; trả các ô đã ghi. */
+  /**
+   * Ô nhường chỗ: ô trống hay lá đã tan trước, rồi lá đang hiện, lá dừng sau cùng (lúc giảm chuyển động, lá dừng là vật duy nhất của
+   * lớp Lá đa khi chưa chạm); cùng hạng thì ô có lúc rơi cũ nhất.
+   */
+  const rank = (s, t) => (s.pause >= PAUSE_MIN ? 2 : api.state(s, t).scale > 0 ? 1 : 0);
+
+  /** `n` lá rụng lúc t quanh `origin`, mỗi lá chiếm ô nhường chỗ trước nhất (rank); trả các ô đã ghi. */
   function fill(t, origin, n) {
     const rand = mulberry32(seed * 7919 + taps);
     taps += 1;
     const filled = [];
     for (let k = 0; k < n; k += 1) {
-      const slot = slots.reduce((a, b) => (b.t0 < a.t0 ? b : a));
+      const slot = slots.reduce((a, b) => {
+        const [ra, rb] = [rank(a, t), rank(b, t)];
+        return rb < ra || (rb === ra && b.t0 < a.t0) ? b : a;
+      });
       const jitter = [randRange(rand, -0.06, 0.06), randRange(rand, -0.03, 0.03), randRange(rand, -0.06, 0.06)];
       slot.t0 = t;
       slot.g = api.g;
@@ -79,13 +90,16 @@ export function createLeafFall({ cap, radius, seed = 7 }) {
       fill(t, origin, n);
     },
     /**
-     * Giảm chuyển động (thay cho drift): lá thứ k rụng từ `origin(k)` rồi dừng ở STILL[k] quãng rơi của nó, mãi mãi. Chúng nhường ô
-     * như mọi lá: chạm dồn hết ô trống thì thay chúng.
+     * Giảm chuyển động (thay cho drift): lá thứ k rụng từ `origin(k)` rồi dừng mãi ở STILL[k] thời gian rơi của nó. Chạm thì lá mới
+     * lấy ô trống, ô của lá đã tan, rồi ô của lá đang hiện; lá dừng nhường ô sau cùng.
      */
     still(origin) {
       STILL.forEach((part, k) => {
         const [slot] = fill(PAUSED, origin(k), 1);
-        slot.pause = part * api.state(slot, 0).landAt;
+        const pause = part * api.state(slot, 0).landAt;
+        // Thời gian rơi bằng 0 (xuất phát dưới mặt đất) thì pause 0: lá dừng sẽ lặng lẽ thành lá thường đã tan từ lâu
+        if (!(pause >= PAUSE_MIN)) throw new Error(`createLeafFall.still: lá dừng thứ ${k} không lơ lửng (thời gian rơi ${pause / part} s)`);
+        slot.pause = pause;
       });
     },
     /**
@@ -107,12 +121,13 @@ export function createLeafFall({ cap, radius, seed = 7 }) {
       const vu = dot(slot.v0, u);
       const h0 = Math.max(Math.hypot(...slot.p0) - radius, 0);
       const landAt = (vu + Math.sqrt(Math.max(vu * vu + 2 * slot.g * h0, 0))) / slot.g;
-      const tau = slot.pause > 0 ? slot.pause : t - slot.t0; // lá dừng (still) giữ mãi một khoảnh khắc của đường rơi
+      const paused = slot.pause >= PAUSE_MIN;
+      const tau = paused ? slot.pause : t - slot.t0; // lá dừng (still) giữ mãi một khoảnh khắc của đường rơi
       const tf = Math.min(Math.max(tau, 0), landAt);
       const pos = add(add(slot.p0, slot.v0, tf), u, -0.5 * slot.g * tf * tf);
       const after = tau - landAt - FALL.rest;
       const scale = tau < 0 ? 0 : 1 - Math.min(Math.max(after / FALL.fade, 0), 1);
-      return { pos, scale, landAt, falling: !(slot.pause > 0) && tau >= 0 && tau < landAt };
+      return { pos, scale, landAt, falling: !paused && tau >= 0 && tau < landAt };
     },
     /** Số lá đang rơi (số đo "Lá đang rơi"). */
     falling: (t) => slots.filter((s) => api.state(s, t).falling).length,
