@@ -94,13 +94,14 @@ jobs:
       - name: Cài Chromium headless shell và thư viện hệ thống
         run: npx playwright install --with-deps --only-shell chromium
 
-      # Lọc đi qua biến môi trường, không chèn thẳng vào lệnh: tên bức có dấu cách và ký tự lạ.
+      # Lọc đi qua biến môi trường, không chèn thẳng vào lệnh: tên bức có dấu cách và ký tự lạ. Không có --pass-with-no-tests: nhóm
+      # không khớp test nào (đặt sai tên describe, đổi tên bức) thì Playwright báo "No tests found" và job đỏ, không lặng lẽ xanh.
       - name: E2E chặn · tranh tĩnh · ${{ matrix.group.id }}
         env:
           GREP: ${{ matrix.group.grep }}
           GREP_INVERT: ${{ matrix.group.grepInvert }}
         run: |
-          args=(--project=static --pass-with-no-tests)
+          args=(--project=static)
           [ -n "$GREP" ] && args+=(--grep "$GREP")
           [ -n "$GREP_INVERT" ] && args+=(--grep-invert "$GREP_INVERT")
           npx playwright test "${args[@]}"
@@ -112,7 +113,7 @@ jobs:
           GREP: ${{ matrix.group.grep }}
           GREP_INVERT: ${{ matrix.group.grepInvert }}
         run: |
-          args=(--project=webgl2-swiftshader --pass-with-no-tests)
+          args=(--project=webgl2-swiftshader)
           [ -n "$GREP" ] && args+=(--grep "$GREP")
           [ -n "$GREP_INVERT" ] && args+=(--grep-invert "$GREP_INVERT")
           npx playwright test "${args[@]}"
@@ -163,7 +164,7 @@ jobs:
           GREP: ${{ matrix.group.grep }}
           GREP_INVERT: ${{ matrix.group.grepInvert }}
         run: |
-          args=(--project=webgpu-swiftshader --pass-with-no-tests)
+          args=(--project=webgpu-swiftshader)
           [ -n "$GREP" ] && args+=(--grep "$GREP")
           [ -n "$GREP_INVERT" ] && args+=(--grep-invert "$GREP_INVERT")
           npx playwright test "${args[@]}"
