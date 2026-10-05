@@ -120,8 +120,12 @@ export const TRAU = Object.freeze({
   }, [0, 0, 0], FIGURE_SCALE),
 });
 
-/** Trái Đất treo thẳng trên đỉnh cây (spec §19.1). */
-export const EARTH = Object.freeze({ center: [0, 3.1, 0], radius: 0.28, spinPeriod: 120 });
+/**
+ * Trái Đất treo thẳng trên đỉnh cây (spec §19.1). Cao 2,7: ở khung mặc định 16:10, mép trên của nó cách mép khung chừng 7%; cao hơn
+ * thì bị cắt, vì camera đứng gần (Task 2). Nó chạm chỏm trên của khối bao, mà không sao: Trái Đất là mesh riêng, so độ sâu với điểm
+ * chạm của SDF như mọi vật, còn tia trong khối bao không thấy nó.
+ */
+export const EARTH = Object.freeze({ center: [0, 2.7, 0], radius: 0.28, spinPeriod: 120 });
 
 /**
  * Khối bao: chứa hành tinh, Cuội, trâu, và cây khi bay cao nhất. Gần như quả cầu nhỏ nhất chứa hai cầu: hành tinh (bán kính 1,02 kể

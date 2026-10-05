@@ -3215,12 +3215,17 @@ shader đó: cảnh không có đèn nào của three.
     `scaleFigure` phóng quanh chỗ vật chạm đất (Cuội: chỗ ngồi sát thân cây; trâu: giữa bốn chân), kể cả hình bao và độ hòa khớp.
 - Mỗi vật (cây, Cuội, trâu) có một hình cầu bao rẻ trong shader. Hình của Cuội và trâu là dữ liệu (`parts/cot-the-gioi.js`): test
   kiểm mọi phần nằm gọn trong hình cầu bao của vật.
-- **Trái Đất** treo thẳng trên đỉnh cây, ở (0; 3,1; 0), bán kính 0,28. Đây là một mesh cầu bình thường, có biển, lục địa, mây và
+- **Trái Đất** treo thẳng trên đỉnh cây, ở (0; 2,7; 0), bán kính 0,28. Đây là một mesh cầu bình thường, có biển, lục địa, mây và
   viền khí quyển, tự quay chậm. Tỉ lệ là của truyện cổ tích, không phải của thiên văn.
+  - (GĐ 7, Task 6) Thiết kế đầu đặt ở cao 3,1. Camera đã dời gần ở Task 2, nên ở khung 16:10 mép trên Trái Đất ra ngoài khung (25,1°
+    so với nửa fov 24°). Ở cao 2,7, mép trên cách mép khung chừng 7%, và Trái Đất cách tán đang bay cao nhất chừng 0,19. Test tính góc
+    giữ điều này ở 16:10 và 390×844, và ở mọi góc xoay dọc nó vẫn trong khung.
 - **Bầu trời** đen sơn mài, có sao vàng li ti: một mesh cầu lớn vẽ mặt trong, sao sinh bằng hàm băm theo hướng nhìn.
 - **Mặt Trời** không có trong khung; chỉ có hướng nắng (§19.2, pha trăng).
 - **Khối bao** là một mesh cầu tâm (0; 0,82; 0), bán kính 1,86. Nó chứa trọn hành tinh, Cuội, trâu, và cả cây đa khi bay lên cao nhất
-  (§19.5). Lá rơi, Trái Đất và bầu trời là mesh riêng, nằm ngoài khối bao.
+  (§19.5). Lá rơi, Trái Đất và bầu trời là mesh riêng.
+  - (GĐ 7, Task 6) Trái Đất ở cao 2,7 chạm chỏm trên của khối bao (đỉnh khối ở 2,68). Không sao: tia trong khối bao không thấy Trái
+    Đất, còn Trái Đất là mesh đục, so độ sâu với điểm chạm của SDF như mọi vật (`depthNode`).
   - (GĐ 7, Task 1) Thiết kế đầu là tâm (0; 0,6; 0), bán kính 1,75. Test thấy hình cầu bao của tán lúc bay cao nhất lọt ra ngoài.
   - Số mới gần như là quả cầu nhỏ nhất chứa hai cầu: hành tinh (bán kính 1,02, kể cả gờ hố) và tán đang bay cao nhất (tâm cao 2,035,
     bán kính 0,6), cộng lề cho chỗ phình của hòa khối.
@@ -3427,8 +3432,8 @@ Cảnh không có đèn nào của three, và không bật `renderer.shadowMap` 
   - **Bầu trời:** một mesh cầu lớn, vẽ mặt trong, không ghi độ sâu, vẽ trước mọi thứ (`renderOrder`). Sao sinh bằng hàm băm theo ô trên
     hướng nhìn, nhấp nháy theo `ctx.u.time` (tất định). Sao ghi vào emissive, nhân `w4`.
 - **Núm:** `earthshine` (0–1, mặc định 0,25), `stars` (mật độ sao, 0–1, mặc định 0,6).
-- **Phá:** *"Không có Trái Đất"* (`khongTraiDat`): giấu Trái Đất và tắt ánh đất (uniform). Phần đêm đen kịt, nên thấy ngay ánh đất đã
-  góp gì.
+- **Phá:** *"Không có Trái Đất"* (`khongTraiDat`): giấu Trái Đất và tắt ánh đất. Phần đêm đen kịt, nên thấy ngay ánh đất đã góp gì.
+  - Trái Đất giấu bằng `visible = false`, không bằng màu 0: màu 0 để lại một đĩa đen che sao. Ánh đất tắt bằng uniform.
 - **Số đo:** `traiDat` ("Trái Đất sáng, nhìn từ trăng", %).
 - **Vật:** `trai-dat`, `bau-troi`.
 

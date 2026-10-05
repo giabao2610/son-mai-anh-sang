@@ -19,6 +19,10 @@ const PLANET_RIGHT = { x0: 0.55, y0: 0.6, x1: 0.62, y1: 0.68 };
 /** Mặt đất ngay bên trái gốc cây: ngày 10, nắng xiên thấp từ bên phải nên bóng cây đổ sang đây (chốt theo ảnh thật, Task 5: có bóng
  * chừng 0,26, không bóng chừng 0,49). */
 const SHADOW = { x0: 0.45, y0: 0.55, x1: 0.5, y1: 0.575 };
+/** Ngày 1: chỏm trên của hành tinh (phía Trái Đất) chìm trong đêm, chỉ có ánh đất (Task 6: 0,18 khi có, 0,004 khi tắt). */
+const PLANET_NIGHT = { x0: 0.42, y0: 0.58, x1: 0.58, y1: 0.66 };
+/** Trái Đất ở khung mặc định (tâm chừng (0,5; 0,145)). */
+const EARTH_BOX = { x0: 0.47, y0: 0.1, x1: 0.53, y1: 0.2 };
 
 async function open(page, testInfo, frames, extra = '') {
   const query = testInfo.project.metadata.query ?? '';
@@ -202,5 +206,53 @@ test.describe('Cung Quế · bóng', () => {
     await toggleExperiment(page, 'bong-mem', 'bongCung', true);
     await twoFrames(page);
     expect(log.errors).toEqual([]);
+  });
+});
+
+test.describe('Cung Quế · ánh đất', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('ngày 1: phía đêm của hành tinh sáng lên nhờ ánh đất (Ánh đất 1 so với 0); Trái Đất xanh (kênh B lớn hơn R)', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const log = collectConsole(page);
+    await open(page, testInfo, 30);
+    await page.evaluate(() => window.__sma.setDial('ngay', 1));
+    await twoFrames(page);
+    const on = await canvasRegions(page, { night: PLANET_NIGHT, earth: EARTH_BOX });
+    await page.screenshot({ path: testInfo.outputPath('anh-dat.png') });
+    await page.evaluate(() => window.__sma.setWeight('anh-dat', 0));
+    await twoFrames(page);
+    const off = await canvasRegions(page, { night: PLANET_NIGHT });
+    expect(on.night.mean, 'ánh đất trên phần đêm').toBeGreaterThan(off.night.mean + 0.05);
+    expect(on.earth.rgb[2], 'Trái Đất xanh').toBeGreaterThan(on.earth.rgb[0]);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('Mặt trời bằng 0, Bóng mềm và Ánh đất bằng 1: hành tinh không đen kịt (đất sét dưới đèn xưởng); bật cùng lúc "Hiện khối bao" và "Không có Trái Đất": không lỗi', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const log = collectConsole(page);
+    await open(page, testInfo, 30);
+    await page.evaluate(() => window.__sma.setWeight('mat-troi', 0));
+    await twoFrames(page);
+    const r = await canvasRegions(page, { core: PLANET_CORE });
+    expect(r.core.mean, 'đất sét dưới đèn xưởng').toBeGreaterThan(0.15);
+    await toggleExperiment(page, 'cot', 'khoiBao', true);
+    await toggleExperiment(page, 'anh-dat', 'khongTraiDat', true);
+    await twoFrames(page);
+    expect(await page.evaluate(() => window.__sma.state)).toBe('live');
+    expect(log.errors).toEqual([]);
+  });
+
+  test('mài về Cốt: thân hành tinh là đất sét xám (sắc độ dưới 0,05)', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    await open(page, testInfo, 30);
+    for (const { id } of await page.evaluate(() => window.__sma.layers())) {
+      if (id !== 'cot') await page.evaluate((l) => window.__sma.setWeight(l, 0), id);
+    }
+    await twoFrames(page);
+    const r = await canvasRegions(page, { core: PLANET_CORE });
+    expect(r.core.chroma).toBeLessThan(0.05);
   });
 });

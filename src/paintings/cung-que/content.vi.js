@@ -97,6 +97,29 @@ export default {
       },
       readouts: { buocBong: 'Bước dò bóng', mauAo: 'Số mẫu AO' },
     },
+    'anh-dat': {
+      understand: 'Từ mặt trăng, Trái Đất đứng yên một chỗ trên trời và cũng có pha, nhưng ngược với pha trăng: trăng non thì Trái Đất '
+        + 'tròn, rằm thì Trái Đất tối. Trái Đất tròn hắt nắng xuống phía đêm của hành tinh, một thứ ánh xanh lam nhạt gọi là ánh đất '
+        + '(earthshine). Đó là lý do đêm trăng non, phần tối của trăng vẫn mờ mờ hiện ra. Ở đây ánh đất cộng vào phần ánh sáng nền, '
+        + 'nên chỗ nào khuất (khe rễ, đáy hố) thì AO của lớp Bóng mềm làm nó tối hơn.',
+      learned: [
+        'Ánh sáng nền không phải một hằng số: ở đây nó đến từ một vật cụ thể, có hướng, có pha.',
+        'Một thiên thể sáng vì phản chiếu nắng thì pha của nó tùy chỗ người nhìn đứng.',
+      ],
+      readMore: [
+        { title: 'Earthlight · ánh đất (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Earthlight' },
+        { title: 'Planetshine (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Planetshine' },
+      ],
+      knobs: { earthshine: 'Cường độ ánh đất', stars: 'Mật độ sao' },
+      experiments: {
+        khongTraiDat: {
+          label: 'Không có Trái Đất',
+          explain: 'Giấu Trái Đất, và ánh của nó tắt theo: lúc trăng non, phía đêm của hành tinh chìm hẳn vào bóng tối.',
+        },
+      },
+      readouts: { traiDat: 'Trái Đất sáng (nhìn từ trăng)' },
+      objects: { 'trai-dat': 'Trái Đất', 'bau-troi': 'Bầu trời sao' },
+    },
     'phu-bong': { ...phuBong.layers['phu-bong'] },
   },
 };
