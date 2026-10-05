@@ -1,5 +1,10 @@
 // paintings/cung-que/content.vi.js — chữ tiếng Việt của Bức 3: gợi ý tương tác; Hiểu/Chỉnh/Phá của từng lớp trong Sổ tay.
 import phuBong from '../../engine/stock/phu-bong/content.vi.js';
+import doTiaDiagram from './diagrams/do-tia.svg?raw';
+import phaTrangDiagram from './diagrams/pha-trang.svg?raw';
+import bongMemDiagram from './diagrams/bong-mem.svg?raw';
+import anhDatDiagram from './diagrams/anh-dat.svg?raw';
+import doSauDiagram from './diagrams/do-sau.svg?raw';
 
 /**
  * Mọi nhãn tra theo id (lớp, núm, thí nghiệm, số đo, tên vật): đổi chữ không đụng tới code của lớp.
@@ -25,6 +30,7 @@ export default {
         + 'là một hàm khoảng cách: đưa vào một điểm, hàm trả về khoảng cách tới bề mặt gần nhất. Một quả cầu bao quanh mọi thứ; mỗi '
         + 'điểm ảnh của nó dò tia vào trong, mỗi bước tiến đúng bằng khoảng cách hàm cho, tới khi chạm mặt. Mài hết các lớp thì bức '
         + 'trở về đây.',
+      diagram: doTiaDiagram,
       learned: [
         'Một hàm khoảng cách có dấu (SDF) tả được cả một thế giới mà không cần lưới tam giác.',
         'Dò tia (sphere tracing): mỗi bước tiến đúng bằng khoảng cách tới mặt gần nhất, nên không bao giờ đi xuyên qua mặt.',
@@ -33,6 +39,7 @@ export default {
       readMore: [
         { title: 'Inigo Quilez · distance functions', url: 'https://iquilezles.org/articles/distfunctions/' },
         { title: 'Inigo Quilez · smooth minimum', url: 'https://iquilezles.org/articles/smin/' },
+        { title: 'Jamie Wong · Ray marching and signed distance functions', url: 'https://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/' },
       ],
       knobs: { steps: 'Số bước dò tối đa', smooth: 'Độ hòa khối' },
       experiments: {
@@ -57,6 +64,7 @@ export default {
         + 'rọi thẳng xuống đỉnh cây, trăng mới thì phía Trái Đất chìm trong đêm. Kéo núm Ngày âm lịch để thấy vệt sáng quét qua hành '
         + 'tinh. Bụi trăng không phản xạ như mặt Lambert: nó không tối dần ra mép, nên trăng rằm trông như một đĩa phẳng sáng đều, và '
         + 'bừng lên khi nắng ở sau lưng người nhìn.',
+      diagram: phaTrangDiagram,
       learned: [
         'Pha trăng chỉ là góc chiếu của nắng so với hướng nhìn từ Trái Đất.',
         'Mỗi bề mặt có một BRDF riêng: bụi trăng (Lommel–Seeliger) khác hẳn mặt Lambert.',
@@ -79,6 +87,7 @@ export default {
         + 'chính hàm khoảng cách của Cốt. Tia chạm vật thì điểm nằm trong bóng. Tia đi sát mép vật mà không chạm thì điểm nằm trong '
         + 'nửa tối: càng sát càng tối. Nhờ vậy bóng mềm dần khi xa vật che, như bóng thật. Thêm năm mẫu dọc pháp tuyến để đo độ che '
         + 'quanh mỗi điểm (AO): khe rễ, đáy hố, chỗ Cuội tựa gốc cây tối hơn.',
+      diagram: bongMemDiagram,
       learned: [
         'Trường khoảng cách cho bóng mềm gần như miễn phí: chỉ cần nhớ tia đã đi sát vật tới đâu.',
         'AO đo bằng vài mẫu dọc pháp tuyến: chỗ nào khoảng cách nhỏ hơn quãng đã đi thì quanh đó có vật che.',
@@ -102,6 +111,7 @@ export default {
         + 'tròn, rằm thì Trái Đất tối. Trái Đất tròn hắt nắng xuống phía đêm của hành tinh, một thứ ánh xanh lam nhạt gọi là ánh đất '
         + '(earthshine). Đó là lý do đêm trăng non, phần tối của trăng vẫn mờ mờ hiện ra. Ở đây ánh đất cộng vào phần ánh sáng nền, '
         + 'nên chỗ nào khuất (khe rễ, đáy hố) thì AO của lớp Bóng mềm làm nó tối hơn.',
+      diagram: anhDatDiagram,
       learned: [
         'Ánh sáng nền không phải một hằng số: ở đây nó đến từ một vật cụ thể, có hướng, có pha.',
         'Một thiên thể sáng vì phản chiếu nắng thì pha của nó tùy chỗ người nhìn đứng.',
@@ -125,13 +135,14 @@ export default {
         + 'và chậm, không chao lượn: từ tán xuống đất mất gần ba giây. Đường rơi là một công thức theo thời gian, tính ngay trong shader '
         + 'của từng lá; máy chỉ ghi lại chỗ và lúc lá bắt đầu rơi khi bạn chạm. Lá là mesh thường, còn hành tinh là hình dò tia, vậy mà '
         + 'lá vẫn khuất sau thân cây đúng chỗ: khối bao ghi độ sâu của điểm chạm, như mọi vật khác.',
+      diagram: doSauDiagram,
       learned: [
         'Chuyển động dạng đóng: vị trí là hàm của thời gian, GPU tự tính, không phải cập nhật từng khung.',
         'Độ sâu là thứ giúp hai cách vẽ khác nhau (mesh và dò tia) xếp lớp đúng với nhau.',
       ],
       readMore: [
         { title: 'NASA · Apollo 15: búa và lông chim rơi trên trăng', url: 'https://nssdc.gsfc.nasa.gov/planetary/lunar/apollo_15_feather_drop.html' },
-        { title: 'Gravitation of the Moon (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Gravitation_of_the_Moon' },
+        { title: 'Z-buffering · bộ đệm độ sâu (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Z-buffering' },
       ],
       knobs: {
         burst: 'Số lá mỗi lần chạm',

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" role="img" aria-labelledby="dg-cq-cot-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-cq-cot-title">Dò tia vào thế giới khoảng cách: từ mắt, mỗi bước tia tiến đúng bằng khoảng cách tới mặt gần nhất (bán kính các vòng tròn). Xa mọi vật thì bước dài, gần mặt thì bước ngắn dần, tới khi khoảng cách gần bằng 0: tia đã chạm mặt.</title>
+  <defs>
+    <marker id="dg-cq-cot-mui" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#F2D48A"/>
+    </marker>
+  </defs>
+  <!-- ba vật: hành tinh, một khối tán, một hòn đá -->
+  <circle cx="292" cy="150" r="64" fill="#8A8580"/>
+  <circle cx="70" cy="70" r="22" fill="#2E4A3A"/>
+  <circle cx="196" cy="168" r="14" fill="#3B1F14"/>
+  <!-- vòng tròn ở mỗi bước: bán kính = khoảng cách tới mặt gần nhất, nên không vòng nào lấn vào vật -->
+  <g fill="none" stroke="#D4A94A" stroke-width="1" stroke-dasharray="3 3">
+    <circle cx="16.0" cy="112.0" r="46.4"/>
+    <circle cx="62.3" cy="115.4" r="24.1"/>
+    <circle cx="86.3" cy="117.2" r="27.9"/>
+    <circle cx="114.2" cy="119.3" r="44.2"/>
+    <circle cx="158.2" cy="122.5" r="45.1"/>
+    <circle cx="203.2" cy="125.9" r="28.0"/>
+  </g>
+  <path d="M16.0 112.0 L231.1 127.9" stroke="#F2D48A" stroke-width="1.6" marker-end="url(#dg-cq-cot-mui)"/>
+  <g fill="#EDE3CF">
+    <circle cx="16.0" cy="112.0" r="2.2"/>
+    <circle cx="62.3" cy="115.4" r="2.2"/>
+    <circle cx="86.3" cy="117.2" r="2.2"/>
+    <circle cx="114.2" cy="119.3" r="2.2"/>
+    <circle cx="158.2" cy="122.5" r="2.2"/>
+    <circle cx="203.2" cy="125.9" r="2.2"/>
+    <circle cx="231.1" cy="127.9" r="2.2"/>
+  </g>
+  <text x="16" y="138" fill="#EDE3CF">mắt</text>
+  <text x="242" y="133" fill="#0E0A08">chạm mặt</text>
+  <text x="180" y="22" fill="#EDE3CF" text-anchor="middle">mỗi bước dài bằng khoảng cách tới mặt gần nhất</text>
+</svg>
