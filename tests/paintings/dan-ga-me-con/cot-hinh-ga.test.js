@@ -1,11 +1,12 @@
-// tests/paintings/dan-ga-me-con/cot-hinh-ga.test.js — hình gà đủ phần (spec §20.3) và chỗ của chúng: phần nào của gà mẹ, gà con có trong geometry; đầu mỏ khớp CHICK; khớp của gà mẹ ở tọa độ thế giới; cực của cầu mắt ở giữa chỏm mắt; con trèo lưng, con nấp bụng sát mẹ mà không lún vào mọi khối của mẹ (đọc chỗ thật qua placement()); ở góc nhìn của tranh thấy được cả mười con.
+// tests/paintings/dan-ga-me-con/cot-hinh-ga.test.js — hình gà đủ phần (spec §20.3) và chỗ của chúng: phần nào của gà mẹ, gà con có trong geometry; đầu mỏ khớp CHICK; khớp của gà mẹ ở tọa độ thế giới; cực của cầu mắt ở giữa chỏm mắt; con trèo lưng, con nấp bụng sát mẹ mà không lún vào mọi khối của mẹ (đọc chỗ thật qua placement()); tám chỗ núp (quay ra ngoài, ngó nghiêng) không lún vào mẹ, không chồng lên nhau hay lên con nấp bụng; ở góc nhìn của tranh thấy được cả mười con.
 import { describe, it, expect } from 'vitest';
 import { ConeGeometry, CylinderGeometry, Matrix4, Mesh, MeshBasicMaterial, Raycaster, SphereGeometry, Vector2, Vector3 } from 'three/webgpu';
 import { createCamera } from '../../../src/engine/gpu/camera.js';
-import { CAMERA, CHICK, HEN, HOMES } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
+import { CAMERA, CHICK, HEN, HOMES, SLOTS } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
 import {
   CHICK_SHAPE, HEN_JOINTS, HEN_SHAPE, PART, chickGeometry, henGeometry, placement,
 } from '../../../src/paintings/dan-ga-me-con/parts/cot-hinh-ga.js';
+import { FLOCK } from '../../../src/paintings/dan-ga-me-con/parts/dan-ga-song.js';
 
 const SEGMENTS = 24;
 const partsOf = (geometry) => new Set(geometry.attributes.part.array);
@@ -30,13 +31,19 @@ const toHen = ([x, y, z]) => {
 const henSolids = [...HEN_SHAPE.body, HEN_SHAPE.wingL, HEN_SHAPE.wingR];
 /** Phần có tên của một khối, cho lời báo lỗi. */
 const nameOf = (shape) => `${shape.part} ${shape.kind} ở ${shape.at}`;
+/** Nghịch đảo của placement() của một khối, nhớ lại: mỗi khối bị thử hàng chục nghìn lần. */
+const inverses = new WeakMap();
+const inverseOf = (shape) => {
+  if (!inverses.has(shape)) inverses.set(shape, new Matrix4().copy(placement(shape)).invert());
+  return inverses.get(shape);
+};
 /**
  * Điểm p (khung của khối) có nằm trong khối lý tưởng không: đưa p về dạng chuẩn bằng nghịch đảo của placement() (đúng phép đặt mà hình
  * dùng, kể cả kéo dãn, xoay, dẹt), rồi so với cầu, nón, trụ chuẩn của three (dọc +y, tâm ở gốc). Lưới đa diện nằm trong khối lý tưởng, nên
  * phép thử này chặt hơn lưới thật.
  */
 const inside = (shape, p) => {
-  const q = new Vector3(...p).applyMatrix4(new Matrix4().copy(placement(shape)).invert());
+  const q = new Vector3(...p).applyMatrix4(inverseOf(shape));
   if (shape.kind === 'ball') return q.length() < shape.r;
   if (Math.abs(q.y) > shape.h / 2) return false;
   const radius = shape.kind === 'cone' ? (shape.r * (shape.h / 2 - q.y)) / shape.h : shape.r;
@@ -46,6 +53,41 @@ const inside = (shape, p) => {
 const centerOf = (part) => CHICK_SHAPE.find((s) => s.part === part).at;
 /** Bàn chân của gà con: đáy của mỗi trụ chân (dời xuống nửa chiều cao từ tâm). */
 const chickFeet = () => CHICK_SHAPE.filter((s) => s.part === 'LEG').map((s) => [s.at[0], s.at[1] - s.h / 2, s.at[2]]);
+
+// ── Chỗ núp: gà con ở dáng pose [x, y, z, hướng] đọc chỗ thật của khối, hai chiều (đỉnh của con này trong khối của con kia).
+/** Điểm thế giới về khung của gà con ở dáng pose (ngược của place). */
+const toChick = ([x, y, z], [px, py, pz, h]) => {
+  const [dx, dz] = [x - px, z - pz];
+  return [dx * Math.cos(h) - dz * Math.sin(h), y - py, dx * Math.sin(h) + dz * Math.cos(h)];
+};
+/** Điểm thế giới p có nằm trong một khối nào của gà con ở dáng pose không. */
+const insideChick = (pose, p) => CHICK_SHAPE.some((s) => inside(s, toChick(p, pose)));
+/** Quanh gốc của gà con, mọi khối nằm trong 0,85 (đầu mỏ ở 0,8): đỉnh xa hơn 1 thì khỏi thử. */
+const nearChick = (pose, w) => Math.hypot(w[0] - pose[0], w[2] - pose[2]) < 1;
+/** Số đỉnh của gà con ở dáng `a` nằm trong khối của gà con ở dáng `b`. */
+const sunkInChick = (verts, a, b) => verts.filter((v) => { const w = place(v, a); return nearChick(b, w) && insideChick(b, w); }).length;
+/** Số đỉnh của gà con ở dáng pose nằm trong khối nào đó của mẹ (mình, đuôi, chân, đầu, cánh). */
+const sunkInHen = (verts, pose) => verts.filter((v) => { const p = toHen(place(v, pose)); return henSolids.some((s) => inside(s, p)); }).length;
+/** Số đỉnh của mẹ (`henVerts`: tọa độ thế giới) nằm trong khối của gà con ở dáng pose. */
+const henSunkInChick = (henVerts, pose) => henVerts.filter((w) => nearChick(pose, w) && insideChick(pose, w)).length;
+/** Dáng gà con núp ở chỗ slot: quay ra ngoài (từ mẹ tới chỗ núp), lệch `sway` rad vì ngó nghiêng (FLOCK.peek). */
+const hidePose = (slot, sway) => [slot[0], 0, slot[1], Math.atan2(slot[0] - HEN.at[0], slot[1] - HEN.at[1]) + sway];
+const SWAYS = [-FLOCK.peek, 0, FLOCK.peek];
+/** Lưới thưa (12 vòng) cho nhanh: đỉnh nằm đúng trên mặt khối lý tưởng nên đủ để thử "lún vào". */
+const COARSE = 12;
+/**
+ * Điểm thấp nhất của một cánh mẹ (cầu) khi mở `angle` rad quanh trục trước qua vai, như henWingPosition (cánh trái +angle, cánh phải −angle):
+ * y của tâm trừ bán kính nhân độ dài hàng y của phần tuyến tính của ma trận đặt (cầu kéo dãn, xoay, dời).
+ */
+function lowestOfOpenWing(shape, sign, angle) {
+  const [sx, sy, sz] = toHen(sign > 0 ? HEN_JOINTS.shoulderL : HEN_JOINTS.shoulderR);
+  const m = new Matrix4().makeTranslation(sx, sy, sz)
+    .multiply(new Matrix4().makeRotationAxis(new Vector3(0, 0, 1), sign * angle))
+    .multiply(new Matrix4().makeTranslation(-sx, -sy, -sz))
+    .multiply(placement(shape));
+  const e = m.elements;
+  return e[13] - shape.r * Math.hypot(e[1], e[5], e[9]);
+}
 
 describe('cot-hinh-ga', () => {
   it('gà con đủ phần: mình, đuôi, chân, cánh, đầu, mỏ, mắt; gà mẹ: mình có cả mào và con ong (thân, cánh ong), hai cánh là hai geometry riêng', () => {
@@ -156,6 +198,59 @@ describe('cot-hinh-ga', () => {
       }
       expect(Math.abs(foot[1] - lo), `chân ở ${foot.map((c) => c.toFixed(2))}`).toBeLessThan(0.05);
     }
+  });
+
+  it('bộ thử chồng nhau cắn thật: hai gà con cùng chỗ hay cách nửa đơn vị thì chồng, cách hai thì không; gà con đặt giữa thân mẹ thì lún', () => {
+    const verts = vertices(chickGeometry({ segments: COARSE }));
+    const here = [1, 0, 1, 0.4];
+    expect(sunkInChick(verts, here, here), 'cùng chỗ').toBeGreaterThan(0);
+    expect(sunkInChick(verts, here, [1.5, 0, 1, 0.4]), 'cách nửa đơn vị').toBeGreaterThan(0);
+    expect(sunkInChick(verts, here, [3, 0, 1, 0.4]), 'cách hai đơn vị').toBe(0);
+    expect(sunkInHen(verts, [HEN.at[0], 0, HEN.at[1], 0]), 'giữa thân mẹ').toBeGreaterThan(0);
+    expect(sunkInHen(verts, [HEN.at[0] + 6, 0, HEN.at[1], 0]), 'xa mẹ').toBe(0);
+    // Chiều ngược lại (đỉnh của mẹ trong khối gà con): gà con đặt đúng dưới hông chân mẹ thì chân mẹ đâm vào mình nó.
+    const hen = henGeometry({ segments: COARSE });
+    const henVerts = [hen.body, hen.wingL, hen.wingR].flatMap((g) => vertices(g));
+    expect(henSunkInChick(henVerts, [HEN_JOINTS.hip[0], 0, HEN_JOINTS.hip[2], 0]), 'chân mẹ trong gà con').toBeGreaterThan(0);
+    expect(henSunkInChick(henVerts, [HEN.at[0] + 6, 0, HEN.at[1], 0]), 'xa mẹ').toBe(0);
+  });
+
+  it('tám chỗ núp (quay ra ngoài, ngó nghiêng tới ±FLOCK.peek): gà con không lún vào mẹ, mẹ không lún vào gà con; cánh mở hết cỡ (FLOCK.wing) nằm trên đầu gà con', () => {
+    const chick = vertices(chickGeometry({ segments: COARSE }));
+    const hen = henGeometry({ segments: COARSE });
+    const henVerts = [hen.body, hen.wingL, hen.wingR].flatMap((g) => vertices(g));
+    for (const slot of SLOTS) {
+      for (const sway of SWAYS) {
+        const pose = hidePose(slot, sway);
+        expect(sunkInHen(chick, pose), `chỗ ${slot}, ngó nghiêng ${sway}: đỉnh gà con lún vào mẹ`).toBe(0);
+        expect(henSunkInChick(henVerts, pose), `chỗ ${slot}, ngó nghiêng ${sway}: đỉnh mẹ lún vào gà con`).toBe(0);
+      }
+    }
+    const top = Math.max(...chick.map((v) => v[1]));
+    for (const [shape, sign] of [[HEN_SHAPE.wingL, 1], [HEN_SHAPE.wingR, -1]]) {
+      expect(lowestOfOpenWing(shape, sign, FLOCK.wing), 'điểm thấp nhất của cánh mở, so với đỉnh đầu gà con').toBeGreaterThan(top);
+    }
+  });
+
+  it('tám chỗ núp: gà con ở hai chỗ kề nhau, hay kề con nấp bụng, không chồng lên nhau, kể cả lúc ngó nghiêng hết cỡ (con nấp bụng lắc ±FLOCK.perchSway)', () => {
+    const verts = vertices(chickGeometry({ segments: COARSE }));
+    const belly = HOMES.find((h) => h.kind === 'belly');
+    const group = [
+      ...SLOTS.map((slot) => ({ name: `chỗ ${slot}`, at: slot, poses: SWAYS.map((d) => hidePose(slot, d)) })),
+      { name: 'con nấp bụng', at: belly.at, poses: [-FLOCK.perchSway, 0, FLOCK.perchSway].map((d) => [belly.at[0], 0, belly.at[1], belly.heading + d]) },
+    ];
+    let pairs = 0;
+    for (let i = 0; i < group.length; i += 1) {
+      for (let j = i + 1; j < group.length; j += 1) {
+        const [a, b] = [group[i], group[j]];
+        if (Math.hypot(a.at[0] - b.at[0], a.at[1] - b.at[1]) > 2.5) continue; // xa hơn thì không thể chạm
+        pairs += 1;
+        for (const pa of a.poses) {
+          for (const pb of b.poses) expect(sunkInChick(verts, pa, pb) + sunkInChick(verts, pb, pa), `${a.name} (hướng ${pa[3].toFixed(2)}) và ${b.name} (hướng ${pb[3].toFixed(2)}) chồng nhau`).toBe(0);
+        }
+      }
+    }
+    expect(pairs, 'số cặp kề nhau đã thử').toBeGreaterThanOrEqual(9); // vòng 8 chỗ có 7 cặp kề (con nấp bụng ngắt vòng), cộng 2 cặp kề con nấp bụng
   });
 
   it.each([1.6, 390 / 844])('ở góc nhìn của tranh (khung tỉ lệ %s), thấy được cả mười con: tia qua đầu và mình mỗi con trúng chính nó trước', (aspect) => {

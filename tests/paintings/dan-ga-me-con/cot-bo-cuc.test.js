@@ -1,9 +1,9 @@
-// tests/paintings/dan-ga-me-con/cot-bo-cuc.test.js — bố cục của tờ tranh: góc nhìn của tranh đúng số §20.2 (cả số của tranh tự khép lại); chỗ nhà của gà con trên sàn, không chồng nhau; đầu mỏ của gà con khi cúi (beakTip); cú chạm của camera trực giao trúng đúng điểm trên sàn; số đo `goc` (viewAngle).
+// tests/paintings/dan-ga-me-con/cot-bo-cuc.test.js — bố cục của tờ tranh: góc nhìn của tranh đúng số §20.2 (cả số của tranh tự khép lại); chỗ nhà của gà con trên sàn, không chồng nhau; tám chỗ núp quanh mẹ (dưới 2,2 để quanhMe đếm đủ mười, ngoài thân mẹ, cách nhau và cách con nấp bụng) và nhúm thóc trước mặt mẹ; đầu mỏ của gà con khi cúi (beakTip); cú chạm của camera trực giao trúng đúng điểm trên sàn; số đo `goc` (viewAngle).
 import { describe, it, expect } from 'vitest';
 import { Raycaster, Vector2, Vector3 } from 'three/webgpu';
 import { createCamera } from '../../../src/engine/gpu/camera.js';
 import {
-  CAMERA, CHICK, FLOOR, HEN, HOMES, PAPER, beakTip, floorPoint, viewAngle,
+  CAMERA, CHICK, FLOOR, HEN, HEN_FRONT, HOMES, LAYOUT, PAPER, PILE, SLOTS, beakTip, floorPoint, viewAngle,
 } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
 
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -74,6 +74,31 @@ describe('cot-bo-cuc', () => {
     }
     for (let i = 0; i < free.length; i += 1) {
       for (let j = i + 1; j < free.length; j += 1) expect(dist(free[i].at, free[j].at)).toBeGreaterThan(1.3);
+    }
+  });
+
+  it('tám chỗ núp: trên sàn, cách tâm mẹ dưới 2,2 (quanhMe đếm đủ mười), ngoài bầu dục thân mẹ; đôi một cách nhau hơn 1,3, cách con nấp bụng hơn 1,4 và con trèo lưng hơn 1 (chỗ gà con núp không chồng nhau)', () => {
+    expect(SLOTS).toHaveLength(8);
+    const belly = HOMES.find((h) => h.kind === 'belly').at;
+    const back = HOMES.find((h) => h.kind === 'back').at;
+    for (const s of SLOTS) {
+      expect(inFloor(s), `chỗ núp ${s} ngoài sàn`).toBe(true);
+      expect(dist(s, HEN.at), `chỗ núp ${s} xa tâm mẹ`).toBeLessThan(2.2);
+      expect(((s[0] - HEN.at[0]) / 2) ** 2 + ((s[1] - HEN.at[1]) / 1.2) ** 2, `chỗ núp ${s} nằm trong thân mẹ`).toBeGreaterThan(1);
+      expect(dist(s, belly), `chỗ núp ${s} sát con nấp bụng`).toBeGreaterThan(1.4);
+      expect(dist(s, back), `chỗ núp ${s} sát con trèo lưng`).toBeGreaterThan(1);
+    }
+    for (let i = 0; i < SLOTS.length; i += 1) {
+      for (let j = i + 1; j < SLOTS.length; j += 1) expect(dist(SLOTS[i], SLOTS[j]), `chỗ núp ${SLOTS[i]} và ${SLOTS[j]}`).toBeGreaterThan(1.3);
+    }
+  });
+
+  it('LAYOUT gom đủ bố cục cho đàn gà dạng đóng (nhà, tâm mẹ, chỗ núp, nhúm thóc, chỗ bới, đầu mỏ, lưng mẹ, sàn; đóng băng); nhúm thóc và chỗ gà mẹ bới nằm trên sàn, trước mặt mẹ, ngoài đầu mẹ', () => {
+    expect(LAYOUT).toEqual({ homes: HOMES, hen: HEN.at, slots: SLOTS, pile: PILE, henFront: HEN_FRONT, beakTip, back: HEN.back, floor: FLOOR });
+    expect([LAYOUT, SLOTS, ...SLOTS, PILE, HEN_FRONT].every(Object.isFrozen)).toBe(true);
+    for (const p of [PILE, HEN_FRONT]) {
+      expect(inFloor(p), `${p} ngoài sàn`).toBe(true);
+      expect(p[0], `${p} không ở trước mặt mẹ`).toBeLessThan(HEN.at[0] - HEN.length / 2); // mẹ quay sang −x: trước mặt là phía x nhỏ, ngoài thân mẹ
     }
   });
 

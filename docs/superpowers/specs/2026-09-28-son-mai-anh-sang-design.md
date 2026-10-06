@@ -1089,7 +1089,7 @@ son-mai-anh-sang/
         layers/l2-ban-mau.js         [8] màu in, chia nấc; parts/ban-mau-bang.js
         layers/l3-ban-net.js         [8] dò cạnh trên độ sâu (post), nét trong, lệch bản; parts/ban-net-do-canh.js, ban-net-net-trong.js
         layers/l4-giay-diep.js       [8] sợi dó, vệt chổi, hạt điệp; parts/giay-diep-mat.js
-        layers/l5-dan-ga.js          [8] thóc (bể hạt của lib/tsl/particles.js), đàn gà; parts/dan-ga-thoc.js, dan-ga-song.js (hàm thuần)
+        layers/l5-dan-ga.js          [8] thóc (bể hạt của lib/tsl/particles.js), đàn gà; parts/dan-ga-thoc.js, dan-ga-song.js, dan-ga-pha.js (hàm thuần)
         diagrams/*.svg               [8] sơ đồ của tab Hiểu
   tests/
     unit/                            [0] flags tier quality palette tokens-css random lunar moon strings deadline disposer layers source
@@ -1098,7 +1098,7 @@ son-mai-anh-sang/
                                      [8] home, particles (bể hạt), fov (fitOrtho)
     paintings/ao-sen-dem/            [1→5] test của từng lớp Bức 1 (dựng cả bức bằng buildPainting); GĐ 5: anh-trang-drift (hàm thuần), tha-hoa-dang (chạm hai lần)
     paintings/den-keo-quan/          [6] test của từng lớp Bức 2 (khung, ngon-nen, gian-nha, giay, keo-quan); cot-hinh-nhan, keo-quan-quay, ngon-nen-thoi (hàm thuần); cử chỉ; chữ; quality
-    paintings/dan-ga-me-con/         [8] test của từng lớp Bức 4; cot-bo-cuc, dan-ga-song (hàm thuần); cử chỉ; chữ; quality
+    paintings/dan-ga-me-con/         [8] test của từng lớp Bức 4; cot-bo-cuc, dan-ga-song và dan-ga-pha (hàm thuần); cử chỉ; chữ; quality
     rules/imports.test.js            [0→5] luật ranh giới, đường nhẹ, hàng rào từ vựng; GĐ 5: phần nhẹ không gọi built-in ES2022 trở lên (Safari 14)
     rules/files.test.js              [0→5] dòng 1 là chú thích, số dòng, API cấm; GĐ 5: chỉ draws.js đặt móc lần vẽ
     paintings/contract.test.js       [0→5] lặp qua registry (+ _mau từ GĐ 2); GĐ 4: mức cùng bộ khóa, Dial, nhãn tap, poster/og; GĐ 5: captions, files của lớp kê đủ parts/ mà lớp import
@@ -3945,7 +3945,7 @@ spec.
   2. **Giữ là gà mẹ gọi con** (`'hold-start'` → `'hold-end'`):
      - Gà mẹ xòe hai cánh, cúi đầu gọi "cục cục" theo nhịp. Mọi gà con đang rảnh chạy về tám chỗ quanh và dưới cánh mẹ; con
        trèo lưng và con nấp bụng vốn đã ở sát mẹ, nên ở yên.
-     - Buông tay thì mẹ khép cánh, các con tản ra: tới chỗ rắc gần nhất nếu nắm đó mới rắc chưa tới 20 giây, không thì về chỗ của mình.
+     - Buông tay thì mẹ khép cánh, các con tản ra: tới chỗ rắc mới nhất nếu nắm đó mới rắc chưa tới 20 giây, không thì về chỗ của mình.
      - Camera không xoay trong lúc giữ: xưởng tắt OrbitControls khi giữ (§8.1).
   - `'swipe'` và `'double-tap'` không làm gì riêng: một lần chạm đúp là hai `'tap'`, tức hai nắm thóc. Kéo là của camera.
 - **Gà mẹ bới:** không ai chạm thì cứ 25 giây gà mẹ cào chân một lần, một nhúm 24 hạt văng ra trước mặt mẹ, và hai ba con gần nhất xúm
@@ -4238,31 +4238,49 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
 ### 20.5 Chuyển động tất định (`parts/dan-ga-song.js`)
 - **Mốc:**
   - `scatter(t, điểm, hạt giống)`: chạm, hay gà mẹ bới;
-  - `grip(t)` và `release(t)`: giữ, thả;
-  - giữ tối đa 32 mốc gần nhất, như Bức 3.
+  - `grip(t)` và `release(t)`: giữ, thả. Giữ hai lần liền, hay thả khi chưa giữ, thì bỏ qua;
+  - "đang giữ" kéo dài qua các mốc rắc: `grip`, `release` và bới hỏi mốc cuối có đang giữ không (`underGrip`), không hỏi loại của mốc cuối;
+  - giữ tối đa 32 mốc gần nhất, như Bức 3. Mốc có thời điểm lùi thì xếp vào ngay sau mốc cuối;
+  - thời điểm hay điểm rắc không hữu hạn thì ném lỗi: một số NaN lọt vào mốc làm hỏng mọi trạng thái sau đó.
 - **Trạng thái của một gà con ở thời điểm t:** đi qua các mốc theo thứ tự. Trạng thái đầu của mỗi đoạn là trạng thái cuối của đoạn trước,
   nên vị trí liên tục. Mỗi đoạn có dạng đóng:
-  - **rảnh:** lượn quanh chỗ "nhà" theo noise một chiều của thời gian (bán kính 0,3), xen lẫn rỉa lông và mổ đất theo chu kỳ có hạt giống;
-  - **chạy tới:** từ chỗ đang đứng tới điểm đích, là điểm rắc lệch một khoảng theo hạt giống.
+  - **rảnh:** lượn quanh chỗ "nhà" theo hai sóng sin của thời gian, biên độ 0,3 mỗi trục (bán kính tối đa chừng 0,42), xen lẫn cúi đầu
+    rỉa lông theo chu kỳ có hạt giống;
+  - **chạy tới:** từ chỗ đang đứng tới điểm đích, là một chỗ trên vòng bán kính 1 quanh điểm rắc.
+    - Các con chạy tới cùng một nắm đứng cách đều nhau trên vòng ấy, mỗi con một chỗ (gán theo khoảng cách như chỗ núp; hạt giống xoay
+      cả vòng), nên không chồng lên nhau: gà con rộng chừng 1. Điểm rắc sát mép sàn thì tâm vòng được kéo vào trong sàn (chừa cả vòng
+      và bước nhảy), nên gà con luôn đứng trên giấy.
     - Đường thẳng, tốc độ 9 đơn vị/s (0,9 m/s), có tăng giảm tốc (`smootherstep`).
     - Bắt đầu sau 0,1–0,4 giây (phản xạ, theo hạt giống).
-  - **mổ:** 8 giây quanh điểm đích, nhảy giữa ba chỗ gần nhau. Đầu cúi theo nhịp 2,5 lần mỗi giây; mỏ "đang mổ" ở đáy nhịp;
+  - **mổ:** 8 giây quanh điểm đích, nhảy giữa ba chỗ cách chỗ đứng 0,1–0,25, luôn nhìn về tâm vòng (nắm thóc). Nhảy ngắn thì hai con kề
+    nhau trên vòng (bốn con thì cách 1,41) vẫn cách nhau ≥ 0,9. Đầu cúi theo nhịp 2,5 lần mỗi giây; mỏ "đang mổ" ở đáy nhịp, trước chân
+    chừng 0,75, nên chạm sàn gần điểm rắc (trong 0,55);
   - **về:** đi bộ về chỗ "nhà", 5 đơn vị/s;
-  - **núp** (khi giữ): chạy về một trong tám chỗ quanh và dưới cánh mẹ, đứng sát, đầu ngó nghiêng. Chỗ gán theo khoảng cách, không hai
-    con một chỗ.
+  - **núp** (khi giữ): chạy về một trong tám chỗ quanh và dưới cánh mẹ, đứng sát, quay ra ngoài (lưng về phía mẹ), đầu ngó nghiêng (hướng
+    lắc ±0,5 rad). Chỗ gán theo khoảng cách, không hai con một chỗ.
+    - Tám chỗ là dữ liệu của bố cục (`SLOTS`), trên vòng bán kính 2,1 quanh tâm mẹ: dưới 2,2 để `quanhMe` đếm đủ mười; đủ xa để gà
+      con quay ra ngoài không lún vào thân, đuôi, đầu hay cánh mẹ (kể cả cánh mở 60°); đôi một cách nhau ≥ 1,35 và cách con nấp bụng
+      ≥ 1,5, nên không chồng lên nhau kể cả lúc ngó nghiêng (test đọc chỗ thật của khối).
+    - Hai chỗ giữa lưng mẹ bị mẹ che hẳn từ camera của tranh; kéo xoay mới thấy gà con núp ở đó.
 - **Ai chạy tới chỗ rắc:** ba tới bốn con gần nhất (số theo hạt giống) trong các con đang rảnh hay đang về.
-  - Đang núp thì không đi.
+  - Đang núp thì không đi. Con đã chạy tới hay đang mổ một nắm thì không bị nắm khác gọi đi.
   - Con trèo lưng và con nấp bụng luôn giữ chỗ của mình: không chạy tới chỗ rắc, và khi giữ thì ở yên (vốn đã ở sát mẹ).
 - **Thứ tự ưu tiên** khi các mốc chồng nhau: núp > chạy tới > về > rảnh. Rắc trong lúc giữ thì thóc vẫn rơi, nhưng các con ở lại với mẹ.
 - **Hướng:**
   - đang đi thì quay theo vận tốc (sai phân của đường dạng đóng);
-  - đứng yên thì quay về phía mẹ, hay phía điểm đang mổ.
+  - đứng yên ở nhà thì theo dáng của bố cục (lắc nhẹ); đứng mổ thì nhìn về nắm thóc; núp thì quay ra ngoài, lưng về phía mẹ.
 - **Gà mẹ:** đứng yên giữa sàn; đầu ngoảnh chậm theo thời gian.
   - Giữ: hai cánh mở tới 60° theo lò xo tắt dần tới hạn (như cây bay của Bức 3); đầu gật "cục cục" 2 lần mỗi giây.
   - Thả: cánh khép theo cùng lò xo.
-  - Bới: chân cào trong 0,6 giây; thóc văng ra ở giữa nhịp cào.
+  - Bới: chân cào trong 0,6 giây; thóc văng ra ở giữa nhịp cào. Không ai chạm 25 giây (kể từ mốc cuối, và không đang giữ) thì bới một
+    lần: một nhúm 24 hạt ở `HEN_FRONT`, hai ba con gần nhất xúm lại.
+- **Nhúm lúc mở trang:** 40 hạt nằm yên ở `PILE`; hai ba con gần nhất đã đứng sẵn quanh đó, chờ 0,1–0,4 giây rồi mổ, lệch nhịp nhau
+  (poster chụp ở 2 giây có gà mổ).
+  - `PILE` và `HEN_FRONT` đặt ở x = −3,3, trước mỏ mẹ (mỏ ở −2,6) chừng 0,7: đủ xa ngực mẹ để các con xúm lại (trên vòng bán kính 1)
+    không lún vào ngực. Đo bằng chỗ thật của khối (nhúm gà mẹ bới, 120 lần, mọi khung mổ): ở x = −2,6 chừng một khung mổ trong chín có
+    con lún vào ngực mẹ, ở −3,3 không khung nào trong 9000.
 - **Đơn vị:** một đơn vị là 10 cm. Trọng lực của Trái Đất là 98,1 đơn vị/s², của trăng là 16,2.
-- **Giảm chuyển động:** tốc độ chạy và đi còn một nửa; không có gà mẹ bới.
+- **Giảm chuyển động:** tốc độ chạy và đi còn một nửa, cánh mở chậm gấp đôi; không có gà mẹ bới (nhúm lúc mở trang vẫn có).
 - Gọi `state(t)` bao nhiêu lần, theo thứ tự nào, cũng ra cùng một số; `update(0, t)` ra đúng khung N.
 
 ### 20.6 Xưởng và hợp đồng
@@ -4441,16 +4459,25 @@ chuyển động ở lại trong bức.
 - `cot-bo-cuc`: đủ mười gà con; mọi chỗ "nhà" nằm trên sàn, không chồng lên nhau hay lên gà mẹ (trừ con trèo lưng và con nấp bụng);
   chỗ nhà của tám con còn lại cách tâm mẹ hơn 2,2, nên lúc nghỉ `quanhMe` chỉ đếm con trèo lưng và con nấp bụng. `beakTip`: lúc ngẩng
   là `CHICK.beak`, cúi hẳn thì mỏ chạm sàn, cúi dần thì mỏ hạ dần. Khung máy tính 16 : 10 và 16 : 9: tờ giấy chiếm 55–61% bề cao, tâm
-  giấy cao hơn tâm khung một chút; điện thoại dọc 390 × 844: cả tờ giấy trong khung.
+  giấy cao hơn tâm khung một chút; điện thoại dọc 390 × 844: cả tờ giấy trong khung. Tám chỗ núp (`SLOTS`): trên sàn, cách tâm mẹ dưới 2,2,
+  ngoài bầu dục thân mẹ, đôi một cách nhau hơn 1,3, cách con nấp bụng hơn 1,4; nhúm thóc và chỗ gà mẹ bới nằm trên sàn, ngoài đầu mẹ.
 - `cot-hinh-ga`: gà mẹ, gà con đủ phần; đầu mỏ của hình khớp `CHICK`; khớp của gà mẹ ở tọa độ thế giới; con trèo lưng và con nấp bụng sát
   mẹ mà không lún vào khối nào của mẹ (cầu xoay, nón, trụ: đọc chỗ thật qua `placement()`, chung với hình), đáy chân con trèo lưng chạm
   lưng; ở góc nhìn của tranh (khung 16 : 10 và 390 × 844), tia qua tâm đầu và tâm mình (đọc từ `CHICK_SHAPE`) mỗi con trúng chính nó
-  trước (không con nào bị che hẳn).
+  trước (không con nào bị che hẳn). Tám chỗ núp, gà con quay ra ngoài và ngó nghiêng hết cỡ: không đỉnh gà con nào nằm trong khối của
+  mẹ và không đỉnh mẹ nào nằm trong khối gà con; cánh mở 60° nằm trên đầu gà con; hai gà con ở hai chỗ kề nhau, hay kề con nấp bụng,
+  không chồng nhau.
 - `dan-ga-song`:
-  - chạm thì 3–4 con rảnh ở gần nhất chạy tới, và tới nơi đúng lúc tính theo tốc độ; mổ 8 giây rồi về;
-  - giữ thì mọi con rảnh về các chỗ quanh mẹ, không hai con một chỗ; thả thì tản ra;
-  - vị trí liên tục ở mỗi mốc; gọi theo thứ tự nào cũng ra cùng số; tối đa 32 mốc;
-  - giảm chuyển động thì chậm gấp đôi, không có gà mẹ bới.
+  - chạm thì 3–4 con rảnh ở gần nhất chạy tới, và tới nơi đúng lúc tính theo tốc độ; mổ 8 giây rồi về. Các con tới cùng một nắm đứng
+    cách nhau ≥ 0,9 và luôn trên sàn, kể cả chạm sát mép và góc; lúc mổ nhìn về nắm, mỏ chạm sàn trong 0,55 quanh điểm rắc; con đang
+    bận nắm này không bị nắm khác gọi đi;
+  - giữ thì mọi con rảnh về các chỗ quanh mẹ, quay ra ngoài, không hai con một chỗ; thả thì tản ra, tới nắm mới nhất nếu chưa quá 20 giây;
+  - vị trí liên tục ở mỗi mốc, kể cả giữ lúc một con đang chờ phản xạ, đang chạy hay đang mổ; "bão" chạm, giữ, thả (24 hạt giống PRNG,
+    mốc lùi, khoảng lặng cho gà mẹ bới) giữ vị trí và cánh liên tục, mọi số hữu hạn, luôn trên sàn, không hai con một chỗ núp; hai mươi
+    lần chạm trong một giây; giữ hai lần liền, thả khi chưa giữ;
+  - gọi theo thứ tự nào cũng ra cùng số; tối đa 32 mốc; `drift` gọi từng khung hay một lần đều ra cùng dãy mốc;
+  - giảm chuyển động thì chậm gấp đôi, cánh mở chậm hơn, không có gà mẹ bới; nhúm lúc mở trang có gà mổ lệch nhịp nhau;
+  - đầu vào hỏng (thời điểm hay điểm rắc không hữu hạn, bố cục thiếu chỗ núp) thì ném lỗi.
 - `dan-ga-thoc`: luật dịch được ở cả hai backend; mảng mỏ có 10 phần tử.
 - Từng lớp, dựng cả bức bằng `buildPainting`:
   - material của các mesh là `NodeMaterial` gốc; mọi material có `emissiveNode`;
@@ -4558,6 +4585,15 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
   - Mài về Cốt thì giấy thành đất sét, nên độ sáng trung bình vẫn dưới 0,8.
 - **Dạng đóng của đàn gà phức tạp** khi các mốc chồng nhau (rắc trong lúc giữ, giữ trong lúc đang chạy tới). Cách tránh: một thứ tự ưu tiên
   duy nhất (§20.5), test vị trí liên tục ở mỗi mốc, tối đa 32 mốc.
+- **Gà con tới chỗ rắc sát thân mẹ có thể lún vào mẹ**, và chạy xuyên thân mẹ khi chỗ đến ở bên kia: đàn gà dạng đóng đi đường thẳng và
+  không coi thân mẹ là vật cản (§20.5). Chỗ núp (quay ra ngoài) đã chừa đủ chỗ, và nhúm lúc mở trang, nhúm gà mẹ bới đặt ngoài tầm ngực
+  mẹ; còn nắm do người chạm ngay sát mẹ thì chưa. Chạm lên vách cho điểm rắc nằm ở mép sau sàn, ngay sau lưng mẹ; chạm vào chính gà mẹ
+  cũng vậy, vì tia xuyên thân mẹ rồi cắt sàn ở sau lưng hay dưới bụng mẹ.
+  - Đo (GĐ 8 Task 7, 250 cú chạm mỗi nhóm, đọc chỗ thật của khối): chạm đều khắp sàn thì 27% số cú chạm có con lún vào mẹ lúc mổ (12% số
+    khung mổ); chạm lên vách thì 36%, và 87% nếu x trong ±2,4 (sau lưng mẹ); chạm cách tâm mẹ hơn 4 thì 0%.
+  - Cách tránh nếu ảnh duyệt thấy rõ: vòng cấm quanh mẹ cho từng chỗ đứng, như phép kéo vào trong sàn. Đo thử bằng chỗ thật của khối
+    ở 16 hướng: gà con đứng thẳng ở ngoài bầu dục nửa trục chừng 2,4 × 1,8 quanh tâm mẹ thì hướng nào cũng không lún vào mẹ; cộng thêm
+    bước nhảy 0,25. Sau lưng mẹ sàn chỉ sâu chừng 0,9 giữa vòng cấm và mép sau, nên chỗ đó chứa được ít con hơn một vòng.
 - **Thóc quá nhỏ trên điện thoại:** 0,08 đơn vị là chừng 2 điểm ảnh ở 390×844. Cách tránh: cỡ hạt có sàn theo điểm ảnh (chia theo
   `u.resolution` và zoom).
 - **Tranh tự khép lại đánh nhau với quán tính của OrbitControls:** `end` đến khi buông tay, nhưng damping còn quay thêm một lúc, và phần

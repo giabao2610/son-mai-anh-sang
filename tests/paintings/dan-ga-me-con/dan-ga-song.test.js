@@ -1,0 +1,373 @@
+// tests/paintings/dan-ga-me-con/dan-ga-song.test.js — đàn gà dạng đóng (spec §20.5): rắc thì 3–4 con rảnh gần nhất chạy tới, mỗi con một chỗ trên vòng quanh nắm (không chồng nhau, không ra khỏi giấy), tới đúng lúc, mổ rồi về; giữ thì núp (quay ra ngoài, không hai con một chỗ), thả thì tản; liên tục ở mỗi mốc kể cả giữ lúc gà đang chờ, chạy hay mổ; thứ tự gọi không đổi kết quả; tối đa 32 mốc; bão chạm, giữ, thả với nhiều hạt giống; chạm dồn; giảm chuyển động; gà mẹ bới (drift); nhúm thóc lúc mở trang; đầu vào hỏng thì ném lỗi.
+import { describe, it, expect } from 'vitest';
+import { FLOCK, createFlock } from '../../../src/paintings/dan-ga-me-con/parts/dan-ga-song.js';
+import { FLOOR, LAYOUT } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
+import { mulberry32 } from '../../../src/lib/random.js';
+
+const NO_PILE = { ...LAYOUT, pile: null };
+const FREE = LAYOUT.homes.flatMap((h, i) => (h.kind === 'free' ? [i] : []));
+const AT_HOME = FLOCK.wander * Math.SQRT2 + 1e-9; // lượn quanh nhà: mỗi trục tối đa FLOCK.wander
+/** Xa nhất mà một con đang mổ cách điểm rắc: bán kính vòng đứng cộng bước nhảy. */
+const REACH = FLOCK.spread + FLOCK.hopRadius[1];
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const xz = (c) => [c.x, c.z];
+/** Hiệu hai góc, về [−π, π). */
+const angleDiff = (a, b) => ((((a - b) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+const finite = (st) => st.chicks.every((c) => [c.x, c.y, c.z, c.heading, c.head, ...c.beak].every(Number.isFinite))
+  && Object.values(st.hen).every(Number.isFinite) && Number.isFinite(st.near) && Number.isFinite(st.eating);
+/** Chỗ núp (chỉ số trong LAYOUT.slots) mà con c đang đứng đúng, −1 nếu chưa ở chỗ nào. */
+const slotOf = (c) => LAYOUT.slots.findIndex((s) => dist(s, xz(c)) < 0.05);
+/** Mọi con ở quanh nhà (con trèo lưng và con nấp bụng đứng yên tại nhà). */
+const allHome = (st) => st.chicks.every((c, i) => dist(xz(c), LAYOUT.homes[i].at) <= AT_HOME);
+/** Con c còn trên sàn (chừa 0,01 cho sai số): gà con đứng ngoài sàn là đứng ngoài tờ giấy. */
+const onFloor = (c) => c.x >= FLOOR.x[0] - 0.01 && c.x <= FLOOR.x[1] + 0.01 && c.z >= FLOOR.z[0] - 0.01 && c.z <= FLOOR.z[1] + 0.01;
+/** Khoảng cách nhỏ nhất giữa hai con đang mổ ở một khung; Infinity nếu chưa đủ hai con. */
+function closestEaters(st) {
+  const e = st.chicks.filter((c) => c.kind === 'peck');
+  let m = Infinity;
+  for (let i = 0; i < e.length; i += 1) for (let j = i + 1; j < e.length; j += 1) m = Math.min(m, dist(xz(e[i]), xz(e[j])));
+  return m;
+}
+
+describe('dan-ga-song', () => {
+  it('không ai chạm, không có nhúm thóc: mọi con quanh nhà; chỉ con trèo lưng và con nấp bụng ở quanh mẹ; không ai mổ', () => {
+    const flock = createFlock(NO_PILE);
+    for (const t of [0, 3, 10, 24]) {
+      const st = flock.state(t);
+      st.chicks.forEach((c, i) => expect(dist(xz(c), LAYOUT.homes[i].at), `con ${i} lúc ${t}`).toBeLessThanOrEqual(AT_HOME));
+      expect([st.near, st.eating]).toEqual([2, 0]);
+    }
+  });
+
+  it('chạm: 3–4 con rảnh GẦN NHẤT chạy tới; tới chậm nhất lúc phản xạ 0,4 s + quãng / 9; mổ (mỏ chạm sàn); rồi về nhà', () => {
+    const flock = createFlock(NO_PILE);
+    const at = [-4.5, 2.5];
+    flock.scatter(5, at, 7);
+    const before = flock.state(5);
+    const went = FREE.filter((i) => dist(xz(flock.state(9).chicks[i]), at) < REACH + 0.05);
+    expect(went.length).toBeGreaterThanOrEqual(3);
+    expect(went.length).toBeLessThanOrEqual(4);
+    const byDistance = [...FREE].sort((a, b) => dist(xz(before.chicks[a]), at) - dist(xz(before.chicks[b]), at));
+    expect([...went].sort()).toEqual(byDistance.slice(0, went.length).sort());
+    for (const i of went) {
+      const latest = 5 + FLOCK.react[1] + (dist(xz(before.chicks[i]), at) + FLOCK.spread) / FLOCK.run;
+      expect(dist(xz(flock.state(latest + 0.05).chicks[i]), at), `con ${i} tới nơi`).toBeLessThanOrEqual(REACH + 1e-9);
+    }
+    expect(flock.state(10).eating).toBe(went.length);
+    let pecks = 0;
+    for (let t = 7; t < 13; t += 1 / 60) pecks += flock.state(t).chicks.filter((c) => c.pecking && c.beak[1] < 0.1).length;
+    expect(pecks).toBeGreaterThan(0);
+    const later = flock.state(30);
+    for (const i of went) expect(dist(xz(later.chicks[i]), LAYOUT.homes[i].at)).toBeLessThanOrEqual(AT_HOME);
+  });
+
+  it('con đã chạy tới hay đang mổ một nắm thì không bị nắm khác gọi đi: nắm sau chỉ gọi các con còn rảnh, kế hoạch của con kia không đổi', () => {
+    const onlyFirst = createFlock(NO_PILE);
+    const both = createFlock(NO_PILE);
+    for (const f of [onlyFirst, both]) f.scatter(5, [-4.5, 2.5], 1);
+    both.scatter(5.5, [-4, 2], 2); // sát nắm đầu: các con của nắm đầu vẫn là gần nhất, nhưng đang bận
+    const busy = FREE.filter((i) => onlyFirst.state(5.45).chicks[i].goal === 'food');
+    expect(busy.length).toBeGreaterThanOrEqual(3);
+    const busyNow = FREE.filter((i) => both.state(5.55).chicks[i].goal === 'food');
+    expect(busyNow.length, 'nắm sau gọi thêm con rảnh').toBeGreaterThan(busy.length);
+    for (const t of [6, 9, 12, 20]) {
+      for (const i of busy) expect(both.state(t).chicks[i], `con ${i} lúc ${t}`).toEqual(onlyFirst.state(t).chicks[i]);
+    }
+  });
+
+  it('các con tới cùng một nắm đứng trên vòng quanh điểm rắc, mỗi con một chỗ: suốt lúc mổ hai con bất kỳ cách nhau ≥ chặn dưới (không chồng lên nhau)', () => {
+    // Bốn con cách đều trên vòng bán kính spread: hai con kề nhau cách 2·spread·sin(π/4); mỗi con nhảy tối đa hopRadius[1] khỏi chỗ đứng.
+    const bound = 2 * FLOCK.spread * Math.sin(Math.PI / FLOCK.responders[1]) - 2 * FLOCK.hopRadius[1];
+    expect(bound).toBeGreaterThan(0.7); // gà con rộng chừng 1: cách dưới 0,7 là chồng lên nhau rõ rệt
+    const rand = mulberry32(5);
+    let worst = Infinity;
+    let samples = 0;
+    for (let n = 0; n < 60; n += 1) {
+      const flock = createFlock(NO_PILE);
+      flock.scatter(5, [rand() * 11 - 5.5, rand() * 6 - 1.5], n);
+      for (let t = 7; t < 12.5; t += 0.1) {
+        const m = closestEaters(flock.state(t));
+        if (m < Infinity) samples += 1;
+        worst = Math.min(worst, m);
+      }
+    }
+    expect(samples).toBeGreaterThan(1000);
+    expect(worst).toBeGreaterThanOrEqual(bound - 1e-6);
+  });
+
+  it('đang mổ thì nhìn về nắm thóc, nên mỏ chạm sàn gần điểm rắc (trong 0,55) và có cú mổ ngay sát điểm rắc (trong 0,3)', () => {
+    const rand = mulberry32(12);
+    let worst = 0;
+    let closest = Infinity;
+    for (let n = 0; n < 30; n += 1) {
+      const flock = createFlock(NO_PILE);
+      const at = [rand() * 8 - 4, rand() * 4.4 - 1.2]; // giữa sàn, cách mép hơn spread + hopRadius[1]: vòng đứng không bị kéo vào trong
+      flock.scatter(5, at, n);
+      for (let t = 8; t < 13; t += 1 / 30) {
+        for (const c of flock.state(t).chicks) {
+          if (c.kind !== 'peck') continue;
+          // Nhìn về tâm vòng từ chỗ đứng; con nhảy ngang tới hopRadius[1] so với chỗ đứng nên lệch tối đa atan(0,25 / 0,75) ≈ 0,32.
+          expect(Math.abs(angleDiff(c.heading, Math.atan2(at[0] - c.x, at[1] - c.z))), `hạt ${n}, lúc ${t.toFixed(2)}: hướng so với nắm`).toBeLessThan(0.35);
+          if (!c.pecking || c.beak[1] > 0.1) continue;
+          const d = dist([c.beak[0], c.beak[2]], at);
+          worst = Math.max(worst, d);
+          closest = Math.min(closest, d);
+        }
+      }
+    }
+    // Chỗ đứng cách điểm rắc spread, đầu mỏ lúc "đang mổ" (cúi ≥ 85%) trước chân 0,73–0,8, chỗ mổ lệch tối đa hopRadius[1]:
+    // mỏ cách điểm rắc tối đa max(spread − 0,73; 0,8 − spread) + hopRadius[1].
+    expect(worst).toBeLessThanOrEqual(Math.max(FLOCK.spread - 0.73, 0.8 - FLOCK.spread) + FLOCK.hopRadius[1] + 0.02);
+    expect(worst).toBeLessThan(0.55);
+    expect(closest).toBeLessThan(0.3);
+  });
+
+  it('chạm sát mép sàn hay ở góc: không con nào ra khỏi giấy, lúc chạy lẫn lúc mổ (vòng đứng kéo vào trong sàn)', () => {
+    const corners = [[-6.7, -2.7], [6.7, -2.7], [-6.7, 4.7], [6.7, 4.7], [0, 4.7], [6.7, 1], [-6.7, 1], [0, -2.7]];
+    for (const at of corners) {
+      const flock = createFlock(NO_PILE);
+      flock.scatter(5, at, 3);
+      const out = [];
+      for (let t = 5; t < 25; t += 0.1) flock.state(t).chicks.forEach((c, i) => { if (!onFloor(c)) out.push(`con ${i} lúc ${t.toFixed(1)}: [${c.x.toFixed(2)}, ${c.z.toFixed(2)}]`); });
+      expect(out, `chạm ở ${at}`).toEqual([]);
+    }
+  });
+
+  it('giữ: tám con chạy về tám chỗ núp, không hai con một chỗ; quanhMe = 10 sau 3 giây; cánh mẹ mở 60°; thả thì tản dần rồi về nhà', () => {
+    const flock = createFlock(NO_PILE);
+    flock.grip(2);
+    const st = flock.state(5);
+    const slots = FREE.map((i) => slotOf(st.chicks[i]));
+    expect(slots.every((k) => k >= 0)).toBe(true);
+    expect(new Set(slots).size).toBe(8);
+    expect(st.near).toBe(10);
+    expect(st.hen.wing).toBeCloseTo(FLOCK.wing, 2);
+    flock.release(5);
+    expect(flock.state(5.05).near).toBeGreaterThanOrEqual(8); // tản dần: vừa thả thì còn quanh mẹ
+    const end = flock.state(20);
+    expect(end.near).toBe(2);
+    expect(end.hen.wing).toBeLessThan(1e-3);
+  });
+
+  it('núp: quay ra ngoài (lưng về phía mẹ) rồi ngó nghiêng không quá FLOCK.peek: chỗ núp của bố cục chừa đủ chỗ cho đúng dáng này', () => {
+    const flock = createFlock(NO_PILE);
+    flock.grip(2);
+    for (let t = 4; t < 12; t += 0.05) {
+      const st = flock.state(t);
+      for (const i of FREE) {
+        const slot = LAYOUT.slots[slotOf(st.chicks[i])];
+        const outward = Math.atan2(slot[0] - LAYOUT.hen[0], slot[1] - LAYOUT.hen[1]);
+        expect(Math.abs(angleDiff(st.chicks[i].heading, outward)), `con ${i} lúc ${t.toFixed(2)}`).toBeLessThanOrEqual(FLOCK.peek + 1e-9);
+      }
+    }
+  });
+
+  it('rắc trong lúc giữ: thóc vẫn rơi (takeScatters) mà các con ở lại với mẹ; thả trong 20 giây thì 3–4 con tới nắm đó', () => {
+    const flock = createFlock(NO_PILE);
+    flock.grip(1);
+    flock.scatter(3, [4, 3], 2);
+    expect(flock.takeScatters(3)).toHaveLength(1);
+    expect(flock.state(4).near).toBe(10);
+    flock.release(6);
+    const went = FREE.filter((i) => dist(xz(flock.state(9).chicks[i]), [4, 3]) < REACH + 0.05).length;
+    expect(went).toBeGreaterThanOrEqual(3);
+    expect(went).toBeLessThanOrEqual(4);
+  });
+
+  it('thả sau hơn 20 giây kể từ nắm cuối: không con nào tới nắm cũ; mọi con về nhà', () => {
+    const flock = createFlock(NO_PILE);
+    flock.grip(1);
+    flock.scatter(2, [4, 3], 9);
+    flock.release(30);
+    for (let t = 30; t < 45; t += 0.1) expect(flock.state(t).eating, `lúc ${t.toFixed(1)}`).toBe(0);
+    expect(allHome(flock.state(45))).toBe(true);
+  });
+
+  it('giữ hai lần liền hay thả khi chưa giữ: bỏ qua, không thêm mốc', () => {
+    const flock = createFlock(NO_PILE);
+    flock.release(1);
+    expect(flock.marks()).toBe(1);
+    flock.grip(2);
+    flock.grip(3);
+    expect(flock.marks()).toBe(2);
+    flock.release(4);
+    flock.release(5);
+    expect(flock.marks()).toBe(3);
+  });
+
+  it.each(['stay', 'move', 'peck'])('giữ lúc một con rảnh đang ở pha %s của nắm thóc: vị trí liên tục, rồi cả tám con về chỗ núp, không ai còn mổ', (kind) => {
+    const make = () => {
+      const f = createFlock(NO_PILE);
+      f.scatter(5, [-4.5, 2.5], 7);
+      return f;
+    };
+    const probe = make();
+    let gripAt = null;
+    for (let t = 5.01; t < 14 && gripAt === null; t += 0.01) if (probe.state(t).chicks.some((c) => c.goal === 'food' && c.kind === kind)) gripAt = t;
+    expect(gripAt, `không có con nào ở pha ${kind}`).not.toBeNull();
+    const flock = make();
+    const before = flock.state(gripAt - 1e-6);
+    flock.grip(gripAt);
+    const after = flock.state(gripAt + 1e-6);
+    after.chicks.forEach((c, i) => expect(dist(xz(c), xz(before.chicks[i])), `con ${i}`).toBeLessThan(1e-3));
+    const settled = flock.state(gripAt + 4);
+    expect([settled.near, settled.eating]).toEqual([10, 0]);
+    expect(new Set(FREE.map((i) => slotOf(settled.chicks[i]))).size).toBe(8);
+  });
+
+  it('bão chạm, giữ, thả (24 hạt giống PRNG, một phần ba ở chế độ giảm chuyển động, cả mốc lùi và khoảng lặng cho gà mẹ bới): vị trí và cánh liên tục ở mỗi mốc; mọi số hữu hạn; luôn trên sàn; không hai con một chỗ núp; tối đa 32 mốc; cuối cùng ai về nhà nấy', () => {
+    for (let seed = 1; seed <= 24; seed += 1) {
+      const rand = mulberry32(seed * 2026);
+      const flock = createFlock(LAYOUT, { reduced: seed % 3 === 0 });
+      let t = 0.5;
+      for (let n = 0; n < 150; n += 1) {
+        t += rand() < 0.08 ? 20 + rand() * 30 : rand() * 1.5; // thỉnh thoảng lặng lâu: gà mẹ bới
+        flock.drift(t); // như update mỗi khung: gọi trước cử chỉ
+        const r = rand();
+        const before = flock.state(t - 1e-6);
+        if (r < 0.4) flock.scatter(t, [rand() * 12 - 6, rand() * 7 - 2.5], n);
+        else if (r < 0.65) flock.grip(t);
+        else if (r < 0.85) flock.release(t);
+        else flock.scatter(t - 3, [0, 0], n); // mốc lùi: xếp vào sau mốc cuối
+        flock.drift(t);
+        const after = flock.state(t + 1e-6);
+        const tag = `hạt ${seed}, bước ${n}, t = ${t.toFixed(2)}`;
+        expect(finite(before) && finite(after), tag).toBe(true);
+        if (r < 0.85) {
+          after.chicks.forEach((c, i) => expect(dist(xz(c), xz(before.chicks[i])), `${tag}, con ${i}`).toBeLessThan(1e-3));
+          expect(Math.abs(after.hen.wing - before.hen.wing), `${tag}: cánh`).toBeLessThan(1e-3);
+        }
+        expect(after.chicks.every(onFloor), `${tag}: có con ngoài sàn`).toBe(true);
+        const settled = after.chicks.filter((c) => c.kind === 'hide').map(xz);
+        settled.forEach((p, i) => settled.slice(i + 1).forEach((q) => expect(dist(p, q), `${tag}: hai con một chỗ núp`).toBeGreaterThan(1)));
+        expect(after.eating, tag).toBeLessThanOrEqual(8);
+        expect(flock.marks(), tag).toBeLessThanOrEqual(32);
+      }
+      flock.release(t + 0.1);
+      expect(allHome(flock.state(t + 200)), `hạt ${seed}: cuối cùng ai về nhà nấy`).toBe(true);
+    }
+  });
+
+  it('hai mươi lần chạm trong một giây: mọi nắm giao đúng một lần, theo thứ tự; mọi số hữu hạn, trên sàn; không quá tám con mổ; rồi ai về nhà nấy', () => {
+    const rand = mulberry32(8);
+    const flock = createFlock(NO_PILE);
+    for (let n = 0; n < 20; n += 1) flock.scatter(1 + n * 0.05, [rand() * 12 - 6, rand() * 7 - 2.5], n);
+    const got = flock.takeScatters(5);
+    expect(got.map((g) => g.seed)).toEqual(Array.from({ length: 20 }, (_, n) => n));
+    expect(flock.takeScatters(5)).toEqual([]);
+    expect(flock.marks()).toBe(21);
+    for (let t = 0; t < 60; t += 0.25) {
+      const st = flock.state(t);
+      expect(finite(st) && st.chicks.every(onFloor), `lúc ${t}`).toBe(true);
+      expect(st.eating).toBeLessThanOrEqual(8);
+    }
+    expect(allHome(flock.state(60))).toBe(true);
+  });
+
+  it('gọi state theo thứ tự nào cũng ra cùng số (dạng đóng: update(0, t) của ?freeze ra đúng khung N)', () => {
+    const make = () => {
+      const f = createFlock(LAYOUT);
+      f.scatter(2, [-4, 2], 1);
+      f.grip(6);
+      f.release(9);
+      f.drift(60);
+      return f;
+    };
+    const times = Array.from({ length: 70 }, (_, k) => k * 0.85);
+    const a = make();
+    const b = make();
+    const forward = times.map((t) => a.state(t));
+    const backward = [...times].reverse().map((t) => b.state(t)).reverse();
+    expect(backward).toEqual(forward);
+  });
+
+  it('giảm chuyển động: chạy chậm còn một nửa (tới muộn hơn hẳn), cánh mở chậm hơn; gà mẹ không bới', () => {
+    const fast = createFlock(NO_PILE);
+    const slow = createFlock(NO_PILE, { reduced: true });
+    for (const f of [fast, slow]) f.scatter(1, [-6, 4.5], 3);
+    const firstEat = (f) => {
+      for (let t = 1; t < 20; t += 0.01) if (f.state(t).eating > 0) return t;
+      return Infinity;
+    };
+    expect(firstEat(slow) - 1).toBeGreaterThan((firstEat(fast) - 1) * 1.4);
+    slow.drift(200);
+    expect(slow.marks()).toBe(2); // mốc đầu và cú chạm
+    const [quick, calm] = [createFlock(NO_PILE), createFlock(NO_PILE, { reduced: true })];
+    for (const f of [quick, calm]) f.grip(1);
+    expect(calm.state(1.3).hen.wing).toBeLessThan(quick.state(1.3).hen.wing);
+    expect(calm.state(10).hen.wing).toBeCloseTo(FLOCK.wing, 2); // rồi cũng mở hết cỡ
+  });
+
+  it('gà mẹ bới: không ai chạm 25 giây thì một nhúm 24 hạt trước mặt mẹ, văng ở giữa nhịp cào (0,3 s sau), 2–3 con xúm lại', () => {
+    const flock = createFlock(NO_PILE);
+    flock.drift(24.9);
+    expect(flock.takeScatters(24.9)).toEqual([]);
+    flock.drift(26);
+    expect(flock.takeScatters(25.2)).toEqual([]);
+    const [handful] = flock.takeScatters(25.4);
+    expect(handful.count).toBe(FLOCK.henHandful);
+    expect(dist(handful.at, LAYOUT.henFront)).toBeLessThan(0.5);
+    expect(flock.takeScatters(30)).toEqual([]); // mỗi nắm giao đúng một lần
+    expect(flock.state(25.3).hen.scratch).toBeGreaterThan(0.5);
+    expect(flock.state(26).hen.scratch).toBe(0);
+    const pecking = flock.state(29).eating;
+    expect(pecking).toBeGreaterThanOrEqual(2);
+    expect(pecking).toBeLessThanOrEqual(3);
+  });
+
+  it('gà mẹ bới (drift): gọi từng khung hay một lần đều ra cùng dãy mốc; chạm hay thả thì đồng hồ 25 giây tính lại; đang giữ thì không bới', () => {
+    const [stepwise, jump] = [createFlock(LAYOUT), createFlock(LAYOUT)];
+    for (const f of [stepwise, jump]) f.scatter(10, [1, 1], 3);
+    jump.drift(130);
+    for (let t = 0; t <= 130; t += 1 / 60) stepwise.drift(t);
+    stepwise.drift(130);
+    expect(stepwise.marks()).toBe(jump.marks());
+    expect(jump.marks()).toBe(6); // mốc đầu (nhúm), cú chạm lúc 10, rồi bới lúc 35, 60, 85, 110
+    for (const t of [20, 36, 60.2, 61, 75.4, 100, 130]) expect(stepwise.state(t)).toEqual(jump.state(t));
+    jump.drift(130); // gọi lại cùng t không thêm gì
+    expect(jump.marks()).toBe(6);
+    jump.scatter(120, [2, 2], 4); // chạm lúc 120: đồng hồ tính lại từ đây, lần bới kế tiếp ở 145
+    jump.drift(144.9);
+    expect(jump.marks()).toBe(7);
+    jump.drift(145.1);
+    expect(jump.marks()).toBe(8);
+    const gripped = createFlock(NO_PILE);
+    gripped.grip(5);
+    gripped.drift(500);
+    expect(gripped.marks()).toBe(2); // đang giữ: không bới
+    gripped.release(500);
+    gripped.drift(524.9);
+    expect(gripped.marks()).toBe(3);
+    gripped.drift(525.1);
+    expect(gripped.marks()).toBe(4);
+  });
+
+  it('mở trang: nhúm 40 hạt nằm yên trước mặt mẹ; hai ba con đang mổ ngay từ đầu, lệch nhịp nhau, đứng cách nhau (poster chụp ở 2 giây có gà mổ)', () => {
+    const flock = createFlock(LAYOUT);
+    const [pile] = flock.takeScatters(0);
+    expect(pile).toMatchObject({ count: FLOCK.pileHandful, still: true });
+    expect(pile.at).toEqual(LAYOUT.pile);
+    const eating = flock.state(0.5).eating;
+    expect(eating).toBeGreaterThanOrEqual(2);
+    expect(eating).toBeLessThanOrEqual(3);
+    expect(flock.state(2).eating).toBe(eating);
+    const eaters = flock.state(2).chicks.filter((c) => c.kind === 'peck');
+    expect(new Set(eaters.map((c) => c.head.toFixed(2))).size, 'các con cúi đầu cùng lúc như máy').toBeGreaterThan(1);
+    for (let t = 1; t < 7.5; t += 0.1) expect(closestEaters(flock.state(t)), `lúc ${t.toFixed(1)}`).toBeGreaterThanOrEqual(2 * FLOCK.spread * Math.sin(Math.PI / FLOCK.henResponders[1]) - 2 * FLOCK.hopRadius[1] - 1e-6);
+  });
+
+  it('đầu vào hỏng (thời điểm hay điểm rắc không hữu hạn, bố cục thiếu chỗ núp hay thiếu trường) thì ném lỗi tiếng Việt và không làm hỏng các mốc', () => {
+    const flock = createFlock(NO_PILE);
+    expect(() => flock.scatter(NaN, [0, 0], 1)).toThrow(/hữu hạn/);
+    expect(() => flock.scatter(1, [Infinity, 0], 1)).toThrow(/hữu hạn/);
+    expect(() => flock.scatter(1, [0], 1)).toThrow(/hữu hạn/);
+    expect(() => flock.grip(Infinity)).toThrow(/hữu hạn/);
+    expect(() => flock.release(NaN)).toThrow(/hữu hạn/);
+    expect(() => flock.drift(NaN)).toThrow(/hữu hạn/);
+    expect(flock.marks()).toBe(1);
+    expect(finite(flock.state(3))).toBe(true);
+    expect(() => createFlock({ ...LAYOUT, slots: LAYOUT.slots.slice(1) })).toThrow(/chỗ núp/);
+    expect(() => createFlock({ ...LAYOUT, floor: undefined })).toThrow(/thiếu `floor`/);
+    expect(() => createFlock({ ...LAYOUT, pile: undefined })).not.toThrow(); // không có nhúm lúc mở trang cũng được
+  });
+});

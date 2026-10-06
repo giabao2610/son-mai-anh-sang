@@ -1,4 +1,4 @@
-// paintings/dan-ga-me-con/parts/cot-bo-cuc.js — bố cục của tờ tranh (dữ liệu thuần): tờ giấy cong, gà mẹ, chỗ "nhà" của mười gà con, khung và đầu mỏ của gà con khi cúi, hướng nắng, góc nhìn của tranh; điểm chạm trên sàn; góc lệch của camera khỏi góc của tranh; không import three.
+// paintings/dan-ga-me-con/parts/cot-bo-cuc.js — bố cục của tờ tranh (dữ liệu thuần): tờ giấy cong, gà mẹ, chỗ "nhà" và tám chỗ núp của gà con, nhúm thóc lúc mở trang, khung và đầu mỏ của gà con khi cúi, hướng nắng, góc nhìn của tranh; điểm chạm trên sàn; góc lệch của camera khỏi góc của tranh; không import three.
 
 const RAD = Math.PI / 180;
 const unit = (v) => v.map((c) => c / Math.hypot(...v));
@@ -56,6 +56,26 @@ export const HOMES = Object.freeze([
   { at: [0.2, 1.75], heading: -Math.PI / 2, pigment: 4, kind: 'belly' }, // sát bụng mẹ, phía người xem, dưới cánh trái
   { at: [0.75, 0.0], heading: -Math.PI / 2, pigment: 3, kind: 'back' }, // đứng trên lưng mẹ, chân chạm lưng
 ].map((h) => Object.freeze({ ...h, at: Object.freeze(h.at) })));
+
+/**
+ * Tám chỗ núp quanh gà mẹ khi mẹ gọi con (§20.2, §20.5). Nằm trên vòng bán kính 2,1 quanh tâm mẹ: dưới 2,2 để số đo `quanhMe` đếm đủ
+ * mười, và đủ xa thân mẹ cho gà con quay ra ngoài (ló đầu, lưng về phía mẹ) không lún vào thân, đuôi hay cánh mẹ, cả khi cánh mở 60°.
+ * Con nấp bụng đứng ở góc 83° (cách tâm 1,76) chiếm một chỗ của vòng, nên hai chỗ kề nó cách 45°, sáu chỗ còn lại cách đều chừng 38°:
+ * đôi một cách nhau ≥ 1,35, cách con nấp bụng ≥ 1,5, nên các gà con núp không chồng lên nhau (test đọc chỗ thật của khối, kể cả lúc ngó
+ * nghiêng). Xếp theo góc, từ đầu đuôi vòng về phía người xem rồi ra sau lưng mẹ: hai chỗ giữa lưng ([−0,9; −1,9] và [0,45; −2,05])
+ * từ camera của tranh bị mẹ che hẳn, kéo xoay mới thấy; sáu chỗ còn lại thấy được (hai chỗ ở góc sau thấy một phần).
+ */
+export const SLOTS = Object.freeze([[2.1, 0], [1.65, 1.3], [-1.3, 1.65], [-2.05, 0.45], [-1.9, -0.9], [-0.9, -1.9], [0.45, -2.05], [1.65, -1.3]]
+  .map((s) => Object.freeze(s)));
+/**
+ * Nhúm thóc nằm sẵn lúc mở trang, và chỗ gà mẹ bới: trước mặt mẹ (mẹ quay sang −x), cách đầu mỏ chừng 0,7 (mỏ ở x = −2,6, con ong ở −3).
+ * Đủ xa ngực mẹ để các con xúm lại (đứng trên vòng bán kính 1 quanh nắm) không lún vào ngực: đo bằng chỗ thật của khối (nhúm gà mẹ bới,
+ * 120 lần, mọi khung mổ), đặt ở x = −2,6 thì chừng một khung mổ trong chín có con lún vào ngực mẹ, ở −3,3 không khung nào trong 9000.
+ */
+export const PILE = Object.freeze([-3.3, 0.4]);
+export const HEN_FRONT = Object.freeze([-3.3, 0]);
+/** Bố cục mà đàn gà dạng đóng cần (shared.js truyền vào dan-ga-song.js, vì lớp Đàn gà không import part của Cốt). */
+export const LAYOUT = Object.freeze({ homes: HOMES, hen: HEN.at, slots: SLOTS, pile: PILE, henFront: HEN_FRONT, beakTip, back: HEN.back, floor: FLOOR });
 
 /**
  * Góc nhìn của tranh (CameraSpec, §20.2). Nhìn chếch xuống 20° (position − target = [0; 4,4; 12]). Khung cao 13,2 và tờ giấy cao 7,67 trên
