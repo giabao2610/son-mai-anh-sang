@@ -1,8 +1,10 @@
-// tests/paintings/dan-ga-me-con/cot-bo-cuc.test.js — bố cục của tờ tranh: góc nhìn của tranh đúng số §20.2 (cả số của tranh tự khép lại); chỗ nhà của gà con trên sàn, không chồng nhau; cú chạm của camera trực giao trúng đúng điểm trên sàn; số đo `goc` (viewAngle).
+// tests/paintings/dan-ga-me-con/cot-bo-cuc.test.js — bố cục của tờ tranh: góc nhìn của tranh đúng số §20.2 (cả số của tranh tự khép lại); chỗ nhà của gà con trên sàn, không chồng nhau; đầu mỏ của gà con khi cúi (beakTip); cú chạm của camera trực giao trúng đúng điểm trên sàn; số đo `goc` (viewAngle).
 import { describe, it, expect } from 'vitest';
 import { Raycaster, Vector2, Vector3 } from 'three/webgpu';
 import { createCamera } from '../../../src/engine/gpu/camera.js';
-import { CAMERA, FLOOR, HEN, HOMES, PAPER, floorPoint, viewAngle } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
+import {
+  CAMERA, CHICK, FLOOR, HEN, HOMES, PAPER, beakTip, floorPoint, viewAngle,
+} from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
 
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const DEG = 180 / Math.PI;
@@ -48,6 +50,20 @@ describe('cot-bo-cuc', () => {
     for (let i = 0; i < free.length; i += 1) {
       for (let j = i + 1; j < free.length; j += 1) expect(dist(free[i].at, free[j].at)).toBeGreaterThan(1.3);
     }
+  });
+
+  it('beakTip: lúc ngẩng là đầu mỏ CHICK.beak (đảo thành [ra trước, lên trên]); cúi hẳn (60°) thì mỏ chạm sàn; cúi dần thì mỏ hạ dần', () => {
+    expect(CHICK.headDown).toBeCloseTo(Math.PI / 3, 12); // radian
+    expect(beakTip(0)).toEqual([CHICK.beak[1], CHICK.beak[0]].map((v) => expect.closeTo(v, 12)));
+    const [forward, up] = beakTip(1);
+    expect(up, 'đầu mỏ khi cúi hẳn').toBeGreaterThanOrEqual(-0.05);
+    expect(up).toBeLessThanOrEqual(0.1);
+    expect(forward, 'mỏ vẫn ở phía trước chân').toBeGreaterThan(0.3);
+    const heights = [0, 0.25, 0.5, 0.75, 1].map((k) => beakTip(k)[1]);
+    for (let i = 1; i < heights.length; i += 1) expect(heights[i]).toBeLessThan(heights[i - 1]);
+    // Đầu xoay quanh CHICK.pivot: khoảng cách từ trục tới đầu mỏ giữ nguyên ở mọi góc cúi.
+    const reach = (k) => Math.hypot(beakTip(k)[0] - CHICK.pivot[1], beakTip(k)[1] - CHICK.pivot[0]);
+    expect(reach(1)).toBeCloseTo(reach(0), 12);
   });
 
   it.each([1.6, 390 / 844])('chạm vào một điểm trên sàn (khung tỉ lệ %s) thì ra đúng điểm đó: tia của camera trực giao qua NDC của nó', (aspect) => {

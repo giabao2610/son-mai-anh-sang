@@ -5,15 +5,16 @@ import { waitForSettled, waitForFrames, canvasRegions, collectConsole, gpuReport
 /** Tag của test khói: nếu CI bật ciWebgpuSmoke cho Bức 4 (Task 13), job WebGPU chỉ chạy các test này. */
 const SMOKE = { tag: '@khoi' };
 /**
- * Vùng (phần của canvas 640 × 400), chốt theo ảnh thật (GPU thật và SwiftShader, Task 1). Khung nhìn 19,2 × 12 đơn vị; tờ giấy từ y 0,12
- * tới 0,875, x từ 0,136 tới 0,864.
- * BOARD_TOP, BOARD_BOTTOM: ván tối trên và dưới tờ giấy. WALL: vách giấy, không có gà. HEN: mình gà mẹ. LEFT_EDGE: mép trái tờ giấy
- * (nửa ván, nửa giấy): viền của Bản nét nằm ở đây. FLOOR: mặt sàn trống phía trước bên trái, nghiêng so với camera: không có nét nào.
+ * Vùng (phần của canvas 640 × 400), chốt theo ảnh thật (GPU thật và SwiftShader, Task 1; HEN chốt lại ở Task 4). Khung nhìn 19,2 × 12 đơn
+ * vị; tờ giấy từ y 0,12 tới 0,875, x từ 0,136 tới 0,864.
+ * BOARD_TOP, BOARD_BOTTOM: ván tối trên và dưới tờ giấy. WALL: vách giấy, không có gà. HEN: mình gà mẹ, phía trên cánh và dưới con trèo
+ * lưng (chỉ có màu vàng hòe, không nếp gấp nào). LEFT_EDGE: mép trái tờ giấy (nửa ván, nửa giấy): viền của Bản nét nằm ở đây. FLOOR: mặt
+ * sàn trống phía trước bên trái, nghiêng so với camera: không có nét nào.
  */
 const BOARD_TOP = { x0: 0.25, y0: 0.01, x1: 0.75, y1: 0.08 };
 const BOARD_BOTTOM = { x0: 0.25, y0: 0.93, x1: 0.75, y1: 0.99 };
 const WALL = { x0: 0.25, y0: 0.18, x1: 0.4, y1: 0.3 };
-const HEN = { x0: 0.46, y0: 0.57, x1: 0.54, y1: 0.63 };
+const HEN = { x0: 0.44, y0: 0.54, x1: 0.5, y1: 0.575 };
 const LEFT_EDGE = { x0: 0.12, y0: 0.3, x1: 0.15, y1: 0.7 };
 const FLOOR = { x0: 0.18, y0: 0.76, x1: 0.28, y1: 0.85 };
 
@@ -50,14 +51,19 @@ test.describe('Đàn Gà Mẹ Con · khung', () => {
     test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
   });
 
-  test('góc nhìn của tranh: camera trực giao vẽ tờ giấy giữa khung, hai dải ván tối ở trên và dưới', SMOKE, async ({ page }, testInfo) => {
+  test('góc nhìn của tranh: camera trực giao vẽ tờ giấy giữa khung, hai dải ván tối ở trên và dưới; gà mẹ in màu vàng hòe', SMOKE, async ({ page }, testInfo) => {
     const log = collectConsole(page);
     await open(page, testInfo, 30);
-    const r = await canvasRegions(page, { top: BOARD_TOP, bottom: BOARD_BOTTOM, wall: WALL });
+    const r = await canvasRegions(page, { top: BOARD_TOP, bottom: BOARD_BOTTOM, wall: WALL, hen: HEN });
     await page.screenshot({ path: testInfo.outputPath('khung.png') });
     expect(r.top.mean, 'ván trên tối').toBeLessThan(0.08);
     expect(r.bottom.mean, 'ván dưới tối').toBeLessThan(0.08);
     expect(r.wall.mean, 'tờ giấy sáng hơn hẳn ván').toBeGreaterThan(r.top.mean + 0.15);
+    // Bản màu (Task 4): mình gà mẹ có màu (đất sét chỉ chừng 0,05), và là màu vàng: đỏ, lục hơn hẳn lam.
+    expect(r.hen.chroma, 'gà mẹ in màu').toBeGreaterThan(0.15);
+    const [red, green, blue] = r.hen.rgb;
+    expect(red - blue, `vàng hòe: ${r.hen.rgb.map(Math.round)}`).toBeGreaterThan(40);
+    expect(green - blue, `vàng hòe: ${r.hen.rgb.map(Math.round)}`).toBeGreaterThan(20);
     expect(log.errors).toEqual([]);
   });
 

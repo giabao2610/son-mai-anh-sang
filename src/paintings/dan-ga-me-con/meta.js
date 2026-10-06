@@ -24,7 +24,8 @@ export default {
   og: 'paintings/dan-ga-me-con/og.jpg',
   // Năm màu tự nhiên của tranh Đông Hồ (spec §20.3): trắng điệp, vàng hoa hòe, đỏ sỏi son, xanh lá chàm, đen than lá tre.
   palette: { diep: '#EFE6D2', hoe: '#E0AC3A', sonSoi: '#B9472E', xanhDong: '#41705F', muc: '#221E1A' },
-  // THỨ TỰ PHỦ: lớp đầu là Cốt; lớp cuối là Phủ bóng dùng chung của xưởng. Bản khung (Task 1) có Cốt, Bản nét, Phủ bóng.
+  // THỨ TỰ PHỦ: lớp đầu là Cốt; lớp cuối là Phủ bóng dùng chung của xưởng. Thứ tự in của làng: màu trước (Bản màu), nét đen sau cùng
+  // (Bản nét). Task 6 và Task 8 thêm Giấy điệp và Đàn gà.
   layers: [
     {
       id: 'cot',
@@ -35,6 +36,11 @@ export default {
         'paintings/dan-ga-me-con/parts/cot-giay.js',
         'paintings/dan-ga-me-con/parts/cot-hinh-ga.js',
       ],
+    },
+    {
+      id: 'ban-mau',
+      name: 'Bản màu',
+      files: ['paintings/dan-ga-me-con/layers/l2-ban-mau.js', 'paintings/dan-ga-me-con/parts/ban-mau-bang.js'],
     },
     {
       id: 'ban-net',

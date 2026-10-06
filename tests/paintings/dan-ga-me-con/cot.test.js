@@ -1,6 +1,6 @@
-// tests/paintings/dan-ga-me-con/cot.test.js — Lớp 1 · Cốt của Bức 4: tờ giấy, gà mẹ, mười gà con bằng NodeMaterial gốc tô theo recipe; camera trực giao; không đèn, không shadow map; dịch được ở hai backend.
+// tests/paintings/dan-ga-me-con/cot.test.js — Lớp 1 · Cốt của Bức 4: tờ giấy, gà mẹ (mình, hai cánh), mười gà con bằng NodeMaterial gốc tô theo recipe; dáng đi qua positionNode (thuộc tính instance, bốn uniform); Tấm bìa phẳng không biên dịch lại; camera trực giao; không đèn, không shadow map; dịch được ở hai backend.
 import { describe, it, expect } from 'vitest';
-import { InstancedMesh, NodeMaterial, OrthographicCamera, Vector3 } from 'three/webgpu';
+import { DynamicDrawUsage, InstancedMesh, NodeMaterial, OrthographicCamera, Vector3 } from 'three/webgpu';
 import meta from '../../../src/paintings/dan-ga-me-con/meta.js';
 import * as painting from '../../../src/paintings/dan-ga-me-con/painting.js';
 import { CAMERA, HEN, HOMES } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
@@ -75,12 +75,87 @@ describe('l1-cot (Bức 4)', () => {
     });
   });
 
-  it.each(['webgpu', 'webgl2'])('%s: dịch được cả ba vật (mọi mesh của gà mẹ), không lỗi', (backend) => {
+  it('gà mẹ: Group ga-me có đúng ba Mesh (mình, cánh trái, cánh phải); mọi material có positionNode, nên frustumCulled = false', () => {
+    const { layers, shared } = build();
+    const hen = layers.cot.objects.find((o) => o.name === 'ga-me');
+    const meshes = meshesOf(hen);
+    expect(meshes).toHaveLength(3);
+    expect(meshes).toEqual([shared.cot.hen.body, shared.cot.hen.wingL, shared.cot.hen.wingR]);
+    expect(shared.cot.hen.group).toBe(hen);
+    for (const mesh of meshes) {
+      expect(mesh.material.positionNode, 'positionNode').toBeTruthy();
+      expect(mesh.frustumCulled, 'đỉnh dời trong shader: khung bao trên CPU không còn đúng').toBe(false);
+    }
+    // Bốn uniform dáng (radian) mà lớp Đàn gà ghi mỗi khung (Task 8); lúc dựng là dáng nghỉ.
+    const pose = ['wing', 'nod', 'look', 'scratch'].map((k) => shared.cot.hen[k]);
+    expect(pose.map((u) => u.name)).toEqual(['henWing', 'henNod', 'henLook', 'henScratch']);
+    expect(pose.map((u) => u.value)).toEqual([0, 0, 0, 0]);
+  });
+
+  it.each(['webgpu', 'webgl2'])('%s: mỗi mesh của gà mẹ đọc đúng uniform dáng của nó; positionNode đọc uniform của Tấm bìa phẳng', (backend) => {
     const built = build();
-    for (const object of built.layers.cot.objects) {
-      for (const mesh of meshesOf(object)) {
-        const { problems } = compileMaterial(mesh, built.ctx, backend);
-        expect(problems, `${object.name}`).toEqual([]);
+    const { body, wingL, wingR } = built.shared.cot.hen;
+    const read = (mesh) => compileMaterial(mesh, built.ctx, backend).uniforms;
+    expect(read(body)).toEqual(expect.arrayContaining(['henNod', 'henLook', 'henScratch', 'cotBiaPhang']));
+    expect(read(body)).not.toContain('henWing');
+    for (const wing of [wingL, wingR]) {
+      expect(read(wing)).toEqual(expect.arrayContaining(['henWing', 'cotBiaPhang']));
+      expect(read(wing)).not.toContain('henNod');
+    }
+    expect(read(built.shared.cot.chicks.mesh)).toContain('cotBiaPhang');
+  });
+
+  it('gà con: pose, head là instancedDynamicBufferAttribute (lớp Đàn gà ghi mỗi khung); positionNode đọc cả hai; dáng nghỉ đầu ngẩng', () => {
+    const built = build();
+    const { chicks } = built.shared.cot;
+    expect(chicks.mesh.material.positionNode).toBeTruthy();
+    // Thuộc tính instance không nằm trong geometry.attributes: shader đọc chúng qua node, trong thân một Fn. Chưa có Bản màu thì không
+    // ai đọc pigment (ban-mau.test.js kiểm nó).
+    const attrs = compileMaterial(chicks.mesh, built.ctx, 'webgpu').bufferAttributes
+      .filter((a) => a.isInstancedBufferAttribute && a !== chicks.mesh.instanceMatrix);
+    expect(attrs).toHaveLength(2);
+    expect(attrs).toContain(chicks.pose);
+    expect(attrs).toContain(chicks.head);
+    expect([chicks.pose.itemSize, chicks.head.itemSize]).toEqual([4, 1]);
+    expect([chicks.pose.usage, chicks.head.usage]).toEqual([DynamicDrawUsage, DynamicDrawUsage]);
+    expect([...chicks.head.array], 'dáng nghỉ: đầu ngẩng').toEqual(HOMES.map(() => 0));
+  });
+
+  it('thí nghiệm biaPhang (Tấm bìa phẳng) chỉ đổi một uniform: bật rồi tắt, không material nào biên dịch lại (version không đổi)', async () => {
+    const { layers } = build();
+    const exp = layers.cot.experiments.find((e) => e.id === 'biaPhang');
+    expect(exp).toBeTruthy();
+    const materials = layers.cot.objects.flatMap(meshesOf).map((m) => m.material);
+    const versions = materials.map((m) => m.version);
+    await exp.toggle(true);
+    expect(materials.map((m) => m.version)).toEqual(versions);
+    await exp.toggle(false);
+    expect(materials.map((m) => m.version)).toEqual(versions);
+  });
+
+  it('núm segments dựng lại cả bốn geometry (mình, hai cánh của mẹ; gà con) và gỡ geometry cũ', async () => {
+    const { knobs, shared } = build();
+    const meshes = [shared.cot.hen.body, shared.cot.hen.wingL, shared.cot.hen.wingR, shared.cot.chicks.mesh];
+    const old = meshes.map((m) => m.geometry);
+    const gone = old.map(() => false);
+    old.forEach((g, i) => g.addEventListener('dispose', () => { gone[i] = true; }));
+    await knobs.cot.set('segments', 48);
+    meshes.forEach((m, i) => {
+      expect(m.geometry, `geometry ${i}`).not.toBe(old[i]);
+      expect(m.geometry.attributes.position.count).toBeGreaterThan(old[i].attributes.position.count);
+    });
+    expect(gone).toEqual([true, true, true, true]);
+  });
+
+  it.each(['webgpu', 'webgl2'])('%s: dịch được cả ba vật (mọi mesh của gà mẹ) ở segments 8 và 48, không lỗi', async (backend) => {
+    for (const segments of [8, 48]) {
+      const built = build();
+      await built.knobs.cot.set('segments', segments);
+      for (const object of built.layers.cot.objects) {
+        for (const mesh of meshesOf(object)) {
+          const { problems } = compileMaterial(mesh, built.ctx, backend);
+          expect(problems, `${object.name}, segments ${segments}`).toEqual([]);
+        }
       }
     }
   });

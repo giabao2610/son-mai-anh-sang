@@ -1,23 +1,27 @@
-// paintings/dan-ga-me-con/layers/l1-cot.js — Lớp 1 · Cốt của Bức 4: tờ giấy cong, gà mẹ, mười gà con bằng đất sét dưới đèn xưởng viết trong shader; công bố "công thức tô" (recipe) cho các lớp sau.
+// paintings/dan-ga-me-con/layers/l1-cot.js — Lớp 1 · Cốt của Bức 4: tờ giấy cong, gà mẹ (mình, hai cánh), mười gà con bằng đất sét dưới đèn xưởng viết trong shader; dáng đi qua positionNode; công bố "công thức tô" (recipe) cho các lớp sau.
 import { Group, InstancedBufferAttribute, InstancedMesh, Mesh, NodeMaterial } from 'three/webgpu';
 import {
-  Fn, attribute, color, cos, dot, float, instancedBufferAttribute, max, mix, normalLocal, normalWorld, positionLocal, positionWorld, sin,
-  uniform, uv, vec3,
+  Fn, attribute, color, dot, float, instancedBufferAttribute, instancedDynamicBufferAttribute, max, mix, normalWorld, positionWorld, uniform,
+  uv, vec3,
 } from 'three/tsl';
-import { FLOOR, HEN, HOMES, SUN, viewAngle } from '../parts/cot-bo-cuc.js';
+import { CAMERA, FLOOR, HEN, HOMES, SUN, viewAngle } from '../parts/cot-bo-cuc.js';
 import { paperGeometry } from '../parts/cot-giay.js';
-import { chickGeometry, henGeometry } from '../parts/cot-hinh-ga.js';
+import { PART, chickGeometry, chickPosition, henGeometry, henPosition, henWingPosition } from '../parts/cot-hinh-ga.js';
 
 export const id = 'cot';
 
 export const knobs = [
-  // Số vòng quanh của mỗi khối cầu: ít thì gà thành khối nhiều mặt. Dựng lại hình, không biên dịch lại.
-  { id: 'segments', via: 'rebuild', min: 8, max: 48, step: 4, value: 24 },
+  // Số vòng quanh của mỗi khối cầu: ít thì gà thành khối nhiều mặt. Dựng lại hình, không biên dịch lại. Mặc định 32: hai mặt kề nhau gãy
+  // chừng 11°, dưới góc mà Bản nét coi là nếp gấp, cả ở hai đầu mình gà mẹ (cầu kéo dãn gấp đôi theo chiều dài).
+  { id: 'segments', via: 'rebuild', min: 8, max: 48, step: 4, value: 32 },
   { id: 'wireframe', kind: 'bool', via: 'rebuild', value: false },
 ];
 
-/** Xoay v quanh trục y (cos, sin của góc h), như rotation.y của three: x' = x cos h + z sin h, z' = z cos h − x sin h. */
-const turnY = (v, c, s) => vec3(v.x.mul(c).add(v.z.mul(s)), v.y, v.z.mul(c).sub(v.x.mul(s)));
+/** Hướng nhìn của tranh (đơn vị, từ điểm nhìn về camera): Tấm bìa phẳng dẹt gà theo hướng này; Bản nét vẽ con ngươi phía này. */
+const VIEW = (() => {
+  const d = CAMERA.position.map((v, i) => v - CAMERA.target[i]);
+  return d.map((v) => v / Math.hypot(...d));
+})();
 
 /**
  * @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx
@@ -44,28 +48,45 @@ export function createLayer(ctx, shared) {
   const wire = ctx.knobValue('wireframe');
   /**
    * NodeMaterial gốc (lights = false: màu ra là colorNode cộng emissive). Màu dựng trong Fn gọi ngay: thân hàm chỉ chạy lúc biên dịch,
-   * sau khi mọi lớp đã bọc recipe.
+   * sau khi mọi lớp đã bọc recipe. `position`: positionNode (dáng của gà).
    */
-  const make = (kind, pigment = float(-1)) => {
+  const make = (kind, { pigment = float(-1), position = null } = {}) => {
     const m = new NodeMaterial();
     m.wireframe = wire;
     m.colorNode = Fn(() => paint(pointOf(kind, pigment)))();
     m.emissiveNode = kind === 'giay' ? Fn(() => recipe.glint(pointOf(kind, pigment)))() : vec3(0);
+    m.positionNode = position;
     return m;
   };
 
   const paper = new Mesh(paperGeometry(), make('giay'));
   paper.name = 'giay';
 
-  const segments = ctx.knobValue('segments');
-  const henBody = new Mesh(henGeometry({ segments }).body, make('ga'));
-  const hen = new Group();
-  hen.name = 'ga-me'; // Group: các mesh con (mình; Task 4 thêm hai cánh) không cần tên riêng
-  hen.add(henBody);
+  // Tấm bìa phẳng (thí nghiệm biaPhang): mọi con gà dẹt theo hướng nhìn của tranh, còn 5% bề dày. Chỉ đổi uniform, không biên dịch lại.
+  const view = vec3(...VIEW);
+  const biaPhang = uniform(0).setName('cotBiaPhang');
+  const keep = mix(float(1), float(0.05), biaPhang);
 
-  // Mười gà con: MỘT InstancedMesh, ma trận instance giữ đơn vị. Chỗ đứng và hướng (pose: x, y, z, hướng) là thuộc tính instance, áp
-  // trong positionNode. Góc cúi đầu (head; positionNode đọc từ Task 4) và chỉ số màu (pigment; Bản màu đọc) cũng là thuộc tính instance.
-  // Bản khung ghi một lần lúc dựng; Task 4 ghi pose, head mỗi khung.
+  // Gà mẹ: Group gồm mình và hai cánh. Bốn góc dáng (radian) là uniform: lớp Đàn gà ghi mỗi khung (Task 8); lúc dựng là dáng nghỉ.
+  const henWing = uniform(0).setName('henWing');
+  const henNod = uniform(0).setName('henNod');
+  const henLook = uniform(0).setName('henLook');
+  const henScratch = uniform(0).setName('henScratch');
+  const segments = ctx.knobValue('segments');
+  const henShape = henGeometry({ segments });
+  const henBody = new Mesh(henShape.body, make('ga', { position: henPosition({ nod: henNod, look: henLook, scratch: henScratch, view, keep }) }));
+  const wingL = new Mesh(henShape.wingL, make('ga', { position: henWingPosition({ sign: 1, wing: henWing, view, keep }) }));
+  const wingR = new Mesh(henShape.wingR, make('ga', { position: henWingPosition({ sign: -1, wing: henWing, view, keep }) }));
+  const hen = new Group();
+  hen.name = 'ga-me'; // Group: các mesh con (mình, hai cánh) không cần tên riêng
+  for (const mesh of [henBody, wingL, wingR]) {
+    mesh.frustumCulled = false; // đỉnh dời trong shader (cánh xòe, đầu gật): khung bao trên CPU không còn đúng
+    hen.add(mesh);
+  }
+
+  // Mười gà con: MỘT InstancedMesh, ma trận instance giữ đơn vị. Chỗ đứng và hướng (pose: x, y, z, hướng) và góc cúi đầu (head, 0–1) là
+  // thuộc tính instance mà lớp Đàn gà ghi MỖI khung (Task 8), nên dùng instancedDynamicBufferAttribute; chỉ số màu (pigment, Bản màu đọc)
+  // chỉ ghi lúc dựng. Lúc dựng: dáng nghỉ ở nhà (HOMES), đầu ngẩng.
   const poseAttr = new InstancedBufferAttribute(new Float32Array(HOMES.length * 4), 4);
   const headAttr = new InstancedBufferAttribute(new Float32Array(HOMES.length), 1);
   const pigmentAttr = new InstancedBufferAttribute(new Float32Array(HOMES.length), 1);
@@ -73,14 +94,12 @@ export function createLayer(ctx, shared) {
     poseAttr.setXYZW(i, home.at[0], home.kind === 'back' ? HEN.back : 0, home.at[1], home.heading);
     pigmentAttr.setX(i, home.pigment);
   });
-  const pose = instancedBufferAttribute(poseAttr);
-  const chickMaterial = make('ga', instancedBufferAttribute(pigmentAttr));
-  chickMaterial.positionNode = Fn(() => {
-    const c = cos(pose.w).toVar();
-    const s = sin(pose.w).toVar();
-    normalLocal.assign(turnY(normalLocal, c, s));
-    return turnY(positionLocal, c, s).add(pose.xyz);
-  })();
+  const chickMaterial = make('ga', {
+    pigment: instancedBufferAttribute(pigmentAttr),
+    position: chickPosition({
+      pose: instancedDynamicBufferAttribute(poseAttr), head: instancedDynamicBufferAttribute(headAttr), view, keep,
+    }),
+  });
   const chicks = new InstancedMesh(chickGeometry({ segments }), chickMaterial, HOMES.length);
   chicks.name = 'ga-con';
   chicks.frustumCulled = false; // vị trí thật chỉ có trong shader
@@ -94,10 +113,19 @@ export function createLayer(ctx, shared) {
   syncPixel();
 
   const objects = [paper, hen, chicks];
-  const materials = [paper.material, henBody.material, chickMaterial];
+  const meshes = [paper, henBody, wingL, wingR, chicks];
   ctx.scene.add(...objects);
   shared.cot = {
-    recipe, muc, sun, floor: FLOOR, pixel, paper, hen: { group: hen, body: henBody }, chicks: { mesh: chicks, pose: poseAttr, head: headAttr },
+    recipe,
+    muc,
+    sun,
+    floor: FLOOR,
+    pixel,
+    paper,
+    PART,
+    view,
+    hen: { group: hen, body: henBody, wingL, wingR, wing: henWing, nod: henNod, look: henLook, scratch: henScratch },
+    chicks: { mesh: chicks, pose: poseAttr, head: headAttr },
   };
 
   let disposed = false;
@@ -108,18 +136,20 @@ export function createLayer(ctx, shared) {
     },
     // Góc lệch của camera khỏi góc của tranh: ctx.camera là camera của sân khấu (xưởng kéo nó về nhà khi buông tay, CameraSpec.home).
     readouts: [{ id: 'goc', get: () => viewAngle(ctx.camera.position.toArray()).toFixed(1), unit: '°' }],
+    experiments: [{ id: 'biaPhang', toggle: (on) => { biaPhang.value = on ? 1 : 0; } }],
     onKnob: {
       segments: (v) => { // @knob segments
-        henBody.geometry.dispose();
-        henBody.geometry = henGeometry({ segments: v }).body;
-        chicks.geometry.dispose();
-        chicks.geometry = chickGeometry({ segments: v });
+        const next = henGeometry({ segments: v });
+        for (const [mesh, geometry] of [[henBody, next.body], [wingL, next.wingL], [wingR, next.wingR], [chicks, chickGeometry({ segments: v })]]) {
+          mesh.geometry.dispose();
+          mesh.geometry = geometry;
+        }
       },
       // wireframe nằm trong cache key: đổi là biên dịch lại (vì vậy là núm 'rebuild'), như Bức 1.
       wireframe: (v) => { // @knob wireframe
-        for (const m of materials) {
-          m.wireframe = v;
-          m.needsUpdate = true;
+        for (const { material } of meshes) {
+          material.wireframe = v;
+          material.needsUpdate = true;
         }
       },
     },
@@ -127,9 +157,11 @@ export function createLayer(ctx, shared) {
       if (disposed) return;
       disposed = true;
       ctx.scene.remove(...objects);
-      for (const mesh of [paper, henBody, chicks]) mesh.geometry.dispose();
+      for (const mesh of meshes) {
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+      }
       chicks.dispose();
-      for (const m of materials) m.dispose();
     },
   };
 }
