@@ -1,4 +1,4 @@
-// tests/helpers/nodes.js — soi đồ thị node của three ngay trong Node (không GPU): duyệt mọi node, và dịch material ra WGSL/GLSL bằng node builder thật.
+// tests/helpers/nodes.js — soi đồ thị node của three ngay trong Node (không GPU): duyệt mọi node, và dịch material và compute node ra WGSL/GLSL bằng node builder thật.
 import { Compatibility, HalfFloatType, RenderTarget, WebGPURenderer } from 'three/webgpu';
 import { makeMRT } from '../../src/engine/gpu/pipeline.js';
 
@@ -112,6 +112,29 @@ export function compileMaterial(object, { scene, camera }, backend, {
   const uniforms = [...builder.uniforms.vertex, ...builder.uniforms.fragment].map((u) => u.name);
   const bufferAttributes = builder.bufferAttributes.map((a) => a.node.attribute ?? a.node.value);
   return { vertexShader, fragmentShader, outputs: countOutputs(fragmentShader), problems, uniforms, bufferAttributes };
+}
+
+/**
+ * Dịch một compute node ra mã như renderer làm ở lần compute đầu (NodeManager.getForCompute của r186): WGSL cho WebGPU; GLSL cho WebGL2
+ * (vertex shader của transform feedback). Lỗi và cảnh báo của TSL gom vào `problems` như compileMaterial.
+ * @param {any} computeNode
+ * @param {'webgpu' | 'webgl2'} backend
+ * @param {{ renderer?: any }} [options]
+ * @returns {{ code: string, problems: string[], uniforms: string[] }}
+ */
+export function compileCompute(computeNode, backend, { renderer = compileRenderer(backend) } = {}) {
+  const builder = renderer.backend.createNodeBuilder(null, renderer);
+  builder.compute = computeNode;
+  const problems = [];
+  const saved = { error: console.error, warn: console.warn };
+  console.error = (...args) => problems.push(args.map(String).join(' '));
+  console.warn = console.error;
+  try {
+    builder.build();
+  } finally {
+    Object.assign(console, saved);
+  }
+  return { code: builder.computeShader, problems, uniforms: builder.uniforms.compute.map((u) => u.name) };
 }
 
 /**

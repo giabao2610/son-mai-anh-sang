@@ -1,0 +1,98 @@
+#version 300 es
+
+// Three.js r186 - Node System
+
+
+// extensions
+
+
+// precision
+
+precision highp float;
+precision highp int;
+precision highp sampler2D;
+precision highp sampler3D;
+precision highp samplerCube;
+precision highp sampler2DArray;
+
+precision highp usampler2D;
+precision highp usampler3D;
+precision highp usamplerCube;
+precision highp usampler2DArray;
+
+precision highp isampler2D;
+precision highp isampler3D;
+precision highp isamplerCube;
+precision highp isampler2DArray;
+
+precision highp sampler2DShadow;
+precision highp sampler2DArrayShadow;
+precision highp samplerCubeShadow;
+
+
+// structs
+
+
+
+
+
+// uniforms
+
+
+// varyings
+out vec4 nodeVarying0;
+out vec4 nodeVarying1;
+
+
+// attributes
+layout( location = 0 ) in vec4 nodeAttribute0;
+layout( location = 1 ) in vec4 nodeAttribute1;
+
+
+// vars
+uint nodeVar0;
+uint nodeVar1;
+float nodeVar2;
+uint nodeVar3;
+uint nodeVar4;
+float nodeVar5;
+uint nodeVar6;
+uint nodeVar7;
+uint nodeVar8;
+uint nodeVar9;
+uint nodeVar10;
+uint nodeVar11;
+
+// codes
+
+
+void main() {
+
+	// transforms
+	nodeVarying0 = nodeAttribute0;
+	nodeVarying1 = nodeAttribute1;
+	
+
+	// flow
+	// code
+
+	nodeVar0 = ( ( ( uint( gl_InstanceID ) + 1u ) * 747796405u ) + 2891336453u );
+	nodeVar1 = ( ( ( nodeVar0 >> ( ( nodeVar0 >> 28u ) + 4u ) ) ^ nodeVar0 ) * 277803737u );
+	nodeVar2 = ( ( float( ( ( nodeVar1 >> 22u ) ^ nodeVar1 ) ) * 2.3283064365386963e-10 ) * 6.283185307179586 );
+	nodeVar3 = ( ( uint( gl_InstanceID ) * 747796405u ) + 2891336453u );
+	nodeVar4 = ( ( ( nodeVar3 >> ( ( nodeVar3 >> 28u ) + 4u ) ) ^ nodeVar3 ) * 277803737u );
+	nodeVar5 = ( sqrt( ( float( ( ( nodeVar4 >> 22u ) ^ nodeVar4 ) ) * 2.3283064365386963e-10 ) ) * 40.0 );
+	nodeVar6 = ( ( ( uint( gl_InstanceID ) + 2u ) * 747796405u ) + 2891336453u );
+	nodeVar7 = ( ( ( nodeVar6 >> ( ( nodeVar6 >> 28u ) + 4u ) ) ^ nodeVar6 ) * 277803737u );
+	nodeVar8 = ( ( ( uint( gl_InstanceID ) + 3u ) * 747796405u ) + 2891336453u );
+	nodeVar9 = ( ( ( nodeVar8 >> ( ( nodeVar8 >> 28u ) + 4u ) ) ^ nodeVar8 ) * 277803737u );
+	nodeVarying0 = vec4( ( cos( nodeVar2 ) * nodeVar5 ), mix( 0.3, 4.0, ( float( ( ( nodeVar7 >> 22u ) ^ nodeVar7 ) ) * 2.3283064365386963e-10 ) ), ( sin( nodeVar2 ) * nodeVar5 ), ( float( ( ( nodeVar9 >> 22u ) ^ nodeVar9 ) ) * 2.3283064365386963e-10 ) );
+	nodeVar10 = ( ( ( uint( gl_InstanceID ) + 4u ) * 747796405u ) + 2891336453u );
+	nodeVar11 = ( ( ( nodeVar10 >> ( ( nodeVar10 >> 28u ) + 4u ) ) ^ nodeVar10 ) * 277803737u );
+	nodeVarying1 = vec4( 0.0, 0.0, 0.0, ( float( ( ( nodeVar11 >> 22u ) ^ nodeVar11 ) ) * 2.3283064365386963e-10 ) );
+
+	
+
+	gl_PointSize = 1.0;
+
+}

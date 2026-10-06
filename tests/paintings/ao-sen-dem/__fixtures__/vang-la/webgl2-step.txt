@@ -1,0 +1,373 @@
+#version 300 es
+
+// Three.js r186 - Node System
+
+
+// extensions
+
+
+// precision
+
+precision highp float;
+precision highp int;
+precision highp sampler2D;
+precision highp sampler3D;
+precision highp samplerCube;
+precision highp sampler2DArray;
+
+precision highp usampler2D;
+precision highp usampler3D;
+precision highp usamplerCube;
+precision highp usampler2DArray;
+
+precision highp isampler2D;
+precision highp isampler3D;
+precision highp isamplerCube;
+precision highp isampler2DArray;
+
+precision highp sampler2DShadow;
+precision highp sampler2DArrayShadow;
+precision highp samplerCubeShadow;
+
+
+// structs
+
+
+
+
+
+// uniforms
+
+layout( std140 ) uniform object {
+	float vang_la_flowScale;
+	float nodeUniform3;
+	float vang_la_speed;
+	float nodeUniform5;
+	vec3 nodeUniform6;
+	float nodeUniform7;
+	float vang_la_attraction;
+};
+
+
+// varyings
+out vec4 nodeVarying0;
+out vec4 nodeVarying1;
+
+
+// attributes
+layout( location = 0 ) in vec4 nodeAttribute0;
+layout( location = 1 ) in vec4 nodeAttribute1;
+
+
+// vars
+vec3 nodeVar0;
+vec3 nodeVar1;
+vec3 nodeVar2;
+vec3 nodeVar3;
+vec3 nodeVar4;
+vec3 nodeVar5;
+vec3 nodeVar6;
+vec3 nodeVar7;
+vec3 nodeVar8;
+vec3 nodeVar9;
+float nodeVar10;
+vec3 nodeVar11;
+float nodeVar12;
+
+// codes
+uint mx_rotl32 ( uint x, int k ) {
+
+	int nodeVar0;
+	uint nodeVar1;
+
+	nodeVar0 = k;
+	nodeVar1 = x;
+
+	return ( ( nodeVar1 << uint( nodeVar0 ) ) | ( nodeVar1 >> uint( ( 32 - nodeVar0 ) ) ) );
+
+}
+
+uint mx_bjfinal ( uint a, uint b, uint c ) {
+
+	uint nodeVar0;
+	uint nodeVar1;
+	uint nodeVar2;
+
+	nodeVar0 = c;
+	nodeVar1 = b;
+	nodeVar2 = a;
+	nodeVar0 = ( nodeVar0 ^ nodeVar1 );
+	nodeVar0 = ( nodeVar0 - mx_rotl32( nodeVar1, 14 ) );
+	nodeVar2 = ( nodeVar2 ^ nodeVar0 );
+	nodeVar2 = ( nodeVar2 - mx_rotl32( nodeVar0, 11 ) );
+	nodeVar1 = ( nodeVar1 ^ nodeVar2 );
+	nodeVar1 = ( nodeVar1 - mx_rotl32( nodeVar2, 25 ) );
+	nodeVar0 = ( nodeVar0 ^ nodeVar1 );
+	nodeVar0 = ( nodeVar0 - mx_rotl32( nodeVar1, 16 ) );
+	nodeVar2 = ( nodeVar2 ^ nodeVar0 );
+	nodeVar2 = ( nodeVar2 - mx_rotl32( nodeVar0, 4 ) );
+	nodeVar1 = ( nodeVar1 ^ nodeVar2 );
+	nodeVar1 = ( nodeVar1 - mx_rotl32( nodeVar2, 14 ) );
+	nodeVar0 = ( nodeVar0 ^ nodeVar1 );
+	nodeVar0 = ( nodeVar0 - mx_rotl32( nodeVar1, 24 ) );
+
+	return nodeVar0;
+
+}
+
+uint mx_hash_int_2 ( int x, int y, int z ) {
+
+	int nodeVar0;
+	int nodeVar1;
+	int nodeVar2;
+	uint nodeVar3;
+	uint nodeVar4;
+	uint nodeVar5;
+	uint nodeVar6;
+
+	nodeVar0 = z;
+	nodeVar1 = y;
+	nodeVar2 = x;
+	nodeVar3 = 3u;
+	nodeVar4 = 0u;
+	nodeVar5 = 0u;
+	nodeVar6 = 0u;
+	nodeVar6 = ( ( 3735928559u + ( nodeVar3 << 2u ) ) + 13u );
+	nodeVar5 = nodeVar6;
+	nodeVar4 = nodeVar5;
+	nodeVar4 = ( nodeVar4 + uint( nodeVar2 ) );
+	nodeVar5 = ( nodeVar5 + uint( nodeVar1 ) );
+	nodeVar6 = ( nodeVar6 + uint( nodeVar0 ) );
+
+	return mx_bjfinal( nodeVar4, nodeVar5, nodeVar6 );
+
+}
+
+float mx_select ( bool b, float t, float f ) {
+
+	float nodeVar0;
+	float nodeVar1;
+	bool nodeVar2;
+	float nodeVar3;
+
+	nodeVar0 = f;
+	nodeVar1 = t;
+	nodeVar2 = b;
+
+	return nodeVar2 ? nodeVar1 : nodeVar0;
+
+}
+
+float mx_negate_if ( float val, bool b ) {
+
+	bool nodeVar0;
+	float nodeVar1;
+	float nodeVar2;
+
+	nodeVar0 = b;
+	nodeVar1 = val;
+
+	return nodeVar0 ? ( - nodeVar1 ) : nodeVar1;
+
+}
+
+float mx_gradient_float_1 ( uint hash, float x, float y, float z ) {
+
+	float nodeVar0;
+	float nodeVar1;
+	float nodeVar2;
+	uint nodeVar3;
+	uint nodeVar4;
+	float nodeVar5;
+	float nodeVar6;
+
+	nodeVar0 = z;
+	nodeVar1 = y;
+	nodeVar2 = x;
+	nodeVar3 = hash;
+	nodeVar4 = ( nodeVar3 & 15u );
+	nodeVar5 = mx_select( ( nodeVar4 < 8u ), nodeVar2, nodeVar1 );
+	nodeVar6 = mx_select( ( nodeVar4 < 4u ), nodeVar1, mx_select( ( ( nodeVar4 == 12u ) || ( nodeVar4 == 14u ) ), nodeVar2, nodeVar0 ) );
+
+	return ( mx_negate_if( nodeVar5, bool( ( nodeVar4 & 1u ) ) ) + mx_negate_if( nodeVar6, bool( ( nodeVar4 & 2u ) ) ) );
+
+}
+
+int mx_floor ( float x ) {
+
+	float nodeVar0;
+
+	nodeVar0 = x;
+
+	return int( floor( nodeVar0 ) );
+
+}
+
+float mx_fade ( float t ) {
+
+	float nodeVar0;
+
+	nodeVar0 = t;
+
+	return ( ( ( nodeVar0 * nodeVar0 ) * nodeVar0 ) * ( ( nodeVar0 * ( ( nodeVar0 * 6.0 ) - 15.0 ) ) + 10.0 ) );
+
+}
+
+uvec3 mx_hash_vec3_1 ( int x, int y, int z ) {
+
+	int nodeVar0;
+	int nodeVar1;
+	int nodeVar2;
+	uint nodeVar3;
+	uvec3 nodeVar4;
+
+	nodeVar0 = z;
+	nodeVar1 = y;
+	nodeVar2 = x;
+	nodeVar3 = mx_hash_int_2( nodeVar2, nodeVar1, nodeVar0 );
+	nodeVar4 = uvec3( 0u, 0u, 0u );
+	nodeVar4.x = ( nodeVar3 & 255u );
+	nodeVar4.y = ( ( nodeVar3 >> 8u ) & 255u );
+	nodeVar4.z = ( ( nodeVar3 >> 16u ) & 255u );
+
+	return nodeVar4;
+
+}
+
+vec3 mx_gradient_vec3_1 ( uvec3 hash, float x, float y, float z ) {
+
+	float nodeVar0;
+	float nodeVar1;
+	float nodeVar2;
+	uvec3 nodeVar3;
+
+	nodeVar0 = z;
+	nodeVar1 = y;
+	nodeVar2 = x;
+	nodeVar3 = hash;
+
+	return vec3( mx_gradient_float_1( nodeVar3.x, nodeVar2, nodeVar1, nodeVar0 ), mx_gradient_float_1( nodeVar3.y, nodeVar2, nodeVar1, nodeVar0 ), mx_gradient_float_1( nodeVar3.z, nodeVar2, nodeVar1, nodeVar0 ) );
+
+}
+
+vec3 mx_trilerp_1 ( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 v4, vec3 v5, vec3 v6, vec3 v7, float s, float t, float r ) {
+
+	float nodeVar0;
+	float nodeVar1;
+	float nodeVar2;
+	vec3 nodeVar3;
+	vec3 nodeVar4;
+	vec3 nodeVar5;
+	vec3 nodeVar6;
+	vec3 nodeVar7;
+	vec3 nodeVar8;
+	vec3 nodeVar9;
+	vec3 nodeVar10;
+	float nodeVar11;
+	float nodeVar12;
+	float nodeVar13;
+
+	nodeVar0 = r;
+	nodeVar1 = t;
+	nodeVar2 = s;
+	nodeVar3 = v7;
+	nodeVar4 = v6;
+	nodeVar5 = v5;
+	nodeVar6 = v4;
+	nodeVar7 = v3;
+	nodeVar8 = v2;
+	nodeVar9 = v1;
+	nodeVar10 = v0;
+	nodeVar11 = ( 1.0 - nodeVar2 );
+	nodeVar12 = ( 1.0 - nodeVar1 );
+	nodeVar13 = ( 1.0 - nodeVar0 );
+
+	return ( ( vec3( nodeVar13 ) * ( ( vec3( nodeVar12 ) * ( ( nodeVar10 * vec3( nodeVar11 ) ) + ( nodeVar9 * vec3( nodeVar2 ) ) ) ) + ( vec3( nodeVar1 ) * ( ( nodeVar8 * vec3( nodeVar11 ) ) + ( nodeVar7 * vec3( nodeVar2 ) ) ) ) ) ) + ( vec3( nodeVar0 ) * ( ( vec3( nodeVar12 ) * ( ( nodeVar6 * vec3( nodeVar11 ) ) + ( nodeVar5 * vec3( nodeVar2 ) ) ) ) + ( vec3( nodeVar1 ) * ( ( nodeVar4 * vec3( nodeVar11 ) ) + ( nodeVar3 * vec3( nodeVar2 ) ) ) ) ) ) );
+
+}
+
+vec3 mx_gradient_scale3d_1 ( vec3 v ) {
+
+	vec3 nodeVar0;
+
+	nodeVar0 = v;
+
+	return ( vec3( 0.982 ) * nodeVar0 );
+
+}
+
+vec3 mx_perlin_noise_vec3_1 ( vec3 p ) {
+
+	vec3 nodeVar0;
+	int nodeVar1;
+	int nodeVar2;
+	int nodeVar3;
+	float nodeVar4;
+	float nodeVar5;
+	float nodeVar6;
+	float nodeVar7;
+	float nodeVar8;
+	float nodeVar9;
+	float nodeVar10;
+	float nodeVar11;
+	float nodeVar12;
+	vec3 nodeVar13;
+
+	nodeVar0 = p;
+	nodeVar1 = 0;
+	nodeVar2 = 0;
+	nodeVar3 = 0;
+	nodeVar4 = nodeVar0.x;
+	nodeVar1 = mx_floor( nodeVar4 );
+	nodeVar5 = ( nodeVar4 - float( nodeVar1 ) );
+	nodeVar6 = nodeVar0.y;
+	nodeVar2 = mx_floor( nodeVar6 );
+	nodeVar7 = ( nodeVar6 - float( nodeVar2 ) );
+	nodeVar8 = nodeVar0.z;
+	nodeVar3 = mx_floor( nodeVar8 );
+	nodeVar9 = ( nodeVar8 - float( nodeVar3 ) );
+	nodeVar10 = mx_fade( nodeVar5 );
+	nodeVar11 = mx_fade( nodeVar7 );
+	nodeVar12 = mx_fade( nodeVar9 );
+	nodeVar13 = mx_trilerp_1( mx_gradient_vec3_1( mx_hash_vec3_1( nodeVar1, nodeVar2, nodeVar3 ), nodeVar5, nodeVar7, nodeVar9 ), mx_gradient_vec3_1( mx_hash_vec3_1( ( nodeVar1 + 1 ), nodeVar2, nodeVar3 ), ( nodeVar5 - 1.0 ), nodeVar7, nodeVar9 ), mx_gradient_vec3_1( mx_hash_vec3_1( nodeVar1, ( nodeVar2 + 1 ), nodeVar3 ), nodeVar5, ( nodeVar7 - 1.0 ), nodeVar9 ), mx_gradient_vec3_1( mx_hash_vec3_1( ( nodeVar1 + 1 ), ( nodeVar2 + 1 ), nodeVar3 ), ( nodeVar5 - 1.0 ), ( nodeVar7 - 1.0 ), nodeVar9 ), mx_gradient_vec3_1( mx_hash_vec3_1( nodeVar1, nodeVar2, ( nodeVar3 + 1 ) ), nodeVar5, nodeVar7, ( nodeVar9 - 1.0 ) ), mx_gradient_vec3_1( mx_hash_vec3_1( ( nodeVar1 + 1 ), nodeVar2, ( nodeVar3 + 1 ) ), ( nodeVar5 - 1.0 ), nodeVar7, ( nodeVar9 - 1.0 ) ), mx_gradient_vec3_1( mx_hash_vec3_1( nodeVar1, ( nodeVar2 + 1 ), ( nodeVar3 + 1 ) ), nodeVar5, ( nodeVar7 - 1.0 ), ( nodeVar9 - 1.0 ) ), mx_gradient_vec3_1( mx_hash_vec3_1( ( nodeVar1 + 1 ), ( nodeVar2 + 1 ), ( nodeVar3 + 1 ) ), ( nodeVar5 - 1.0 ), ( nodeVar7 - 1.0 ), ( nodeVar9 - 1.0 ) ), nodeVar10, nodeVar11, nodeVar12 );
+
+	return mx_gradient_scale3d_1( nodeVar13 );
+
+}
+
+
+
+void main() {
+
+	// transforms
+	nodeVarying0 = nodeAttribute0;
+	nodeVarying1 = nodeAttribute1;
+	
+
+	// flow
+	// code
+
+	nodeVar0 = nodeVarying0.xyz;
+	nodeVar1 = ( ( nodeVar0 * vec3( vang_la_flowScale ) ) + vec3( 0.0, ( nodeUniform3 * 0.05 ), 0.0 ) );
+	nodeVar2 = ( ( mx_perlin_noise_vec3_1( ( nodeVar1 - vec3( 0.1, 0.0, 0.0 ) ) ) * vec3( 1.0 ) ) + vec3( 0.0 ) );
+	nodeVar3 = ( ( mx_perlin_noise_vec3_1( ( nodeVar1 + vec3( 0.1, 0.0, 0.0 ) ) ) * vec3( 1.0 ) ) + vec3( 0.0 ) );
+	nodeVar4 = ( ( mx_perlin_noise_vec3_1( ( nodeVar1 - vec3( 0.0, 0.1, 0.0 ) ) ) * vec3( 1.0 ) ) + vec3( 0.0 ) );
+	nodeVar5 = ( ( mx_perlin_noise_vec3_1( ( nodeVar1 + vec3( 0.0, 0.1, 0.0 ) ) ) * vec3( 1.0 ) ) + vec3( 0.0 ) );
+	nodeVar6 = ( ( mx_perlin_noise_vec3_1( ( nodeVar1 - vec3( 0.0, 0.0, 0.1 ) ) ) * vec3( 1.0 ) ) + vec3( 0.0 ) );
+	nodeVar7 = ( ( mx_perlin_noise_vec3_1( ( nodeVar1 + vec3( 0.0, 0.0, 0.1 ) ) ) * vec3( 1.0 ) ) + vec3( 0.0 ) );
+	nodeVar8 = mix( nodeVarying1.xyz, ( ( ( ( ( vec3( ( ( nodeVar5.z - nodeVar4.z ) - ( nodeVar7.y - nodeVar6.y ) ), ( ( nodeVar7.x - nodeVar6.x ) - ( nodeVar3.z - nodeVar2.z ) ), ( ( nodeVar3.y - nodeVar2.y ) - ( nodeVar5.x - nodeVar4.x ) ) ) / vec3( 0.2 ) ) * vec3( 1.0, 0.35, 1.0 ) ) * vec3( vang_la_speed ) ) * vec3( 0.4 ) ) + ( vec3( ( - nodeVar0.z ), 0.0, nodeVar0.x ) * vec3( 0.012 ) ) ), min( ( nodeUniform5 * 1.5 ), 1.0 ) );
+	nodeVar9 = ( nodeUniform6 - nodeVar0 );
+	nodeVar10 = max( length( nodeVar9 ), 0.001 );
+	nodeVar11 = ( nodeVar9 / vec3( nodeVar10 ) );
+	nodeVar8 = ( nodeVar8 + ( ( ( ( ( ( nodeVar11 + ( vec3( ( - nodeVar11.z ), 0.0, nodeVar11.x ) * vec3( 0.8 ) ) ) * vec3( nodeUniform7 ) ) * vec3( exp( ( - ( nodeVar10 / 10.0 ) ) ) ) ) * vec3( vang_la_attraction ) ) * vec3( 8.0 ) ) * vec3( nodeUniform5 ) ) );
+	nodeVar8 = ( nodeVar8 * vec3( min( 1.0, ( 6.0 / max( length( nodeVar8 ), 0.001 ) ) ) ) );
+	nodeVar0 = ( nodeVar0 + ( nodeVar8 * vec3( nodeUniform5 ) ) );
+	nodeVar12 = min( 1.0, ( 40.0 / max( length( nodeVar0.xz ), 0.001 ) ) );
+	nodeVarying0 = vec4( ( nodeVar0.x * nodeVar12 ), clamp( nodeVar0.y, 0.3, 4.0 ), ( nodeVar0.z * nodeVar12 ), nodeVarying0.w );
+	nodeVarying1 = vec4( nodeVar8, nodeVarying1.w );
+
+	
+
+	gl_PointSize = 1.0;
+
+}
