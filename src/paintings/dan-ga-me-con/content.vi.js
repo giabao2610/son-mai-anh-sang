@@ -117,8 +117,9 @@ export default {
       understand: 'Giấy điệp là giấy dó quét một lớp bột vỏ sò điệp, nền quen thuộc của tranh Đông Hồ. Ở đây tờ giấy có màu ngà, thớ sợi dó '
         + 'chạy dọc và vệt chổi quét điệp chạy xiên. Phần đáng xem là hạt điệp: mặt giấy chia thành ô nhỏ, mỗi ô có một mảnh vỏ sò '
         + 'nghiêng ngẫu nhiên, như một tấm gương bé xíu. Mảnh chỉ lóe khi tia nắng phản xạ trên nó đi đúng vào mắt người xem. Camera '
-        + 'trực giao nhìn mọi điểm theo cùng một hướng, nên tranh đứng yên thì hạt đứng yên; kéo xoay thì hạt này tắt, hạt khác lóe. Chỗ '
-        + 'lóe sáng gấp nhiều lần giấy, để tone mapping không nén mất, và là emissive, nên Phủ bóng làm nó tỏa.',
+        + 'trực giao nhìn mọi điểm theo cùng một hướng, nên khắp tờ giấy chỉ những mảnh quay mặt về đúng một hướng mới lóe. Kéo xoay là '
+        + 'đổi hướng ấy cho cả tờ giấy cùng lúc: hạt này tắt, hạt khác lóe. Chỗ lóe sáng gấp nhiều lần giấy, để tone mapping không nén '
+        + 'mất. Nó là emissive, nên Phủ bóng làm nó tỏa.',
       diagram: hatDiepDiagram,
       learned: [
         'Phản xạ gương: reflect(−nắng, pháp tuyến) cho hướng tia ra. Hạt lóe khi hướng ấy trùng hướng nhìn; số mũ càng lớn thì càng phải '
@@ -176,7 +177,7 @@ export default {
         toTheoLuong: {
           label: 'Tô theo luồng',
           explain: 'Mỗi hạt tô một màu theo số của luồng GPU giữ nó. Hai luồng kề nhau lệch nhau một góc vàng (chừng 137,5°) trên vòng '
-            + 'màu, nên hạt nào cũng khác hẳn màu hạt bên cạnh. Hạt giữ nguyên màu từ lúc văng ra tới lúc nằm yên: suốt đời nó chỉ '
+            + 'màu, nên hạt nào cũng khác hẳn màu hạt ở luồng kề bên. Hạt giữ nguyên màu từ lúc văng ra tới lúc nằm yên: suốt đời nó chỉ '
             + 'một luồng tính nó. Hạ "Số hạt tối đa" rồi rắc liền tay: hết vòng đệm, nắm mới lấy lại luồng của những hạt cũ nhất, và '
             + 'hạt ở nắm cũ biến mất.',
         },

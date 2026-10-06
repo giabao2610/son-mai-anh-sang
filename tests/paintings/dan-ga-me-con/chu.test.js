@@ -34,13 +34,16 @@ describe('chữ của Bức 4', () => {
     expect(understand('dan-ga')).toMatch(/vòng đệm/);
   });
 
-  it('số trong đoạn Hiểu khớp với code: góc nhìn xuống và lúc tranh tự khép lại, số nấc và độ đậm nấc tối mặc định, tầm mỏ ăn thóc', () => {
+  it('số trong chữ khớp với code: góc nhìn xuống và lúc tranh tự khép lại, số nấc và độ đậm nấc tối mặc định (cả công thức màu của sơ đồ chia-nac), tầm mỏ ăn thóc', () => {
     const [, dy, dz] = CAMERA.position.map((v, i) => v - CAMERA.target[i]);
     expect(understand('cot')).toContain(`${Math.round((Math.atan2(dy, dz) * 180) / Math.PI)}°`);
     expect(understand('cot')).toContain(`${WORDS[CAMERA.home.after]} giây`);
     const knob = (k) => banMauKnobs.find((x) => x.id === k).value;
     expect(understand('ban-mau')).toContain(`${WORDS[knob('bands')]} nấc`);
     expect(understand('ban-mau')).toContain(`${Math.round(knob('shade') * 100)}%`);
+    // l2-ban-mau.js: màu ra = màu in × mix(1 − shade, 1, nấc) = màu in × (1 − shade + shade × nấc).
+    const comma = (x) => String(Math.round(x * 100) / 100).replace('.', ',');
+    expect(content.layers['ban-mau'].diagram).toContain(`× (${comma(1 - knob('shade'))} + ${comma(knob('shade'))} × nấc)`);
     // Một đơn vị cảnh là 10 cm (spec §20).
     expect(understand('dan-ga')).toContain(`${String(Math.round(GRAIN.eat * 100) / 10).replace('.', ',')} cm`);
   });

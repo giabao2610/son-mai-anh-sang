@@ -50,8 +50,9 @@ export function paperColor(s, { diep, octaves, fiber, brush, plain }) {
  * hai tiếp tuyến chứ không theo trục x và z của thế giới: vách đứng có pháp tuyến (0, 0, 1), nghiêng theo z không đổi gì, mà vách cần
  * nghiêng lên xuống mới bắt được nắng.
  * Hạt sáng khi tia nắng phản xạ trên nó đi vào mắt: pow(saturate(dot(reflect(−nắng, n_hạt), V)), mũ). Tính trong không gian camera: V là
- * positionViewDirection, three tự cho vec3(0, 0, 1) với camera trực giao (Phụ lục A.91), nên đứng yên thì hạt đứng yên, xoay camera thì hạt
- * khác lóe.
+ * positionViewDirection, three tự cho vec3(0, 0, 1) với camera trực giao (Phụ lục A.91). Hướng nhìn, và vì vậy nửa vector H của nắng và
+ * hướng nhìn, như nhau ở mọi điểm của tờ giấy: khắp tờ giấy chỉ hạt có pháp tuyến quay đúng về H mới lóe. Xoay camera là đổi H cho cả tờ
+ * giấy cùng lúc, nên hạt này tắt, hạt khác lóe.
  */
 export function glints(s, { sun, density, sparkle, tint }) {
   const grid = s.uv.mul(density);

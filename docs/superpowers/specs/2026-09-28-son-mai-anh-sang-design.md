@@ -4205,7 +4205,10 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     - tầm nghiêng ±0,6 theo x và z (bản đầu) cho 0 hạt lóe trên sàn và vách, ở góc của tranh và khi xoay ±30° (mô phỏng cùng phép tính
       của shader), chỉ chỗ uốn có: một dải, không phải một lớp điệp phủ khắp tờ giấy. Với ±1,4, chừng 0,3–1% số ô lóe hơn nửa độ sáng ở mỗi
       vùng, ở các góc nhìn trên;
-  - với camera trực giao, hướng nhìn như nhau ở mọi điểm ảnh (Phụ lục A.91): đứng yên thì hạt đứng yên, xoay camera thì hạt khác lóe lên;
+  - với camera trực giao, hướng nhìn như nhau ở mọi điểm ảnh (Phụ lục A.91), nên H cũng vậy: khắp tờ giấy, chỉ hạt có pháp tuyến quay
+    đúng về H mới lóe (với camera phối cảnh, hướng nhìn và H đổi theo chỗ trên giấy). Xoay camera là đổi H cho cả tờ giấy cùng lúc, nên hạt
+    này tắt, hạt khác lóe lên. Câu cũ "đứng yên thì hạt đứng yên" đúng với mọi camera đứng yên, không phải điều camera trực giao thêm vào
+    (sửa ở GĐ 8 Task 10);
   - **cỡ chấm** không nhỏ hơn 0,8 điểm ảnh MÀN HÌNH theo từng trục (bề rộng một điểm ảnh tính bằng ô: `|dFdx| + |dFdy|` của lưới ô) và
     không quá 0,25 ô. Sàn nhìn chếch 20° bị co dọc còn 1/3: chấm tròn trên mặt giấy thành vạch mảnh chưa tới một điểm ảnh và chớp tắt khi
     xoay, nếu đặt sàn theo đơn vị cảnh của một điểm ảnh (`shared.cot.pixel`, cách của Bản nét: đúng theo chiều ngang, nhưng chiều sâu của sàn bị co);

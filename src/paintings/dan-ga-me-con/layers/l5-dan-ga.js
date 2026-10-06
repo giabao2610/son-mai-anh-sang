@@ -92,7 +92,7 @@ export function createLayer(ctx, shared) {
         applyCount();
       },
     },
-    // Chỉ đổi uniform: mỗi hạt một màu theo chỉ số luồng GPU, thấy mỗi nắm là một đoạn liền của vòng đệm.
+    // Chỉ đổi uniform: mỗi hạt một màu theo chỉ số luồng GPU giữ nó (xoay góc vàng): thấy mỗi luồng giữ một hạt suốt đời.
     experiments: [{ id: 'toTheoLuong', toggle: (on) => { lane.value = on ? 1 : 0; } }],
     readouts: [
       { id: 'rac', get: () => pool.emitted() }, // số hạt đã rắc thật còn trong vòng đệm (bể đếm lúc rắc)
