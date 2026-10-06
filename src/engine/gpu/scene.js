@@ -222,7 +222,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     quality,
     /** Biên dịch trước với đúng render target + MRT của pass, trong lúc poster còn hiện. */
     compile: () => pipeline.compile(),
-    /** Một khung: nấc → đồng hồ → cử chỉ → setup.update → layer.update → tween trọng số → camera → chữ → render → ms GPU → số đo. */
+    /** Một khung: nấc → đồng hồ → cử chỉ → setup.update → layer.update → tween trọng số → camera (thở, tự khép lại) → chữ → render → ms GPU → số đo. */
     step(ms) {
       const start = win.performance.now();
       if (quality.sample(ms ?? start)) return; // thử ngừng vẽ (tuner.js, luật 2): không vẽ, không tiến đồng hồ; ảnh cũ ở lại
@@ -232,6 +232,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
       for (const { layer } of layers) layer.update?.(dt, t);
       weights.step(dt);
       stage.breathe(t);
+      stage.returnHome(dt); // tranh tự khép lại: sau breathe (điểm nhìn của khung này), trước controls.update()
       stage.controls?.update();
       captionSet.step(); // chữ đi theo điểm neo, theo camera của chính khung này
       draws.begin(); // móc (khi Từng sợi bật) ghi lần vẽ của đúng khung này

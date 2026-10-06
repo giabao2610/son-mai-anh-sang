@@ -4,7 +4,7 @@ import {
   Fn, attribute, color, cos, dot, float, instancedBufferAttribute, max, mix, normalLocal, normalWorld, positionLocal, positionWorld, sin,
   uniform, uv, vec3,
 } from 'three/tsl';
-import { FLOOR, HEN, HOMES, SUN } from '../parts/cot-bo-cuc.js';
+import { FLOOR, HEN, HOMES, SUN, viewAngle } from '../parts/cot-bo-cuc.js';
 import { paperGeometry } from '../parts/cot-giay.js';
 import { chickGeometry, henGeometry } from '../parts/cot-hinh-ga.js';
 
@@ -106,6 +106,8 @@ export function createLayer(ctx, shared) {
     update() {
       syncPixel(); // khung nhìn (đổi cỡ) và zoom (OrbitControls) đổi lúc chạy
     },
+    // Góc lệch của camera khỏi góc của tranh: ctx.camera là camera của sân khấu (xưởng kéo nó về nhà khi buông tay, CameraSpec.home).
+    readouts: [{ id: 'goc', get: () => viewAngle(ctx.camera.position.toArray()).toFixed(1), unit: '°' }],
     onKnob: {
       segments: (v) => { // @knob segments
         henBody.geometry.dispose();

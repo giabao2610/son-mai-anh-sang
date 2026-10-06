@@ -67,6 +67,7 @@ function fakeStage(backend, doc) {
     dpr: () => Math.min(2, dprMax),
     tick: vi.fn(() => ({ t: 0.5, dt: 1 / 60 })),
     breathe: vi.fn(),
+    returnHome: vi.fn(),
   };
 }
 
@@ -151,6 +152,15 @@ describe('buildScene', () => {
     expect(scene.studio.stats().drawCalls).toBe(7);
   });
 
+  it('GĐ 8: mỗi khung gọi stage.returnHome(dt) (tranh tự khép lại) SAU breathe và TRƯỚC controls.update()', () => {
+    const { stage, scene } = build();
+    scene.step(16);
+    expect(stage.returnHome).toHaveBeenCalledWith(1 / 60);
+    // Sau breathe: bộ đếm đặt camera quanh điểm nhìn của KHUNG NÀY (đang thở). Trước controls.update(): update() nhìn về điểm nhìn.
+    expect(stage.breathe.mock.invocationCallOrder[0]).toBeLessThan(stage.returnHome.mock.invocationCallOrder[0]);
+    expect(stage.returnHome.mock.invocationCallOrder[0]).toBeLessThan(stage.controls.update.mock.invocationCallOrder[0]);
+  });
+
   it('vòng lặp đang chạy: đổi trọng số không vẽ thêm; sau freeze(): vẽ lại ở nhịp rAF kế tiếp, gộp nhiều thay đổi làm một', async () => {
     const { scene, frames, flush, renders } = build();
     await scene.studio.setWeight('to-mau', 0);
@@ -225,7 +235,8 @@ describe('buildScene', () => {
     scene.quality.start();
     let ms = 0;
     for (let i = 0; i < 240; i++) scene.step((ms += 1000 / 30)); // 8 giây; trình duyệt gọi rAF mỗi 33 ms, vẽ hay không cũng vậy
-    expect([renders(), stage.tick.mock.calls.length]).toEqual([234, 234]); // 6 khung không vẽ, không tiến đồng hồ
+    // 6 khung không vẽ, không tiến đồng hồ, và bộ đếm của tranh tự khép lại cũng đứng (returnHome nằm sau quality.sample)
+    expect([renders(), stage.tick.mock.calls.length, stage.returnHome.mock.calls.length]).toEqual([234, 234, 234]);
     expect(scene.studio.quality()).toMatchObject({ capped: true, steps: [] });
     expect(stage.setDpr.mock.calls).toEqual([[2]]);
   });

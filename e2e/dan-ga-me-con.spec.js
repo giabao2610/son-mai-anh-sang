@@ -1,4 +1,4 @@
-// e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ; (Task 3–9) tự khép lại, các lớp, cử chỉ, chất lượng.
+// e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ; tranh tự khép lại (kéo rồi buông thì camera về góc của tranh); (Task 4–9) các lớp, cử chỉ, chất lượng.
 import { test, expect } from '@playwright/test';
 import { waitForSettled, waitForFrames, canvasRegions, collectConsole, gpuReport, twoFrames } from './helpers.js';
 
@@ -87,5 +87,71 @@ test.describe('Đàn Gà Mẹ Con · khung', () => {
     expect(Math.abs(withInk.floor.mean - without.floor.mean), 'mặt sàn không có nét').toBeLessThan(0.01);
     expect(await calls(), 'Bản nét đọc thẳng texture độ sâu: không thêm lượt vẽ').toBe(before);
     expect(before).toBeLessThanOrEqual(30);
+  });
+});
+
+test.describe('Đàn Gà Mẹ Con · tranh tự khép lại', () => {
+  // Đồng hồ của cảnh theo khung vẽ, mỗi khung tối đa 0,1 s: 4,2 giây cảnh (3 giây chờ, 1,2 giây về) cần ít nhất 42 khung, nên máy vẽ chậm
+  // (SwiftShader trên runner CI) cần lâu: trần rộng tay hơn 60 giây mặc định.
+  test.describe.configure({ timeout: 180_000 });
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+  /** Số đo `goc` của Cốt: độ lệch của camera khỏi góc nhìn của tranh. */
+  const goc = (page) => page.evaluate(() => Number(window.__sma.readouts('cot').find((r) => r.id === 'goc')?.value));
+  /** Kéo ngang trên vách giấy (không chạm gà): OrbitControls xoay camera. */
+  async function dragCamera(page) {
+    const box = await page.locator('[data-stage] canvas').boundingBox();
+    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.25);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.5 + 220, box.y + box.height * 0.25, { steps: 6 });
+    await page.mouse.up();
+  }
+
+  test('kéo xoay thì góc lệch hơn 15°; buông tay rồi chờ thì camera về góc của tranh (dưới 1°)', SMOKE, async ({ page }, testInfo) => {
+    const log = collectConsole(page);
+    await open(page, testInfo, 0);
+    await waitForFrames(page, 20, { timeout: 120_000 });
+    expect(await goc(page)).toBeLessThan(1); // lúc mở trang camera đang ở góc của tranh
+    await dragCamera(page);
+    await expect.poll(() => goc(page), { timeout: 15_000 }).toBeGreaterThan(15);
+    // Quán tính của OrbitControls tắt theo giây của cảnh (home.js), nên về tới nơi rồi camera không trôi đi nữa, kể cả khi máy vẽ chậm.
+    await expect.poll(() => goc(page), { timeout: 90_000 }).toBeLessThan(1);
+    await twoFrames(page);
+    expect(await goc(page), 'về rồi thì ở lại').toBeLessThan(1);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('giảm chuyển động: buông tay thì camera đứng yên, đủ 3 giây cảnh thì về MỘT bước (không lượn qua các góc ở giữa)', async ({ page }, testInfo) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await open(page, testInfo, 0);
+    await waitForFrames(page, 20, { timeout: 120_000 });
+    await dragCamera(page);
+    await expect.poll(() => goc(page), { timeout: 15_000 }).toBeGreaterThan(15);
+    // Giảm chuyển động thì OrbitControls không có quán tính: vài khung sau, mọi cú dời của con trỏ đã áp xong và góc đứng yên ở chỗ
+    // buông (không thì mẫu đầu chưa phải điểm đi). Năm khung của cảnh chỉ tốn tối đa 0,5 giây cảnh trong 3 giây chờ.
+    const frames = await page.evaluate(() => window.__sma.frames);
+    await page.waitForFunction((n) => window.__sma.frames >= n + 5, frames, { timeout: 60_000 });
+    // Ghi `goc` ở MỖI khung rAF của trang, từ đây tới lúc về tới nơi.
+    await page.evaluate(() => {
+      const samples = [];
+      window.__gocSamples = samples;
+      const tick = () => {
+        samples.push(Number(window.__sma.readouts('cot').find((r) => r.id === 'goc')?.value));
+        window.__gocRaf = requestAnimationFrame(tick);
+      };
+      tick();
+    });
+    await expect.poll(() => goc(page), { timeout: 90_000 }).toBeLessThan(1);
+    const samples = await page.evaluate(() => {
+      cancelAnimationFrame(window.__gocRaf);
+      return window.__gocSamples;
+    });
+    const first = samples[0];
+    expect(first, 'mẫu đầu là điểm đi').toBeGreaterThan(15);
+    // Về một bước: mọi mẫu hoặc còn ở chỗ cũ (≥ mẫu đầu − 1°), hoặc đã ở nhà (≤ 1°); không mẫu nào lượn ở giữa.
+    const between = samples.filter((g) => g < first - 1 && g > 1);
+    expect(between, `góc lượn giữa đường: ${samples.join(', ')}`).toEqual([]);
+    expect(samples.at(-1)).toBeLessThanOrEqual(1);
   });
 });

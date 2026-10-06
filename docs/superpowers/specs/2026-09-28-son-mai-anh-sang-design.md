@@ -1018,7 +1018,7 @@ son-mai-anh-sang/
         breath.js                    [1] camera "thở": breathAmplitude, breathOffset (hàm thuần)
         camera.js                    [8] dựng camera theo CameraSpec (phối cảnh hay trực giao), khớp khung, giới hạn OrbitControls; phần tính của stage.js tách ra để unit test
         fov.js                       [7→8] fitFov: nới fov dọc ở khung hẹp (minHorizontalFov); GĐ 8: fitOrtho cho camera trực giao
-        home.js                      [8] tranh tự khép lại (CameraSpec.home): đếm giờ đứng yên, quay về góc của bức; phần tính là hàm thuần
+        home.js                      [8] tranh tự khép lại (CameraSpec.home): đếm giờ đứng yên, quay về góc của bức; phần tính là hàm thuần; đặt dampingFactor theo giây của cảnh (Phụ lục A.98)
       stock/phu-bong/                LỚP DÙNG CHUNG "Phủ bóng"
         meta.js                      [0] { id: 'phu-bong', name: 'Phủ bóng', files } (dữ liệu thuần)
         layer.js                     [0→4] build: bloom chọn lọc + tone (GĐ 2: chọn bằng If, đủ núm); GĐ 4: display (LUT, grain, vignette, FXAA) + tap
@@ -4017,7 +4017,9 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   - ở góc nhìn của tranh, ảnh gần như không đổi; kéo xoay mới thấy gà chỉ là tấm bìa;
   - bài học: phép chiếu trực giao bỏ hẳn chiều theo hướng nhìn, nên ảnh nhìn thẳng không phân biệt được tượng tròn với tấm bìa phẳng;
   - làm bằng uniform trong `positionNode`, không biên dịch lại. Pháp tuyến giữ nguyên, nên nấc sáng không đổi.
-- **Số đo:** `goc`, góc lệch của camera khỏi góc nhìn của tranh (độ), đọc từ `ctx.camera`. E2e đọc nó để kiểm tranh tự khép lại.
+- **Số đo:** `goc`, góc lệch của camera khỏi góc nhìn của tranh (độ, một số lẻ), đọc từ `ctx.camera` (`viewAngle` của `parts/cot-bo-cuc.js`).
+  Là góc 3D giữa hướng từ điểm nhìn tới camera và hướng của tranh, nên xoay ngang 30° ra chừng 28°, không phải 30° (camera nhìn chếch xuống
+  nên đi trên một vòng nhỏ hơn). E2e đọc nó để kiểm tranh tự khép lại.
 - **Vật:** `giay`, `ga-me`, `ga-con`.
 
 #### Lớp 2 · Bản màu (`layers/l2-ban-mau.js`)
@@ -4196,12 +4198,19 @@ dùng được.
   không đổi.
 
 **3. Tranh tự khép lại** (`CameraSpec.home: { after, duration }`, tính bằng giây; file mới `engine/gpu/home.js`)
-- Nghe sự kiện `start` và `end` của OrbitControls. Từ `end`, đếm thời gian đứng yên.
+- Nghe sự kiện `start` và `end` của OrbitControls. Từ `end`, đếm thời gian đứng yên, tính bằng giây của cảnh (`dt` của từng khung).
 - Đủ `after` giây thì quay về góc ngang, góc dọc và zoom (hay khoảng cách, với camera phối cảnh) của `CameraSpec` trong `duration` giây,
   theo `smoothstep`, đi đường ngắn nhất. Có `start` mới thì dừng ngay.
+- Mỗi khung đang về, bộ đếm đặt THẲNG vị trí camera, quanh `controls.target` lúc chạy (không phải `spec.target`: camera "thở" dời nó), và
+  `zoom` (camera trực giao, rồi `updateProjectionMatrix()`); `controls.update()` chạy ngay sau như mọi khung, nhìn về điểm nhìn và kẹp trong
+  giới hạn. Đổi cỡ khung giữa đường thì vẫn về đủ: `fitCamera` đổi khung nhìn, không đổi zoom.
 - Giảm chuyển động: đủ `after` giây thì về một bước.
-- Phần tính là hàm thuần (`homeAt(từ, tới, k)` và bước đếm giờ), test bằng chuỗi khung giả. `scene.step()` gọi nó trước
-  `controls.update()`.
+- **Quán tính của OrbitControls** tắt theo số lần `update()`, không theo giây (Phụ lục A.98), mà dt của khung bị kẹp 0,1 s: ở máy vẽ chậm,
+  phần xoay dở sau khi buông tay còn lại nhiều và kéo camera ra khỏi nhà lần nữa. Nên `step(dt)` đặt `dampingFactor = 1 − (1 − mặc định)^(dt × 60)`
+  trước `controls.update()` (khi `enableDamping`): quán tính tắt theo giây của cảnh ở mọi nhịp khung, và đúng bằng mặc định (0,05) ở 60 khung/giây.
+  Chỉ bức có `CameraSpec.home` chịu thay đổi này; bộ đếm gỡ đi thì trả `dampingFactor` về như cũ.
+- Phần tính là hàm thuần (`homeAt(từ, tới, k)` và bước đếm giờ), test bằng chuỗi khung giả. `scene.step()` gọi `stage.returnHome(dt)` sau
+  `stage.breathe(t)` và trước `controls.update()`; khung bị bỏ (thử ngừng vẽ) thì không gọi.
 - Với `?freeze`, vòng lặp dừng, nên camera không tự về.
 
 **4. Sổ tay hiện code của hộp màu**
@@ -4301,10 +4310,13 @@ chuyển động ở lại trong bức.
 **Unit của xưởng** (`tests/unit/`):
 - `fov`: `fitOrtho` giữ `height` ở khung rộng, nới ở khung hẹp, có trần.
 - `home` (mới):
-  - đứng yên đủ `after` thì về trong `duration`; có `start` giữa chừng thì dừng;
+  - đứng yên đủ `after` thì về trong `duration`; có `start` giữa chừng thì dừng, buông lần nữa thì đếm lại từ đầu;
   - đi đường ngắn nhất, kể cả khi qua ±π;
   - giảm chuyển động thì về một bước;
-  - camera phối cảnh về khoảng cách, camera trực giao về zoom.
+  - camera phối cảnh về khoảng cách, camera trực giao về zoom; đổi cỡ khung giữa đường vẫn về đủ;
+  - quán tính theo giây của cảnh (Phụ lục A.98): `dampingFactor` theo `dt`; OrbitControls thật ở 10, 30, 60 khung/giây không trôi khỏi nhà
+    sau khi về.
+- `scene`: mỗi khung gọi `stage.returnHome(dt)` sau `breathe` và trước `controls.update()`; khung thử ngừng vẽ thì không gọi.
 - `camera` (`createCamera`, `fitCamera`, `limitControls` của `engine/gpu/camera.js`; `stage.js` cần GPU nên không có unit test):
   `kind: 'ortho'` cho `OrthographicCamera`, khung nhìn đúng tỉ lệ, giữ zoom khi khớp khung, `minZoom`/`maxZoom` của OrbitControls; không
   có `kind` thì như cũ.
@@ -4349,7 +4361,8 @@ chuyển động ở lại trong bức.
 - Điệp: xoay camera một góc nhỏ thì view Emissive đổi, vì hạt khác lóe lên.
 - Chạm vào sàn: số đo `rac` > 0; chừng 3 giây cảnh sau, `dangAn` > 0.
 - Trước khi giữ, `quanhMe` ≤ 4; giữ 3 giây cảnh thì `quanhMe` ≥ 8. Thả thì số đó giảm dần.
-- Kéo camera: `goc` > 15; buông tay rồi chờ thì `goc` < 1 (tranh tự khép lại). Giảm chuyển động: camera về ngay khi đủ 3 giây.
+- Kéo camera: `goc` > 15; buông tay rồi chờ thì `goc` < 1 (tranh tự khép lại). Giảm chuyển động: camera về MỘT bước khi đủ 3 giây cảnh;
+  `goc` ghi ở mỗi khung rAF không có mẫu nào lượn giữa chỗ buông và nhà.
 - Draw call ≤ 30 ở mức cao; `?level=thap` chạy được; bật từng thí nghiệm không có lỗi console.
 - E2e chạy live và chờ rộng tay như Bức 3, vì đồng hồ của cảnh theo khung vẽ.
 - `e2e/lat-tranh.spec.js` thêm Bức 3 ⇄ Bức 4; `e2e/phong-tranh.spec.js` đếm bốn mục.
@@ -4408,8 +4421,12 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
   duy nhất (§20.5), test vị trí liên tục ở mỗi mốc, tối đa 32 mốc.
 - **Thóc quá nhỏ trên điện thoại:** 0,08 đơn vị là chừng 2 điểm ảnh ở 390×844. Cách tránh: cỡ hạt có sàn theo điểm ảnh (chia theo
   `u.resolution` và zoom).
-- **Tranh tự khép lại đánh nhau với quán tính của OrbitControls:** `end` đến khi buông tay, nhưng damping còn quay thêm một lúc. Cách
-  tránh: `after` (3 giây) dài hơn thời gian damping tắt; khi quay về thì đặt thẳng góc và zoom, rồi gọi `controls.update()`.
+- **Tranh tự khép lại đánh nhau với quán tính của OrbitControls:** `end` đến khi buông tay, nhưng damping còn quay thêm một lúc, và phần
+  quay dở ấy tắt theo số lần `update()`, không theo giây (Phụ lục A.98). Ở 60 khung/giây, sau `after` (3 giây) chỉ còn chừng 1/10 000; ở máy
+  vẽ chậm (dt kẹp 0,1 s, chừng 10 khung/giây) còn hơn 10% sau 4,2 giây cảnh, và camera trôi ra khỏi nhà sau khi đã về.
+  - Cách tránh: `home.js` đặt `dampingFactor` theo dt của khung (§20.6 mục 3), nên `after` luôn dài hơn thời gian damping tắt ở mọi nhịp khung;
+    khi quay về thì đặt thẳng góc và zoom, rồi gọi `controls.update()`.
+  - Test: unit với OrbitControls thật ở 10, 30 và 60 khung/giây (camera không trôi sau khi về); e2e `goc` < 1 là bằng chứng tích hợp.
 - **AgX làm giấy xám:** chỉnh ở lượt màu (`exposure`, tone của Phủ bóng).
 - **Hàng rào từ vựng bắt nhầm:** `hen` là chuỗi con của `denThen`, nên đã bỏ khỏi fence (§20.6).
 
@@ -4891,3 +4908,15 @@ Các mục dưới đây đã được kiểm bằng ba cách:
       WebGPU.
     - Bể hạt (§20.7) vẫn giữ quy ước mọi nhánh gán đủ `a` lẫn `b`, cho mỗi nhánh nói đủ trạng thái mới của phần tử; quy ước đó không phải
       để tránh rác.
+98. **Quán tính của OrbitControls tắt theo số lần `update()`, không theo giây** (`examples/jsm/controls/OrbitControls.js`, `update()`;
+    GĐ 8 Task 3, OrbitControls thật trong unit test, không cần DOM):
+    - Mỗi lần `update()` khi `enableDamping`: camera xoay thêm `_sphericalDelta × dampingFactor`, rồi `_sphericalDelta` nhân với
+      `1 − dampingFactor` (dòng 717–718 và 799–802). Phần xoay dở của một lần kéo sau n lần là `(1 − dampingFactor)ⁿ`, mỗi khung dài
+      bao lâu cũng vậy.
+    - `scene.js` kẹp dt của khung ở 0,1 s (`clock.js`): ở 10 khung/giây (SwiftShader trên runner CI), 4,2 giây cảnh chỉ là 42 lần
+      `update()`, còn 0,95⁴² ≈ 12% phần xoay dở. Phần ấy tiếp tục xoay camera ra khỏi nhà sau khi tranh tự khép lại đã đặt nó về. Ở 60
+      khung/giây cùng quãng ấy còn 0,95²⁵² ≈ 2·10⁻⁶.
+    - Cách tránh: đặt `dampingFactor = 1 − (1 − 0,05)^(dt × 60)` mỗi khung, TRƯỚC `update()` (`home.js`, chỉ bức có `CameraSpec.home`).
+      Quán tính tắt theo giây của cảnh ở mọi nhịp khung và đúng bằng mặc định ở 60 khung/giây. Test: OrbitControls thật, `rotateLeft(1)`
+      rồi buông, 8 giây cảnh ở 10, 30, 60 khung/giây: sai lệch khỏi nhà dưới 0,01° (bỏ dòng đặt `dampingFactor` thì ở 10 khung/giây còn
+      chừng 5,5°, ở 30 khung/giây chừng 0,08°). E2e SwiftShader ở máy dựng thử chạy đủ nhanh nên chưa thấy lỗi này.

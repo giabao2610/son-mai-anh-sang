@@ -1,9 +1,9 @@
 // tests/paintings/dan-ga-me-con/cot.test.js — Lớp 1 · Cốt của Bức 4: tờ giấy, gà mẹ, mười gà con bằng NodeMaterial gốc tô theo recipe; camera trực giao; không đèn, không shadow map; dịch được ở hai backend.
 import { describe, it, expect } from 'vitest';
-import { InstancedMesh, NodeMaterial, OrthographicCamera } from 'three/webgpu';
+import { InstancedMesh, NodeMaterial, OrthographicCamera, Vector3 } from 'three/webgpu';
 import meta from '../../../src/paintings/dan-ga-me-con/meta.js';
 import * as painting from '../../../src/paintings/dan-ga-me-con/painting.js';
-import { HEN, HOMES } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
+import { CAMERA, HEN, HOMES } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
 import { buildPainting } from '../../helpers/fake-ctx.js';
 import { compileMaterial } from '../../helpers/nodes.js';
 
@@ -54,6 +54,16 @@ describe('l1-cot (Bức 4)', () => {
     ctx.camera.updateProjectionMatrix();
     layers.cot.update(0, 0);
     expect(shared.cot.pixel.value).toBeCloseTo(12 / 2 / 400, 9);
+  });
+
+  it('số đo goc: đọc camera SỐNG của sân khấu, 0,0° ở góc của tranh, đổi theo camera (e2e đọc số này để kiểm tranh tự khép lại)', () => {
+    const { layers, ctx } = build();
+    const goc = layers.cot.readouts.find((r) => r.id === 'goc');
+    expect(goc.unit).toBe('°');
+    expect(goc.get()).toBe('0.0');
+    const target = new Vector3(...CAMERA.target);
+    ctx.camera.position.sub(target).applyAxisAngle(new Vector3(0, 1, 0), 0.5).add(target); // xoay 0,5 rad quanh trục đứng qua điểm nhìn
+    expect(Number(goc.get())).toBeCloseTo(26.9, 1); // 0,5 rad = 28,6° quanh trục đứng; camera nhìn chếch xuống nên góc 3D nhỏ hơn
   });
 
   it('chỗ của mười gà con lấy từ HOMES: (x, y, z, hướng); con trèo lưng đứng trên lưng mẹ', () => {

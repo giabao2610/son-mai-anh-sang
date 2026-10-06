@@ -1,4 +1,4 @@
-// paintings/dan-ga-me-con/parts/cot-bo-cuc.js — bố cục của tờ tranh (dữ liệu thuần): tờ giấy cong, gà mẹ, chỗ "nhà" của mười gà con, hướng nắng, góc nhìn của tranh; điểm chạm trên sàn; không import three.
+// paintings/dan-ga-me-con/parts/cot-bo-cuc.js — bố cục của tờ tranh (dữ liệu thuần): tờ giấy cong, gà mẹ, chỗ "nhà" của mười gà con, hướng nắng, góc nhìn của tranh; điểm chạm trên sàn; góc lệch của camera khỏi góc của tranh; không import three.
 
 const RAD = Math.PI / 180;
 const unit = (v) => v.map((c) => c / Math.hypot(...v));
@@ -38,6 +38,7 @@ export const HOMES = Object.freeze([
  * và mép trên của giấy cách tâm khung chừng 4,5 đơn vị, trong khung cao 12, nên giấy chiếm chừng 75% bề cao và chữ nằm trên ván tối.
  * (Số §20.2 cũ, target [0; 1,6; 0], để giấy lệch hẳn lên trên: mép trên chỉ cách mép khung 0,15. Đã sửa §20.2 cùng task.)
  * polar đo từ trục y: xoay dọc 10°–70° trên mặt sàn là polar 80°–20°.
+ * `home`: buông tay 3 giây thì camera êm êm về góc này trong 1,2 giây (spec §20.2, CameraSpec.home, engine/gpu/home.js).
  * @type {import('../../../engine/contracts/runtime.js').CameraSpec}
  */
 export const CAMERA = Object.freeze({
@@ -50,6 +51,7 @@ export const CAMERA = Object.freeze({
   azimuth: [-75 * RAD, 75 * RAD],
   polar: [20 * RAD, 80 * RAD],
   breathe: 0,
+  home: { after: 3, duration: 1.2 },
 });
 
 /**
@@ -61,4 +63,17 @@ export const CAMERA = Object.freeze({
 export function floorPoint({ origin: o, direction: d }) {
   const s = d.y < -1e-6 && o.y > 0 ? -o.y / d.y : 0;
   return [clamp(o.x + d.x * s, ...FLOOR.x), clamp(o.z + d.z * s, ...FLOOR.z)];
+}
+
+/**
+ * Góc lệch (độ) của camera ở `position` khỏi góc nhìn của tranh, quanh điểm nhìn của tranh (số đo `goc` của Cốt). Là góc 3D giữa hai
+ * hướng nhìn (từ điểm nhìn tới camera), nên xoay ngang 30° khi camera nhìn chếch xuống 20° chỉ lệch chừng 28°: camera đi trên một vòng
+ * nhỏ hơn vòng lớn của hình cầu quanh điểm nhìn.
+ * @param {[number, number, number]} position
+ */
+export function viewAngle(position) {
+  const a = position.map((v, i) => v - CAMERA.target[i]);
+  const b = CAMERA.position.map((v, i) => v - CAMERA.target[i]);
+  const cos = a.reduce((s, v, i) => s + v * b[i], 0) / (Math.hypot(...a) * Math.hypot(...b));
+  return (Math.acos(Math.min(1, Math.max(-1, cos))) * 180) / Math.PI;
 }

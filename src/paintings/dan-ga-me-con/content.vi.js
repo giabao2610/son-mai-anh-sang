@@ -25,6 +25,7 @@ export default {
         { title: 'Tranh Đông Hồ (Wikipedia tiếng Việt)', url: 'https://vi.wikipedia.org/wiki/Tranh_%C4%90%C3%B4ng_H%E1%BB%93' },
       ],
       knobs: { segments: 'Độ mịn của khối', wireframe: 'Chỉ vẽ khung dây' },
+      readouts: { goc: 'Lệch khỏi góc của tranh' },
       objects: { giay: 'Tờ giấy', 'ga-me': 'Gà mẹ', 'ga-con': 'Mười gà con' },
     },
     'ban-net': {

@@ -1,8 +1,8 @@
-// tests/paintings/dan-ga-me-con/cot-bo-cuc.test.js — bố cục của tờ tranh: góc nhìn của tranh đúng số §20.2; chỗ nhà của gà con trên sàn, không chồng nhau; cú chạm của camera trực giao trúng đúng điểm trên sàn.
+// tests/paintings/dan-ga-me-con/cot-bo-cuc.test.js — bố cục của tờ tranh: góc nhìn của tranh đúng số §20.2 (cả số của tranh tự khép lại); chỗ nhà của gà con trên sàn, không chồng nhau; cú chạm của camera trực giao trúng đúng điểm trên sàn; số đo `goc` (viewAngle).
 import { describe, it, expect } from 'vitest';
 import { Raycaster, Vector2, Vector3 } from 'three/webgpu';
 import { createCamera } from '../../../src/engine/gpu/camera.js';
-import { CAMERA, FLOOR, HEN, HOMES, PAPER, floorPoint } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
+import { CAMERA, FLOOR, HEN, HOMES, PAPER, floorPoint, viewAngle } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
 
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const DEG = 180 / Math.PI;
@@ -16,6 +16,23 @@ describe('cot-bo-cuc', () => {
     expect(CAMERA.azimuth.map((a) => a * DEG)).toEqual([-75, 75].map((a) => expect.closeTo(a, 6)));
     expect(CAMERA.polar.map((a) => 90 - a * DEG)).toEqual([70, 10].map((a) => expect.closeTo(a, 6))); // polar đo từ trục y
     expect([CAMERA.height, CAMERA.minWidth, CAMERA.zoom, CAMERA.breathe]).toEqual([12, 15.5, [1, 2.5], 0]);
+    expect(CAMERA.home).toEqual({ after: 3, duration: 1.2 }); // tranh tự khép lại (§20.2, §20.6 mục 3)
+  });
+
+  it('viewAngle (số đo goc): 0 ở góc của tranh; xoay ngang 30° quanh trục đứng qua điểm nhìn ra acos(cos²e·cos30° + sin²e), nhỏ hơn 30° vì camera nhìn chếch xuống; đổi riêng độ cao 10° ra đúng 10°', () => {
+    const target = new Vector3(...CAMERA.target);
+    const offset = new Vector3(...CAMERA.position).sub(target);
+    const at = (v) => v.clone().add(target).toArray();
+    expect(viewAngle(CAMERA.position)).toBeCloseTo(0, 5);
+    const e = Math.atan2(offset.y, Math.hypot(offset.x, offset.z)); // độ cao của camera so với điểm nhìn
+    const around = viewAngle(at(offset.clone().applyAxisAngle(new Vector3(0, 1, 0), 30 / DEG)));
+    expect(around).toBeCloseTo(Math.acos(Math.cos(e) ** 2 * Math.cos(30 / DEG) + Math.sin(e) ** 2) * DEG, 6);
+    expect(around).toBeGreaterThan(28);
+    expect(around).toBeLessThan(30);
+    // Trục nằm ngang, vuông góc với hướng ngang của camera: quay quanh nó chỉ đổi độ cao.
+    const tilt = new Vector3(0, 1, 0).cross(new Vector3(offset.x, 0, offset.z)).normalize();
+    expect(viewAngle(at(offset.clone().applyAxisAngle(tilt, 10 / DEG)))).toBeCloseTo(10, 6);
+    expect(viewAngle(at(offset.clone().multiplyScalar(0.5)))).toBeCloseTo(0, 5); // lại gần điểm nhìn không đổi hướng nhìn
   });
 
   it('mười gà con: hai con trèo lưng và nấp bụng sát mẹ; tám con kia ở trên sàn, cách tâm mẹ hơn 2,2, không chồng nhau', () => {

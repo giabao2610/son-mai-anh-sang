@@ -6,6 +6,7 @@ import { createClock } from './clock.js';
 import { createLatch } from './guards.js';
 import { breathAmplitude, breathOffset } from './breath.js';
 import { createCamera, fitCamera, limitControls } from './camera.js';
+import { createHome } from './home.js';
 
 /** CameraSpec giữ chỗ của sân khấu trước khi bức khai báo camera của nó. */
 const PLACEHOLDER = Object.freeze({ position: [0, 0, 5], target: [0, 0, 0], fov: 45 });
@@ -17,7 +18,7 @@ const PLACEHOLDER = Object.freeze({ position: [0, 0, 5], target: [0, 0, 0], fov:
  * @param {{ freeze: boolean|number }} opts.flags   cờ URL (engine/flags.js)
  * @param {HTMLElement} opts.parent        phần tử [data-stage]; canvas được gắn vào đây
  * @param {string} opts.clearColor         màu nền đặc, ví dụ palette.denThen
- * @param {boolean} [opts.reducedMotion]   prefers-reduced-motion: tắt quán tính của camera
+ * @param {boolean} [opts.reducedMotion]   prefers-reduced-motion: tắt quán tính của camera; tranh tự khép lại thì về một bước
  * @param {Window} [opts.win]
  */
 export async function createStage({ tier, flags, parent, clearColor, reducedMotion = false, win = window }) {
@@ -54,6 +55,7 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
   renderer.onError = (info) => errorCallbacks.forEach((cb) => cb(info));
 
   let controls = null;
+  let home = null; // tranh tự khép lại (CameraSpec.home): bộ đếm giờ trên controls; null khi bức không khai báo
   let cameraSpec = null; // CameraSpec của bức: khung nhìn tính lại theo tỉ lệ khung mỗi lần resize (minHorizontalFov, minWidth)
   let aspect = 1; // tỉ lệ khung hiện tại: camera mới của useCamera() dựng theo số này
   let breathAmp = 0; // biên độ "thở" của camera (CameraSpec.breathe; 0 khi giảm chuyển động)
@@ -97,6 +99,7 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
 
     /** Áp CameraSpec của bức: dựng camera đúng loại ở vị trí của bức, khớp khung, rồi OrbitControls bị chặn trong giới hạn bức khai báo. */
     useCamera(spec) {
+      home?.dispose();
       controls?.dispose();
       cameraSpec = spec;
       camera = createCamera(spec, aspect);
@@ -104,6 +107,7 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
       limitControls(controls, spec, reducedMotion);
       base.set(...spec.target);
       breathAmp = breathAmplitude(spec, reducedMotion);
+      home = spec.home ? createHome({ camera, controls, spec, reduced: reducedMotion }) : null;
       controls.update();
       return controls;
     },
@@ -118,6 +122,14 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
       if (!controls || !breathAmp) return;
       const [x, y, z] = breathOffset(t, breathAmp);
       controls.target.set(base.x + x, base.y + y, base.z + z);
+    },
+
+    /**
+     * Tranh tự khép lại (CameraSpec.home): một khung của bộ đếm giờ, dt giây của cảnh. Buông tay đủ `after` giây thì đặt camera trên đường
+     * về góc của bức. Gọi SAU breathe() và TRƯỚC controls.update() mỗi khung; bức không khai báo home thì không làm gì.
+     */
+    returnHome(dt) {
+      home?.step(dt);
     },
 
     /** Đặt trần DPR theo mức chất lượng (budget.dpr), hay theo nấc hạ của bộ điều chỉnh, rồi tính lại kích thước. */
@@ -154,6 +166,8 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
       lost.clear();
       errorCallbacks.length = 0;
       observer.disconnect();
+      home?.dispose();
+      home = null;
       controls?.dispose();
       renderer.setAnimationLoop(null);
       renderer.dispose().catch((err) => console.error('Gỡ renderer lỗi:', err));
