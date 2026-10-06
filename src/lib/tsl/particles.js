@@ -12,7 +12,8 @@ const QUEUE_MAX = 16;
  * - Mỗi kernel chỉ đụng hai bộ đệm: WebGL2 chạy compute bằng transform feedback, tối đa bốn bộ đệm mỗi kernel.
  * - Luật chỉ đọc và ghi CHÍNH phần tử của nó: trên WebGL2, element(i) bỏ qua i (Phụ lục A.10). Thứ cần đi giữa các phần tử, hay từ JS
  *   vào, đi qua uniform.
- * - Mọi nhánh của init, law, spawn phải gán CẢ a lẫn b: transform feedback ghi mọi phần tử mỗi lần chạy, nhánh không gán là ghi rác.
+ * - Quy ước: mọi nhánh của init, law, spawn gán CẢ a lẫn b, để mỗi nhánh nói đủ trạng thái mới của phần tử. Nhánh không gán thì ô đó
+ *   giữ giá trị cũ ở cả hai backend (WebGL2: three chép bản đọc sang bản ghi trước khi chạy luật; Phụ lục A.97), không phải ghi rác.
  * - Rắc: emit() xếp một nắm vào hàng đợi; mỗi bước lấy một nắm ra, ghi vào uniform `batch`. Phần tử nào thuộc nắm thì gọi spawn để tự
  *   khởi tạo lại, phần tử khác gọi law. Nắm nối tiếp nhau trên vòng đệm của số phần tử đang tính, nên nắm mới đè lên hạt cũ nhất.
  * - File này không đặt tên uniform: một bức có thể dựng hai bể.

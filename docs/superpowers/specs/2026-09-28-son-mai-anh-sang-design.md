@@ -4230,8 +4230,8 @@ chuyển động ở lại trong bức.
   bức.
   - Cấp MỘT lần hai bộ đệm vec4 (`instancedArray`) theo `capacity`. `count` (mặc định `capacity`) là số phần tử được tính và vẽ lúc đầu.
   - `init` và `law` là hàm TSL nhận `{ a, b, index }`, tức vec4 của CHÍNH phần tử đó. Compute khởi tạo và compute bước bọc chúng.
-  - Mọi nhánh của `init`, `law`, `spawn` gán CẢ `a` lẫn `b`: WebGL2 chạy compute bằng transform feedback, ghi mọi phần tử mỗi lần chạy,
-    nên nhánh không gán là ghi rác.
+  - Quy ước: mọi nhánh của `init`, `law`, `spawn` gán CẢ `a` lẫn `b`, để mỗi nhánh nói đủ trạng thái mới của phần tử. Nhánh không gán
+    thì ô đó giữ giá trị cũ, ở cả hai backend: WebGL2 chép bản đọc sang bản ghi trước khi chạy luật (Phụ lục A.97), nên không có rác.
   - Bể nhận `renderer` và `tier` lúc dựng, vì compute khởi tạo chạy ngay lúc đó, trên cả bộ đệm (theo `capacity`). WebGL2 chạy nó hai lần,
     để cả hai bản ping-pong có dữ liệu (Phụ lục A.29).
   - `setCount(n, ...vật vẽ)` đổi `count` của compute bước, và của vật vẽ do bức truyền vào, rồi trả số đã kẹp. Sàn là 100, vì sprite có
@@ -4881,3 +4881,13 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - Lấy mẫu lân cận ở `tâm ± k` điểm ảnh với k lẻ nửa (1,5) rơi đúng mép giữa hai điểm ảnh: bên này làm tròn lên, bên kia xuống, hai
       mẫu không còn đối xứng. Độ lệch khỏi mặt phẳng của mặt sàn nghiêng khi ấy khác 0, và Bản nét của Bức 4 vẽ cả sàn thành sọc mực.
       Cách tránh: tính tâm điểm ảnh theo cỡ của chính texture độ sâu (`textureSize`) và dời một số NGUYÊN điểm ảnh.
+97. **Compute trên WebGL2: nhánh không gán một bộ đệm thì bộ đệm giữ giá trị cũ** (`nodes/accessors/StorageBufferNode.js`,
+    `renderers/webgl-fallback/nodes/GLSLNodeBuilder.js`; GĐ 8 Task 2, đọc ngược bằng `getArrayBufferAsync` trên GPU thật, cả hai backend):
+    - Không có storage buffer (WebGL2), mỗi bộ đệm mà kernel đọc hay ghi thành một thuộc tính (bản để đọc) và một varying (bản để ghi,
+      transform feedback bắt lại): `StorageBufferNode.generate` gọi `registerTransform`. three chép thuộc tính sang varying ở đầu `main()`
+      (khối `// transforms` của `getTransforms`), TRƯỚC phần luật. Nhánh không gán ô đó thì bản ghi nhận đúng giá trị cũ, không phải rác.
+      WebGPU ghi tại chỗ nên cũng giữ giá trị cũ.
+    - Kiểm: nhánh `index < 64` chỉ gán `a`, nhánh kia gán cả hai; sau ba bước, `b` của nhánh đầu vẫn là giá trị khởi tạo, ở cả WebGL2 lẫn
+      WebGPU.
+    - Bể hạt (§20.7) vẫn giữ quy ước mọi nhánh gán đủ `a` lẫn `b`, cho mỗi nhánh nói đủ trạng thái mới của phần tử; quy ước đó không phải
+      để tránh rác.
