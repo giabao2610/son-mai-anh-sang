@@ -14,15 +14,15 @@ const HEN_TAIL = [0, Math.sin(55 * RAD), -Math.cos(55 * RAD)];
 const AHEAD = [0, 0, 1];
 
 // Một khối: cầu kéo dãn (bán kính, tỉ lệ), nón (bán kính đáy, cao, hướng của đỉnh) hay trụ (bán kính, cao); `at` là tâm. `detail` < 1:
-// khối nhỏ (mắt, mào, ong, chân) có ít vòng hơn núm `segments`. `tilt` [x, z]: xoay (rad) quanh trục x rồi z sau khi kéo dãn (cánh mẹ,
-// cánh ong). Nón có `flat` < 1 thì dẹt ngang (trục x) thành cái quạt, như đuôi gà mẹ.
-const ball = (part, r, scale, at, { detail = 1, tilt = [0, 0] } = {}) => ({ part, kind: 'ball', r, scale, at, detail, tilt });
+// khối nhỏ (mắt, mào, ong, chân) có ít vòng hơn núm `segments`. `tilt` [x, y, z]: xoay (rad) quanh trục x, rồi y, rồi z sau khi kéo dãn
+// (cánh mẹ, cánh ong). Nón có `flat` < 1 thì dẹt ngang (trục x) thành cái quạt, như đuôi gà mẹ.
+const ball = (part, r, scale, at, { detail = 1, tilt = [0, 0, 0] } = {}) => ({ part, kind: 'ball', r, scale, at, detail, tilt });
 const cone = (part, r, h, dir, at, { flat = 1 } = {}) => ({ part, kind: 'cone', r, h, dir, at, detail: 1, flat });
 const rod = (part, r, h, at) => ({ part, kind: 'rod', r, h, at, detail: 0.5 });
-/** Một khối và ảnh gương của nó qua mặt giữa (x → −x): hai chân, hai cánh, hai mắt. Khối có xoay quanh z thì xoay ngược lại. */
+/** Một khối và ảnh gương của nó qua mặt giữa (x → −x): hai chân, hai cánh, hai mắt. Ảnh gương của phép xoay quanh y, z là xoay ngược lại. */
 const pair = (shape) => [
   shape,
-  { ...shape, at: [-shape.at[0], shape.at[1], shape.at[2]], tilt: shape.tilt && [shape.tilt[0], -shape.tilt[1]] },
+  { ...shape, at: [-shape.at[0], shape.at[1], shape.at[2]], tilt: shape.tilt && [shape.tilt[0], -shape.tilt[1], -shape.tilt[2]] },
 ];
 
 /**
@@ -39,8 +39,8 @@ export const CHICK_SHAPE = Object.freeze([
   ...pair(ball('EYE', 0.045, [1, 1, 1], [0.2, 0.95, 0.55], { detail: 0.5 })),
 ]);
 
-// Cánh gà mẹ: cầu dẹt áp vào sườn, đuôi cánh hếch lên phía sau.
-const [wingL, wingR] = pair(ball('WING', 1, [0.3, 0.55, 1.15], [0.98, 1.55, -0.3], { tilt: [0.25, 0] }));
+// Cánh gà mẹ: cầu dẹt áp vào sườn, đuôi cánh hơi hếch lên và quặp vào thân (mình hẹp dần về phía sau, cánh thẳng thì chĩa ra như mái chèo).
+const [wingL, wingR] = pair(ball('WING', 1, [0.3, 0.55, 1.1], [0.95, 1.55, -0.25], { tilt: [0.12, 0.14, 0] }));
 /**
  * Gà mẹ trong khung của nó (như gà con): mình và đầu như bản khung; phần nhỏ (chân, mỏ, mắt) lấy số của gà con nhân chừng 2,7; đuôi là cái
  * quạt (nón dẹt) mọc từ phía trên lưng sau, cánh to hơn để thành mảng màu. Mào là ba cầu nhỏ trên đỉnh đầu; con ong ngậm ở đầu mỏ, có hai
@@ -52,12 +52,13 @@ export const HEN_SHAPE = Object.freeze({
     ball('BODY', 1, [1.2, 1.1, 2], [0, 1.6, 0]),
     cone('TAIL', 0.62, 1.4, HEN_TAIL, [0, 2.3, -1.75], { flat: 0.45 }),
     ...pair(rod('LEG', 0.11, 0.6, [0.38, 0.3, 0])),
+    ...pair(ball('LEG', 0.2, [0.8, 0.3, 1.4], [0.38, 0.06, 0.12], { detail: 0.5 })), // bàn chân: cầu dẹt chĩa ra trước, đáy chạm sàn
     ball('HEAD', 0.6, [1, 1, 1], [0, 2.7, 1.6]),
     cone('BEAK', 0.19, 0.43, AHEAD, [0, 2.62, 2.36]),
     ...[[3.25, 1.3], [3.32, 1.58], [3.24, 1.86]].map(([y, z]) => ball('COMB', 0.16, [0.6, 1, 1], [0, y, z], { detail: 0.5 })),
     ...pair(ball('EYE', 0.1, [1, 1, 1], [0.4, 2.84, 1.94], { detail: 0.5 })),
     ball('BEE', 0.16, [1, 0.8, 1.4], [0, 2.6, 2.76], { detail: 0.5 }),
-    ...pair(ball('BEE', 0.17, [0.09, 0.65, 1], [0.05, 2.8, 2.72], { detail: 0.5, tilt: [-0.5, 0.35] })),
+    ...pair(ball('BEE', 0.17, [0.09, 0.65, 1], [0.05, 2.8, 2.72], { detail: 0.5, tilt: [-0.5, 0, 0.35] })),
   ]),
   wingL,
   wingR,
@@ -102,7 +103,8 @@ function solid(shape, segments) {
   const n = Math.max(6, Math.round(segments * shape.detail));
   let g;
   if (shape.kind === 'ball') {
-    g = new SphereGeometry(shape.r, n, Math.max(6, Math.round(n * 0.6))).scale(...shape.scale).rotateX(shape.tilt[0]).rotateZ(shape.tilt[1]);
+    g = new SphereGeometry(shape.r, n, Math.max(6, Math.round(n * 0.6))).scale(...shape.scale)
+      .rotateX(shape.tilt[0]).rotateY(shape.tilt[1]).rotateZ(shape.tilt[2]);
   } else if (shape.kind === 'cone') {
     g = new ConeGeometry(shape.r, shape.h, n).scale(shape.flat, 1, 1)
       .applyQuaternion(new Quaternion().setFromUnitVectors(UP, new Vector3(...shape.dir).normalize()));
