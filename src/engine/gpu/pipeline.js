@@ -1,4 +1,4 @@
-// engine/gpu/pipeline.js — scene pass + MRT (output, emissive; normal khi cần); nối post của các lớp: build → renderOutput → display → overlay; alpha luôn 1.
+// engine/gpu/pipeline.js — scene pass + MRT (output, emissive; normal khi cần); nối post của các lớp: build → renderOutput → display → overlay; alpha luôn 1; GĐ 8: độ sâu tuyến tính theo loại camera.
 import { RenderPipeline, BlendMode, MaterialBlending, NoToneMapping } from 'three/webgpu';
 import { pass, mrt, output, emissive, normalView, packNormalToRGB, vec4, renderOutput } from 'three/tsl';
 import { createViews } from './views.js';
@@ -48,6 +48,19 @@ export function makeMRT({ normal = false } = {}) {
 }
 
 /**
+ * Độ sâu tuyến tính [0, 1] (0 ở near, 1 ở far) của scene pass, đúng cho loại camera của sân khấu.
+ * - Camera phối cảnh: getLinearDepthNode() như cũ (ba bức đầu không đổi node nào).
+ * - Camera trực giao: three luôn đổi texture độ sâu bằng công thức phối cảnh (PassNode.getViewZNode, Phụ lục A.89), nên mọi điểm dồn
+ *   về sát 0 và view Depth thành một bóng trắng. Texture độ sâu của camera trực giao đã tuyến tính ở cả hai backend (A.90): dùng thẳng.
+ * Chọn bằng JS lúc dựng pipeline: trong post, camera của TSL là camera vẽ quad, không phải camera của cảnh (A.93).
+ * @param {any} scenePass
+ * @param {any} camera   camera của sân khấu
+ */
+export function linearDepth(scenePass, camera) {
+  return camera.isOrthographicCamera ? scenePass.getTextureNode('depth') : scenePass.getLinearDepthNode();
+}
+
+/**
  * Dựng pipeline hậu kỳ của cảnh.
  * @param {{ renderer: any, scene: any, camera: any, layers: { id: string, layer: object }[], weight: (id: string) => any }} options
  * @returns {{ scenePass: any, renderPipeline: any, views: ReturnType<typeof createViews>, render: () => void,
@@ -56,10 +69,11 @@ export function makeMRT({ normal = false } = {}) {
 export function createPipeline({ renderer, scene, camera, layers, weight }) {
   const scenePass = pass(scene, camera);
   scenePass.setMRT(makeMRT());
+  const depth = linearDepth(scenePass, camera); // channel('depth') và view Depth cùng dùng node này
 
   const channel = (name) => {
     if (name === 'output' || name === 'emissive') return scenePass.getTextureNode(name);
-    if (name === 'depth') return scenePass.getLinearDepthNode();
+    if (name === 'depth') return depth;
     throw new Error(`Pipeline không có kênh "${name}"`);
   };
 
@@ -71,7 +85,7 @@ export function createPipeline({ renderer, scene, camera, layers, weight }) {
   const compile = () => scenePass.compileAsync(renderer);
   const taps = [];
   const final = buildFinalNode({ color: channel('output'), channel, layers, weight, taps });
-  const views = createViews({ scenePass, renderPipeline, mrtFor: makeMRT, final, taps, compile });
+  const views = createViews({ scenePass, renderPipeline, mrtFor: makeMRT, final, taps, compile, depth });
   views.setOverlays([]); // chưa có công cụ: ảnh cuối → vec4(rgb, 1)
 
   return {

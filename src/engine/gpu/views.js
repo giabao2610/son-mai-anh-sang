@@ -24,8 +24,9 @@ const DEPTH_CURVE = 8;
  * @param {any} p.final   ảnh cuối (không gian hiển thị), chưa có overlay; KHÔNG bao giờ dựng lại
  * @param {{ layerId: string, tapId: string, node: any, linear: boolean }[]} p.taps   theo thứ tự trong pipeline
  * @param {() => Promise<void>} p.compile   biên dịch trước (scenePass.compileAsync)
+ * @param {any} [p.depth]   (GĐ 8) độ sâu tuyến tính của pipeline (pipeline.js#linearDepth); thiếu thì như camera phối cảnh
  */
-export function createViews({ scenePass, renderPipeline, mrtFor, final, taps, compile }) {
+export function createViews({ scenePass, renderPipeline, mrtFor, final, taps, compile, depth = scenePass.getLinearDepthNode() }) {
   let normal = false; // MRT đã có kênh normal chưa
   let normalReady = false; // đã biên dịch xong biến thể có normal: list() chỉ báo Normal sẵn sàng từ lúc này
   let compiling = null; // lần biên dịch đang chạy: mọi lần require('normal') trong lúc đó cùng chờ nó
@@ -38,7 +39,7 @@ export function createViews({ scenePass, renderPipeline, mrtFor, final, taps, co
     if (id === 'final') return final;
     if (id === 'emissive') return renderOutput(scenePass.getTextureNode('emissive'), NoToneMapping);
     if (id === 'normal') return normal ? scenePass.getTextureNode('normal') : NORMAL_PLACEHOLDER;
-    if (id === 'depth') return vec4(vec3(pow(oneMinus(scenePass.getLinearDepthNode()), DEPTH_CURVE)), 1);
+    if (id === 'depth') return vec4(vec3(pow(oneMinus(depth), DEPTH_CURVE)), 1);
     const tap = tapOf.get(id);
     if (!tap) throw new Error(`Không có view "${id}"`);
     return tap.linear ? renderOutput(tap.node, NoToneMapping) : tap.node;

@@ -1,11 +1,14 @@
-// tests/unit/pipeline.test.js — nối post của các lớp (build → renderOutput → display), MRT, tap, view Normal lười, scene pass đứng đầu lượt cuối; không cần GPU.
+// tests/unit/pipeline.test.js — nối post của các lớp (build → renderOutput → display), MRT, tap, view Normal lười, scene pass đứng đầu lượt cuối; GĐ 8: độ sâu tuyến tính theo loại camera, nhánh chọn view của công cụ học tự gán biến texture; không cần GPU.
 import { describe, it, expect, vi } from 'vitest';
 import {
-  NoToneMapping, MaterialBlending, SRGBColorSpace, Scene, PerspectiveCamera, Vector4,
+  NoToneMapping, MaterialBlending, NodeMaterial, QuadMesh, SRGBColorSpace, Scene, OrthographicCamera, PerspectiveCamera, Vector2, Vector4,
 } from 'three/webgpu';
-import { rtt, uniform } from 'three/tsl';
-import { buildFinalNode, createPipeline } from '../../src/engine/gpu/pipeline.js';
+import { rtt, uniform, vec4 } from 'three/tsl';
+import { buildFinalNode, createPipeline, linearDepth } from '../../src/engine/gpu/pipeline.js';
+import { lensNode } from '../../src/engine/tools/kinh-mai.js';
+import { peelNode } from '../../src/engine/tools/lot-lop.js';
 import { buildFinalPass } from '../helpers/final-pass.js';
+import { compileMaterial, nodesOf } from '../helpers/nodes.js';
 
 // three r186: vec4(a, b) trả về VarNode "intent" bọc một JoinNode. Bóc lớp vỏ để xem các thành phần.
 const unwrap = (node) => (node.isVarNode && node.intent ? node.node : node);
@@ -198,6 +201,80 @@ describe('createPipeline (dựng đồ thị, không cần GPU)', () => {
     done();
     await Promise.all([first, second]);
     expect([setMRT.mock.calls.length, p.scenePass.compileAsync.mock.calls.length, overlay.mock.calls.length]).toEqual([1, 1, 2]);
+    p.dispose();
+  });
+});
+
+describe('linearDepth (GĐ 8): độ sâu tuyến tính đúng cho loại camera của sân khấu', () => {
+  const fakeRenderer = { toneMapping: NoToneMapping, outputColorSpace: SRGBColorSpace };
+  const probe = (seen) => ({ id: 'x', layer: { post: { build({ color, channel }) { seen.depth = channel('depth'); return color; } }, dispose() {} } });
+  const idsOf = (node) => new Set(nodesOf(node).map((n) => n.id));
+
+  it('camera trực giao: channel("depth") và view Depth là CHÍNH texture độ sâu (đã tuyến tính, Phụ lục A.90), không qua công thức phối cảnh', () => {
+    const seen = {};
+    const camera = new OrthographicCamera();
+    const p = createPipeline({ renderer: fakeRenderer, scene: new Scene(), camera, layers: [probe(seen)], weight: () => uniform(1) });
+    const depthTexture = p.scenePass.getTextureNode('depth');
+    expect(seen.depth).toBe(depthTexture);
+    expect(linearDepth(p.scenePass, camera)).toBe(depthTexture);
+    const ids = idsOf(p.views.node('depth'));
+    expect(ids.has(depthTexture.id)).toBe(true);
+    expect(ids.has(p.scenePass.getLinearDepthNode().id)).toBe(false);
+  });
+
+  it('camera phối cảnh: linearDepth và view Depth giữ nguyên node như ba bức trước (getLinearDepthNode; channel("depth") có test ở trên)', () => {
+    const camera = new PerspectiveCamera();
+    const p = createPipeline({ renderer: fakeRenderer, scene: new Scene(), camera, layers: [], weight: () => uniform(1) });
+    expect(linearDepth(p.scenePass, camera)).toBe(p.scenePass.getLinearDepthNode());
+    expect(idsOf(p.views.node('depth')).has(p.scenePass.getLinearDepthNode().id)).toBe(true);
+  });
+});
+
+describe('lượt cuối có công cụ học (GĐ 8): view dùng chung texture của scene pass ở nhiều nhánh If của Kính mài và Lột lớp', () => {
+  const fakeRenderer = { toneMapping: NoToneMapping, outputColorSpace: SRGBColorSpace };
+  /** Đầu một nhánh của chuỗi If/ElseIf chọn view (pick.js): `if ( ( peel_view == 2.0 ) ) {`; WGSL có thêm `object.`. */
+  const BRANCH = /if \( \( (?:object\.)?(?:peel_view|lens_mode) == \d+\.0 \) \) \{/g;
+  const reads = (code) => new Set(code.match(/\bnodeVar\d+\b/g) ?? []);
+  const assigned = (code) => new Set([...code.matchAll(/\b(nodeVar\d+) = /g)].map((m) => m[1]));
+  /** Thân của nhánh mở ở `start` (đếm ngoặc): gồm khối lồng bên trong, không gồm nhánh else của nó. Trả [đầu, cuối] trong code. */
+  const bodyAt = (code, start) => {
+    let i = code.indexOf('{', start) + 1;
+    const from = i;
+    for (let depth = 1; depth > 0; i += 1) depth += code[i] === '{' ? 1 : code[i] === '}' ? -1 : 0;
+    return [from, i - 1];
+  };
+
+  it.each(['webgpu', 'webgl2'])('%s: nhánh nào đọc biến cũng tự gán nó (hay biến gán ngoài mọi nhánh), không đọc biến chỉ gán ở nhánh khác (Phụ lục A.95)', (backend) => {
+    // Hai tap cùng chứa màu của scene pass, như truoc-tone và truoc-bloom của Phủ bóng, hay truoc-net của Bản nét (Bức 4); display vẽ
+    // chuỗi ra RTT như FXAA của Phủ bóng, nên luồng chính của lượt cuối không tự đọc màu ấy. Hai công cụ gắn theo thứ tự của hộp đồ nghề.
+    // Lỗi cũ: nhánh sau dùng lại biến texture chỉ được gán ở nhánh trước, nên Lột lớp ra ảnh đen ở nấc đó.
+    const build = ({ color, tap }) => { tap('a', color); tap('b', color.add(vec4(0.1))); return color; };
+    const layer = { post: { build, display: ({ color }) => rtt(color) }, dispose() {} };
+    const p = createPipeline({
+      renderer: fakeRenderer, scene: new Scene(), camera: new PerspectiveCamera(), layers: [{ id: 'x', layer }], weight: () => uniform(1),
+    });
+    const ids = p.views.list().slice(1).map((v) => v.id);
+    const u = { mode: uniform(0).setName('lens_mode'), radius: uniform(0.2), pos: uniform(new Vector2()), split: uniform(0.5), shape: uniform(0) };
+    p.views.setOverlays([
+      { id: 'kinh-mai', fn: (final, view) => lensNode(final, view, { ids, u }) },
+      { id: 'lot-lop', fn: (final, view) => peelNode(final, view, { ids, peel: uniform(0).setName('peel_view') }) },
+    ]);
+    const quad = new QuadMesh(new NodeMaterial());
+    quad.material.fragmentNode = p.renderPipeline.outputNode;
+    const { fragmentShader: code, problems } = compileMaterial(quad, { scene: new Scene(), camera: new PerspectiveCamera() }, backend, { pass: 'reflector' });
+    expect(problems).toEqual([]);
+    const spans = [...code.matchAll(BRANCH)].map((m) => bodyAt(code, m.index));
+    expect(spans).toHaveLength(ids.length * 2);
+    // Biến gán ngoài mọi nhánh chọn view (luồng chính, khối của Kính mài trước chuỗi If…): nhánh nào cũng đọc được.
+    let outside = code.slice(code.lastIndexOf('main'));
+    for (const [from, to] of spans) outside = outside.replace(code.slice(from, to), '');
+    const shared = assigned(outside);
+    spans.forEach(([from, to], k) => {
+      const body = code.slice(from, to);
+      const own = assigned(body);
+      const stray = [...reads(body)].filter((v) => !own.has(v) && !shared.has(v));
+      expect(stray, `nhánh ${k + 1} (${ids[k % ids.length]}) đọc biến chỉ gán ở nhánh khác`).toEqual([]);
+    });
     p.dispose();
   });
 });

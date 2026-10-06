@@ -1001,7 +1001,7 @@ son-mai-anh-sang/
         stage.js                     [0→8] renderer, nền đặc, camera + OrbitControls theo CameraSpec, đồng hồ, resize, DPR, lỗi GPU; GĐ 4: trackTimestamp; GĐ 8: camera trực giao (CameraSpec.kind), stage.camera là getter
         disposer.js                  [0] đăng ký mọi thứ đã tạo, gỡ theo thứ tự ngược
         pipeline.js                  [0→8] scene pass + MRT; build → renderOutput → display; alpha 1; views(); overlay; GĐ 8: độ sâu tuyến tính chọn theo loại camera
-        views.js                     [4→5] danh sách view (kênh, tap, Normal lười), ghép overlay của công cụ, requireView; GĐ 5: scene pass đứng đầu lượt cuối (móc lần vẽ thấy lượt vẽ cảnh)
+        views.js                     [4→8] danh sách view (kênh, tap, Normal lười), ghép overlay của công cụ, requireView; GĐ 5: scene pass đứng đầu lượt cuối (móc lần vẽ thấy lượt vẽ cảnh); GĐ 8: view Độ sâu dùng độ sâu của pipeline (linearDepth)
         gpu-timer.js                 [4] ms GPU mỗi khung: resolveTimestampsAsync (render + compute), không chờ, không gọi chồng
         meter.js                     [4] số đo của bàn thợ: draw call, tam giác, ms, ms CPU, ms GPU; hai bên "Tắt / Bật" của compare
         toolbox.js                   [4→5] hộp đồ nghề: gắn công cụ, cử chỉ tới công cụ trước bức, mỗi lúc một công cụ, body[data-tool]; GĐ 5: ToolApi.draws (năm hàm của móc), thanh công cụ ngay sau thanh lớp (thứ tự Tab)
@@ -1016,6 +1016,7 @@ son-mai-anh-sang/
         debug.js                     [1→2] ?debug → Inspector; ?debug=stats → stats-gl (import động); GĐ 2: openDebug không bao giờ ném
         gesture.js                   [1→5] phân loại cử chỉ (hàm thuần): tap / hold-* / swipe; kéo là của camera; GĐ 5: double-tap
         breath.js                    [1] camera "thở": breathAmplitude, breathOffset (hàm thuần)
+        camera.js                    [8] dựng camera theo CameraSpec (phối cảnh hay trực giao), khớp khung, giới hạn OrbitControls; phần tính của stage.js tách ra để unit test
         fov.js                       [7→8] fitFov: nới fov dọc ở khung hẹp (minHorizontalFov); GĐ 8: fitOrtho cho camera trực giao
         home.js                      [8] tranh tự khép lại (CameraSpec.home): đếm giờ đứng yên, quay về góc của bức; phần tính là hàm thuần
       stock/phu-bong/                LỚP DÙNG CHUNG "Phủ bóng"
@@ -1028,7 +1029,7 @@ son-mai-anh-sang/
         index.js                     [4→5] [kinhMai, lotLop, tungSoi]; thêm công cụ = thêm 1 dòng
         kinh-mai.js                  [4→5] overlay (If trong Fn) + thanh điều khiển (ui/dom.js) + cử chỉ; GĐ 5: kính tròn giữ cả double-tap của ngón tay, bút
         lot-lop.js                   [4] overlay (If trong Fn) + thanh điều khiển (ui/dom.js) + cử chỉ
-        pick.js                      [4] chọn một view theo chỉ số bằng If/ElseIf (hai công cụ dùng chung)
+        pick.js                      [4→8] chọn một view theo chỉ số bằng If/ElseIf (hai công cụ dùng chung); GĐ 8: mỗi view bọc isolate() không cache cha (Phụ lục A.95)
         tung-soi.js                  [5] Từng sợi: thanh trượt 0 → N lần vẽ, nút "Dệt lại", dòng mô tả sợi và tóm tắt khung; chỉ nhìn ToolApi.draws
     lib/                             HỘP MÀU: hàm "lá", chỉ trả SỐ
       random.js                      [0] PRNG có hạt giống (mulberry32)
@@ -4153,13 +4154,16 @@ dùng được.
   - `zoom` (tùy chọn): `[min, max]`, thành `minZoom` và `maxZoom` của OrbitControls. Thiếu thì không zoom.
   - `fov` và `distance` không dùng. Khoảng cách của camera chỉ để cắt near/far, và đứng yên: OrbitControls với camera trực giao đổi
     `zoom`, không đổi khoảng cách (Phụ lục A.92).
-- `stage.js`:
-  - `useCamera(spec)` dựng đúng loại camera. `stage.camera` thành getter: mọi chỗ dùng (scene, pipeline, input, chữ đi theo vật) đều đọc
-    sau `useCamera`;
-  - khi resize, camera trực giao tính `left`, `right`, `top`, `bottom` từ tỉ lệ khung và `fitOrtho`;
+- `stage.js` dùng `engine/gpu/camera.js` (file mới: phần tính của camera tách ra để unit test, vì `stage.js` cần GPU):
+  - `useCamera(spec)` dựng đúng loại camera (`createCamera`). `stage.camera` thành getter: mọi chỗ dùng (scene, pipeline, input, chữ đi
+    theo vật, móc lần vẽ) đều đọc sau `useCamera`;
+  - khi resize, `fitCamera`: camera trực giao tính `left`, `right`, `top`, `bottom` từ tỉ lệ khung và `fitOrtho`; zoom người xem chọn giữ
+    nguyên;
+  - `limitControls`: với camera trực giao, zoom kẹp trong `spec.zoom`, khoảng cách không đụng tới; với camera phối cảnh như cũ;
   - near 0,1 và far 500 giữ nguyên.
 - Những chỗ đã đúng sẵn, chỉ thêm test: tia của Raycaster (gốc nằm trên mặt phẳng của camera, hướng là hướng nhìn; Phụ lục A.92), chiếu
-  điểm neo của chữ đi theo vật, camera "thở".
+  điểm neo của chữ đi theo vật. Camera "thở" không cần test riêng: `breath.js` là hàm thuần không biết loại camera, và Bức 4 có
+  `breathe` 0.
 - `contracts/runtime.js` (JSDoc) và test hợp đồng: `fov > 0` chỉ bắt buộc với camera phối cảnh; camera trực giao bắt buộc `height > 0`.
   `tests/helpers/fake-ctx.js` dựng camera theo `painting.camera`.
 
@@ -4266,8 +4270,9 @@ chuyển động ở lại trong bức.
   - đi đường ngắn nhất, kể cả khi qua ±π;
   - giảm chuyển động thì về một bước;
   - camera phối cảnh về khoảng cách, camera trực giao về zoom.
-- `stage` (`useCamera`): `kind: 'ortho'` cho `OrthographicCamera`, khung nhìn đúng tỉ lệ, `minZoom`/`maxZoom` của OrbitControls; không có
-  `kind` thì như cũ.
+- `camera` (`createCamera`, `fitCamera`, `limitControls` của `engine/gpu/camera.js`; `stage.js` cần GPU nên không có unit test):
+  `kind: 'ortho'` cho `OrthographicCamera`, khung nhìn đúng tỉ lệ, giữ zoom khi khớp khung, `minZoom`/`maxZoom` của OrbitControls; không
+  có `kind` thì như cũ.
 - `pipeline` và `views`: với camera trực giao, `channel('depth')` và view Độ sâu là texture độ sâu, không có `perspectiveDepthToViewZ` trong
   đồ thị; với camera phối cảnh, node giữ nguyên như cũ.
 - `input`: tia của camera trực giao (gốc trên mặt phẳng camera, hướng là hướng nhìn). `caption-set`: chiếu điểm neo với camera trực giao.
@@ -4822,3 +4827,15 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - `sizeAttenuation` chỉ có nghĩa với camera phối cảnh.
 
     Đom đóm của Bức 1 và thóc của Bức 4 vẽ theo cùng một cách.
+95. **Nhánh của `If` dùng chung biến texture với nhánh khác** (r186: `ConditionalNode`, `ContextNode`, `IsolateNode`, `TextureNode`; GĐ 8
+    Task 1, chạy thật trên GPU thật và SwiftShader):
+    - Mỗi nhánh dựng trong một cache cô lập CÓ cache cha (`isolate()`). Nhưng `ContextNode.setup` trả node vừa dựng trong cache cô lập, và
+      `Node.build` dựng nó THÊM một lần ở cache cha. Dữ liệu của mọi node trong nhánh vì vậy cũng nằm ở cache cha, nên nhánh anh em tìm
+      thấy nó qua cache cha.
+    - `TextureNode.generate` nhận hai tham số, nên three không gán lại biến của nó cho từng khối (`addFlowCodeHierarchy` chỉ chạy với
+      node "generate once"). Texture đọc lần đầu ở nhánh 1 thì nhánh 2 đọc lại biến chưa gán: ra 0, ảnh đen. Phép tính thường (TempNode)
+      thì được dựng lại trong nhánh.
+    - Gặp ở `tools/pick.js`: mọi tap chứa màu của scene pass, nên Lột lớp và Kính mài ra đen ở nấc "Trước bloom" (ba bức đầu, từ GĐ 5)
+      và "Trước khi in bản nét" (Bức 4). Cách tránh: bọc view của mỗi nhánh trong `isolate(node).setParent(false)`, cache KHÔNG có cha:
+      nhánh nào cũng tự đọc texture của nó; thuộc tính, varying, uniform và `VarNode` vẫn dùng chung vì nằm ở cache toàn cục. Test dịch
+      lượt cuối (WGSL, GLSL) và kiểm mỗi nhánh chỉ đọc biến nó tự gán hay biến gán ngoài mọi nhánh (`tests/unit/pipeline.test.js`).

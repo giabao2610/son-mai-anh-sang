@@ -14,7 +14,7 @@ import { captionErrors } from '../helpers/caption-rules.js';
 import { read, staticClosure } from '../helpers/source.js';
 import { parseAt } from '../../src/engine/flags.js';
 import { pass } from 'three/tsl';
-import { buildFinalNode, makeMRT } from '../../src/engine/gpu/pipeline.js';
+import { buildFinalNode, linearDepth, makeMRT } from '../../src/engine/gpu/pipeline.js';
 
 const SRC = resolve(import.meta.dirname, '../../src');
 const MARKER = /\/\/\s*@knob\s+([A-Za-z0-9_]+)/g;
@@ -116,11 +116,20 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
       expect(Array.isArray(m.knobs), `lớp "${m.id}" thiếu export const knobs`).toBe(true);
       expect(typeof m.createLayer, `lớp "${m.id}" thiếu createLayer`).toBe('function');
     }
-    const { position, target, fov, azimuth, polar, distance } = painting.camera;
-    expect(position).toHaveLength(3);
-    expect(target).toHaveLength(3);
-    expect(fov).toBeGreaterThan(0);
-    for (const [lo, hi] of [azimuth, polar, distance]) expect(lo).toBeLessThanOrEqual(hi);
+    const cam = painting.camera;
+    expect(cam.position).toHaveLength(3);
+    expect(cam.target).toHaveLength(3);
+    expect(['perspective', 'ortho'], `CameraSpec.kind "${cam.kind}"`).toContain(cam.kind ?? 'perspective');
+    if (cam.kind === 'ortho') {
+      expect(cam.height, 'camera trực giao cần height > 0').toBeGreaterThan(0);
+      if (cam.minWidth !== undefined) expect(cam.minWidth).toBeGreaterThan(0);
+      if (cam.zoom) expect(0 < cam.zoom[0] && cam.zoom[0] <= cam.zoom[1], `zoom ${cam.zoom}`).toBe(true);
+    } else {
+      expect(cam.fov, 'camera phối cảnh cần fov > 0').toBeGreaterThan(0);
+      expect(cam.distance[0]).toBeLessThanOrEqual(cam.distance[1]);
+    }
+    for (const [lo, hi] of [cam.azimuth, cam.polar]) expect(lo).toBeLessThanOrEqual(hi);
+    if (cam.home) expect(cam.home.after > 0 && cam.home.duration > 0, 'home: after, duration > 0').toBe(true);
   });
 
   it('marker // @knob trong file của mỗi lớp khớp đúng knobs của lớp đó', async () => {
@@ -267,7 +276,9 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
       const { ctx, built } = buildPainting(await entry.load(), meta);
       const scenePass = pass(ctx.scene, ctx.camera);
       scenePass.setMRT(makeMRT());
-      const channel = (name) => (name === 'depth' ? scenePass.getLinearDepthNode() : scenePass.getTextureNode(name));
+      // Độ sâu như pipeline.js dựng (theo loại camera): lớp nào lấy mẫu texture độ sâu (.sample) cần đúng texture, không phải công thức.
+      const depth = linearDepth(scenePass, ctx.camera);
+      const channel = (name) => (name === 'depth' ? depth : scenePass.getTextureNode(name));
       const taps = [];
       buildFinalNode({ color: channel('output'), channel, layers: built, weight: ctx.weight, taps });
       for (const { layerId, tapId } of taps) {

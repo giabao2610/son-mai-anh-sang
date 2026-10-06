@@ -13,17 +13,24 @@
  * @property {(dt: number, t: number) => void} [update]   mỗi khung, TRƯỚC các lớp. [4] update(0, t) như Layer.update
  * @property {() => void} [dispose]     gọi 2 lần vẫn an toàn
  */
-/** Dữ liệu thuần; xưởng dựng PerspectiveCamera + OrbitControls có giới hạn.
+/** Dữ liệu thuần; xưởng dựng camera phối cảnh ([8] hay trực giao) + OrbitControls có giới hạn.
  * @typedef {Object} CameraSpec
+ * @property {'perspective'|'ortho'} [kind] [8] mặc định 'perspective'
  * @property {[number, number, number]} position
  * @property {[number, number, number]} target
- * @property {number} fov
+ * @property {number} [fov]                 bắt buộc với camera phối cảnh; [8] camera trực giao không dùng
+ * @property {number} [height]              [8] camera trực giao (bắt buộc): bề cao khung nhìn ở zoom 1, đơn vị cảnh
+ * @property {number} [minWidth]            [8] camera trực giao: khung hẹp thì xưởng nới height để bề ngang thấy đủ chừng này
+ *                                          (engine/gpu/fov.js#fitOrtho)
+ * @property {[number, number]} [zoom]      [8] camera trực giao: minZoom, maxZoom của OrbitControls; thiếu thì không zoom
  * @property {[number, number]} azimuth     giới hạn xoay ngang (rad); [-Infinity, Infinity] là xoay trọn vòng (GĐ 7)
  * @property {[number, number]} polar       giới hạn xoay dọc (rad)
- * @property {[number, number]} distance
+ * @property {[number, number]} [distance]  bắt buộc với camera phối cảnh; [8] camera trực giao không dùng (khoảng cách đứng yên)
  * @property {number} [breathe]             [1] biên độ "thở"; xưởng ép về 0 khi prefers-reduced-motion
  * @property {number} [minHorizontalFov]    [7] góc nhìn ngang tối thiểu (độ): khung hẹp (điện thoại dọc) thì xưởng nới fov dọc để
  *                                          bề ngang vẫn thấy đủ góc này; khung đủ rộng giữ nguyên fov (engine/gpu/fov.js)
+ * @property {{ after: number, duration: number }} [home]   [8] tranh tự khép lại: đứng yên `after` giây thì quay về góc của bức
+ *                                          trong `duration` giây (engine/gpu/home.js); giảm chuyển động thì về một bước
  */
 /** @typedef {Object} QualitySpec
  * @property {Record<'cao'|'vua'|'thap', Record<string, number>>} levels   ghép lên mức mặc định của xưởng; lớp đọc qua ctx.budget
@@ -95,6 +102,8 @@
 /** @typedef {Object} PostInput
  * @property {any} color                                   màu hiện tại (từ scene pass hoặc stage trước)
  * @property {(name: 'output'|'emissive'|'normal'|'depth') => any} channel   'normal' chỉ có sau requireView [4]
+ *                                                         [8] 'depth' với camera trực giao là chính texture độ sâu (tuyến tính
+ *                                                         sẵn): lấy mẫu ở điểm lân cận được mà không thêm lượt vẽ
  * @property {any} weight                                  uniform trọng số của chính lớp này
  * @property {(tapId: string, node: any) => void} [tap]    [4] chụp một bước giữa chừng → view '<layerId>:<tapId>'
  */

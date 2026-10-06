@@ -1,11 +1,14 @@
-// engine/gpu/stage.js — Sân khấu 3D: renderer nền đặc, camera + OrbitControls, đồng hồ, resize + DPR, lỗi GPU.
-import { WebGPURenderer, Scene, PerspectiveCamera, Vector2, Vector3 } from 'three/webgpu';
+// engine/gpu/stage.js — Sân khấu 3D: renderer nền đặc, camera (phối cảnh hay trực giao, GĐ 8) + OrbitControls, đồng hồ, resize + DPR, lỗi GPU.
+import { WebGPURenderer, Scene, Vector2, Vector3 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createClock } from './clock.js';
 import { createLatch } from './guards.js';
 import { breathAmplitude, breathOffset } from './breath.js';
-import { fitFov } from './fov.js';
+import { createCamera, fitCamera, limitControls } from './camera.js';
+
+/** CameraSpec giữ chỗ của sân khấu trước khi bức khai báo camera của nó. */
+const PLACEHOLDER = Object.freeze({ position: [0, 0, 5], target: [0, 0, 0], fov: 45 });
 
 /**
  * Dựng sân khấu cho một bức. Chỉ chạy trong trình duyệt có GPU (e2e kiểm, không có unit test).
@@ -30,7 +33,9 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
   // renderer.toneMapping giữ NoToneMapping (mặc định): tone mapping nằm trong pipeline (Phủ bóng + renderOutput).
 
   const scene = new Scene();
-  const camera = new PerspectiveCamera(45, 1, 0.1, 500);
+  // Camera giữ chỗ tới khi bức khai báo CameraSpec: useCamera() dựng camera ĐÚNG LOẠI (phối cảnh hay trực giao) thay cho nó. Mọi chỗ
+  // dùng (scene, pipeline, input, chữ đi theo vật, móc lần vẽ) đọc stage.camera SAU useCamera.
+  let camera = createCamera(PLACEHOLDER, 1);
   // Uniform dùng chung cho mọi lớp. Tên đặt bằng setName phải là định danh hợp lệ (không có '-').
   const u = {
     time: uniform(0).setName('u_time'),
@@ -49,7 +54,8 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
   renderer.onError = (info) => errorCallbacks.forEach((cb) => cb(info));
 
   let controls = null;
-  let cameraSpec = null; // CameraSpec của bức: fov tính lại theo tỉ lệ khung mỗi lần resize (minHorizontalFov)
+  let cameraSpec = null; // CameraSpec của bức: khung nhìn tính lại theo tỉ lệ khung mỗi lần resize (minHorizontalFov, minWidth)
+  let aspect = 1; // tỉ lệ khung hiện tại: camera mới của useCamera() dựng theo số này
   let breathAmp = 0; // biên độ "thở" của camera (CameraSpec.breathe; 0 khi giảm chuyển động)
   const base = new Vector3(); // điểm nhìn gốc của bức; thở = lệch quanh điểm này
   let dprMax = 1;
@@ -65,9 +71,8 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
     lastSize = size;
     renderer.setPixelRatio(ratio);
     renderer.setSize(width, height);
-    camera.aspect = width / height;
-    if (cameraSpec) camera.fov = fitFov(cameraSpec, camera.aspect);
-    camera.updateProjectionMatrix();
+    aspect = width / height;
+    fitCamera(camera, cameraSpec ?? PLACEHOLDER, aspect);
     renderer.getDrawingBufferSize(u.resolution.value);
   };
   const observer = new win.ResizeObserver(resize);
@@ -80,33 +85,25 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
   return {
     renderer,
     scene,
-    camera,
+    /** Camera của bức (getter): useCamera() thay camera, nên đừng giữ tham chiếu từ trước lúc đó. */
+    get camera() {
+      return camera;
+    },
     backend,
     u,
     get controls() {
       return controls;
     },
 
-    /** Áp CameraSpec của bức: vị trí, điểm nhìn, fov (nới theo khung, fov.js), rồi OrbitControls bị chặn trong giới hạn bức khai báo. */
+    /** Áp CameraSpec của bức: dựng camera đúng loại ở vị trí của bức, khớp khung, rồi OrbitControls bị chặn trong giới hạn bức khai báo. */
     useCamera(spec) {
       controls?.dispose();
       cameraSpec = spec;
-      camera.fov = fitFov(spec, camera.aspect);
-      camera.position.set(...spec.position);
-      camera.updateProjectionMatrix();
+      camera = createCamera(spec, aspect);
       controls = new OrbitControls(camera, renderer.domElement);
-      controls.target.set(...spec.target);
+      limitControls(controls, spec, reducedMotion);
       base.set(...spec.target);
       breathAmp = breathAmplitude(spec, reducedMotion);
-      controls.minAzimuthAngle = spec.azimuth[0];
-      controls.maxAzimuthAngle = spec.azimuth[1];
-      controls.minPolarAngle = spec.polar[0];
-      controls.maxPolarAngle = spec.polar[1];
-      controls.minDistance = spec.distance[0];
-      controls.maxDistance = spec.distance[1];
-      controls.enablePan = false;
-      // Damping = quán tính khi thả tay; cần gọi controls.update() mỗi khung (run.js làm).
-      controls.enableDamping = !reducedMotion;
       controls.update();
       return controls;
     },
