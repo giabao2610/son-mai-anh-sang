@@ -3881,16 +3881,24 @@ spec.
 
   Bố cục của Bức 4 theo tinh thần đó, không chép nét của bản khắc.
 - **Tờ giấy cong.** Tờ giấy điệp nằm phẳng ở phía trước (sân của đàn gà) rồi uốn lên thành vách ở phía sau, như phông chụp ảnh:
-  - mặt sàn rộng 14, sâu 10; chỗ uốn có bán kính 2; vách cao 6;
-  - từ camera mặc định, phần sàn (bị thu ngắn theo góc nhìn) và phần vách ghép thành một hình chữ nhật 14 × 9,1 đơn vị trên màn, tức
-    chừng 3 : 2, như một tờ tranh khổ ngang (đo ở GĐ 8 Task 4: 930 × 602 điểm ảnh CSS ở khung 1280 × 800; số cũ "chừng 4 : 3" là ước
-    lượng trước khi có camera). Nền tranh Đông Hồ trơn, nên chỗ uốn không lộ;
+  - mặt sàn rộng 14, sâu 10; chỗ uốn có bán kính 2; vách cao 4,5 (mép trên ở y 4,5). Vách cao 6 lúc đầu để trống gần nửa tờ giấy phía
+    trên đàn gà; điểm duyệt ảnh (GĐ 8 Task 4) hạ xuống 4,5;
+  - từ camera mặc định, phần sàn (bị thu ngắn theo góc nhìn) và phần vách ghép thành một hình chữ nhật 14 × 7,6 đơn vị trên màn, tức chừng
+    11 : 6 (1,83 : 1), như một tờ tranh khổ ngang. Đo trên GPU thật sau điểm duyệt ảnh: 844 × 460 điểm ảnh CSS ở khung 1280 × 800. Số cũ
+    "chừng 4 : 3" là ước lượng trước khi có camera; 14 × 9,1 (3 : 2) là của vách cao 6. Nền tranh Đông Hồ trơn, nên chỗ uốn không lộ;
   - kéo xoay mới thấy tờ giấy cong, và gà đứng trên phần sàn.
   - Lý do không dùng một tờ phẳng nằm ngang: nhìn chếch 20° thì tờ phẳng thu thành một dải dẹt; nhìn cao hơn thì gà bị nhìn từ trên
     xuống, mất dáng nghiêng của tranh. Còn tờ phẳng dựng đứng thì gà không có chỗ đứng, thóc không có chỗ rơi.
 - **Tấm ván sơn** là nền `denThen` (màu xóa của canvas), không có mesh nào.
-  - Tờ giấy chiếm chừng 75% bề cao của khung máy tính.
+  - Tờ giấy chiếm chừng 58% bề cao của khung máy tính (đo: 57,5% ở 1280 × 800, 57,7% ở 1440 × 900, 57,8% ở 1920 × 1080), nằm cao hơn
+    tâm khung một chút. Ở điện thoại dọc 390 × 844, khung nới theo `minWidth`: tờ giấy rộng gần hết bề ngang và chỉ cao chừng 22%
+    (350 × 190 điểm ảnh CSS).
   - Phần ván tối ở trên và dưới là chỗ của tên, thơ, gợi ý và con dấu, vì chữ màu ngà đặt trên giấy sáng không đọc được.
+    - Đo ở 1280 × 800: tờ giấy từ y 150 tới 610 (điểm ảnh CSS); tên tranh và dải link hết ở y 132, gợi ý bắt đầu ở y 628. Cách 18 điểm
+      ảnh mỗi phía; ở 1440 × 900 và 1920 × 1080 còn rộng hơn (32–83). E2e "chữ trên ván tối" giữ điều này ở ba khung máy tính và ở
+      390 × 844.
+    - Chữ của trang có cỡ cố định theo điểm ảnh, còn tờ giấy co theo bề cao khung: khung máy tính thấp hơn chừng 740 điểm ảnh CSS thì
+      gợi ý chạm mép dưới tờ giấy (1280 × 720: chạm 1 điểm ảnh; 1366 × 768 còn cách 10).
 - **Gà mẹ** dài chừng 4, cao chừng 3,2, đứng giữa sàn, quay nghiêng sang trái. Con ong là một phần hình của đầu gà mẹ.
 - **Mười gà con**, mỗi con dài chừng 1,3. Chỗ đứng ("nhà") và dáng của từng con là dữ liệu (`parts/cot-bo-cuc.js`), theo tranh gốc:
   - hai con trước mặt mẹ, hai con phía sau mẹ;
@@ -3907,10 +3915,13 @@ spec.
 ### 20.2 Trải nghiệm riêng của Bức 4
 - **Camera trực giao** (§20.6):
   - số thiết kế:
-    - `position` [0; 7,2; 11,55], `target` [0; 2,8; −0,45]: nhìn chếch xuống chừng 20°, và tờ giấy nằm giữa khung theo chiều dọc (mép trước
-      và mép trên của giấy cách tâm khung chừng 4,5 đơn vị). Số cũ, `position` [0; 6; 12] và `target` [0; 1,6; 0], để giấy lệch hẳn lên
-      trên: mép trên chỉ cách mép khung 0,15 đơn vị, không còn ván tối cho chữ (sửa ở GĐ 8 Task 1);
-    - `height` 12, `minWidth` 15,5, `zoom` [1; 2,5];
+    - `position` [0; 6,26; 11,9], `target` [0; 1,86; −0,1]: nhìn chếch xuống chừng 20° (`position − target` = [0; 4,4; 12]); tờ giấy nằm
+      cao hơn tâm khung 0,33 đơn vị, để tên tranh, dải link ở trên và gợi ý, thơ ở dưới đều nằm trên ván tối (§20.1). Điểm nhìn gần tâm gà
+      mẹ, nên kéo xoay thì đàn gà quay quanh chính nó;
+    - `height` 13,2, `minWidth` 15,5, `zoom` [1; 2,5];
+    - số trước điểm duyệt ảnh (GĐ 8 Task 4): `position` [0; 7,2; 11,55], `target` [0; 2,8; −0,45], `height` 12, vách cao 6. Giấy chiếm 75%
+      bề cao, và dải link, gợi ý đè lên giấy. Số cũ hơn, `position` [0; 6; 12], `target` [0; 1,6; 0], để giấy lệch hẳn lên trên: mép trên
+      chỉ cách mép khung 0,15 đơn vị (sửa ở GĐ 8 Task 1);
     - xoay ngang ±75°; xoay dọc từ 10° tới 70° trên mặt sàn;
     - `breathe` 0: tờ tranh đứng yên;
   - không có điểm tụ: vật ở xa không nhỏ đi, chỉ nằm cao hơn trong khung, đúng lối vẽ của tranh dân gian;
@@ -4031,8 +4042,13 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   - **Tờ giấy** (`parts/cot-giay.js`) là một lưới cong (sàn, chỗ uốn, vách). UV chạy theo chiều dài cung, nên thớ giấy không bị kéo dãn
     ở chỗ uốn.
   - Góc nhìn của tranh (`CAMERA`) nằm trong `parts/cot-bo-cuc.js`; `painting.js` và lớp này cùng đọc.
-- **Núm:** `segments` (độ mịn của khối, dựng lại; mặc định 32: hai mặt kề nhau của khối cầu gãy chừng 11°, dưới góc thành nét của Bản
-  nét, cả ở hai đầu mình gà mẹ, nơi cầu bị kéo dãn), `wireframe` (bool, dựng lại).
+- **Núm:** `segments` (độ mịn của khối, dựng lại), `wireframe` (bool, dựng lại).
+  - `segments` mặc định 32: số vòng của mỗi khối là `segments` × `detail` của khối. Ở mặc định, hai mặt kề nhau của mọi khối gãy dưới
+    20°, dưới góc Bản nét bắt đầu in nếp gấp (chừng 21°, lớp 3): mình gà mẹ (cầu kéo dãn) 18,6°, mình gà con 14°, đầu 11,3°.
+  - Khối dẹt gãy gắt ở vành: cùng 32 vòng thì cánh gà mẹ 39,7°, cánh gà con 31,4°, mào 36,3° (16 vòng), bàn chân 69,8° (16 vòng), và vành
+    của chúng thành sọc mực khi phóng to. Vì vậy chúng có nhiều vòng hơn: cánh mẹ 2,25 lần, cánh con 1,75, bàn chân 2,25, mào và ong 1.
+  - Riêng cánh ong mỏng 0,09 lần: vành luôn gãy gắt (95° ở 32 vòng), và thành nét viền của cánh.
+  - Lưới giữ index, nên mỗi đỉnh chạy `positionNode` một lần. Ở mặc định, cả cảnh có chừng 86 nghìn đỉnh, 148 nghìn tam giác.
 - **Thí nghiệm "Tấm bìa phẳng"** (`biaPhang`):
   - dẹt từng con gà quanh tâm của nó, theo hướng nhìn của tranh, còn 5%;
   - ở góc nhìn của tranh, ảnh gần như không đổi; kéo xoay mới thấy gà chỉ là tấm bìa;
@@ -4078,13 +4094,16 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
       đậm hẳn; độ đậm nhân `crease`. Bậc lớn đã là viền thì không tính lại, để phía sau của bậc không dày thêm.
     - Vì sao đo góc chứ không đo hiệu độ dốc (`|e|` chia độ dài bước, cách của GĐ 8 Task 1): gần mép khối, mặt nghiêng gần 90° so với màn,
       độ dốc rất lớn, nên hai mặt kề nhau của khối cầu đa diện, dù chỉ gãy 11–15°, cũng chênh độ dốc quá ngưỡng. Vòng mặt đa diện thành
-      nét bên trong viền (thấy trên GPU thật ở DPR 2, GĐ 8 Task 4). Góc thì không phụ thuộc mặt nghiêng bao nhiêu: mặt đa diện dưới ngưỡng,
-      chỗ nối thật (đầu vào mình, cánh áp thân, mỏ, mào, mắt) gãy từ 40° trở lên.
+      nét bên trong viền (thấy trên GPU thật ở DPR 2, GĐ 8 Task 4). Góc thì không phụ thuộc mặt nghiêng bao nhiêu: mặt kề nhau của khối gãy
+      dưới 20° (lớp 1, `segments`), còn chỗ nối thật gãy nhiều hơn.
+    - Góc ở chỗ nối, đo dọc đường giao của hai mặt (góc giữa hai pháp tuyến): đầu vào mình 92–123°, mào 87–90°, chân 68–102°, mỏ 42–60°,
+      mắt 48–51°, đuôi 34–69°, cánh gà con 52–90°. Riêng cánh gà mẹ áp sát sườn: có đoạn chỉ gãy 13–20° (giữa 32°), nên nét quanh cánh mẹ
+      đứt ở chỗ cánh nằm sát sườn, và ở đó chỉ còn ranh màu (đỏ trên vàng).
 
-    Vì sao không dùng Sobel trên độ sâu: ở góc nhìn của tranh, độ sâu của mặt sàn đổi chừng 0,02 đơn vị mỗi điểm ảnh (khung cao 12 trên
+    Vì sao không dùng Sobel trên độ sâu: ở góc nhìn của tranh, độ sâu của mặt sàn đổi chừng 0,02 đơn vị mỗi điểm ảnh (khung cao 13,2 trên
     1600 điểm ảnh thiết bị, nhìn chếch 20°); kéo xuống góc thấp nhất và ở DPR 1 thì gấp bốn. Độ dốc của Sobel trên mặt sàn khi ấy vượt
-    ngưỡng của một bậc thật, và cả mặt sàn thành nét đen. Độ lệch khỏi mặt phẳng thì một phép đo cho cả bậc lẫn nếp gấp, không bị mặt
-    nghiêng đánh lừa.
+    ngưỡng của một bậc thật, và cả mặt sàn thành nét đen. Độ lệch khỏi mặt phẳng thì bằng 0 trên mọi mặt nghiêng, nên chỉ bậc thật thành
+    viền; nếp gấp đo riêng bằng góc gãy (ở trên), cũng không bị mặt nghiêng đánh lừa.
   - Mọi mẫu nằm đúng **tâm một điểm ảnh**, cách điểm giữa một số NGUYÊN điểm ảnh: bước là `lineWidth` (núm chỉ có số nguyên; shader
     vẫn làm tròn, tối thiểu 1), lệch bản cũng làm tròn. Texture độ sâu không lọc được, nên three đọc điểm ảnh gần nhất (Phụ lục
     A.96): bước 1,5 điểm ảnh rơi đúng mép giữa hai điểm ảnh, hai mẫu không còn đối xứng, và mặt sàn nghiêng thành sọc mực (đã thấy
@@ -4149,8 +4168,10 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
 - **Đàn gà** (`parts/dan-ga-song.js`, hàm thuần, chỉ import `lib/random.js`):
   - vị trí, hướng, góc cúi đầu của mười gà con, và cánh của gà mẹ, tính thẳng từ thời gian theo các mốc (§20.5);
   - `shared.js` giữ các mốc (cử chỉ đến đó); lớp này đọc mốc mới để `emit` thóc;
-  - mỗi khung, `update` ghi ma trận instance, góc cúi đầu, góc cánh và mảng mỏ, rồi gọi `computeBoundingSphere()`. Thuộc tính ghi lại
-    mỗi khung thì dùng `DynamicDrawUsage`.
+  - mỗi khung, `update` gọi `shared.cot.pose(state, k)`: Cốt ghi chỗ, hướng (`pose`) và góc cúi đầu (`head`) vào thuộc tính instance riêng
+    của gà con, và bốn uniform của gà mẹ (lớp 1); lớp này ghi mảng mỏ.
+  - Ma trận instance giữ đơn vị và `frustumCulled = false` (lớp 1), nên không ghi ma trận và không cần `computeBoundingSphere()`.
+  - `pose`, `head` ghi lại mỗi khung, nên là `instancedDynamicBufferAttribute` (`DynamicDrawUsage`).
 - **Núm:** `handful` (số hạt mỗi nắm), `bounce`, `gravity` (select: `traiDat`, `trang`), `count` (trần số hạt, `via: 'js'`, như đom đóm).
 - **Thí nghiệm "Tô theo luồng"** (`toTheoLuong`): mỗi hạt một màu theo chỉ số luồng GPU (`instanceIndex`). Thấy được mỗi luồng giữ một
   hạt, và mỗi nắm là một đoạn liền của vòng đệm.
@@ -4366,10 +4387,12 @@ chuyển động ở lại trong bức.
 **Unit của Bức 4** (`tests/paintings/dan-ga-me-con/`):
 - `cot-bo-cuc`: đủ mười gà con; mọi chỗ "nhà" nằm trên sàn, không chồng lên nhau hay lên gà mẹ (trừ con trèo lưng và con nấp bụng);
   chỗ nhà của tám con còn lại cách tâm mẹ hơn 2,2, nên lúc nghỉ `quanhMe` chỉ đếm con trèo lưng và con nấp bụng. `beakTip`: lúc ngẩng
-  là `CHICK.beak`, cúi hẳn thì mỏ chạm sàn, cúi dần thì mỏ hạ dần.
+  là `CHICK.beak`, cúi hẳn thì mỏ chạm sàn, cúi dần thì mỏ hạ dần. Khung máy tính 16 : 10 và 16 : 9: tờ giấy chiếm 55–61% bề cao, tâm
+  giấy cao hơn tâm khung một chút; điện thoại dọc 390 × 844: cả tờ giấy trong khung.
 - `cot-hinh-ga`: gà mẹ, gà con đủ phần; đầu mỏ của hình khớp `CHICK`; khớp của gà mẹ ở tọa độ thế giới; con trèo lưng và con nấp bụng sát
-  mẹ mà không lún vào mình, đầu, cánh của mẹ, chân con trèo lưng chạm lưng; ở góc nhìn của tranh (khung 16 : 10 và 390 × 844), tia qua đầu
-  và mình mỗi con trúng chính nó trước (không con nào bị che hẳn).
+  mẹ mà không lún vào khối nào của mẹ (cầu xoay, nón, trụ: đọc chỗ thật qua `placement()`, chung với hình), đáy chân con trèo lưng chạm
+  lưng; ở góc nhìn của tranh (khung 16 : 10 và 390 × 844), tia qua tâm đầu và tâm mình (đọc từ `CHICK_SHAPE`) mỗi con trúng chính nó
+  trước (không con nào bị che hẳn).
 - `dan-ga-song`:
   - chạm thì 3–4 con rảnh ở gần nhất chạy tới, và tới nơi đúng lúc tính theo tốc độ; mổ 8 giây rồi về;
   - giữ thì mọi con rảnh về các chỗ quanh mẹ, không hai con một chỗ; thả thì tản ra;
@@ -4393,6 +4416,8 @@ chuyển động ở lại trong bức.
 **E2e riêng** (`e2e/dan-ga-me-con.spec.js`; WebGL2 trên SwiftShader là cổng chặn, WebGPU không chặn):
 - Góc nhìn của tranh: vùng giữa khung sáng (giấy), hai dải trên và dưới tối (ván); mình gà mẹ in màu vàng hòe (độ bão hòa > 0,15).
   Vòng mặt đa diện thành nét (§20.4 lớp 3) chỉ thấy rõ ở DPR 2, nên kiểm bằng ảnh ở điểm duyệt ảnh, không bằng e2e ở khung 640 × 400.
+- Chữ trên ván tối: ở 1280 × 800, 1440 × 900, 1920 × 1080 và 390 × 844, khung tờ giấy (đo trên điểm ảnh của canvas) nằm dưới tên tranh và
+  dải link, trên gợi ý và thơ; cả tờ giấy trong khung.
 - Mài:
   - Bản nét về 0 thì tỉ lệ điểm tối trong vùng giấy giảm hẳn;
   - `misregister` bằng 6 thì ảnh khác lúc bằng 0;
@@ -4447,18 +4472,20 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
   - Cách tránh: Bức 4 dùng `positionViewDirection`, vì three tự xử lý camera trực giao (Phụ lục A.91). Task đầu soát lại cả xưởng bằng
     một cảnh khung chạy thật.
 - **Dò cạnh chỉ trên độ sâu bỏ sót nét:** hai mặt chạm nhau mà cùng độ sâu thì không có bậc.
-  - Cách tránh: độ lệch khỏi mặt phẳng bắt cả nếp gấp (§20.4 lớp 3); nét trong vẽ trong shader.
+  - Cách tránh: ngoài bậc (độ lệch khỏi mặt phẳng), Bản nét đo góc gãy của mặt, nên bắt cả nếp gấp (§20.4 lớp 3); nét trong vẽ trong
+    shader. Chỗ nối nông (cánh gà mẹ áp sát sườn, 13–20°) vẫn không có nét: ranh màu thay cho nét ở đó.
   - Nếu vẫn thiếu: thêm kênh normal vào MRT từ đầu cho bức cần (một trường tùy chọn mới, biên dịch một lần lúc dựng). Việc này để ở §16.
 - **Dò nếp gấp vẽ cả mặt đa diện:** khối cầu của gà là đa diện; đo độ đổi độ dốc thì gần mép khối, nơi mặt nghiêng gần 90°, hai mặt kề
   nhau cũng thành nét (GĐ 8 Task 4).
-  - Cách tránh: đo góc gãy của mặt (§20.4 lớp 3), và `segments` mặc định 32.
+  - Cách tránh: đo góc gãy của mặt (§20.4 lớp 3); `segments` mặc định 32, khối dẹt (cánh, bàn chân) nhiều vòng hơn (`detail`, §20.4
+    lớp 1).
 - **Lấy mẫu texture độ sâu ở WebGL2.** View Độ sâu đã đọc texture này ở cả hai backend từ GĐ 4, nên lấy mẫu ở điểm lân cận chỉ là cùng
   phép đọc. Nếu hỏng: bọc `convertToTexture`, thêm một lượt vẽ như FXAA.
 - **Bức 1 đổi ảnh khi rút bể hạt.**
   - Cách tránh: test so mã với fixture ghi TRƯỚC khi rút; chạy lại đủ e2e của Bức 1.
   - Đường lùi: Bức 1 giữ code cũ, chỉ Bức 4 dùng `lib/tsl/particles.js`, và §16 ghi việc chuyển Bức 1 để sau.
 - **Ảnh sáng làm hỏng chữ và test chung:** chữ màu ngà trên giấy không đọc được; test chung đòi đủ điểm tối.
-  - Cách tránh: tờ giấy chỉ chiếm chừng 75% bề cao, chữ nằm trên ván tối.
+  - Cách tránh: tờ giấy chỉ chiếm chừng 58% bề cao, chữ nằm trên ván tối (e2e "chữ trên ván tối", §20.1).
   - Mài về Cốt thì giấy thành đất sét, nên độ sáng trung bình vẫn dưới 0,8.
 - **Dạng đóng của đàn gà phức tạp** khi các mốc chồng nhau (rắc trong lúc giữ, giữ trong lúc đang chạy tới). Cách tránh: một thứ tự ưu tiên
   duy nhất (§20.5), test vị trí liên tục ở mỗi mốc, tối đa 32 mốc.

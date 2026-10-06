@@ -4,9 +4,9 @@ import { abs, atan, float, floor, max, screenUV, smoothstep, textureSize, vec2 }
 /** Bốn hướng lấy mẫu: ngang, dọc, hai chéo. Mỗi hướng một cặp điểm đối xứng quanh điểm giữa: lưới 3×3, chín lần đọc texture. */
 const DIRS = [[1, 0], [0, 1], [1, 1], [1, -1]];
 /**
- * Góc gãy của mặt (radian, chừng 34°) từ đó nếp gấp thành nét đậm hẳn; bắt đầu hiện từ 0,6 lần góc này (chừng 21°). Khối cầu của gà là
- * đa diện: hai mặt kề nhau gãy chừng 360° / segments (15° ở 24 vòng), nên dưới ngưỡng; chỗ nối thật (đầu vào mình, cánh áp thân, mỏ, mào)
- * gãy từ 40° trở lên.
+ * Góc gãy của mặt (radian, chừng 34°) từ đó nếp gấp thành nét đậm hẳn; bắt đầu hiện từ 0,6 lần góc này (chừng 21°). Khối của gà là đa
+ * diện: ở mặc định, hai mặt kề nhau của mọi khối gãy dưới 20° (khối dẹt có nhiều vòng hơn: spec §20.4 lớp 1), nên dưới ngưỡng. Chỗ nối thật
+ * gãy nhiều hơn (đầu vào mình 92–123°, mỏ 42–60°, đuôi 34–69°), trừ đoạn cánh gà mẹ áp sát sườn (13–20°): ở đó chỉ còn ranh màu.
  */
 const KINK = 0.6;
 

@@ -6,9 +6,10 @@ const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
 
 /**
  * Tờ giấy cong như phông chụp ảnh (spec §20.1), đơn vị cảnh 10 cm: sàn phẳng rộng 14 từ mép trước z = 5 tới z = −3; chỗ uốn là cung tròn
- * bán kính 2; vách đứng ở z = −5, mép trên ở y = 6. Sàn sâu 8 + chỗ uốn 2 = 10.
+ * bán kính 2; vách đứng ở z = −5, mép trên ở y = 4,5 (điểm duyệt ảnh GĐ 8 Task 4: vách cao 6 để trống gần nửa tờ giấy phía trên đàn gà).
+ * Sàn sâu 8 + chỗ uốn 2 = 10.
  */
-export const PAPER = Object.freeze({ width: 14, front: 5, back: -3, bend: 2, top: 6 });
+export const PAPER = Object.freeze({ width: 14, front: 5, back: -3, bend: 2, top: 4.5 });
 /** Phần sàn phẳng mà gà đứng và thóc nằm được, chừa mép 0,3. */
 export const FLOOR = Object.freeze({ x: Object.freeze([-6.7, 6.7]), z: Object.freeze([-2.7, 4.7]) });
 /** Hướng nắng (đơn vị, chỉ VỀ phía nắng): từ trên, bên trái, phía trước (§20.1). */
@@ -57,18 +58,19 @@ export const HOMES = Object.freeze([
 ].map((h) => Object.freeze({ ...h, at: Object.freeze(h.at) })));
 
 /**
- * Góc nhìn của tranh (CameraSpec, §20.2). Nhìn chếch xuống 20°; điểm nhìn đặt sao cho tờ giấy nằm giữa khung theo chiều dọc: mép trước
- * và mép trên của giấy cách tâm khung chừng 4,5 đơn vị, trong khung cao 12, nên giấy chiếm chừng 75% bề cao và chữ nằm trên ván tối.
- * (Số §20.2 cũ, target [0; 1,6; 0], để giấy lệch hẳn lên trên: mép trên chỉ cách mép khung 0,15. Đã sửa §20.2 cùng task.)
+ * Góc nhìn của tranh (CameraSpec, §20.2). Nhìn chếch xuống 20° (position − target = [0; 4,4; 12]). Khung cao 13,2 và tờ giấy cao 7,67 trên
+ * màn, nên giấy chiếm chừng 58% bề cao khung, nằm cao hơn tâm khung 0,33 đơn vị: ở máy tính 16 : 10 tới 16 : 9 (800–1080 điểm ảnh CSS bề
+ * cao), tên tranh, dải link ở trên và gợi ý, thơ ở dưới đều nằm trên ván tối, không đè lên giấy (điểm duyệt ảnh GĐ 8 Task 4; khung cao 12
+ * cũ để giấy chiếm 75% bề cao, chữ đè lên giấy). Điểm nhìn gần tâm gà mẹ, nên kéo xoay thì đàn gà quay quanh chính nó.
  * polar đo từ trục y: xoay dọc 10°–70° trên mặt sàn là polar 80°–20°.
  * `home`: buông tay 3 giây thì camera êm êm về góc này trong 1,2 giây (spec §20.2, CameraSpec.home, engine/gpu/home.js).
  * @type {import('../../../engine/contracts/runtime.js').CameraSpec}
  */
 export const CAMERA = Object.freeze({
   kind: 'ortho',
-  position: [0, 7.2, 11.55],
-  target: [0, 2.8, -0.45],
-  height: 12,
+  position: [0, 6.26, 11.9],
+  target: [0, 1.86, -0.1],
+  height: 13.2,
   minWidth: 15.5,
   zoom: [1, 2.5],
   azimuth: [-75 * RAD, 75 * RAD],

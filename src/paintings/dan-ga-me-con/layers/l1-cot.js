@@ -11,8 +11,9 @@ import { PART, chickGeometry, chickPosition, henGeometry, henPosition, henWingPo
 export const id = 'cot';
 
 export const knobs = [
-  // Số vòng quanh của mỗi khối cầu: ít thì gà thành khối nhiều mặt. Dựng lại hình, không biên dịch lại. Mặc định 32: hai mặt kề nhau gãy
-  // chừng 11°, dưới góc mà Bản nét coi là nếp gấp, cả ở hai đầu mình gà mẹ (cầu kéo dãn gấp đôi theo chiều dài).
+  // Số vòng quanh của mỗi khối: ít thì gà thành khối nhiều mặt. Dựng lại hình, không biên dịch lại. Mặc định 32: hai mặt kề nhau của mọi
+  // khối gãy dưới 20° (mình gà mẹ, cầu kéo dãn, tới 18,6°; khối dẹt như cánh, bàn chân có nhiều vòng hơn: `detail` ở parts/cot-hinh-ga.js),
+  // dưới góc mà Bản nét bắt đầu coi là nếp gấp (chừng 21°).
   { id: 'segments', via: 'rebuild', min: 8, max: 48, step: 4, value: 32 },
   { id: 'wireframe', kind: 'bool', via: 'rebuild', value: false },
 ];

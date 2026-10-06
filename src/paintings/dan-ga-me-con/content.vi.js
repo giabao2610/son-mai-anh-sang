@@ -65,12 +65,15 @@ export default {
     'ban-net': {
       understand: 'Bản nét là nét mực đen in sau cùng, như ván khắc nét của tranh Đông Hồ. Không nét nào được vẽ sẵn: cảnh vẽ xong thì '
         + 'mỗi điểm ảnh đọc ảnh độ sâu ở tám điểm quanh nó. Trên một mặt phẳng, độ sâu hai bên cộng lại bằng hai lần độ sâu ở giữa, '
-        + 'dù mặt nghiêng tới đâu; lệch hẳn là có mép vật hay nếp gấp, và điểm ảnh ấy thành mực. Với camera trực giao, ảnh độ sâu đã '
-        + 'tuyến tính nên đọc thẳng được, không tốn thêm lượt vẽ nào.',
+        + 'dù mặt nghiêng tới đâu; lệch hẳn là có mép vật, và điểm ảnh ấy thành mực. Nếp gấp, như chỗ đầu nối mình, thì đo bằng góc: mặt '
+        + 'gãy quá chừng 30° là thành nét. Đo góc chứ không đo độ dốc, vì gần mép khối mặt gần như dựng đứng, nên hai mặt kề nhau của '
+        + 'khối đa diện dù gãy ít cũng chênh độ dốc rất lớn. Với camera trực giao, ảnh độ sâu đã tuyến tính nên đọc thẳng được, không tốn '
+        + 'thêm lượt vẽ nào.',
       learned: [
         'Dò cạnh là một bước hậu kỳ: đọc ảnh độ sâu ở các điểm lân cận, không cần biết vật nào là vật nào.',
         'Độ lệch khỏi mặt phẳng (đạo hàm bậc hai) bằng 0 trên mọi mặt phẳng, nên mặt sàn nghiêng không thành nét.',
         'Mép tờ giấy cũng là một bậc độ sâu (giấy đứng trước khoảng trống), nên khung tranh tự có nét.',
+        'Nếp gấp đo bằng góc gãy của mặt, tính từ độ dốc của độ sâu hai bên: khối cầu đủ nhiều mặt thì không thành vòng nét.',
       ],
       readMore: [
         { title: 'Roystan · Outline shader', url: 'https://roystan.net/articles/outline-shader/' },

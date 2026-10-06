@@ -7,6 +7,11 @@ import {
 } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
 
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+/** Bốn góc ngoài cùng của tờ giấy: hai góc mép trước (trên sàn) và hai góc mép trên (đỉnh vách). */
+const sheetCorners = () => [-1, 1].flatMap((side) => [
+  [side * PAPER.width / 2, 0, PAPER.front],
+  [side * PAPER.width / 2, PAPER.top, PAPER.back - PAPER.bend],
+]);
 const DEG = 180 / Math.PI;
 const inFloor = ([x, z]) => x >= FLOOR.x[0] && x <= FLOOR.x[1] && z >= FLOOR.z[0] && z <= FLOOR.z[1];
 
@@ -17,8 +22,28 @@ describe('cot-bo-cuc', () => {
     expect(Math.atan2(dy, Math.hypot(dx, dz)) * DEG).toBeCloseTo(20, 0);
     expect(CAMERA.azimuth.map((a) => a * DEG)).toEqual([-75, 75].map((a) => expect.closeTo(a, 6)));
     expect(CAMERA.polar.map((a) => 90 - a * DEG)).toEqual([70, 10].map((a) => expect.closeTo(a, 6))); // polar đo từ trục y
-    expect([CAMERA.height, CAMERA.minWidth, CAMERA.zoom, CAMERA.breathe]).toEqual([12, 15.5, [1, 2.5], 0]);
+    expect([CAMERA.height, CAMERA.minWidth, CAMERA.zoom, CAMERA.breathe]).toEqual([13.2, 15.5, [1, 2.5], 0]);
     expect(CAMERA.home).toEqual({ after: 3, duration: 1.2 }); // tranh tự khép lại (§20.2, §20.6 mục 3)
+  });
+
+  it.each([['16 : 10', 1.6], ['16 : 9', 16 / 9]])('khung máy tính %s: tờ giấy chiếm chừng 58% bề cao, nằm cao hơn tâm khung một chút, đủ bề ngang; còn ván tối trên và dưới cho chữ (điểm duyệt ảnh)', (_, aspect) => {
+    const cam = createCamera(CAMERA, aspect);
+    const ys = sheetCorners().map((p) => new Vector3(...p).project(cam));
+    const top = Math.max(...ys.map((p) => p.y));
+    const bottom = Math.min(...ys.map((p) => p.y));
+    expect((top - bottom) / 2, 'phần bề cao khung').toBeGreaterThan(0.55);
+    expect((top - bottom) / 2).toBeLessThan(0.61);
+    expect((top + bottom) / 2, 'tâm giấy cao hơn tâm khung').toBeGreaterThan(0.02);
+    expect((top + bottom) / 2).toBeLessThan(0.08);
+    for (const p of ys) expect(Math.abs(p.x), 'giấy trong khung').toBeLessThan(0.8);
+  });
+
+  it('điện thoại dọc 390 × 844: khung nới theo minWidth, cả tờ giấy nằm trong khung', () => {
+    const cam = createCamera(CAMERA, 390 / 844);
+    for (const p of sheetCorners().map((c) => new Vector3(...c).project(cam))) {
+      expect(Math.abs(p.x)).toBeLessThan(1);
+      expect(Math.abs(p.y)).toBeLessThan(1);
+    }
   });
 
   it('viewAngle (số đo goc): 0 ở góc của tranh; xoay ngang 30° quanh trục đứng qua điểm nhìn ra acos(cos²e·cos30° + sin²e), nhỏ hơn 30° vì camera nhìn chếch xuống; đổi riêng độ cao 10° ra đúng 10°', () => {
@@ -90,5 +115,6 @@ describe('cot-bo-cuc', () => {
       expect(p.every(Number.isFinite) && inFloor(p), `${p}`).toBe(true);
     }
     expect(PAPER.front - PAPER.back).toBe(8); // sàn phẳng sâu 8, cộng chỗ uốn (bán kính 2) là 10 như §20.1
+    expect(PAPER.top).toBe(4.5); // vách thấp (điểm duyệt ảnh): không còn nửa tờ giấy trống phía trên đàn gà
   });
 });

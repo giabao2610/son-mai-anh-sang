@@ -4,7 +4,7 @@ import { PAPER } from './cot-bo-cuc.js';
 
 const FLAT = PAPER.front - PAPER.back; // 8
 const ARC = (Math.PI / 2) * PAPER.bend; // ≈ 3,14
-const WALL = PAPER.top - PAPER.bend; // 4
+const WALL = PAPER.top - PAPER.bend; // 2,5
 /** Chiều dài mặt cắt, từ mép trước tới mép trên (đơn vị cảnh). Giấy điệp đặt noise theo UV này. */
 export const PAPER_LENGTH = FLAT + ARC + WALL;
 

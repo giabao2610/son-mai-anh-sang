@@ -49,11 +49,11 @@ describe('l1-cot (Bức 4)', () => {
     const { shared, layers, ctx } = build();
     for (const fn of ['base', 'fill', 'ink', 'paper', 'glint']) expect(typeof shared.cot.recipe[fn], fn).toBe('function');
     expect(shared.cot.floor.x).toEqual([-6.7, 6.7]);
-    expect(shared.cot.pixel.value).toBeCloseTo(12 / 400, 9); // khung nhìn cao 12 trên 400 điểm ảnh của canvas giả
+    expect(shared.cot.pixel.value).toBeCloseTo(CAMERA.height / 400, 9); // khung nhìn cao CAMERA.height trên 400 điểm ảnh của canvas giả
     ctx.camera.zoom = 2;
     ctx.camera.updateProjectionMatrix();
     layers.cot.update(0, 0);
-    expect(shared.cot.pixel.value).toBeCloseTo(12 / 2 / 400, 9);
+    expect(shared.cot.pixel.value).toBeCloseTo(CAMERA.height / 2 / 400, 9);
   });
 
   it('số đo goc: đọc camera SỐNG của sân khấu, 0,0° ở góc của tranh, đổi theo camera (e2e đọc số này để kiểm tranh tự khép lại)', () => {

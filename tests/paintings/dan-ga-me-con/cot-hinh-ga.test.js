@@ -1,10 +1,10 @@
-// tests/paintings/dan-ga-me-con/cot-hinh-ga.test.js — hình gà đủ phần (spec §20.3) và chỗ của chúng: phần nào của gà mẹ, gà con có trong geometry; đầu mỏ khớp CHICK; khớp của gà mẹ ở tọa độ thế giới; con trèo lưng, con nấp bụng sát mẹ mà không lún vào mẹ; ở góc nhìn của tranh thấy được cả mười con.
+// tests/paintings/dan-ga-me-con/cot-hinh-ga.test.js — hình gà đủ phần (spec §20.3) và chỗ của chúng: phần nào của gà mẹ, gà con có trong geometry; đầu mỏ khớp CHICK; khớp của gà mẹ ở tọa độ thế giới; con trèo lưng, con nấp bụng sát mẹ mà không lún vào mọi khối của mẹ (đọc chỗ thật qua placement()); ở góc nhìn của tranh thấy được cả mười con.
 import { describe, it, expect } from 'vitest';
-import { Mesh, MeshBasicMaterial, Raycaster, Vector2, Vector3 } from 'three/webgpu';
+import { ConeGeometry, CylinderGeometry, Matrix4, Mesh, MeshBasicMaterial, Raycaster, SphereGeometry, Vector2, Vector3 } from 'three/webgpu';
 import { createCamera } from '../../../src/engine/gpu/camera.js';
 import { CAMERA, CHICK, HEN, HOMES } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
 import {
-  HEN_JOINTS, HEN_SHAPE, PART, chickGeometry, henGeometry,
+  CHICK_SHAPE, HEN_JOINTS, HEN_SHAPE, PART, chickGeometry, henGeometry, placement,
 } from '../../../src/paintings/dan-ga-me-con/parts/cot-hinh-ga.js';
 
 const SEGMENTS = 24;
@@ -26,11 +26,26 @@ const toHen = ([x, y, z]) => {
   const h = -HEN.heading;
   return [dx * Math.cos(h) + dz * Math.sin(h), y, dz * Math.cos(h) - dx * Math.sin(h)];
 };
-/** Các khối cầu kéo dãn của gà mẹ (mình, đầu, hai cánh…), trong khung của mẹ. */
-const henBalls = [...HEN_SHAPE.body, HEN_SHAPE.wingL, HEN_SHAPE.wingR].filter((s) => s.kind === 'ball');
-/** > 1 là ngoài khối cầu kéo dãn s (bán kính r, tỉ lệ scale, tâm at). */
-const outside = (s, [x, y, z]) => ((x - s.at[0]) / (s.r * s.scale[0])) ** 2 + ((y - s.at[1]) / (s.r * s.scale[1])) ** 2
-  + ((z - s.at[2]) / (s.r * s.scale[2])) ** 2;
+/** Mọi khối của gà mẹ (mình, đuôi, chân, bàn chân, đầu, mỏ, mào, mắt, ong, hai cánh), trong khung của mẹ. */
+const henSolids = [...HEN_SHAPE.body, HEN_SHAPE.wingL, HEN_SHAPE.wingR];
+/** Phần có tên của một khối, cho lời báo lỗi. */
+const nameOf = (shape) => `${shape.part} ${shape.kind} ở ${shape.at}`;
+/**
+ * Điểm p (khung của khối) có nằm trong khối lý tưởng không: đưa p về dạng chuẩn bằng nghịch đảo của placement() (đúng phép đặt mà hình
+ * dùng, kể cả kéo dãn, xoay, dẹt), rồi so với cầu, nón, trụ chuẩn của three (dọc +y, tâm ở gốc). Lưới đa diện nằm trong khối lý tưởng, nên
+ * phép thử này chặt hơn lưới thật.
+ */
+const inside = (shape, p) => {
+  const q = new Vector3(...p).applyMatrix4(new Matrix4().copy(placement(shape)).invert());
+  if (shape.kind === 'ball') return q.length() < shape.r;
+  if (Math.abs(q.y) > shape.h / 2) return false;
+  const radius = shape.kind === 'cone' ? (shape.r * (shape.h / 2 - q.y)) / shape.h : shape.r;
+  return Math.hypot(q.x, q.z) < radius;
+};
+/** Tâm (trong khung của gà con) của khối đầu tiên mang phần `part`. */
+const centerOf = (part) => CHICK_SHAPE.find((s) => s.part === part).at;
+/** Bàn chân của gà con: đáy của mỗi trụ chân (dời xuống nửa chiều cao từ tâm). */
+const chickFeet = () => CHICK_SHAPE.filter((s) => s.part === 'LEG').map((s) => [s.at[0], s.at[1] - s.h / 2, s.at[2]]);
 
 describe('cot-hinh-ga', () => {
   it('gà con đủ phần: mình, đuôi, chân, cánh, đầu, mỏ, mắt; gà mẹ: mình có cả mào và con ong, hai cánh là hai geometry riêng', () => {
@@ -72,26 +87,50 @@ describe('cot-hinh-ga', () => {
     expect(HEN_JOINTS.neck[0], 'cổ ở phía trước tâm mình').toBeLessThan(HEN.at[0] - 0.5);
   });
 
-  it('con trèo lưng và con nấp bụng sát mẹ mà không lún vào mẹ: mọi đỉnh (trừ chân con trèo lưng) ở ngoài mình, đầu, cánh của mẹ', () => {
+  it('phép thử "nằm trong khối" khớp hình thật của three: mọi đỉnh của từng khối gà mẹ (cầu xoay, nón dẹt, trụ) co 1% về tâm thì trong, nở 1% thì ngoài', () => {
+    // Đỉnh của SphereGeometry, ConeGeometry, CylinderGeometry nằm đúng trên mặt khối lý tưởng; khối nào cũng lồi, tâm ở trong. Sai hướng nón
+    // (đỉnh ở −y), quên phép xoay hay phép dẹt thì đỉnh co vào vẫn bị coi là ngoài, hay đỉnh nở ra vẫn bị coi là trong.
+    const canonical = (s) => {
+      if (s.kind === 'ball') return new SphereGeometry(s.r, 24, 14);
+      if (s.kind === 'cone') return new ConeGeometry(s.r, s.h, 24);
+      return new CylinderGeometry(s.r, s.r, s.h, 24);
+    };
+    for (const shape of henSolids) {
+      const m = placement(shape);
+      const center = new Vector3().setFromMatrixPosition(m);
+      const { position } = canonical(shape).applyMatrix4(m).attributes;
+      for (let i = 0; i < position.count; i += 1) {
+        const v = new Vector3().fromBufferAttribute(position, i);
+        expect(inside(shape, v.clone().lerp(center, 0.01).toArray()), `${nameOf(shape)}: đỉnh ${i} co vào`).toBe(true);
+        expect(inside(shape, v.clone().sub(center).multiplyScalar(1.01).add(center).toArray()), `${nameOf(shape)}: đỉnh ${i} nở ra`).toBe(false);
+      }
+    }
+  });
+
+  it('con trèo lưng và con nấp bụng sát mẹ mà không lún vào mẹ: mọi đỉnh (trừ chân con trèo lưng) ở ngoài mọi khối của mẹ', () => {
     const chick = chickGeometry({ segments: SEGMENTS });
     for (const kind of ['back', 'belly']) {
       const home = HOMES.find((h) => h.kind === kind);
       const keep = kind === 'back' ? (p) => p !== PART.LEG : () => true;
       for (const v of vertices(chick, keep)) {
         const p = toHen(place(v, restPose(home)));
-        for (const s of henBalls) expect(outside(s, p), `con ${kind}: đỉnh ${p.map((c) => c.toFixed(2))} lún vào ${s.part}`).toBeGreaterThan(1);
+        for (const s of henSolids) expect(inside(s, p), `con ${kind}: đỉnh ${p.map((c) => c.toFixed(2))} lún vào ${nameOf(s)}`).toBe(false);
       }
     }
   });
 
-  it('con trèo lưng đứng ĐÚNG trên lưng mẹ: chân chạm mặt lưng (lệch dưới 0,05), không lơ lửng', () => {
+  it('con trèo lưng đứng ĐÚNG trên lưng mẹ: đáy mỗi chân (đọc từ CHICK_SHAPE) chạm mặt lưng (lệch dưới 0,05), không lơ lửng', () => {
     const home = HOMES.find((h) => h.kind === 'back');
     const body = HEN_SHAPE.body.find((s) => s.part === 'BODY');
-    const [sx, sy, sz] = body.scale.map((k) => k * body.r);
-    for (const side of [-1, 1]) {
-      const foot = toHen(place([0.14 * side, 0, 0], restPose(home)));
-      const surface = body.at[1] + sy * Math.sqrt(1 - ((foot[0] - body.at[0]) / sx) ** 2 - ((foot[2] - body.at[2]) / sz) ** 2);
-      expect(Math.abs(foot[1] - surface), `chân ${side}`).toBeLessThan(0.05);
+    for (const foot of chickFeet().map((f) => toHen(place(f, restPose(home))))) {
+      // Mặt lưng ngay dưới (hay trên) bàn chân: tìm đôi y, một trong một ngoài khối mình, rồi chia đôi.
+      let [lo, hi] = [body.at[1], body.at[1] + 2 * body.r * body.scale[1]];
+      for (let i = 0; i < 50; i += 1) {
+        const mid = (lo + hi) / 2;
+        if (inside(body, [foot[0], mid, foot[2]])) lo = mid;
+        else hi = mid;
+      }
+      expect(Math.abs(foot[1] - lo), `chân ở ${foot.map((c) => c.toFixed(2))}`).toBeLessThan(0.05);
     }
   });
 
@@ -110,7 +149,7 @@ describe('cot-hinh-ga', () => {
     });
     const raycaster = new Raycaster();
     chicks.forEach((mesh, i) => {
-      for (const local of [[0, 0.9, 0.38], [0, 0.5, -0.05]]) { // tâm đầu, tâm mình
+      for (const local of [centerOf('HEAD'), centerOf('BODY')]) {
         const ndc = new Vector3(...local).applyMatrix4(mesh.matrixWorld).project(cam);
         raycaster.setFromCamera(new Vector2(ndc.x, ndc.y), cam);
         const [hit] = raycaster.intersectObjects([...henMeshes, ...chicks], false);
