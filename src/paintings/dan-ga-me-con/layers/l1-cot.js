@@ -1,4 +1,4 @@
-// paintings/dan-ga-me-con/layers/l1-cot.js — Lớp 1 · Cốt của Bức 4: tờ giấy cong, gà mẹ (mình, hai cánh), mười gà con bằng đất sét dưới đèn xưởng viết trong shader; dáng đi qua positionNode; công bố "công thức tô" (recipe) cho các lớp sau.
+// paintings/dan-ga-me-con/layers/l1-cot.js — Lớp 1 · Cốt của Bức 4: tờ giấy cong, gà mẹ (mình, hai cánh), mười gà con bằng đất sét dưới đèn xưởng viết trong shader; dáng đi qua positionNode, lớp Đàn gà áp dáng mỗi khung qua shared.cot.pose; công bố "công thức tô" (recipe) cho các lớp sau.
 import { Group, InstancedBufferAttribute, InstancedMesh, Matrix4, Mesh, NodeMaterial } from 'three/webgpu';
 import {
   Fn, attribute, color, dot, float, instancedBufferAttribute, instancedDynamicBufferAttribute, max, mix, normalWorld, positionWorld, uniform,
@@ -19,6 +19,10 @@ export const knobs = [
   { id: 'segments', via: 'rebuild', min: 8, max: 48, step: 4, value: 32 },
   { id: 'wireframe', kind: 'bool', via: 'rebuild', value: false },
 ];
+
+const TAU = Math.PI * 2;
+/** Góc d (rad) về [−π, π): quay từ hướng này sang hướng kia theo đường ngắn nhất. */
+const shortest = (d) => ((((d % TAU) + TAU + Math.PI) % TAU) - Math.PI);
 
 /** Hướng nhìn của tranh (đơn vị, từ điểm nhìn về camera): Tấm bìa phẳng dẹt gà theo hướng này. */
 const VIEW = (() => {
@@ -98,13 +102,14 @@ export function createLayer(ctx, shared) {
   }
 
   // Mười gà con: MỘT InstancedMesh, ma trận instance giữ đơn vị. Chỗ đứng và hướng (pose: x, y, z, hướng) và góc cúi đầu (head, 0–1) là
-  // thuộc tính instance mà lớp Đàn gà ghi MỖI khung (Task 8), nên dùng instancedDynamicBufferAttribute; chỉ số màu (pigment, Bản màu đọc)
-  // chỉ ghi lúc dựng. Lúc dựng: dáng nghỉ ở nhà (HOMES), đầu ngẩng.
+  // thuộc tính instance mà lớp Đàn gà ghi MỖI khung (qua shared.cot.pose), nên dùng instancedDynamicBufferAttribute; chỉ số màu (pigment,
+  // Bản màu đọc) chỉ ghi lúc dựng. Lúc dựng: dáng nghỉ ở nhà (HOMES), đầu ngẩng.
+  const rest = HOMES.map((home) => [home.at[0], home.kind === 'back' ? HEN.back : 0, home.at[1], home.heading]);
   const poseAttr = new InstancedBufferAttribute(new Float32Array(HOMES.length * 4), 4);
   const headAttr = new InstancedBufferAttribute(new Float32Array(HOMES.length), 1);
   const pigmentAttr = new InstancedBufferAttribute(new Float32Array(HOMES.length), 1);
   HOMES.forEach((home, i) => {
-    poseAttr.setXYZW(i, home.at[0], home.kind === 'back' ? HEN.back : 0, home.at[1], home.heading);
+    poseAttr.setXYZW(i, ...rest[i]);
     pigmentAttr.setX(i, home.pigment);
   });
   const chickMaterial = make('ga', {
@@ -125,6 +130,28 @@ export function createLayer(ctx, shared) {
   };
   syncPixel();
 
+  /**
+   * Dáng của đàn gà lúc này (dan-ga-song.js#state), hòa từ dáng nghỉ theo k (trọng số của lớp Đàn gà: 0 là dáng nghỉ, như tượng). Hướng
+   * đi đường ngắn nhất. Lớp Đàn gà gọi mỗi khung; chưa có lớp ấy thì gà đứng ở dáng nghỉ ghi lúc dựng. Chỉ ghi thuộc tính và uniform: ma
+   * trận instance giữ đơn vị, không computeBoundingSphere (frustumCulled = false).
+   * @param {{ chicks: { x: number, y: number, z: number, heading: number, head: number }[], hen: { wing: number, nod: number, look: number,
+   *   scratch: number } }} state
+   * @param {number} k
+   */
+  const pose = (state, k) => {
+    state.chicks.forEach((c, i) => {
+      const [x, y, z, h] = rest[i];
+      poseAttr.setXYZW(i, x + (c.x - x) * k, y + (c.y - y) * k, z + (c.z - z) * k, h + shortest(c.heading - h) * k);
+      headAttr.setX(i, c.head * k);
+    });
+    poseAttr.needsUpdate = true;
+    headAttr.needsUpdate = true;
+    henWing.value = state.hen.wing * k;
+    henNod.value = state.hen.nod * k;
+    henLook.value = state.hen.look * k;
+    henScratch.value = state.hen.scratch * k;
+  };
+
   const objects = [paper, hen, chicks];
   const meshes = [paper, henBody, wingL, wingR, chicks];
   ctx.scene.add(...objects);
@@ -141,6 +168,7 @@ export function createLayer(ctx, shared) {
       group: hen, body: henBody, wingL, wingR, wing: henWing, nod: henNod, look: henLook, scratch: henScratch, bodyFrame: henBodyFrame(),
     },
     chicks: { mesh: chicks, pose: poseAttr, head: headAttr },
+    pose,
   };
 
   let disposed = false;

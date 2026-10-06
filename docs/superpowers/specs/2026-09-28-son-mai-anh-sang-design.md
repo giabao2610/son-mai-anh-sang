@@ -3938,19 +3938,20 @@ spec.
        nên chạm ở đâu cũng có phản hồi. Chạm sát mép sàn thì thóc rơi vào trong một chút (tới 1,25), đúng tâm vòng gà con đứng quanh
        (§20.5), để mỏ chạm sàn ngay trên nắm thóc.
      - Một nắm chừng 120 hạt (núm `handful`) văng ra từ cao chừng 3 (tầm tay), tỏa hình nón, rơi theo trọng lực, nảy một hai lần, lăn rồi
-       nằm yên.
+       nằm yên, thành một nắm gọn (nửa số hạt trong chừng 0,4), để các con đứng quanh mổ trúng (§20.4 lớp 5).
        - Trọng lực là của Trái Đất: 9,81 m/s², tức 98,1 đơn vị/s². Thóc chạm sàn chừng 0,25 giây sau khi văng, như rắc thật.
        - Núm `gravity` cho chọn trọng lực của trăng, để so với lá rơi của Bức 3.
      - Ba tới bốn gà con đang rảnh, ở gần chỗ rắc nhất, chạy tới. Tới nơi thì mổ quanh đó chừng 8 giây, rồi đi về chỗ của mình.
-     - Mỏ đang mổ chạm hạt nào thì hạt đó biến mất (§20.4 lớp 5). Hạt không con nào ăn thì nằm 30 giây rồi nhỏ dần.
+     - Mỏ đang mổ chạm hạt nào thì hạt đó biến mất (§20.4 lớp 5): nắm vơi đi thấy rõ, các con ăn chừng nửa nắm. Hạt không con
+       nào ăn thì nằm 30 giây rồi nhỏ dần.
   2. **Giữ là gà mẹ gọi con** (`'hold-start'` → `'hold-end'`):
      - Gà mẹ xòe hai cánh, cúi đầu gọi "cục cục" theo nhịp. Mọi gà con đang rảnh chạy về tám chỗ quanh và dưới cánh mẹ; con
        trèo lưng và con nấp bụng vốn đã ở sát mẹ, nên ở yên.
      - Buông tay thì mẹ khép cánh, các con tản ra: tới chỗ rắc mới nhất nếu nắm đó mới rắc chưa tới 20 giây, không thì về chỗ của mình.
      - Camera không xoay trong lúc giữ: xưởng tắt OrbitControls khi giữ (§8.1).
   - `'swipe'` và `'double-tap'` không làm gì riêng: một lần chạm đúp là hai `'tap'`, tức hai nắm thóc. Kéo là của camera.
-- **Gà mẹ bới:** không ai chạm thì cứ 25 giây gà mẹ cào chân một lần, một nhúm 24 hạt văng ra trước mặt mẹ, và hai ba con gần nhất xúm
-  lại. Lúc mở trang đã có sẵn một nhúm 40 hạt nằm trước mặt mẹ, gà con đang mổ.
+- **Gà mẹ bới:** không ai chạm thì cứ 25 giây gà mẹ cào chân một lần, một nhúm 24 hạt văng ra trước mặt mẹ (văng thấp, chừng 10 cm), và
+  hai ba con gần nhất xúm lại. Lúc mở trang đã có sẵn một nhúm 40 hạt nằm trước mặt mẹ, gà con đang mổ.
   - Lý do: chưa ai chạm thì lớp Đàn gà vẫn có thứ để mài (test chung "mài từng lớp"), và sân gà không đứng im.
   - Giảm chuyển động: không có gà mẹ bới. Nhúm thóc lúc mở trang vẫn có.
 - **Tất định:**
@@ -4031,6 +4032,9 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
       cực trên (uv.y = 1) nằm giữa chỏm, nên Bản nét vẽ vòng mắt và con ngươi theo góc tính từ cực ấy (GĐ 8 Task 5).
     - Cốt công bố `shared.cot.hen.bodyFrame`: ma trận đưa điểm thế giới về khung của khối mình gà mẹ (mặt khối là cầu đơn vị), ở dáng
       nghỉ, cho viền cánh của Bản nét.
+    - Cốt công bố `shared.cot.pose(state, k)` (GĐ 8 Task 8): lớp Đàn gà gọi mỗi khung với trạng thái của đàn gà và k là trọng số của nó.
+      Cốt hòa từ dáng nghỉ (nhà, hướng của bố cục, đầu ngẩng) tới dáng của đàn gà theo k (hướng đi đường ngắn nhất), ghi `pose`, `head` và
+      đặt `needsUpdate`, rồi đặt bốn uniform của gà mẹ bằng góc của đàn gà nhân k. Chưa có lớp Đàn gà thì gà đứng ở dáng nghỉ ghi lúc dựng.
   - **Mười gà con** là MỘT `InstancedMesh`, ma trận instance giữ đơn vị, `frustumCulled = false` (vị trí thật chỉ có trong shader), như lá
     của Bức 3. Mỗi con mang ba thuộc tính instance riêng:
     - `pose` (x, y, z, hướng) và `head` (góc cúi, 0–1): lớp Đàn gà ghi mỗi khung, nên dùng `instancedDynamicBufferAttribute`;
@@ -4152,7 +4156,8 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   `threshold` (bậc độ sâu tối thiểu, đơn vị cảnh; mặc định 0,3, tức 3 cm), `crease` (độ đậm của nét nếp gấp, 0–1), `misregister`
   (0–6 điểm ảnh thiết bị, bước 1, mặc định 2: số nguyên như `lineWidth`, vì độ sâu đọc ở tâm điểm ảnh; shader vẫn làm tròn).
 - **Thí nghiệm** (chỉ đổi uniform, không biên dịch lại):
-  - "Chỉ bản nét" (`chiNet`): màu in của gà thành trắng giấy, chỉ còn nét đen, như bản nét in riêng trước khi in màu. Bọc `recipe.fill`
+  - "Chỉ bản nét" (`chiNet`): màu in của mọi thứ in màu (gà, thóc) thành trắng giấy, chỉ còn nét đen, như bản nét in riêng trước khi in
+    màu. Bọc `recipe.fill`
     bằng `mix(fill, diep, chiNet · w3)`: Bản nét về 0 thì màu in trở lại, nên mọi trọng số bằng 0 vẫn về đất sét;
   - "Dò cạnh theo màu" (`netTheoMau`): Sobel trên độ sáng của ảnh màu (scene pass) thay cho độ sâu, cùng lưới, bước và lệch bản. Nét mọc ở
     ranh của nấc sáng và hai bên nét trong, và mất ở chỗ hai mảng cùng màu chồng nhau (đầu gà mẹ trước mình, cùng vàng hòe). Tám mẫu màu
@@ -4201,24 +4206,43 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
 - **Thóc** là một bể hạt của `lib/tsl/particles.js` (§20.7): hai bộ đệm vec4 cấp một lần theo trần (`budget.grains`), một compute bước
   mỗi khung, vẽ bằng một `Sprite` có `count`.
   - `a = (vị trí, lúc sinh)`, `b = (vận tốc, hạt giống)`. Lúc sinh âm nghĩa là ô trống, hay hạt đã bị ăn.
-  - **Luật** (`parts/dan-ga-thoc.js`):
-    - rơi theo trọng lực;
-    - chạm sàn thì nảy với hệ số `bounce`; ma sát làm hạt lăn chậm dần rồi nằm yên;
-    - ra tới mép sàn thì dội lại;
-    - nằm yên thì thôi tích phân.
+  - **Luật** (`parts/dan-ga-thoc.js`, số ở `GRAIN`):
+    - văng ra trong một đĩa bán kính 0,15, tốc độ ngang tới 1,2 và hất lên tới 1,5; rơi theo trọng lực;
+    - đang bay mà chạm sàn là một lần rơi: nảy với hệ số `bounce`, và vận tốc ngang còn một nửa (giấy hãm hạt). Đang nằm trên sàn (lăn)
+      thì chạm sàn mỗi khung do trọng lực: chỉ kẹp lại, không nảy, không hãm thêm. Nảy lên chậm hơn 1 thì thôi nảy; nảy thấp hơn trọng lực
+      của một khung thì tự tắt, nên ở 10 khung/giây hạt vẫn nằm yên được (bản của plan thì nảy mãi, vì một khung 0,1 giây trọng lực đã
+      cộng 9,8 vào vận tốc);
+    - lăn chậm dần theo `e^(−6t)`, chậm hẳn thì nằm yên; ra tới mép sàn thì dội lại; nằm yên thì thôi tích phân, nhưng vẫn kiểm mỏ.
+    - Nắm gọn: nửa số hạt nằm trong chừng 0,4 quanh chỗ rơi, gần hết trong 0,55, nảy chừng hai lần, nằm yên sau chừng nửa giây, ở 60, 30
+      và 10 khung/giây như nhau (đo bằng bản JS của luật). Số của plan (tốc độ ngang 2,4, không hãm khi rơi, ma sát 3) tỏa nắm ra chừng 1,3
+      (gần hết trong 1,8): các con mổ trong chừng 0,5 quanh tâm nắm chỉ ăn được 3–7% mỗi nắm. Trọng lực của trăng rơi lâu hơn, nên tỏa
+      rộng gấp đôi.
   - **Mổ:** một mảng uniform 10 điểm (`uniformArray`, vec4) giữ mỏ của mười gà con; thành phần w là "đang mổ". Gà mẹ ngậm con ong
-    nên không mổ. Mỗi hạt tự kiểm khoảng cách tới các mỏ đang mổ; gần hơn 0,06 thì tự xóa. Mỗi hạt chỉ đọc và ghi chính
-    nó, vì compute của WebGL2 chỉ cho như vậy (§20.7).
-  - **Rắc** đi qua `emit` của bể: các hạt của nắm mới tự khởi tạo lại ở bước kế tiếp (§20.7).
+    nên không mổ. Mỗi hạt tự kiểm các mỏ đang mổ: đầu mỏ thấp hơn 0,3, hạt cũng thấp hơn 0,3 (hạt đang bay qua thì không), cách hạt dưới
+    0,15 đo trên mặt sàn, thì tự xóa. Mỗi hạt chỉ đọc và ghi chính nó, vì compute của WebGL2 chỉ cho như vậy (§20.7).
+    - Vì sao 0,15 chứ không 0,06 (số cũ của spec): mỗi nắm chỉ có chín tới mười hai chỗ mổ (ba bốn con, mỗi con ba chỗ nhảy), và mỏ đứng
+      yên suốt mỗi chỗ; ở 0,06 mỗi lần mổ trúng chừng một hạt, một nắm 120 hạt gần như không vơi.
+    - Đo bằng bản JS của luật cùng đàn gà thật (`tests/paintings/dan-ga-me-con/dan-ga-thoc.test.js`): một nắm rắc giữa sàn hay sát mép
+      bị ăn chừng 40–65% (60 khung/giây), nhúm lúc mở trang chừng một nửa; cảnh bận (chạm khắp sàn, giữ, thả), nắm có con tới bị ăn trung
+      bình chừng 40%, chừng 5% số nắm dưới 10%. Ở 10 khung/giây ít hơn một chút: mỏ "đang mổ" chừng 0,1 giây mỗi nhịp cúi, nên mỗi nhịp
+      chỉ một khung, có nhịp không khung nào.
+  - **Rắc** đi qua `emit` của bể: các hạt của nắm mới tự khởi tạo lại ở bước kế tiếp (§20.7). Thóc rơi ở điểm `takeScatters` trả, là tâm
+    vòng các con đứng quanh (§20.5 luật 1): sát mép thì vào trong một chút, sát mẹ thì ra bên cạnh mẹ. `origin.y` của nắm là độ cao văng:
+    3 (tầm tay) khi rắc, 1 khi gà mẹ bới (chân cào hất thóc lên thấp; nhúm gọn hơn).
+  - Chỉ rắc ở khung có `dt > 0`: `update(0, t)` của `?freeze` không rắc, không compute. Trọng số về 0 thì nắm tới lúc văng bị bỏ và nắm
+    đang chờ trong bể bị `clear()`: phủ lại lớp không có nắm cũ nào bung ra cùng lúc.
   - **Vẽ:**
     - `positionNode` đọc bộ đệm;
     - `scaleNode` cho hạt hình dẹt (0,08 × 0,04), với sàn theo điểm ảnh (§20.11); `rotationNode` theo hạt giống;
     - hạt đã bị ăn, hay đã nằm hết 30 giây, nhỏ về 0;
-    - không ghi độ sâu (`depthWrite = false`) nhưng vẫn bị gà che (`depthTest`), nên Bản nét không vẽ viền quanh hạt;
-    - màu đi qua `recipe`: thóc là `hoe` khi có Bản màu, đất sét khi không.
+    - `transparent` (vẽ sau mọi vật đục), không ghi độ sâu (`depthWrite = false`) nhưng vẫn bị gà che (`depthTest`), nên Bản nét không vẽ
+      viền quanh hạt;
+    - màu đi qua `recipe.fill`: thóc là `hoe` khi có Bản màu, đất sét khi không; "Chỉ bản nét" in nó thành trắng giấy như mọi thứ in màu.
 - **Đàn gà** (`parts/dan-ga-song.js`, hàm thuần, chỉ import `lib/random.js`):
   - vị trí, hướng, góc cúi đầu của mười gà con, và cánh của gà mẹ, tính thẳng từ thời gian theo các mốc (§20.5);
-  - `shared.js` giữ các mốc (cử chỉ đến đó); lớp này đọc mốc mới để `emit` thóc;
+  - `shared.js` giữ các mốc (cử chỉ đến đó); lớp này đọc mốc mới để `emit` thóc. Hợp đồng của đàn gà: `drift(t)` chạy trước mọi cử chỉ
+    của khung (xưởng giao cử chỉ trước `setup.update`, nên `onGesture` gọi `drift(t)` trước, rồi `setup.update` gọi lại, cùng t không thêm
+    gì). Điểm chạm đi qua `floorPoint`, hàm toàn phần: tia hỏng (khung cỡ 0, NaN, thiếu tia) vẫn ra một điểm hữu hạn trong sàn;
   - mỗi khung, `update` gọi `shared.cot.pose(state, k)`: Cốt ghi chỗ, hướng (`pose`) và góc cúi đầu (`head`) vào thuộc tính instance riêng
     của gà con, và bốn uniform của gà mẹ (lớp 1); lớp này ghi mảng mỏ.
   - Ma trận instance giữ đơn vị và `frustumCulled = false` (lớp 1), nên không ghi ma trận và không cần `computeBoundingSphere()`.
@@ -4226,8 +4250,8 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
 - **Núm:** `handful` (số hạt mỗi nắm), `bounce`, `gravity` (select: `traiDat`, `trang`), `count` (trần số hạt, `via: 'js'`, như đom đóm).
 - **Thí nghiệm "Tô theo luồng"** (`toTheoLuong`): mỗi hạt một màu theo chỉ số luồng GPU (`instanceIndex`). Thấy được mỗi luồng giữ một
   hạt, và mỗi nắm là một đoạn liền của vòng đệm.
-- **Số đo:** `rac` (số hạt đã rắc còn trong vòng đệm), `dangAn` (số gà con đang mổ), `quanhMe` (số gà con cách tâm gà mẹ dưới
-  2,2).
+- **Số đo:** `rac` (số hạt đã rắc thật còn trong vòng đệm: bể đếm lúc một nắm ra khỏi hàng đợi, §20.7), `dangAn` (số gà con đang mổ),
+  `quanhMe` (số gà con cách tâm gà mẹ dưới 2,2).
 - **Nấc** `thoc`: trần số hạt còn một nửa.
 - **Vật:** `thoc`.
 
@@ -4537,7 +4561,16 @@ chuyển động ở lại trong bức.
 - `dan-ga-muot`: từng khung 60 Hz qua rắc, giữ, thả, giữ lại ngay (0,05–0,8 giây), giữ lúc chờ/chạy/mổ, mở trang, mẹ bới, bão: hướng không
   nhảy quá nửa vòng trong 0,3 giây, đầu không nhảy quá nhịp cúi, vị trí không nhảy quá tốc độ đỉnh; chuyến chạy ngắn hơn 0,3 giây;
   đầu đang cúi tắt dần ở mốc.
-- `dan-ga-thoc`: luật dịch được ở cả hai backend; mảng mỏ có 10 phần tử.
+- `dan-ga-thoc` (bản JS của luật, cùng `GRAIN`, với đàn gà thật): nắm rơi, nảy, lăn rồi nằm yên trong chừng một giây, gọn (nửa số hạt trong
+  0,45, gần hết trong 0,65) ở 60, 30 và 10 khung/giây; trọng lực trăng tỏa rộng hơn, nhúm gà mẹ bới gọn hơn; gà con ăn được nhúm lúc mở
+  trang (≥ 40%), nhúm gà mẹ bới, nắm rắc giữa sàn hay sát mép (≥ 30%) ở 60 và 10 khung/giây; cảnh bận: nắm có con tới bị ăn trung bình
+  ≥ 30%, nắm có con mổ mà bị ăn dưới 10% ≤ 6%.
+- `dan-ga` (lớp, dựng cả bức): compute khởi tạo và bước của bể thóc dịch được ở hai backend, bước đọc mảng mỏ 10 phần tử
+  (`array<vec4<f32>, 10>` ở WGSL, khối `NodeBuffer_` ở GLSL); Sprite `thoc` không ghi độ sâu, transparent, không cắt theo khung bao,
+  `count` = `budget.grains`, đọc `w_dan_ga`, `w_ban_mau`, Chỉ bản nét, Tô theo luồng, `cotPixel`; `update(0, t)` không compute, không rắc;
+  trọng số 0 thì không compute, nắm bị bỏ, phủ lại không có nắm cũ bung ra; số đo, thí nghiệm, nấc `thoc` (trần về nửa rồi gỡ); núm ở
+  hai đầu (`gravity` cả hai lựa chọn, `bounce` 0 và 0,8) dịch được, `handful` 300 khi `count` 100 thì nắm bị cắt còn 100; Cốt áp dáng
+  (`pose` của trọng số 1 và 0, hướng đường ngắn nhất, bốn uniform của gà mẹ).
 - Từng lớp, dựng cả bức bằng `buildPainting`:
   - material của các mesh là `NodeMaterial` gốc; mọi material có `emissiveNode`;
   - cảnh không có đèn nào của three, `shadowMap` tắt;
@@ -4554,10 +4587,12 @@ chuyển động ở lại trong bức.
     - núm ở hai đầu (`density` 4 và 40, `sparkle` 0 và 4, `fiber` 0 và 1, `brush` 0 và 1) dịch được; nấc `chi-tiet` hạ số tầng một bậc rồi
       gỡ về như cũ, chỉ có khi `paper` > 1; Giấy dó trơn chỉ đổi uniform;
   - thí nghiệm và số đo đủ, có nhãn; nấc chỉ có khi có tác dụng.
-- Cử chỉ:
-  - chạm thì có mốc rắc ở đúng điểm trên sàn, kể cả khi chạm ra ngoài sàn;
-  - giữ, thả gọi đúng mốc;
-  - `'swipe'`, `'double-tap'` không làm gì riêng.
+- Cử chỉ (`cu-chi`, dựng cả bức):
+  - chạm thì có mốc rắc ở đúng điểm trên sàn (tia của camera trực giao), kể cả khi chạm lên vách, ra ván, tia song song mặt sàn, khung cỡ 0
+    (NDC NaN hay vô cực), cử chỉ thiếu tia: không ném lỗi, nắm luôn hữu hạn và trong sàn;
+  - giữ, thả gọi đúng mốc (`quanhMe` ≥ 8 rồi về 2);
+  - `'swipe'`, `'double-tap'`, `'hold-move'` không làm gì riêng; hai mươi lần chạm trong một giây: tối đa 32 mốc, đàn gà hữu hạn;
+  - `drift` chạy trước cử chỉ: cú chạm đầu tiên sau 25 giây lặng không xóa lần gà mẹ bới đã tới hạn.
 - Chữ của Sổ tay, chất lượng: như Bức 2 và Bức 3.
 
 **E2e riêng** (`e2e/dan-ga-me-con*.spec.js`; WebGL2 trên SwiftShader là cổng chặn, WebGPU không chặn). Một file quá 300 dòng thì tách theo lớp
@@ -4579,8 +4614,11 @@ gom file theo slug dài nhất (slug `dan-ga` không nhận nhầm `dan-ga-me-co
   - camera đứng yên thì hạt đứng yên (vùng vách, hai lần cách nhau hai khung, giống hệt); kéo chuột 30 px thì hạt khác lóe lên;
   - Giấy dó trơn bật thì ảnh đổi, tắt thì về đúng ảnh cũ;
   - trọng số lệch nhau: Bản màu về 0 thì vùng vách y nguyên (giấy không đọc bảng màu); Phủ bóng về 0 thì giấy sáng hơn mà không cháy trắng và vẫn ngà.
-- Chạm vào sàn: số đo `rac` > 0; chừng 3 giây cảnh sau, `dangAn` > 0.
-- Trước khi giữ, `quanhMe` ≤ 4; giữ 3 giây cảnh thì `quanhMe` ≥ 8. Thả thì số đó giảm dần.
+- Đàn gà (`e2e/dan-ga-me-con-dan-ga.spec.js`, live, chờ bằng poll theo số đo):
+  - giảm chuyển động (không có gà mẹ bới): chờ các con ở nhúm lúc mở trang bắt đầu rồi thôi mổ (`dangAn` > 0 rồi về 0: lúc mới mở trang
+    chưa con nào mổ, chờ số 0 ngay lúc ấy là chờ suông), chạm giữa sàn (xa mép, xa mẹ) thì `rac` tăng, rồi `dangAn` > 0;
+  - trước khi giữ, `quanhMe` ≤ 4; giữ trên vách thì `quanhMe` ≥ 8; thả thì về ≤ 4;
+  - mài Đàn gà về 0 khi thóc đang rơi rồi chạm: không lỗi console, phủ lại thì `rac` không đổi (không có nắm cũ bung ra).
 - Kéo camera: `goc` > 15; buông tay rồi chờ thì `goc` < 1 (tranh tự khép lại). Giảm chuyển động: camera về MỘT bước khi đủ 3 giây cảnh;
   `goc` ghi ở mỗi khung rAF không có mẫu nào lượn giữa chỗ buông và nhà.
 - Draw call ≤ 30 ở mức cao; `?level=thap` chạy được; bật từng thí nghiệm không có lỗi console.
@@ -5174,3 +5212,10 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - bloom (ngưỡng 0, cường độ 1) trên kênh emissive chỉ tỏa đáng kể từ đỉnh chừng 10: chấm hai điểm ảnh bị nhòe ở nửa độ phân giải;
     - hệ quả: phần phát sáng của một vật trên nền sáng đặt theo HDR (hàng chục), không theo độ sáng của nền. Ở góc nhìn của Bức 4,
       hạt ở mép giấy tỏa cả ra ván tối.
+101. **Mảng uniform (`uniformArray`) mà compute đọc được tải lại ở mỗi lần `renderer.compute`** (`nodes/accessors/UniformArrayNode.js`,
+     `renderers/common/Renderer.js#compute`, `nodes/core/NodeFrame.js#updateNode`; GĐ 8 Task 8, chạy thật: thóc bị mỏ gà ăn ở cả hai backend):
+    - `UniformArrayNode.updateType` là `RENDER`. `compute()` đặt `nodeFrame.renderId = info.calls`, số tăng ở mỗi lần gọi, nên
+      `updateForCompute` gọi `update()` của mảng ở mọi lần compute, và `update()` chép `.array` vào bộ đệm uniform.
+    - Hệ quả: lớp chỉ cần ghi `array[i].set(…)` trước khi compute (mảng mỏ của Bức 4, mỗi khung), không `needsUpdate`, không dựng node mới.
+    - WGSL đặt mảng trong một struct uniform riêng, tên theo `setName` (`array< vec4<f32>, 10 >`, có dấu cách: test so bằng regex). GLSL
+      (transform feedback của WebGL2) đặt nó vào một khối `uniform NodeBuffer_<id>` và bỏ tên (như `CLAUDE.md` ghi từ GĐ 6 cho material).

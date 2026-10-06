@@ -106,15 +106,21 @@ export const CAMERA = Object.freeze({
   home: { after: 3, duration: 1.2 },
 });
 
+/** Kẹp vào [lo, hi]; NaN (tia hỏng) thì về giữa khoảng. ±Infinity kẹp về mép như số thường. */
+const clampTo = (v, [lo, hi]) => (Number.isNaN(v) ? (lo + hi) / 2 : clamp(v, lo, hi));
+
 /**
  * Điểm trên sàn cho một cú chạm (§20.2): tia cắt mặt y = 0; tia không đi xuống (song song, hướng lên, gốc dưới sàn) thì lấy chân của gốc
- * tia. Rồi kẹp vào FLOOR, nên chạm lên vách hay ra ván vẫn có điểm gần nhất trên sàn.
- * @param {{ origin: { x: number, y: number, z: number }, direction: { x: number, y: number, z: number } }} ray
+ * tia. Rồi kẹp vào FLOOR, nên chạm lên vách hay ra ván vẫn có điểm gần nhất trên sàn. Hàm toàn phần: tia hỏng (thiếu, có NaN như khi khung
+ * vẽ cỡ 0, vô cực) vẫn ra một điểm hữu hạn trong sàn, vì đàn gà ném lỗi với điểm không hữu hạn.
+ * @param {{ origin: { x: number, y: number, z: number }, direction: { x: number, y: number, z: number } } | undefined} ray
  * @returns {[number, number]} x, z
  */
-export function floorPoint({ origin: o, direction: d }) {
+export function floorPoint(ray) {
+  const o = ray?.origin ?? { x: NaN, y: NaN, z: NaN };
+  const d = ray?.direction ?? { x: NaN, y: NaN, z: NaN };
   const s = d.y < -1e-6 && o.y > 0 ? -o.y / d.y : 0;
-  return [clamp(o.x + d.x * s, ...FLOOR.x), clamp(o.z + d.z * s, ...FLOOR.z)];
+  return [clampTo(o.x + d.x * s, FLOOR.x), clampTo(o.z + d.z * s, FLOOR.z)];
 }
 
 /**

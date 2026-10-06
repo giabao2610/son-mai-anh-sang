@@ -138,6 +138,38 @@ export default {
         },
       },
     },
+    'dan-ga': {
+      understand: 'Đàn gà là chuyển động của tờ tranh. Gà mẹ và gà con không có mô phỏng nào: chỗ đứng, hướng, độ cúi đầu tính thẳng từ '
+        + 'thời gian theo các mốc (chạm, giữ, thả, gà mẹ bới), nên khung nào cũng tính lại được như một hàm của giờ. Thóc thì khác: mỗi hạt '
+        + 'là một phần tử của bể hạt trên GPU, mỗi khung một lần compute: rơi theo trọng lực, nảy, lăn rồi nằm yên. Mỗi luồng GPU chỉ đọc và '
+        + 'ghi hạt của chính nó, nên mỏ của mười gà con đến qua một mảng uniform: mỏ đang mổ chạm hạt nào thì hạt đó biến mất. Mài lớp này '
+        + 'thì thóc biến mất, và đàn gà đứng yên ở chỗ của mình như tượng.',
+      learned: [
+        'Dạng đóng: vị trí là một hàm của thời gian và các mốc, không cộng dồn từng khung, nên dừng hình ở khung nào cũng ra đúng khung ấy.',
+        'Compute chạy một luồng cho mỗi hạt, cùng một luật trên dữ liệu của riêng nó: bốn nghìn hạt tính song song cùng lúc.',
+        'Hạt không đọc được hạt khác, nhưng đọc được uniform: mảng mười mỏ mà JS ghi mỗi khung là đường đi từ đàn gà tới thóc.',
+        'Bể hạt cấp phát một lần theo trần; rắc thêm chỉ khởi tạo lại một đoạn của vòng đệm, đổi số lượng chỉ đổi count.',
+      ],
+      readMore: [
+        { title: 'three.js · Compute particles (WebGPU)', url: 'https://threejs.org/examples/#webgpu_compute_particles' },
+        { title: 'Hệ hạt (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Particle_system' },
+      ],
+      knobs: {
+        handful: 'Số hạt mỗi nắm',
+        bounce: 'Độ nảy',
+        gravity: { label: 'Trọng lực', options: { traiDat: 'Trái Đất (9,81 m/s²)', trang: 'Trăng (1,62 m/s²)' } },
+        count: 'Số hạt tối đa',
+      },
+      experiments: {
+        toTheoLuong: {
+          label: 'Tô theo luồng',
+          explain: 'Mỗi hạt một màu theo số của luồng GPU giữ nó. Hạt cùng một nắm có màu liền nhau: mỗi nắm khởi tạo lại một đoạn liền của '
+            + 'vòng đệm, và nắm sau đè lên đoạn của những hạt cũ nhất.',
+        },
+      },
+      readouts: { rac: 'Số hạt đã rắc', dangAn: 'Gà con đang mổ', quanhMe: 'Gà con quanh mẹ' },
+      objects: { thoc: 'Thóc' },
+    },
     'phu-bong': { ...phuBong.layers['phu-bong'] },
   },
 };

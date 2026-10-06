@@ -208,12 +208,12 @@ export function createFlock(layout, { reduced = false } = {}) {
     },
     /**
      * Các nắm đã tới lúc văng (fly ≤ t) mà lớp chưa nhận, theo thứ tự; mỗi nắm giao đúng một lần. Lớp nhận mỗi khung: nắm chưa nhận mà
-     * đã bị đẩy ra khỏi KEEP mốc gần nhất (hơn 31 cú chạm giữa hai lần nhận) thì mất.
+     * đã bị đẩy ra khỏi KEEP mốc gần nhất (hơn 31 cú chạm giữa hai lần nhận) thì mất. `auto`: nhúm gà mẹ bới (lớp rắc thấp hơn nắm rắc tay).
      */
     takeScatters(t) {
       const out = marks.filter((m) => m.kind === 'scatter' && !m.taken && m.fly <= t);
       for (const m of out) m.taken = true;
-      return out.map(({ at, seed, count, still }) => ({ at: [at[0], at[1]], seed, count, still }));
+      return out.map(({ at, seed, count, still, auto }) => ({ at: [at[0], at[1]], seed, count, still, auto }));
     },
     /**
      * Cả đàn lúc t: gọi bao nhiêu lần, theo thứ tự nào, cũng ra cùng một số (chỉ đọc các mốc).

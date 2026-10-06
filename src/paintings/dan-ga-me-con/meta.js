@@ -25,7 +25,7 @@ export default {
   // Năm màu tự nhiên của tranh Đông Hồ (spec §20.3): trắng điệp, vàng hoa hòe, đỏ sỏi son, xanh lá chàm, đen than lá tre.
   palette: { diep: '#EFE6D2', hoe: '#E0AC3A', sonSoi: '#B9472E', xanhDong: '#41705F', muc: '#221E1A' },
   // THỨ TỰ PHỦ: lớp đầu là Cốt; lớp cuối là Phủ bóng dùng chung của xưởng. Thứ tự in của làng: màu trước (Bản màu), nét đen sau cùng
-  // (Bản nét); giấy điệp là việc của tờ giấy, độc lập với gà. Task 8 thêm Đàn gà.
+  // (Bản nét); giấy điệp là việc của tờ giấy, độc lập với gà; Đàn gà là chuyển động (gà, thóc) phủ lên tờ tranh in sẵn.
   layers: [
     {
       id: 'cot',
@@ -56,6 +56,22 @@ export default {
       name: 'Giấy điệp',
       // lib/tsl/noise.js (GĐ 8): fbm của sợi dó và vệt chổi; Sổ tay hiện cả code của nó.
       files: ['paintings/dan-ga-me-con/layers/l4-giay-diep.js', 'paintings/dan-ga-me-con/parts/giay-diep-mat.js', 'lib/tsl/noise.js'],
+    },
+    {
+      id: 'dan-ga',
+      name: 'Đàn gà',
+      // Đàn gà dạng đóng (dan-ga-song.js và các part nó import) do shared.js dựng, lớp chỉ đọc shared.flock; kê ở đây vì đó là chuyển động
+      // của đàn gà: Sổ tay của lớp hiện đủ code. lib/tsl/particles.js: bể hạt của thóc (cùng bể với đom đóm của Bức 1).
+      files: [
+        'paintings/dan-ga-me-con/layers/l5-dan-ga.js',
+        'paintings/dan-ga-me-con/parts/dan-ga-thoc.js',
+        'paintings/dan-ga-me-con/parts/dan-ga-song.js',
+        'paintings/dan-ga-me-con/parts/dan-ga-pha.js',
+        'paintings/dan-ga-me-con/parts/dan-ga-duong.js',
+        'paintings/dan-ga-me-con/parts/dan-ga-cho.js',
+        'paintings/dan-ga-me-con/parts/dan-ga-ke.js',
+        'lib/tsl/particles.js',
+      ],
     },
     phuBong,
   ],

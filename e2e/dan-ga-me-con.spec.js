@@ -1,4 +1,4 @@
-// e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; chữ của trang nằm trên ván tối; độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ, có nét trong, lệch bản, không vệt mực ở mép khung, hai thí nghiệm; tranh tự khép lại (kéo rồi buông thì camera về góc của tranh); (Task 7–9) cử chỉ, chất lượng. Giấy điệp ở e2e/dan-ga-me-con-giay.spec.js; tiện ích và các vùng dùng chung ở e2e/dan-ga-me-con.helpers.js.
+// e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; chữ của trang nằm trên ván tối; độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ, có nét trong, lệch bản, không vệt mực ở mép khung, hai thí nghiệm; tranh tự khép lại (kéo rồi buông thì camera về góc của tranh). Giấy điệp ở e2e/dan-ga-me-con-giay.spec.js, Đàn gà (cử chỉ, thóc) ở e2e/dan-ga-me-con-dan-ga.spec.js; tiện ích và các vùng dùng chung ở e2e/dan-ga-me-con.helpers.js.
 import { test, expect } from '@playwright/test';
 import { STAGE_ONLY, waitForFrames, canvasRegions, collectConsole, twoFrames, toggleExperiment } from './helpers.js';
 import {
