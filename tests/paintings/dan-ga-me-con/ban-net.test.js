@@ -35,6 +35,13 @@ describe('l3-ban-net (Bức 4)', () => {
     p.dispose();
   });
 
+  it('núm lineWidth chỉ có số nguyên điểm ảnh (1–3, mặc định 2): mẫu độ sâu cách nhau số nguyên điểm ảnh, nên mỗi nấc của thanh trượt là một độ dày khác', () => {
+    const knob = painting.layers.find((m) => m.id === 'ban-net').knobs.find((k) => k.id === 'lineWidth');
+    expect(knob).toMatchObject({ min: 1, max: 3, step: 1, value: 2 });
+    const { knobs } = upToInk();
+    expect(knobs['ban-net'].get('lineWidth')).toBe(2);
+  });
+
   it('camera phối cảnh: báo lỗi tiếng Việt lúc dựng, không vẽ nét sai', () => {
     expect(() => buildPainting(painting, meta, { camera: new PerspectiveCamera() })).toThrow(/camera trực giao/);
   });

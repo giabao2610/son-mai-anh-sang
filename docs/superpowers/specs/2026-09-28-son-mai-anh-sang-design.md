@@ -4051,9 +4051,10 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     1600 điểm ảnh thiết bị, nhìn chếch 20°); kéo xuống góc thấp nhất và ở DPR 1 thì gấp bốn. Độ dốc của Sobel trên mặt sàn khi ấy vượt
     ngưỡng của một bậc thật, và cả mặt sàn thành nét đen. Độ lệch khỏi mặt phẳng thì một phép đo cho cả bậc lẫn nếp gấp, không bị mặt
     nghiêng đánh lừa.
-  - Mọi mẫu nằm đúng **tâm một điểm ảnh**, cách điểm giữa một số NGUYÊN điểm ảnh: bước là `lineWidth` làm tròn (tối thiểu 1), lệch bản
-    cũng làm tròn. Texture độ sâu không lọc được, nên three đọc điểm ảnh gần nhất (Phụ lục A.96): bước 1,5 điểm ảnh rơi đúng mép giữa
-    hai điểm ảnh, hai mẫu không còn đối xứng, và mặt sàn nghiêng thành sọc mực (đã thấy trên GPU thật, GĐ 8 Task 1).
+  - Mọi mẫu nằm đúng **tâm một điểm ảnh**, cách điểm giữa một số NGUYÊN điểm ảnh: bước là `lineWidth` (núm chỉ có số nguyên; shader
+    vẫn làm tròn, tối thiểu 1), lệch bản cũng làm tròn. Texture độ sâu không lọc được, nên three đọc điểm ảnh gần nhất (Phụ lục
+    A.96): bước 1,5 điểm ảnh rơi đúng mép giữa hai điểm ảnh, hai mẫu không còn đối xứng, và mặt sàn nghiêng thành sọc mực (đã thấy
+    trên GPU thật, GĐ 8 Task 1).
   - Mép tờ giấy cũng là một bậc độ sâu (giấy đứng trước khoảng trống), nên khung tranh tự có nét.
   - Thóc không ghi độ sâu (lớp 5), nên không bao giờ thành chấm đen.
 - **Nét trong** (`recipe.ink`, `parts/ban-net-net-trong.js`): hàm khoảng cách 2D trên UV của từng phần.
@@ -4064,9 +4065,9 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   tranh in tay. Nét trong nằm trong màu của vật nên không lệch theo; ở 1–2 điểm ảnh thì không thấy.
 - **Chỉ chạy với camera trực giao.** Bức dùng camera phối cảnh mà muốn nét như thế thì bọc độ sâu bằng `convertToTexture`, tốn thêm một
   lượt vẽ.
-- **Núm:** `lineWidth` (0,5–3 điểm ảnh thiết bị; nét dày theo số nguyên điểm ảnh đã làm tròn: 1, 2 hay 3), `threshold` (bậc độ sâu tối
-  thiểu, đơn vị cảnh; mặc định 0,3, tức 3 cm), `crease` (độ đậm của nét nếp gấp, 0–1), `misregister` (0–6 điểm ảnh, mặc định 1,5; làm
-  tròn như `lineWidth`).
+- **Núm:** `lineWidth` (1–3 điểm ảnh thiết bị, bước 1, mặc định 2: chỉ số nguyên, vì mẫu độ sâu phải cách nhau số nguyên điểm ảnh),
+  `threshold` (bậc độ sâu tối thiểu, đơn vị cảnh; mặc định 0,3, tức 3 cm), `crease` (độ đậm của nét nếp gấp, 0–1), `misregister`
+  (0–6 điểm ảnh, mặc định 1,5; làm tròn như `lineWidth`).
 - **Thí nghiệm:**
   - "Chỉ bản nét" (`chiNet`): giấy trắng với nét đen, như bản nét in riêng trước khi in màu;
   - "Dò cạnh theo màu" (`netTheoMau`): dò trên độ sáng của ảnh màu thay cho độ sâu. Nét mọc ở ranh của nấc sáng, và mất ở chỗ hai mảng

@@ -17,12 +17,12 @@ const KINK = 1;
  *   lớn đã là viền thì không tính lại ở đây, để phía sau của bậc không dày thêm.
  * - Mọi mẫu nằm đúng TÂM một điểm ảnh, cách điểm giữa một số NGUYÊN điểm ảnh. Texture độ sâu không lọc được: three đọc điểm ảnh gần nhất
  *   (Phụ lục A.96). Bước 1,5 điểm ảnh rơi đúng mép giữa hai điểm ảnh, một bên làm tròn lên, bên kia xuống, nên hai mẫu không còn đối
- *   xứng và mặt sàn nghiêng ra e ≠ 0: cả sàn thành sọc mực. Vì vậy bước làm tròn về số nguyên (lineWidth 1,5 là 2 điểm ảnh), và tâm
- *   tính theo cỡ của chính texture độ sâu.
+ *   xứng và mặt sàn nghiêng ra e ≠ 0: cả sàn thành sọc mực. Vì vậy núm lineWidth chỉ có số nguyên (1–3), bước vẫn làm tròn (giá trị
+ *   nào tới đây cũng rơi đúng tâm điểm ảnh), và tâm tính theo cỡ của chính texture độ sâu.
  * @param {object} p
  * @param {any} p.depth      texture độ sâu (channel('depth') của camera trực giao)
  * @param {any} p.span       uniform: far − near của camera cảnh. Không đọc cameraFar của TSL: trong post đó là camera vẽ quad (A.93)
- * @param {any} p.px         bước lấy mẫu, điểm ảnh thiết bị (núm lineWidth); làm tròn, tối thiểu 1
+ * @param {any} p.px         bước lấy mẫu, điểm ảnh thiết bị (núm lineWidth, số nguyên 1–3); vẫn làm tròn, tối thiểu 1
  * @param {any} p.offset     vec2, điểm ảnh: lệch bản (Task 5; khung truyền vec2(0)); làm tròn như px
  * @param {any} p.threshold  bậc độ sâu tối thiểu thành viền, đơn vị cảnh (núm; min 0,05 nên threshold · 0,6 < threshold)
  * @param {any} p.crease     độ đậm của nét nếp gấp, 0–1 (núm)

@@ -5,7 +5,8 @@ import { depthEdges } from '../parts/ban-net-do-canh.js';
 export const id = 'ban-net';
 
 export const knobs = [
-  { id: 'lineWidth', min: 0.5, max: 3, step: 0.1, value: 1.5 },
+  // Độ dày nét, điểm ảnh thiết bị: chỉ số nguyên, vì mẫu độ sâu phải cách nhau số nguyên điểm ảnh (parts/ban-net-do-canh.js).
+  { id: 'lineWidth', min: 1, max: 3, step: 1, value: 2 },
   { id: 'threshold', min: 0.05, max: 2, step: 0.05, value: 0.3 },
   { id: 'crease', min: 0, max: 1, step: 0.05, value: 0.6 },
 ];
