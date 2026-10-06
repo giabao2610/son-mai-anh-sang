@@ -3935,15 +3935,16 @@ spec.
 - **Hai cử chỉ** (`setup().onGesture`). Công cụ học vẫn được ưu tiên như ở mọi bức.
   1. **Chạm là rắc thóc** (`'tap'`):
      - Tia của camera trực giao cắt mặt sàn (y = 0) ở chỗ chạm. Chạm ra ngoài sàn (lên vách, ra ván) thì lấy điểm gần nhất trên sàn,
-       nên chạm ở đâu cũng có phản hồi. Chạm sát mép sàn thì thóc rơi vào trong một chút (tới 1,25), đúng tâm vòng gà con đứng quanh
-       (§20.5), để mỏ chạm sàn ngay trên nắm thóc.
+       nên chạm ở đâu cũng có phản hồi. Chạm sát mép sàn thì thóc rơi vào trong một chút (tới 1,25 theo mỗi trục: chạm đúng góc sàn thì
+       chừng 1,8 theo đường chéo), đúng tâm vòng gà con đứng quanh (§20.5), để mỏ chạm sàn ngay trên nắm thóc.
      - Một nắm chừng 120 hạt (núm `handful`) văng ra từ cao chừng 3 (tầm tay), tỏa hình nón, rơi theo trọng lực, nảy một hai lần, lăn rồi
        nằm yên, thành một nắm gọn (nửa số hạt trong chừng 0,4), để các con đứng quanh mổ trúng (§20.4 lớp 5).
        - Trọng lực là của Trái Đất: 9,81 m/s², tức 98,1 đơn vị/s². Thóc chạm sàn chừng 0,25 giây sau khi văng, như rắc thật.
        - Núm `gravity` cho chọn trọng lực của trăng, để so với lá rơi của Bức 3.
      - Ba tới bốn gà con đang rảnh, ở gần chỗ rắc nhất, chạy tới. Tới nơi thì mổ quanh đó chừng 8 giây, rồi đi về chỗ của mình.
-     - Mỏ đang mổ chạm hạt nào thì hạt đó biến mất (§20.4 lớp 5): nắm vơi đi thấy rõ, các con ăn quá nửa nắm. Hạt không con
-       nào ăn thì nằm 30 giây rồi nhỏ dần.
+     - Mỏ đang mổ chạm hạt nào thì hạt đó biến mất (§20.4 lớp 5): nắm vơi đi thấy rõ (nắm rắc giữa sàn hay sát mép bị ăn chừng 60–80%,
+       nhúm lúc mở trang chừng một nửa; sân đông, nhiều nắm cùng lúc thì chừng 45%). Hạt không con nào ăn thì nằm 30 giây rồi nhỏ dần.
+     - Lớp Đàn gà mài về 0 (gà đứng như tượng, không có thóc) thì chạm và giữ không làm gì, gà mẹ vẫn bới theo đồng hồ (§20.4 lớp 5).
   2. **Giữ là gà mẹ gọi con** (`'hold-start'` → `'hold-end'`):
      - Gà mẹ xòe hai cánh, cúi đầu gọi "cục cục" theo nhịp (gật sâu nhất 23°). Mọi gà con đang rảnh chạy về tám chỗ quanh và dưới cánh mẹ; con
        trèo lưng và con nấp bụng vốn đã ở sát mẹ, nên ở yên.
@@ -4235,8 +4236,11 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   - **Rắc** đi qua `emit` của bể: các hạt của nắm mới tự khởi tạo lại ở bước kế tiếp (§20.7). Thóc rơi ở điểm `takeScatters` trả, là tâm
     vòng các con đứng quanh (§20.5 luật 1): sát mép thì vào trong một chút, sát mẹ thì ra bên cạnh mẹ. `origin.y` của nắm là độ cao văng:
     3 (tầm tay) khi rắc, 1 khi gà mẹ bới (chân cào hất thóc lên thấp; nhúm gọn hơn).
-  - Chỉ rắc ở khung có `dt > 0`: `update(0, t)` của `?freeze` không rắc, không compute. Trọng số về 0 thì nắm tới lúc văng bị bỏ và nắm
-    đang chờ trong bể bị `clear()`: phủ lại lớp không có nắm cũ nào bung ra cùng lúc.
+  - Chỉ rắc ở khung có `dt > 0`: `update(0, t)` của `?freeze` không rắc, không compute. Trọng số về 0 thì nắm tới lúc văng bị bỏ (nhúm gà
+    mẹ bới, vì gà mẹ vẫn bới theo đồng hồ) và nắm đang chờ trong bể bị `clear()`: phủ lại lớp không có nắm cũ nào bung ra cùng lúc.
+  - Trọng số về 0 thì `shared.js` cũng không đưa chạm và giữ tới đàn gà (GĐ 8 Task 8, sửa sau review): không thì đàn gà vẫn chạy, mổ nền
+    trống mà không ai thấy, phủ lại là thấy gà mổ đất, và `dangAn`, `quanhMe` báo việc không ai thấy. Thả thì luôn tới đàn gà: thả mà chưa
+    giữ thì đàn gà bỏ qua, còn cái giữ bắt đầu lúc lớp còn phủ phải được thả, không thì gà mẹ xòe cánh mãi. `drift(t)` vẫn chạy mỗi khung.
   - **Vẽ:**
     - `positionNode` đọc bộ đệm;
     - `scaleNode` cho hạt hình dẹt (0,08 × 0,04), với sàn theo điểm ảnh (§20.11); `rotationNode` theo hạt giống;
@@ -4285,7 +4289,7 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
      rắc mà tâm vòng của nó (kéo vào trong sàn) gần hơn thì dời tới điểm gần nhất trong sàn thỏa điều ấy. Nắm ném vào mẹ, sát mẹ, hay chạm
      lên vách (điểm rắc kẹp về mép sau sàn, ngay sau lưng mẹ) thì rơi bên cạnh mẹ. Rồi điểm rắc kéo vào trong sàn thành chính tâm vòng (GĐ 8
      Task 8): `takeScatters` trả tâm vòng ấy, lớp Đàn gà rắc thóc ở đó, nên thóc nằm đúng giữa các con. Trước đó thóc rơi ở điểm chạm, mà
-     chạm sát mép thì tâm vòng bị kéo vào tới 1,25: các con mổ cách nắm thóc cả đơn vị, không trúng hạt nào.
+     chạm sát mép thì tâm vòng bị kéo vào tới 1,25 theo mỗi trục: các con mổ cách nắm thóc cả đơn vị, không trúng hạt nào.
   2. **Đường chạy không cắt vòng cấm.** Đường thẳng cắt vòng cấm thì vòng qua đầu hay đuôi mẹ, bên nào gần: một đường gấp khúc, cả đường chung
      MỘT lần tăng giảm tốc (không dừng ở góc), hướng quay dần trong 0,3 giây sau mỗi góc.
   3. **Tới chỗ núp không quay mỏ vào mẹ.** Sáu trong tám chỗ núp nằm trong vòng cấm. Gà con chạy tới điểm dừng ngoài vòng cấm (cách vòng 0,35,
@@ -4321,8 +4325,8 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
       vào trong thì đầu hai con cạnh nhau (bán kính 0,3) đâm vào nhau: đo bằng tâm đầu thật, 8% số cặp-khung hai đầu lún vào nhau, sâu tới
       0,4; nhảy ra ngoài ±60° thì dưới 0,5%, sâu không quá chừng 0,04.
     - Cả nhóm cùng một nắm thôi mổ cùng lúc: con tới sau cùng mổ 8 giây, con tới trước mổ lâu hơn một chút (chỗ nhảy cuối dài ra, nhịp
-      cúi vẫn liền). Con tới trước mà về trước thì có thể đứng nghỉ ở nhà ngay sát chỗ một con cùng nhóm còn đang mổ (GĐ 8 Task 8: 15
-      trong 200 cảnh bận, sau khi đã tính nhà của con đi vắng);
+      cúi vẫn liền). Lý do: khi mỗi con thôi mổ 8 giây sau lúc chính nó tới, con tới trước về trước, rồi đứng nghỉ ở nhà ngay sát chỗ một
+      con cùng nhóm còn đang mổ (GĐ 8 Task 8, đo trước luật này: 15 trong 200 cảnh bận, sau khi đã tính nhà của con đi vắng; có luật: 0);
   - **về:** đi bộ về chỗ "nhà", 5 đơn vị/s;
   - **núp** (khi giữ): chạy về một trong tám chỗ quanh và dưới cánh mẹ (luật 3 ở trên), đứng sát, quay ra ngoài (lưng về phía mẹ), đầu ngó
     nghiêng (hướng lắc ±0,5 rad). Chỗ gán sao cho tổng quãng đường của tám con (cả đoạn vòng qua mẹ) ngắn nhất, nên con nào cũng ưu tiên
@@ -4576,12 +4580,14 @@ chuyển động ở lại trong bức.
 - `dan-ga-thoc` (bản JS của luật, cùng `GRAIN`, với đàn gà thật): nắm rơi, nảy, lăn rồi nằm yên trong chừng một giây, gọn (nửa số hạt trong
   0,45, gần hết trong 0,65) ở 60, 30 và 10 khung/giây; trọng lực trăng tỏa rộng hơn, nhúm gà mẹ bới gọn hơn; gà con ăn được nhúm lúc mở
   trang (≥ 40%), nhúm gà mẹ bới, nắm rắc giữa sàn hay sát mép (≥ 30%) ở 60 và 10 khung/giây; cảnh bận: nắm có con tới bị ăn trung bình
-  ≥ 30%, nắm có con mổ mà bị ăn dưới 10% ≤ 6%.
+  ≥ 30%, nắm có con mổ mà bị ăn dưới 10% ≤ 6%. Bản JS khóa với luật thật: mã WGSL và GLSL của bước compute (nhánh rắc và nhánh luật) so
+  từng ký tự với bản ghi `__fixtures__/thoc/` (bỏ số id như fixture của đom đóm); luật hay three đổi thì test đỏ, sửa bản JS rồi mới ghi lại.
 - `dan-ga` (lớp, dựng cả bức): compute khởi tạo và bước của bể thóc dịch được ở hai backend, bước đọc mảng mỏ 10 phần tử
   (`array<vec4<f32>, 10>` ở WGSL, khối `NodeBuffer_` ở GLSL); Sprite `thoc` không ghi độ sâu, transparent, không cắt theo khung bao,
   `count` = `budget.grains`, đọc `w_dan_ga`, `w_ban_mau`, Chỉ bản nét, Tô theo luồng, `cotPixel`; `update(0, t)` không compute, không rắc;
   trọng số 0 thì không compute, nắm bị bỏ, phủ lại không có nắm cũ bung ra; số đo, thí nghiệm, nấc `thoc` (trần về nửa rồi gỡ); núm ở
-  hai đầu (`gravity` cả hai lựa chọn, `bounce` 0 và 0,8) dịch được, `handful` 300 khi `count` 100 thì nắm bị cắt còn 100; Cốt áp dáng
+  hai đầu (`gravity` cả hai lựa chọn, `bounce` 0 và 0,8) dịch được, `handful` 300 khi `count` 100 thì Sprite vẽ 100 hạt và `rac` không vượt
+  100 (cắt nắm lớn hơn bể: test của bể); nhúm gà mẹ bới tới hạn lúc lớp tắt hẳn không bung ra khi phủ lại; Cốt áp dáng
   (`pose` của trọng số 1 và 0, hướng đường ngắn nhất, bốn uniform của gà mẹ).
 - Từng lớp, dựng cả bức bằng `buildPainting`:
   - material của các mesh là `NodeMaterial` gốc; mọi material có `emissiveNode`;
@@ -4604,7 +4610,8 @@ chuyển động ở lại trong bức.
     (NDC NaN hay vô cực), cử chỉ thiếu tia: không ném lỗi, nắm luôn hữu hạn và trong sàn;
   - giữ, thả gọi đúng mốc (`quanhMe` ≥ 8 rồi về 2);
   - `'swipe'`, `'double-tap'`, `'hold-move'` không làm gì riêng; hai mươi lần chạm trong một giây: tối đa 32 mốc, đàn gà hữu hạn;
-  - `drift` chạy trước cử chỉ: cú chạm đầu tiên sau 25 giây lặng không xóa lần gà mẹ bới đã tới hạn.
+  - `drift` chạy trước cử chỉ: cú chạm đầu tiên sau 25 giây lặng không xóa lần gà mẹ bới đã tới hạn;
+  - lớp Đàn gà mài về 0: chạm và giữ không thêm mốc, không con nào chạy hay mổ; gà mẹ vẫn bới; cái giữ bắt đầu lúc lớp còn phủ vẫn được thả.
 - Chữ của Sổ tay, chất lượng: như Bức 2 và Bức 3.
 
 **E2e riêng** (`e2e/dan-ga-me-con*.spec.js`; WebGL2 trên SwiftShader là cổng chặn, WebGPU không chặn). Một file quá 300 dòng thì tách theo lớp
@@ -4701,7 +4708,8 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
     khung bằng chỗ thật của khối (`cot-hinh-ga`, `dan-ga-tranh-me`).
   - Còn lại: nắm người chạm lên mẹ hay vách rơi bên cạnh mẹ chứ không ở chỗ chạm (thóc rơi ở đầu hay đuôi mẹ, cách 2–4 đơn vị); gà con
     tới chỗ núp lâu hơn chừng nửa giây (quay tại chỗ, lùi vào); sau lưng mẹ sàn hẹp nên ở đó không có vòng gà con nào. Chạm sát mép sàn thì
-    thóc rơi vào trong tới 1,25 (tâm vòng). Sân đông thì nắm mới có khi không con nào tới: vòng không nở, spacing không nới.
+    thóc rơi vào trong tới 1,25 theo mỗi trục (tâm vòng; chạm đúng góc thì chừng 1,8 theo đường chéo). Sân đông thì nắm mới có khi không
+    con nào tới: vòng không nở, spacing không nới.
 - **Thóc quá nhỏ trên điện thoại:** 0,08 đơn vị là chừng 2 điểm ảnh ở 390×844. Cách tránh: cỡ hạt có sàn theo điểm ảnh (chia theo
   `u.resolution` và zoom).
 - **Tranh tự khép lại đánh nhau với quán tính của OrbitControls:** `end` đến khi buông tay, nhưng damping còn quay thêm một lúc, và phần

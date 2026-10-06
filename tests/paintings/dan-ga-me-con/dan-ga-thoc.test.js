@@ -1,9 +1,13 @@
-// tests/paintings/dan-ga-me-con/dan-ga-thoc.test.js — số của thóc (GRAIN) và hình học đàn gà cùng nhau, đo bằng bản JS của luật thóc (parts/dan-ga-thoc.js: Node không chạy được compute; e2e chạy luật thật trên GPU): nắm gọn, nảy một hai lần rồi nằm yên ở mọi nhịp khung; gà con ăn được thóc của nhúm lúc mở trang, của nắm giữa sàn hay sát mép, và trong cảnh bận rộn.
+// tests/paintings/dan-ga-me-con/dan-ga-thoc.test.js — số của thóc (GRAIN) và hình học đàn gà cùng nhau, đo bằng bản JS của luật thóc (parts/dan-ga-thoc.js: Node không chạy được compute; e2e chạy luật thật trên GPU), khóa với mã WGSL và GLSL thật của bước compute bằng bản ghi: nắm gọn, nảy một hai lần rồi nằm yên ở mọi nhịp khung; gà con ăn được thóc của nhúm lúc mở trang, của nắm giữa sàn hay sát mép, và trong cảnh bận rộn.
 import { describe, it, expect } from 'vitest';
+import meta from '../../../src/paintings/dan-ga-me-con/meta.js';
+import * as painting from '../../../src/paintings/dan-ga-me-con/painting.js';
 import { BEAKS, GRAIN, GRAVITY } from '../../../src/paintings/dan-ga-me-con/parts/dan-ga-thoc.js';
 import { FLOOR, LAYOUT } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
 import { createFlock } from '../../../src/paintings/dan-ga-me-con/parts/dan-ga-song.js';
 import { mulberry32 } from '../../../src/lib/random.js';
+import { buildPainting } from '../../helpers/fake-ctx.js';
+import { compileCompute, normalizeIds } from '../../helpers/nodes.js';
 
 /** Test nặng (nhiều cảnh, từng khung, hàng nghìn hạt): chừa thời gian cho máy chạy chậm hay đang bận. */
 const SLOW = 60000;
@@ -119,6 +123,28 @@ function pile(fps, { g = GRAVITY.traiDat, y = GRAIN.drop } = {}) {
   radii.sort((a, b) => a - b);
   return { median: radii[radii.length >> 1], p95: radii[Math.floor(radii.length * 0.95)], still, restAt, bounces: bounces / radii.length };
 }
+
+/**
+ * Khóa đồng bộ của bản JS ở trên: mã WGSL và GLSL của bước compute thật (nhánh rắc của makeSpawn, nhánh luật của makeLaw), so từng ký tự với
+ * bản ghi (số id của node bỏ như fixture của đom đóm, Bức 1). GRAIN dùng chung nên đổi một số thì bản JS theo luôn; còn đổi CẤU TRÚC của luật
+ * (điều kiện ăn, tách bay và lăn, hãm khi rơi, dội ở mép), hay three dịch khác đi, thì mã khác bản ghi và test này đỏ.
+ */
+const STALE = 'Mã bước compute của thóc (parts/dan-ga-thoc.js, hay do three) khác bản ghi: sửa bản JS của luật (spawn, step) ở đầu '
+  + 'tests/paintings/dan-ga-me-con/dan-ga-thoc.test.js cho khớp, chạy lại các test đo nắm và phần bị ăn, rồi mới ghi lại bản ghi: '
+  + 'npx vitest run tests/paintings/dan-ga-me-con/dan-ga-thoc.test.js -u';
+
+describe('dan-ga-thoc: mã của bước compute giống bản ghi (bản JS ở trên là bản chép của đúng mã này)', () => {
+  it.each(['webgpu', 'webgl2'])('%s', async (backend) => {
+    const built = buildPainting(painting, meta, { tier: backend });
+    built.ctx.u.time.value = 1 / 60;
+    built.setup.update(1 / 60, 1 / 60);
+    for (const { layer } of built.built) layer.update?.(1 / 60, 1 / 60);
+    const step = built.ctx.renderer.compute.mock.calls.at(-1)[0]; // lần compute cuối của khung đầu là bước của bể thóc
+    const { code, problems } = compileCompute(step, backend);
+    expect(problems).toEqual([]);
+    await expect(normalizeIds(code), STALE).toMatchFileSnapshot(`./__fixtures__/thoc/${backend}-step.txt`);
+  });
+});
 
 describe('dan-ga-thoc: số của thóc với đàn gà (bản JS của luật)', () => {
   it('mười mỏ (BEAKS) cho mười gà con', () => {

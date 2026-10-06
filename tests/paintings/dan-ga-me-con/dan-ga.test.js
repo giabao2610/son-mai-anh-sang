@@ -69,7 +69,7 @@ describe('l5-dan-ga (Bức 4)', () => {
     expect(read(built, 'rac'), 'nắm của cú chạm rắc ở khung có dt').toBe(rac + 120);
   });
 
-  it('trọng số Đàn gà về 0: không compute, cú chạm không rắc, nắm đang chờ bị bỏ; phủ lại thì không có nắm cũ bung ra; Sprite ẩn', () => {
+  it('trọng số Đàn gà về 0: không compute, cú chạm không rắc, nắm đang chờ và nhúm gà mẹ bới tới hạn lúc ấy bị bỏ; phủ lại thì không có nắm cũ bung ra; Sprite ẩn', () => {
     const built = build();
     const { compute } = built.ctx.renderer;
     frame(built, 1, 1 / 60);
@@ -81,10 +81,12 @@ describe('l5-dan-ga (Bức 4)', () => {
     compute.mockClear();
     frame(built, 1.6, 1 / 60, [tapAt(built, [0, 3.8])]);
     frame(built, 1.7, 1 / 60, [tapAt(built, [-2.5, 3.5])]);
+    // Gà mẹ vẫn bới theo đồng hồ (25 giây sau mốc cuối, lúc 1,5): nhúm của mẹ tới lúc văng khi lớp đang tắt hẳn.
+    frame(built, 27, 1 / 60);
     expect(compute).not.toHaveBeenCalled();
     expect(grains(built).visible).toBe(false);
     built.ctx.weights.set('dan-ga', 1);
-    for (let k = 0; k < 5; k += 1) frame(built, 1.8 + k / 60, 1 / 60);
+    for (let k = 0; k < 5; k += 1) frame(built, 27.1 + k / 60, 1 / 60);
     expect(compute).toHaveBeenCalled();
     expect(grains(built).visible).toBe(true);
     expect(read(built, 'rac'), 'không nắm nào bung ra khi phủ lại').toBe(160);
@@ -111,7 +113,9 @@ describe('l5-dan-ga (Bức 4)', () => {
     expect(sprite.count).toBe(built.ctx.budget.grains);
   });
 
-  it.each([['webgpu'], ['webgl2']])('%s: núm ở hai đầu (gravity cả hai lựa chọn, bounce 0 và 0,8) dịch được; handful 300 khi count 100 thì nắm bị cắt còn 100', async (backend) => {
+  // Nắm lớn hơn bể thì bị cắt: test của bể (tests/unit/particles.test.js) giữ điều ấy. Ở đây rac đã kẹp ở số đang tính (min(đã rắc, count)),
+  // nên nắm 300 hạt dù cắt hay không cũng đọc ra 100: chỉ kiểm được số đo không vượt số hạt đang tính và Sprite vẽ đúng 100.
+  it.each([['webgpu'], ['webgl2']])('%s: núm ở hai đầu (gravity cả hai lựa chọn, bounce 0 và 0,8) dịch được; handful 300 khi count 100: Sprite vẽ 100 hạt, rac không vượt số hạt đang tính', async (backend) => {
     for (const [gravity, bounce] of [['traiDat', 0], ['trang', 0.8]]) {
       const built = build({ tier: backend });
       await built.knobs['dan-ga'].set('gravity', gravity);
@@ -124,7 +128,7 @@ describe('l5-dan-ga (Bức 4)', () => {
     expect(grains(built).count).toBe(100);
     frame(built, 1, 1 / 60, [tapAt(built, [-4.5, 2.5])]);
     frame(built, 1 + 1 / 60, 1 / 60);
-    expect(read(built, 'rac'), 'nhúm 40 hạt rồi nắm 300 hạt cắt còn 100: không quá số đang tính').toBe(100);
+    expect(read(built, 'rac'), 'nhúm 40 hạt rồi một nắm: không quá số đang tính').toBe(100);
   });
 
   it('Cốt áp dáng (shared.cot.pose): trọng số 1 là dáng của đàn gà, 0 là dáng nghỉ ở nhà; hướng hòa theo đường ngắn nhất; gà mẹ bốn uniform nhân trọng số', () => {

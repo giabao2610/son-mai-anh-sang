@@ -8,7 +8,7 @@ import {
 /**
  * Số của thóc (spec §20.4 lớp 5, §20.5), đơn vị cảnh 10 cm. Nắm gọn chừng 0,4 quanh chỗ rơi (nửa số hạt; gần hết trong 0,55), vì mỏ của các
  * con đứng quanh trên vòng bán kính 1 chạm sàn trong chừng 0,5 quanh đó. tests/paintings/dan-ga-me-con/dan-ga-thoc.test.js có bản JS của
- * luật dưới đây (đo nắm và phần bị ăn): đổi luật thì đổi cả bản ấy.
+ * luật dưới đây (đo nắm và phần bị ăn), khóa với mã thật của bước compute bằng bản ghi: đổi luật thì test đỏ, sửa bản JS rồi mới ghi lại.
  */
 export const GRAIN = Object.freeze({
   size: [0.08, 0.04], // dài, rộng

@@ -1,4 +1,4 @@
-// tests/helpers/nodes.js — soi đồ thị node của three ngay trong Node (không GPU): duyệt mọi node, và dịch material và compute node ra WGSL/GLSL bằng node builder thật.
+// tests/helpers/nodes.js — soi đồ thị node của three ngay trong Node (không GPU): duyệt mọi node, dịch material và compute node ra WGSL/GLSL bằng node builder thật, và bỏ số id trong mã cho fixture so mã.
 import { Compatibility, HalfFloatType, RenderTarget, WebGPURenderer } from 'three/webgpu';
 import { makeMRT } from '../../src/engine/gpu/pipeline.js';
 
@@ -139,6 +139,23 @@ export function compileCompute(computeNode, backend, { renderer = compileRendere
     Object.assign(console, saved);
   }
   return { code: builder.computeShader, problems, uniforms: builder.uniforms.compute.map((u) => u.name) };
+}
+
+/**
+ * Mã shader sinh ra, bỏ số id của node trong tên (cho fixture so mã: Bức 1 vang-la-ma, Bức 4 dan-ga-thoc). id tăng theo thứ tự node được tạo
+ * trong cả lần chạy test, nên đổi khi code dựng node theo thứ tự khác mà mã không đổi. GLSL: NodeBuffer_<id>, buffer<id> (GLSLNodeBuilder);
+ * WGSL: NodeBuffer_<id>, và kiểu NodeBuffer_<id>Struct của nó (WGSLNodeBuilder#_getWGSLStructBinding ghép tên với 'Struct', nên sau số không
+ * có ranh giới từ). Chỉ thêm tên vào đây khi đã đọc trong mã nguồn của three rằng số trong tên là id của node.
+ * Mỗi id thành '#' kèm thứ tự lần đầu nó xuất hiện trong mã (#0, #1…), không phải một '#' chung: hai bộ đệm vẫn phân biệt được, nên một câu
+ * lệnh đọc hay ghi nhầm bộ đệm thì mã khác bản ghi.
+ * @param {string} code
+ */
+export function normalizeIds(code) {
+  const order = new Map();
+  return code.replace(/\b(NodeBuffer_|buffer)(\d+)/g, (_, name, id) => {
+    if (!order.has(id)) order.set(id, order.size);
+    return `${name}#${order.get(id)}`;
+  });
 }
 
 /**

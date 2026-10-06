@@ -1,0 +1,297 @@
+#version 300 es
+
+// Three.js r186 - Node System
+
+
+// extensions
+
+
+// precision
+
+precision highp float;
+precision highp int;
+precision highp sampler2D;
+precision highp sampler3D;
+precision highp samplerCube;
+precision highp sampler2DArray;
+
+precision highp usampler2D;
+precision highp usampler3D;
+precision highp usamplerCube;
+precision highp usampler2DArray;
+
+precision highp isampler2D;
+precision highp isampler3D;
+precision highp isamplerCube;
+precision highp isampler2DArray;
+
+precision highp sampler2DShadow;
+precision highp sampler2DArrayShadow;
+precision highp samplerCubeShadow;
+
+
+// structs
+
+
+
+
+
+// uniforms
+
+layout( std140 ) uniform object {
+	uint nodeUniform0;
+	uint nodeUniform1;
+	uint nodeUniform2;
+	vec3 nodeUniform4;
+	float nodeUniform5;
+	float nodeUniform6;
+	float nodeUniform7;
+	float dan_ga_gravity;
+	float nodeUniform10;
+	float dan_ga_bounce;
+};
+uniform NodeBuffer_#0 {
+	vec4 buffer#0[10];
+};
+
+
+// varyings
+out vec4 nodeVarying0;
+out vec4 nodeVarying1;
+
+
+// attributes
+layout( location = 0 ) in vec4 nodeAttribute3;
+layout( location = 1 ) in vec4 nodeAttribute8;
+
+
+// vars
+uint nodeVar0;
+uint nodeVar1;
+uint nodeVar2;
+uint nodeVar3;
+float nodeVar4;
+uint nodeVar5;
+uint nodeVar6;
+vec3 nodeVar7;
+uint nodeVar8;
+uint nodeVar9;
+float nodeVar10;
+vec3 nodeVar11;
+vec3 nodeVar12;
+float nodeVar13;
+bool nodeVar14;
+float nodeVar15;
+
+// codes
+
+
+void main() {
+
+	// transforms
+	nodeVarying0 = nodeAttribute3;
+	nodeVarying1 = nodeAttribute8;
+	
+
+	// flow
+	// code
+
+	nodeVar0 = ( ( ( uint( gl_InstanceID ) + nodeUniform0 ) - nodeUniform1 ) % nodeUniform0 );
+
+	if ( ( nodeVar0 < nodeUniform2 ) ) {
+
+		nodeVar1 = ( ( nodeVar0 * 3u ) + ( uint( nodeUniform5 ) * 7919u ) );
+		nodeVar2 = ( ( ( nodeVar1 + 0u ) * 747796405u ) + 2891336453u );
+		nodeVar3 = ( ( ( nodeVar2 >> ( ( nodeVar2 >> 28u ) + 4u ) ) ^ nodeVar2 ) * 277803737u );
+		nodeVar4 = ( ( float( ( ( nodeVar3 >> 22u ) ^ nodeVar3 ) ) * 2.3283064365386963e-10 ) * 6.283185307179586 );
+		nodeVar5 = ( ( ( nodeVar1 + 1u ) * 747796405u ) + 2891336453u );
+		nodeVar6 = ( ( ( nodeVar5 >> ( ( nodeVar5 >> 28u ) + 4u ) ) ^ nodeVar5 ) * 277803737u );
+		nodeVar7 = ( vec3( cos( nodeVar4 ), 0.0, sin( nodeVar4 ) ) * vec3( sqrt( ( float( ( ( nodeVar6 >> 22u ) ^ nodeVar6 ) ) * 2.3283064365386963e-10 ) ) ) );
+		nodeVarying0 = vec4( mix( ( nodeUniform4 + ( nodeVar7 * vec3( 0.15 ) ) ), ( vec3( nodeUniform4.x, 0.02, nodeUniform4.z ) + ( nodeVar7 * vec3( 0.35 ) ) ), nodeUniform6 ), nodeUniform7 );
+		nodeVar8 = ( ( ( nodeVar1 + 2u ) * 747796405u ) + 2891336453u );
+		nodeVar9 = ( ( ( nodeVar8 >> ( ( nodeVar8 >> 28u ) + 4u ) ) ^ nodeVar8 ) * 277803737u );
+		nodeVar10 = ( float( ( ( nodeVar9 >> 22u ) ^ nodeVar9 ) ) * 2.3283064365386963e-10 );
+		nodeVarying1 = vec4( mix( ( ( nodeVar7 * vec3( 1.2 ) ) + vec3( 0.0, ( nodeVar10 * 1.5 ), 0.0 ) ), vec3( 0.0, 0.0, 0.0 ), nodeUniform6 ), nodeVar10 );
+		
+
+	} else {
+
+		nodeVar11 = nodeVarying0.xyz;
+		nodeVar12 = nodeVarying1.xyz;
+		nodeVar13 = nodeVarying0.w;
+
+		if ( ( nodeVar13 >= 0.0 ) ) {
+
+			nodeVar14 = ( nodeVar11.y > 0.021 );
+
+			if ( ( ( length( nodeVar12 ) > 0.0 ) || nodeVar14 ) ) {
+
+				nodeVar12.y = ( nodeVar12.y - ( mix( 98.1, 16.2, dan_ga_gravity ) * nodeUniform10 ) );
+				nodeVar11 = ( nodeVar11 + ( nodeVar12 * vec3( nodeUniform10 ) ) );
+
+				if ( ( nodeVar11.y < 0.02 ) ) {
+
+					nodeVar11.y = 0.02;
+
+					if ( nodeVar14 ) {
+
+						nodeVar12.y = ( abs( nodeVar12.y ) * dan_ga_bounce );
+						nodeVar12.x = ( nodeVar12.x * 0.5 );
+						nodeVar12.z = ( nodeVar12.z * 0.5 );
+
+						if ( ( nodeVar12.y < 1.0 ) ) {
+
+							nodeVar12.y = 0.0;
+							
+
+						}
+
+						
+
+					} else {
+
+						nodeVar12.y = 0.0;
+						
+
+					}
+
+					
+
+				}
+
+
+				if ( ( nodeVar11.y <= 0.021 ) ) {
+
+					nodeVar15 = exp( ( nodeUniform10 * -6.0 ) );
+					nodeVar12.x = ( nodeVar12.x * nodeVar15 );
+					nodeVar12.z = ( nodeVar12.z * nodeVar15 );
+
+					if ( ( ( nodeVar12.y == 0.0 ) && ( length( nodeVar12.xz ) < 0.05 ) ) ) {
+
+						nodeVar12 = vec3( 0.0, 0.0, 0.0 );
+						
+
+					}
+
+					
+
+				}
+
+
+				if ( ( ( nodeVar11.x < -6.7 ) || ( nodeVar11.x > 6.7 ) ) ) {
+
+					nodeVar11.x = clamp( nodeVar11.x, -6.7, 6.7 );
+					nodeVar12.x = ( ( - nodeVar12.x ) * dan_ga_bounce );
+					
+
+				}
+
+
+				if ( ( ( nodeVar11.z < -2.7 ) || ( nodeVar11.z > 4.7 ) ) ) {
+
+					nodeVar11.z = clamp( nodeVar11.z, -2.7, 4.7 );
+					nodeVar12.z = ( ( - nodeVar12.z ) * dan_ga_bounce );
+					
+
+				}
+
+				
+
+			}
+
+
+			if ( ( ( ( ( buffer#0[ 0u ].w > 0.5 ) && ( buffer#0[ 0u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( buffer#0[ 0u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( buffer#0[ 1u ].w > 0.5 ) && ( buffer#0[ 1u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( buffer#0[ 1u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( buffer#0[ 2u ].w > 0.5 ) && ( buffer#0[ 2u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( buffer#0[ 2u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( buffer#0[ 3u ].w > 0.5 ) && ( buffer#0[ 3u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( buffer#0[ 3u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( buffer#0[ 4u ].w > 0.5 ) && ( buffer#0[ 4u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( buffer#0[ 4u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( buffer#0[ 5u ].w > 0.5 ) && ( buffer#0[ 5u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( buffer#0[ 5u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( buffer#0[ 6u ].w > 0.5 ) && ( buffer#0[ 6u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( buffer#0[ 6u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( buffer#0[ 7u ].w > 0.5 ) && ( buffer#0[ 7u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( buffer#0[ 7u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( buffer#0[ 8u ].w > 0.5 ) && ( buffer#0[ 8u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( buffer#0[ 8u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( buffer#0[ 9u ].w > 0.5 ) && ( buffer#0[ 9u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( buffer#0[ 9u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+			
+
+		}
+
+		nodeVarying0 = vec4( nodeVar11, nodeVar13 );
+		nodeVarying1 = vec4( nodeVar12, nodeVarying1.w );
+		
+
+	}
+
+
+	
+
+	gl_PointSize = 1.0;
+
+}

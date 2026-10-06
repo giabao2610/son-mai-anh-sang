@@ -1,0 +1,287 @@
+// Three.js r186 - Node System
+
+// directives
+
+
+// system
+var<private> instanceIndex : u32;
+
+// locals
+
+
+// structs
+
+
+// uniforms
+
+struct NodeBuffer_#0Struct {
+	value : array< vec4<f32> >
+};
+@binding( 1 ) @group( 0 )
+var<storage, read_write> NodeBuffer_#0 : NodeBuffer_#0Struct;
+
+struct NodeBuffer_#1Struct {
+	value : array< vec4<f32> >
+};
+@binding( 2 ) @group( 0 )
+var<storage, read_write> NodeBuffer_#1 : NodeBuffer_#1Struct;
+
+struct danGaBeaksStruct {
+	value : array< vec4<f32>, 10 >
+};
+@binding( 3 ) @group( 0 )
+var<uniform> danGaBeaks : danGaBeaksStruct;
+
+struct objectStruct {
+	nodeUniform0 : u32,
+	nodeUniform1 : u32,
+	nodeUniform2 : u32,
+	nodeUniform4 : vec3<f32>,
+	nodeUniform5 : f32,
+	nodeUniform6 : f32,
+	nodeUniform7 : f32,
+	dan_ga_gravity : f32,
+	nodeUniform10 : f32,
+	dan_ga_bounce : f32,
+	nodeUniform13 : u32
+};
+@binding( 0 ) @group( 0 )
+var<uniform> object : objectStruct;
+
+// vars
+var<private> nodeVar0 : u32;
+var<private> nodeVar1 : u32;
+var<private> nodeVar2 : u32;
+var<private> nodeVar3 : u32;
+var<private> nodeVar4 : f32;
+var<private> nodeVar5 : u32;
+var<private> nodeVar6 : u32;
+var<private> nodeVar7 : vec3<f32>;
+var<private> nodeVar8 : u32;
+var<private> nodeVar9 : u32;
+var<private> nodeVar10 : f32;
+var<private> nodeVar11 : vec3<f32>;
+var<private> nodeVar12 : vec3<f32>;
+var<private> nodeVar13 : f32;
+var<private> nodeVar14 : bool;
+var<private> nodeVar15 : f32;
+
+// codes
+
+
+@compute @workgroup_size( 64, 1, 1 )
+fn main( @builtin( global_invocation_id ) globalId : vec3<u32>,
+	@builtin( workgroup_id ) workgroupId : vec3<u32>,
+	@builtin( local_invocation_id ) localId : vec3<u32>,
+	@builtin( num_workgroups ) numWorkgroups : vec3<u32> ) {
+
+	// local vars
+	
+
+	// system
+	instanceIndex = globalId.x
+		+ globalId.y * ( 64 * numWorkgroups.x )
+		+ globalId.z * ( 64 * numWorkgroups.x ) * ( 1 * numWorkgroups.y );
+
+	// flow
+	// code
+
+	if ( instanceIndex >= object.nodeUniform13 ) { return; }
+
+	nodeVar0 = ( ( ( instanceIndex + object.nodeUniform0 ) - object.nodeUniform1 ) % object.nodeUniform0 );
+
+	if ( ( nodeVar0 < object.nodeUniform2 ) ) {
+
+		nodeVar1 = ( ( nodeVar0 * 3u ) + ( u32( object.nodeUniform5 ) * 7919u ) );
+		nodeVar2 = ( ( ( nodeVar1 + 0u ) * 747796405u ) + 2891336453u );
+		nodeVar3 = ( ( ( nodeVar2 >> ( ( nodeVar2 >> 28u ) + 4u ) ) ^ nodeVar2 ) * 277803737u );
+		nodeVar4 = ( ( f32( ( ( nodeVar3 >> 22u ) ^ nodeVar3 ) ) * 2.3283064365386963e-10 ) * 6.283185307179586 );
+		nodeVar5 = ( ( ( nodeVar1 + 1u ) * 747796405u ) + 2891336453u );
+		nodeVar6 = ( ( ( nodeVar5 >> ( ( nodeVar5 >> 28u ) + 4u ) ) ^ nodeVar5 ) * 277803737u );
+		nodeVar7 = ( vec3<f32>( cos( nodeVar4 ), 0.0, sin( nodeVar4 ) ) * vec3<f32>( sqrt( ( f32( ( ( nodeVar6 >> 22u ) ^ nodeVar6 ) ) * 2.3283064365386963e-10 ) ) ) );
+		NodeBuffer_#0.value[ instanceIndex ] = vec4<f32>( mix( ( object.nodeUniform4 + ( nodeVar7 * vec3<f32>( 0.15 ) ) ), ( vec3<f32>( object.nodeUniform4.x, 0.02, object.nodeUniform4.z ) + ( nodeVar7 * vec3<f32>( 0.35 ) ) ), object.nodeUniform6 ), object.nodeUniform7 );
+		nodeVar8 = ( ( ( nodeVar1 + 2u ) * 747796405u ) + 2891336453u );
+		nodeVar9 = ( ( ( nodeVar8 >> ( ( nodeVar8 >> 28u ) + 4u ) ) ^ nodeVar8 ) * 277803737u );
+		nodeVar10 = ( f32( ( ( nodeVar9 >> 22u ) ^ nodeVar9 ) ) * 2.3283064365386963e-10 );
+		NodeBuffer_#1.value[ instanceIndex ] = vec4<f32>( mix( ( ( nodeVar7 * vec3<f32>( 1.2 ) ) + vec3<f32>( 0.0, ( nodeVar10 * 1.5 ), 0.0 ) ), vec3<f32>( 0.0, 0.0, 0.0 ), object.nodeUniform6 ), nodeVar10 );
+		
+
+	} else {
+
+		nodeVar11 = NodeBuffer_#0.value[ instanceIndex ].xyz;
+		nodeVar12 = NodeBuffer_#1.value[ instanceIndex ].xyz;
+		nodeVar13 = NodeBuffer_#0.value[ instanceIndex ].w;
+
+		if ( ( nodeVar13 >= 0.0 ) ) {
+
+			nodeVar14 = ( nodeVar11.y > 0.021 );
+
+			if ( ( ( length( nodeVar12 ) > 0.0 ) || nodeVar14 ) ) {
+
+				nodeVar12.y = ( nodeVar12.y - ( mix( 98.1, 16.2, object.dan_ga_gravity ) * object.nodeUniform10 ) );
+				nodeVar11 = ( nodeVar11 + ( nodeVar12 * vec3<f32>( object.nodeUniform10 ) ) );
+
+				if ( ( nodeVar11.y < 0.02 ) ) {
+
+					nodeVar11.y = 0.02;
+
+					if ( nodeVar14 ) {
+
+						nodeVar12.y = ( abs( nodeVar12.y ) * object.dan_ga_bounce );
+						nodeVar12.x = ( nodeVar12.x * 0.5 );
+						nodeVar12.z = ( nodeVar12.z * 0.5 );
+
+						if ( ( nodeVar12.y < 1.0 ) ) {
+
+							nodeVar12.y = 0.0;
+							
+
+						}
+
+						
+
+					} else {
+
+						nodeVar12.y = 0.0;
+						
+
+					}
+
+					
+
+				}
+
+
+				if ( ( nodeVar11.y <= 0.021 ) ) {
+
+					nodeVar15 = exp( ( object.nodeUniform10 * -6.0 ) );
+					nodeVar12.x = ( nodeVar12.x * nodeVar15 );
+					nodeVar12.z = ( nodeVar12.z * nodeVar15 );
+
+					if ( ( ( nodeVar12.y == 0.0 ) && ( length( nodeVar12.xz ) < 0.05 ) ) ) {
+
+						nodeVar12 = vec3<f32>( 0.0, 0.0, 0.0 );
+						
+
+					}
+
+					
+
+				}
+
+
+				if ( ( ( nodeVar11.x < -6.7 ) || ( nodeVar11.x > 6.7 ) ) ) {
+
+					nodeVar11.x = clamp( nodeVar11.x, -6.7, 6.7 );
+					nodeVar12.x = ( ( - nodeVar12.x ) * object.dan_ga_bounce );
+					
+
+				}
+
+
+				if ( ( ( nodeVar11.z < -2.7 ) || ( nodeVar11.z > 4.7 ) ) ) {
+
+					nodeVar11.z = clamp( nodeVar11.z, -2.7, 4.7 );
+					nodeVar12.z = ( ( - nodeVar12.z ) * object.dan_ga_bounce );
+					
+
+				}
+
+				
+
+			}
+
+
+			if ( ( ( ( ( danGaBeaks.value[ 0u ].w > 0.5 ) && ( danGaBeaks.value[ 0u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( danGaBeaks.value[ 0u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( danGaBeaks.value[ 1u ].w > 0.5 ) && ( danGaBeaks.value[ 1u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( danGaBeaks.value[ 1u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( danGaBeaks.value[ 2u ].w > 0.5 ) && ( danGaBeaks.value[ 2u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( danGaBeaks.value[ 2u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( danGaBeaks.value[ 3u ].w > 0.5 ) && ( danGaBeaks.value[ 3u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( danGaBeaks.value[ 3u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( danGaBeaks.value[ 4u ].w > 0.5 ) && ( danGaBeaks.value[ 4u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( danGaBeaks.value[ 4u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( danGaBeaks.value[ 5u ].w > 0.5 ) && ( danGaBeaks.value[ 5u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( danGaBeaks.value[ 5u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( danGaBeaks.value[ 6u ].w > 0.5 ) && ( danGaBeaks.value[ 6u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( danGaBeaks.value[ 6u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( danGaBeaks.value[ 7u ].w > 0.5 ) && ( danGaBeaks.value[ 7u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( danGaBeaks.value[ 7u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( danGaBeaks.value[ 8u ].w > 0.5 ) && ( danGaBeaks.value[ 8u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( danGaBeaks.value[ 8u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+
+			if ( ( ( ( ( danGaBeaks.value[ 9u ].w > 0.5 ) && ( danGaBeaks.value[ 9u ].y < 0.3 ) ) && ( nodeVar11.y < 0.3 ) ) && ( length( ( danGaBeaks.value[ 9u ].xz - nodeVar11.xz ) ) < 0.2 ) ) ) {
+
+				nodeVar13 = -1.0;
+				
+
+			}
+
+			
+
+		}
+
+		NodeBuffer_#0.value[ instanceIndex ] = vec4<f32>( nodeVar11, nodeVar13 );
+		NodeBuffer_#1.value[ instanceIndex ] = vec4<f32>( nodeVar12, NodeBuffer_#1.value[ instanceIndex ].w );
+		
+
+	}
+
+
+	
+
+}

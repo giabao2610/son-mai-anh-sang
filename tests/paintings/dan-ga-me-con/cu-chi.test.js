@@ -1,4 +1,4 @@
-// tests/paintings/dan-ga-me-con/cu-chi.test.js — cử chỉ của Bức 4 (shared.js, spec §20.2), dựng cả bức: chạm rắc thóc ở đúng điểm trên sàn (tia của camera trực giao), chạm lên vách, ra ván, tia song song mặt sàn hay tia hỏng (khung cỡ 0) vẫn rơi trong sàn mà không ném lỗi; giữ thì gà mẹ gọi con, thả thì tản; vuốt, chạm đúp không thêm mốc; hai mươi lần chạm trong một giây; drift chạy trước cử chỉ.
+// tests/paintings/dan-ga-me-con/cu-chi.test.js — cử chỉ của Bức 4 (shared.js, spec §20.2), dựng cả bức: chạm rắc thóc ở đúng điểm trên sàn (tia của camera trực giao), chạm lên vách, ra ván, tia song song mặt sàn hay tia hỏng (khung cỡ 0) vẫn rơi trong sàn mà không ném lỗi; giữ thì gà mẹ gọi con, thả thì tản; vuốt, chạm đúp không thêm mốc; hai mươi lần chạm trong một giây; lớp Đàn gà mài về 0 thì chạm, giữ không làm gì; drift chạy trước cử chỉ.
 import { describe, it, expect } from 'vitest';
 import { Ray, Raycaster, Vector2, Vector3 } from 'three/webgpu';
 import meta from '../../../src/paintings/dan-ga-me-con/meta.js';
@@ -113,6 +113,29 @@ describe('cử chỉ (Bức 4)', () => {
     expect(tapsOf(handfuls)).toHaveLength(20);
     for (const { at } of handfuls) expect(inFloor(at), `${at}`).toBe(true);
     for (let t = 1; t < 30; t += 0.25) expect(finite(flock.state(t)), `lúc ${t}`).toBe(true);
+  });
+
+  it('lớp Đàn gà mài về 0 (gà đứng như tượng, không có thóc): chạm và giữ không làm gì, không con nào chạy hay mổ; gà mẹ vẫn bới theo đồng hồ; cái giữ bắt đầu lúc lớp còn phủ vẫn được thả', () => {
+    const built = build();
+    const { flock } = built.shared;
+    const ray = rayTo(built.ctx.camera, [-4.5, 0, 2.5]);
+    built.ctx.weights.set('dan-ga', 0);
+    frame(built, 10); // nhúm lúc mở trang đã ăn xong, các con đã về
+    const before = flock.marks();
+    frame(built, 11, [{ kind: 'tap', ray }, { kind: 'hold-start', ray }]);
+    frame(built, 12, [{ kind: 'hold-end', ray }]);
+    expect(flock.marks(), 'không thêm mốc nào').toBe(before);
+    for (const t of [12, 14, 16]) expect([flock.state(t).eating, flock.state(t).near], `lúc ${t}`).toEqual([0, 2]);
+    frame(built, FLOCK.auto + 1);
+    expect(flock.marks(), 'gà mẹ vẫn bới (drift chạy mỗi khung)').toBe(before + 1);
+    // Giữ lúc lớp còn phủ, mài về 0 rồi mới thả: đàn gà vẫn nhận cái thả, gà mẹ không xòe cánh mãi.
+    const other = build();
+    frame(other, 2, [{ kind: 'hold-start', ray }]);
+    other.ctx.weights.set('dan-ga', 0);
+    frame(other, 5, [{ kind: 'hold-end', ray }]);
+    const later = other.shared.flock.state(20);
+    expect(later.hen.wing).toBeLessThan(1e-3);
+    expect(later.near).toBe(2);
   });
 
   it('drift chạy trước cử chỉ của khung: cú chạm đầu tiên sau 25 giây lặng không xóa lần gà mẹ bới đã tới hạn', () => {

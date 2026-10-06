@@ -3,23 +3,8 @@ import { describe, it, expect } from 'vitest';
 import meta from '../../../src/paintings/ao-sen-dem/meta.js';
 import * as painting from '../../../src/paintings/ao-sen-dem/painting.js';
 import { buildPainting } from '../../helpers/fake-ctx.js';
-import { compileCompute, compileMaterial } from '../../helpers/nodes.js';
+import { compileCompute, compileMaterial, normalizeIds as normalize } from '../../helpers/nodes.js';
 
-/**
- * Tên mang số id của node. id tăng theo thứ tự node được tạo trong cả lần chạy test, nên đổi khi code dựng node theo thứ tự khác mà mã
- * không đổi. GLSL: NodeBuffer_<id>, buffer<id> (GLSLNodeBuilder); WGSL: NodeBuffer_<id>, và kiểu NodeBuffer_<id>Struct của nó
- * (WGSLNodeBuilder#_getWGSLStructBinding ghép tên với 'Struct', nên sau số không có ranh giới từ). Chỉ thêm tên vào đây khi đã đọc
- * trong mã nguồn của three rằng số trong tên là id của node.
- * Mỗi id thành '#' kèm thứ tự lần đầu nó xuất hiện trong mã (#0, #1…), không phải một '#' chung: hai bộ đệm vẫn phân biệt được, nên
- * một câu lệnh đọc hay ghi nhầm bộ đệm thì mã khác bản ghi.
- */
-const normalize = (code) => {
-  const order = new Map();
-  return code.replace(/\b(NodeBuffer_|buffer)(\d+)/g, (_, name, id) => {
-    if (!order.has(id)) order.set(id, order.size);
-    return `${name}#${order.get(id)}`;
-  });
-};
 const fixture = (backend, name) => `./__fixtures__/vang-la/${backend}-${name}.txt`;
 
 describe.each(['webgpu', 'webgl2'])('Vàng lá: mã shader của đom đóm không đổi khi rút bể hạt (%s)', (backend) => {
