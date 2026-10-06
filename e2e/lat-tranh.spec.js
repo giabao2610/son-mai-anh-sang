@@ -28,6 +28,17 @@ test('từ Bức 2 bấm "Bức 3 · …" thì tới trang Bức 3; bấm "← B
   await expect(page.locator('h1')).toHaveText(second.meta.title);
 });
 
+test('từ Bức 3 bấm "Bức 4 · …" thì tới trang Bức 4; bấm "← Bức 3 · …" thì về (GĐ 8)', async ({ page }) => {
+  const [, , third, fourth] = paintings;
+  await page.goto('./tranh/cung-que/?static');
+  await page.locator('nav.series a[rel="next"]').click();
+  await expect(page).toHaveURL(/\/tranh\/dan-ga-me-con\/$/);
+  await expect(page.locator('h1')).toHaveText(fourth.meta.title);
+  await page.locator('nav.series a[rel="prev"]').click();
+  await expect(page).toHaveURL(/\/tranh\/cung-que\/$/);
+  await expect(page.locator('h1')).toHaveText(third.meta.title);
+});
+
 test('trang nào cũng có link "Phòng tranh" giữa bức trước và bức sau; bấm thì tới Phòng tranh (GĐ 7)', async ({ page }) => {
   for (const { page: html } of paintings) {
     await page.goto(`./${html.replace(/index\.html$/, '')}?static`);

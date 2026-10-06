@@ -234,6 +234,10 @@ describe('hàng rào từ vựng (§8.2)', () => {
     expect(fenceHits('const s = "Mặt nước";').map((h) => h.term)).toContain('mặt nước');
     expect(fenceHits('const s = "Hoa sen";').map((h) => h.term)).toContain('hoa sen');
     expect(fenceHits('const s = "hoa senx";').map((h) => h.term)).not.toContain('hoa sen');
+    // GĐ 8: bắt được từ của Bức 4; không bắt token của xưởng (denThen chứa "hen") hay núm grain của Phủ bóng.
+    expect(fenceHits('chickPeck')).not.toEqual([]);
+    expect(fenceHits('const s = "Gà mẹ";').map((h) => h.term)).toContain('gà mẹ');
+    for (const word of ['denThen', 'grainAmount']) expect(fenceHits(word), word).toEqual([]);
   });
 
   it('engine/, ui/, lib/tsl/ (sau khi bỏ chú thích) không chứa từ vựng của bức nào', () => {

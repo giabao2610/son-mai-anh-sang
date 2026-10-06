@@ -2262,7 +2262,9 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
     - bật kính tròn ở giữa khung và chọn một view: ảnh trong vùng kính khác, ngoài vùng kính như cũ;
     - hình gạt ở 50%: nửa trái khác, nửa phải như cũ;
     - tắt công cụ thì về đúng ảnh cũ.
-  - **Mọi bức · Lột lớp:** mỗi nấc cho ảnh khác nấc kề bên; về nấc cuối thì đúng ảnh cũ.
+  - **Mọi bức · Lột lớp:** mỗi nấc cho ảnh khác nấc kề bên; về nấc cuối thì đúng ảnh cũ. (GĐ 8) Trừ một cặp: "Trước tone" là "Trước bloom"
+    cộng ánh bloom, nên bức không có gì phát sáng (ảnh "Chỉ emissive" đen tuyền, như Bức 4 khi chưa có giấy điệp) thì hai nấc ấy phải
+    TRÙNG nhau; có thì phải khác.
   - **Mọi bức · Normal:** chọn Normal thì thấy "đang mài…", rồi ảnh đổi, không có lỗi console.
   - **Mọi bức · `?poster`:** ngoài canvas không có phần tử UI nào hiện.
   - **A11y** (`e2e/a11y.spec.js`, `@axe-core/playwright`, luật WCAG 2 A/AA):
@@ -3901,7 +3903,9 @@ spec.
 ### 20.2 Trải nghiệm riêng của Bức 4
 - **Camera trực giao** (§20.6):
   - số thiết kế:
-    - `position` [0; 6; 12], `target` [0; 1,6; 0]: nhìn chếch xuống chừng 20°;
+    - `position` [0; 7,2; 11,55], `target` [0; 2,8; −0,45]: nhìn chếch xuống chừng 20°, và tờ giấy nằm giữa khung theo chiều dọc (mép trước
+      và mép trên của giấy cách tâm khung chừng 4,5 đơn vị). Số cũ, `position` [0; 6; 12] và `target` [0; 1,6; 0], để giấy lệch hẳn lên
+      trên: mép trên chỉ cách mép khung 0,15 đơn vị, không còn ván tối cho chữ (sửa ở GĐ 8 Task 1);
     - `height` 12, `minWidth` 15,5, `zoom` [1; 2,5];
     - xoay ngang ±75°; xoay dọc từ 10° tới 70° trên mặt sàn;
     - `breathe` 0: tờ tranh đứng yên;
@@ -4035,9 +4039,21 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     lân cận được mà không tốn lượt vẽ nào.
   - Độ sâu đổi ra đơn vị cảnh bằng near, far của `ctx.camera`, qua uniform đặt từ JS. Trong post, `cameraNear` của TSL là của camera vẽ
     quad, không phải camera của cảnh (Phụ lục A.93).
-  - Lấy mẫu trên lưới 3×3, mỗi bước `lineWidth` điểm ảnh:
-    - độ dốc (Sobel) bắt bậc độ sâu: mép vật trước nền, vật trước vật;
-    - đạo hàm bậc hai (Laplace) bắt nếp gấp dù không có bậc: cổ nối mình, cánh áp thân.
+  - Lấy mẫu trên lưới 3×3 (chín lần đọc), mỗi bước `lineWidth` điểm ảnh. Mỗi hướng trong bốn hướng (ngang, dọc, hai chéo) tính **độ lệch
+    khỏi mặt phẳng** `e = D(+) + D(−) − 2·D(giữa)`, với D là độ sâu theo đơn vị cảnh:
+    - trên MỌI mặt phẳng, dù nghiêng tới đâu, `e = 0`;
+    - bậc độ sâu cao H (mép vật trước nền, vật trước vật) cho `|e| ≈ H`. `e > 0` nghĩa là điểm giữa nằm trên vật ở trước: nét chỉ vẽ phía
+      đó, như nét viền của vật; `e` từ `threshold` trở lên thì đậm hẳn;
+    - nếp gấp dù không có bậc (cổ nối mình, cánh áp thân): `|e|` chia độ dài một bước là độ gãy (độ đổi độ dốc); đủ 1 thì thành nét, độ đậm
+      nhân `crease`. Bậc lớn đã là viền thì không tính lại, để phía sau của bậc không dày thêm.
+
+    Vì sao không dùng Sobel trên độ sâu: ở góc nhìn của tranh, độ sâu của mặt sàn đổi chừng 0,02 đơn vị mỗi điểm ảnh (khung cao 12 trên
+    1600 điểm ảnh thiết bị, nhìn chếch 20°); kéo xuống góc thấp nhất và ở DPR 1 thì gấp bốn. Độ dốc của Sobel trên mặt sàn khi ấy vượt
+    ngưỡng của một bậc thật, và cả mặt sàn thành nét đen. Độ lệch khỏi mặt phẳng thì một phép đo cho cả bậc lẫn nếp gấp, không bị mặt
+    nghiêng đánh lừa.
+  - Mọi mẫu nằm đúng **tâm một điểm ảnh**, cách điểm giữa một số NGUYÊN điểm ảnh: bước là `lineWidth` làm tròn (tối thiểu 1), lệch bản
+    cũng làm tròn. Texture độ sâu không lọc được, nên three đọc điểm ảnh gần nhất (Phụ lục A.96): bước 1,5 điểm ảnh rơi đúng mép giữa
+    hai điểm ảnh, hai mẫu không còn đối xứng, và mặt sàn nghiêng thành sọc mực (đã thấy trên GPU thật, GĐ 8 Task 1).
   - Mép tờ giấy cũng là một bậc độ sâu (giấy đứng trước khoảng trống), nên khung tranh tự có nét.
   - Thóc không ghi độ sâu (lớp 5), nên không bao giờ thành chấm đen.
 - **Nét trong** (`recipe.ink`, `parts/ban-net-net-trong.js`): hàm khoảng cách 2D trên UV của từng phần.
@@ -4048,8 +4064,9 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   tranh in tay. Nét trong nằm trong màu của vật nên không lệch theo; ở 1–2 điểm ảnh thì không thấy.
 - **Chỉ chạy với camera trực giao.** Bức dùng camera phối cảnh mà muốn nét như thế thì bọc độ sâu bằng `convertToTexture`, tốn thêm một
   lượt vẽ.
-- **Núm:** `lineWidth` (0,5–3 điểm ảnh), `threshold` (bậc độ sâu tối thiểu, đơn vị cảnh; mặc định 0,3, tức 3 cm), `crease` (độ
-  nhạy nếp gấp), `misregister` (0–6 điểm ảnh, mặc định 1,5).
+- **Núm:** `lineWidth` (0,5–3 điểm ảnh thiết bị; nét dày theo số nguyên điểm ảnh đã làm tròn: 1, 2 hay 3), `threshold` (bậc độ sâu tối
+  thiểu, đơn vị cảnh; mặc định 0,3, tức 3 cm), `crease` (độ đậm của nét nếp gấp, 0–1), `misregister` (0–6 điểm ảnh, mặc định 1,5; làm
+  tròn như `lineWidth`).
 - **Thí nghiệm:**
   - "Chỉ bản nét" (`chiNet`): giấy trắng với nét đen, như bản nét in riêng trước khi in màu;
   - "Dò cạnh theo màu" (`netTheoMau`): dò trên độ sáng của ảnh màu thay cho độ sâu. Nét mọc ở ranh của nấc sáng, và mất ở chỗ hai mảng
@@ -4254,6 +4271,10 @@ chuyển động ở lại trong bức.
   - Thóc: 4096 phần tử, mỗi phần tử một vòng qua 10 mỏ.
   - Mục tiêu như §2: 60 khung/giây trên Mac M2 (1280×800, DPR 2, mức cao), 45 trên điện thoại tầm trung. Đo ở task đầu, rồi đo lại khi đủ
     sáu lớp.
+  - (GĐ 8, Task 1, bản khung: Cốt, Bản nét, Phủ bóng; Chrome headless, GPU thật) M2, 1280×800, DPR 2: 60 khung/giây ở cả ba mức (trần
+    60 của xưởng), 17 draw call, CPU 1,1–1,8 ms mỗi khung, bộ điều chỉnh không hạ nấc nào; Bản nét về 0 cũng vậy. Tải nặng 2560×1600,
+    DPR 2, mức cao: vẫn 60 khung/giây, không hạ nấc. Ms GPU ở mức vừa 8,2, thấp 5,9; ở mức cao GPU Apple báo các lượt chồng lên nhau nên
+    bị coi là không đo được (README).
 - **JS:** chunk của bức cộng chunk content. `lib/tsl/particles.js` vào một chunk dùng chung với Bức 1 (Vite tự tách). Số đo ghi vào
   README.
 
@@ -4359,7 +4380,7 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
   - Cách tránh: Bức 4 dùng `positionViewDirection`, vì three tự xử lý camera trực giao (Phụ lục A.91). Task đầu soát lại cả xưởng bằng
     một cảnh khung chạy thật.
 - **Dò cạnh chỉ trên độ sâu bỏ sót nét:** hai mặt chạm nhau mà cùng độ sâu thì không có bậc.
-  - Cách tránh: Laplace bắt nếp gấp; nét trong vẽ trong shader.
+  - Cách tránh: độ lệch khỏi mặt phẳng bắt cả nếp gấp (§20.4 lớp 3); nét trong vẽ trong shader.
   - Nếu vẫn thiếu: thêm kênh normal vào MRT từ đầu cho bức cần (một trường tùy chọn mới, biên dịch một lần lúc dựng). Việc này để ở §16.
 - **Lấy mẫu texture độ sâu ở WebGL2.** View Độ sâu đã đọc texture này ở cả hai backend từ GĐ 4, nên lấy mẫu ở điểm lân cận chỉ là cùng
   phép đọc. Nếu hỏng: bọc `convertToTexture`, thêm một lượt vẽ như FXAA.
@@ -4799,7 +4820,8 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - `getViewZNode()` luôn gọi `perspectiveDepthToViewZ(texture độ sâu, near, far)`. `getLinearDepthNode()` dựng trên nó, kèm chú thích
       `// TODO: just if ( builder.camera.isPerspectiveCamera )`.
     - Với camera trực giao, texture độ sâu đã tuyến tính. Đi qua công thức phối cảnh thì gần như mọi điểm dồn về sát 0 (near 0,1, far
-      500: 0,5 thành chừng 0,0002), nên view Độ sâu thành một bóng trắng trên nền đen.
+      500: 0,5 thành chừng 0,0002), nên view Độ sâu thành một bóng trắng trên nền đen. Đã thấy đúng như vậy trên GPU thật (GĐ 8 Task 1,
+      cả WebGPU lẫn WebGL2): tờ giấy và đàn gà trắng tinh một màu; dùng `pipeline.js#linearDepth` thì có độ dốc.
 90. **Texture độ sâu của camera trực giao là tuyến tính ở cả hai backend:**
     - WebGL đưa z của NDC từ [−1, 1] về [0, 1]; WebGPU dùng thẳng [0, 1]. Với phép chiếu trực giao, cả hai cho
       `d = (−viewZ − near) / (far − near)`.
@@ -4839,3 +4861,9 @@ Các mục dưới đây đã được kiểm bằng ba cách:
       và "Trước khi in bản nét" (Bức 4). Cách tránh: bọc view của mỗi nhánh trong `isolate(node).setParent(false)`, cache KHÔNG có cha:
       nhánh nào cũng tự đọc texture của nó; thuộc tính, varying, uniform và `VarNode` vẫn dùng chung vì nằm ở cache toàn cục. Test dịch
       lượt cuối (WGSL, GLSL) và kiểm mỗi nhánh chỉ đọc biến nó tự gán hay biến gán ngoài mọi nhánh (`tests/unit/pipeline.test.js`).
+96. **Texture độ sâu đọc kiểu nearest** (`textures/DepthTexture.js`, `renderers/webgpu/nodes/WGSLNodeBuilder.js`; GĐ 8 Task 1):
+    - `DepthTexture` mặc định `NearestFilter`, và WGSL coi nó là không lọc được: `textureLoad` ở điểm ảnh `floor(uv · cỡ)`. WebGL2 đọc
+      điểm ảnh gần nhất như vậy.
+    - Lấy mẫu lân cận ở `tâm ± k` điểm ảnh với k lẻ nửa (1,5) rơi đúng mép giữa hai điểm ảnh: bên này làm tròn lên, bên kia xuống, hai
+      mẫu không còn đối xứng. Độ lệch khỏi mặt phẳng của mặt sàn nghiêng khi ấy khác 0, và Bản nét của Bức 4 vẽ cả sàn thành sọc mực.
+      Cách tránh: tính tâm điểm ảnh theo cỡ của chính texture độ sâu (`textureSize`) và dời một số NGUYÊN điểm ảnh.

@@ -2,6 +2,7 @@
 import aoSenDem from './ao-sen-dem/meta.js';
 import denKeoQuan from './den-keo-quan/meta.js';
 import cungQue from './cung-que/meta.js';
+import danGaMeCon from './dan-ga-me-con/meta.js';
 
 /** Địa chỉ gốc khi deploy, có '/' cuối (og:image tuyệt đối = SITE + meta.og). */
 export const SITE = 'https://giabao2610.github.io/son-mai-anh-sang/';
@@ -18,4 +19,5 @@ export const paintings = [
   { meta: aoSenDem, page: 'index.html', lang: 'vi' },
   { meta: denKeoQuan, page: 'tranh/den-keo-quan/index.html', lang: 'vi' },
   { meta: cungQue, page: 'tranh/cung-que/index.html', lang: 'vi', ciWebgpuSmoke: true },
+  { meta: danGaMeCon, page: 'tranh/dan-ga-me-con/index.html', lang: 'vi' },
 ];
