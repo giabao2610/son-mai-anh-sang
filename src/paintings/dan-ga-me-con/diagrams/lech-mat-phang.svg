@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" role="img" aria-labelledby="dg-dgmc-lm-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-dgmc-lm-title">Độ lệch khỏi mặt phẳng, đo trên mặt cắt độ sâu của một hàng điểm ảnh: e = D(+) + D(−) − 2·D(giữa), với D là độ sâu ở điểm bên trái, điểm giữa và điểm bên phải (ba chấm; đường đứt nối hai chấm ngoài, vạch đỏ là chỗ điểm giữa lệch khỏi nó). Mặt nghiêng: ba điểm thẳng hàng, e = 0, không thành nét dù mặt nghiêng tới đâu. Bậc, như mép một vật đứng trước vật khác: e gần bằng độ cao H của bậc, nên thành viền. Nếp gấp: e nhỏ, dưới ngưỡng của viền, vì hai mẫu chỉ cách nhau vài điểm ảnh; nét nếp gấp đến từ một phép đo riêng, góc gãy của mặt.</title>
+  <defs>
+    <marker id="dg-dgmc-lm-mui" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#8A8580"/>
+    </marker>
+  </defs>
+  <text x="180" y="18" fill="#EDE3CF" text-anchor="middle" font-size="13">e = D(+) + D(−) − 2·D(giữa)</text>
+  <!-- trục độ sâu: lên là gần, xuống là xa -->
+  <path d="M12 64 V124" stroke="#8A8580" marker-end="url(#dg-dgmc-lm-mui)"/>
+  <text x="12" y="58" fill="#8A8580" text-anchor="middle" font-size="11">gần</text>
+  <text x="12" y="140" fill="#8A8580" text-anchor="middle" font-size="11">xa</text>
+  <!-- mặt nghiêng -->
+  <g transform="translate(26 0)">
+    <text x="52" y="44" fill="#EDE3CF" text-anchor="middle" font-weight="600">mặt nghiêng</text>
+    <path d="M6 70 L98 126" fill="none" stroke="#C9C6BD" stroke-width="2"/>
+    <path d="M34 87 L70 109" stroke="#8A8580" stroke-dasharray="3 3"/>
+    <g fill="#E0AC3A">
+      <circle cx="34" cy="87" r="3.4"/>
+      <circle cx="52" cy="98" r="3.4"/>
+      <circle cx="70" cy="109" r="3.4"/>
+    </g>
+    <text x="52" y="152" fill="#EDE3CF" text-anchor="middle" font-weight="600">e = 0</text>
+    <text x="52" y="168" fill="#8A8580" text-anchor="middle">không nét</text>
+  </g>
+  <!-- bậc -->
+  <g transform="translate(138 0)">
+    <text x="52" y="44" fill="#EDE3CF" text-anchor="middle" font-weight="600">bậc</text>
+    <path d="M6 120 H43 V76 H98" fill="none" stroke="#C9C6BD" stroke-width="2"/>
+    <path d="M34 120 L70 76" stroke="#8A8580" stroke-dasharray="3 3"/>
+    <path d="M52 76 V98" stroke="#B9472E" stroke-width="2.4"/>
+    <path d="M35 76 V120" stroke="#EDE3CF" stroke-width="1"/>
+    <path d="M32 76 H38 M32 120 H38" stroke="#EDE3CF"/>
+    <text x="29" y="102" fill="#EDE3CF" text-anchor="end">H</text>
+    <g fill="#E0AC3A">
+      <circle cx="34" cy="120" r="3.4"/>
+      <circle cx="52" cy="76" r="3.4"/>
+      <circle cx="70" cy="76" r="3.4"/>
+    </g>
+    <text x="52" y="152" fill="#EDE3CF" text-anchor="middle" font-weight="600">e ≈ H</text>
+    <text x="52" y="168" fill="#8A8580" text-anchor="middle">viền</text>
+  </g>
+  <!-- nếp gấp -->
+  <g transform="translate(250 0)">
+    <text x="52" y="44" fill="#EDE3CF" text-anchor="middle" font-weight="600">nếp gấp</text>
+    <path d="M6 102.4 L52 84 L98 97.8" fill="none" stroke="#C9C6BD" stroke-width="2"/>
+    <path d="M34 91.2 L70 89.4" stroke="#8A8580" stroke-dasharray="3 3"/>
+    <path d="M52 84 V90.3" stroke="#B9472E" stroke-width="2.4"/>
+    <path d="M52 84 L92 68" stroke="#8A8580" stroke-dasharray="2 2"/>
+    <path d="M79.9 72.9 A30 30 0 0 1 80.7 92.6" fill="none" stroke="#F2D48A" stroke-width="1.4"/>
+    <text x="78" y="110" fill="#F2D48A" text-anchor="middle" font-size="11">góc gãy</text>
+    <g fill="#E0AC3A">
+      <circle cx="34" cy="91.2" r="3.4"/>
+      <circle cx="52" cy="84" r="3.4"/>
+      <circle cx="70" cy="89.4" r="3.4"/>
+    </g>
+    <text x="52" y="152" fill="#EDE3CF" text-anchor="middle" font-weight="600">e nhỏ</text>
+    <text x="52" y="168" fill="#8A8580" text-anchor="middle">đo góc gãy</text>
+  </g>
+  <text x="180" y="192" fill="#8A8580" text-anchor="middle" font-size="11">ba mẫu độ sâu trên một hàng điểm ảnh, cách nhau vài điểm ảnh</text>
+</svg>

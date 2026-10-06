@@ -1090,7 +1090,7 @@ son-mai-anh-sang/
         layers/l3-ban-net.js         [8] dò cạnh trên độ sâu (post), nét trong, lệch bản; parts/ban-net-do-canh.js, ban-net-net-trong.js
         layers/l4-giay-diep.js       [8] sợi dó, vệt chổi, hạt điệp; parts/giay-diep-mat.js
         layers/l5-dan-ga.js          [8] thóc (bể hạt của lib/tsl/particles.js), đàn gà; parts/dan-ga-thoc.js, dan-ga-song.js, dan-ga-pha.js, dan-ga-duong.js, dan-ga-cho.js, dan-ga-ke.js (hàm thuần)
-        diagrams/*.svg               [8] sơ đồ của tab Hiểu
+        diagrams/*.svg               [8] năm sơ đồ của tab Hiểu: truc-giao, chia-nac, lech-mat-phang, hat-diep, vong-dem
   tests/
     unit/                            [0] flags tier quality palette tokens-css random lunar moon strings deadline disposer layers source
                                      [4] tuner gpu-timer lut views toolbox kinh-mai lot-lop dial-set dials rail-tools poster
@@ -4270,8 +4270,12 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   - Ma trận instance giữ đơn vị và `frustumCulled = false` (lớp 1), nên không ghi ma trận và không cần `computeBoundingSphere()`.
   - `pose`, `head` ghi lại mỗi khung, nên là `instancedDynamicBufferAttribute` (`DynamicDrawUsage`).
 - **Núm:** `handful` (số hạt mỗi nắm), `bounce`, `gravity` (select: `traiDat`, `trang`), `count` (trần số hạt, `via: 'js'`, như đom đóm).
-- **Thí nghiệm "Tô theo luồng"** (`toTheoLuong`): mỗi hạt một màu theo chỉ số luồng GPU (`instanceIndex`). Thấy được mỗi luồng giữ một
-  hạt, và mỗi nắm là một đoạn liền của vòng đệm.
+- **Thí nghiệm "Tô theo luồng"** (`toTheoLuong`): mỗi hạt một màu theo chỉ số luồng GPU (`instanceIndex`). Màu xoay một góc vàng
+  (2,4 rad, chừng 137,5°) mỗi luồng, nên hai hạt kề nhau trên vòng đệm khác màu hẳn: màu không cho thấy một nắm là đoạn liền.
+  - Thấy được mỗi luồng giữ một hạt suốt đời nó: hạt giữ nguyên màu khi rơi, nảy, lăn.
+  - Hạ `count` rồi rắc liền tay thì thấy nắm mới lấy lại luồng của những hạt cũ nhất (mỗi nắm là một đoạn liền của vòng đệm): hạt ở nắm
+    cũ biến mất.
+  - Bản đầu của chữ trong Sổ tay viết "hạt cùng một nắm có màu liền nhau", sai với góc vàng (sửa ở GĐ 8 Task 10).
 - **Số đo:** `rac` (số hạt đã rắc thật còn trong vòng đệm: bể đếm lúc một nắm ra khỏi hàng đợi, §20.7), `dangAn` (số gà con đang mổ),
   `quanhMe` (số gà con cách tâm gà mẹ dưới 2,2).
 - **Nấc** `thoc`: trần số hạt còn một nửa.

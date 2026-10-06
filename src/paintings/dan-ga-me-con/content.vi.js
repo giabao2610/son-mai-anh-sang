@@ -1,29 +1,38 @@
-// paintings/dan-ga-me-con/content.vi.js — chữ tiếng Việt của Bức 4: gợi ý tương tác; Hiểu/Chỉnh/Phá của từng lớp trong Sổ tay (Task 10 viết đủ và thêm sơ đồ).
+// paintings/dan-ga-me-con/content.vi.js — chữ tiếng Việt của Bức 4: gợi ý tương tác; Hiểu/Chỉnh/Phá của từng lớp trong Sổ tay, kèm năm sơ đồ.
 import phuBong from '../../engine/stock/phu-bong/content.vi.js';
+import trucGiaoDiagram from './diagrams/truc-giao.svg?raw';
+import chiaNacDiagram from './diagrams/chia-nac.svg?raw';
+import lechMatPhangDiagram from './diagrams/lech-mat-phang.svg?raw';
+import hatDiepDiagram from './diagrams/hat-diep.svg?raw';
+import vongDemDiagram from './diagrams/vong-dem.svg?raw';
 
 /**
- * Mọi nhãn tra theo id (lớp, núm, tap, tên vật): đổi chữ không đụng tới code của lớp.
- * understand ≤ 150 chữ (đếm theo khoảng trắng); đường dẫn "Đọc thêm" chỉ https. Test hợp đồng giữ các luật này.
+ * Mọi nhãn tra theo id (lớp, núm, thí nghiệm, số đo, tap, tên vật): đổi chữ không đụng tới code của lớp.
+ * understand ≤ 150 chữ (đếm theo khoảng trắng); đường dẫn "Đọc thêm" chỉ https. Test hợp đồng giữ các luật này; số nêu trong đoạn Hiểu
+ * khớp với code (tests/paintings/dan-ga-me-con/chu.test.js).
  * @type {import('../../engine/contracts/painting.js').PaintingContent}
  */
 export default {
   hint: 'Chạm để rắc thóc · giữ để gà mẹ gọi con · kéo để bước vào tranh',
   layers: {
     cot: {
-      understand: 'Cốt là tờ tranh bằng đất sét: một tờ giấy cong như phông chụp ảnh, nằm phẳng ở phía trước rồi uốn lên thành vách, '
-        + 'gà mẹ đứng giữa, mười gà con quây quần. Camera ở đây là camera trực giao: không có điểm tụ, vật ở xa không nhỏ đi mà chỉ '
-        + 'nằm cao hơn trong khung, đúng lối vẽ của tranh dân gian. Kéo xoay thì thấy tờ giấy cong và gà là khối tròn. Mài hết các '
-        + 'lớp thì bức trở về đây.',
+      understand: 'Cốt là tờ tranh bằng đất sét: một tờ giấy cong như phông chụp ảnh, phẳng ở phía trước rồi uốn lên thành vách; gà '
+        + 'mẹ đứng giữa, mười gà con quây quần. Điều mới ở đây là camera trực giao. Mắt người và camera phối cảnh nhìn theo những tia hội '
+        + 'tụ về một điểm, nên vật ở xa nhỏ đi. Camera trực giao nhìn theo những tia song song: gà con ở xa to bằng con ở gần, chỉ nằm '
+        + 'cao hơn trong khung (camera nhìn chếch xuống 20°), đúng lối vẽ của tranh dân gian. Cái giá là mất chiều sâu: nhìn thẳng thì '
+        + 'tượng tròn và tấm bìa phẳng cho gần như cùng một ảnh (thử "Tấm bìa phẳng"). Kéo xoay mới thấy gà là khối tròn; buông tay ba '
+        + 'giây thì tranh tự khép lại. Mài hết các lớp thì bức trở về đây.',
+      diagram: trucGiaoDiagram,
       learned: [
-        'Camera trực giao chiếu mọi điểm theo cùng một hướng: không có điểm tụ, nên cỡ của vật không đổi theo khoảng cách.',
-        'Phóng to camera trực giao là đổi zoom (thu nhỏ khung nhìn), không phải đưa camera lại gần.',
+        'Camera trực giao chiếu theo các tia song song: không có điểm tụ, nên cỡ của vật không đổi theo khoảng cách.',
+        'Phép chiếu trực giao bỏ hẳn chiều theo hướng nhìn: nhìn thẳng, tượng tròn và tấm bìa phẳng cho gần như cùng một ảnh; phải xoay '
+          + 'mới biết vật dày bao nhiêu.',
+        'Phóng to camera trực giao là đổi zoom (thu nhỏ khung nhìn), không phải đưa camera lại gần: gần hay xa, ảnh vẫn như nhau.',
         'InstancedMesh vẽ mười gà con bằng một lần vẽ; mỗi con chỉ khác nhau ở vài thuộc tính (chỗ đứng, hướng, góc cúi đầu, màu).',
-        'positionNode dời đỉnh ngay trong shader: đầu gà con cúi, cánh mẹ xòe chỉ nhờ một thuộc tính hay một uniform; gán cả normalLocal thì '
-          + 'pháp tuyến xoay theo, nên ánh sáng vẫn đúng.',
       ],
       readMore: [
         { title: 'three.js · OrthographicCamera', url: 'https://threejs.org/docs/#api/en/cameras/OrthographicCamera' },
-        { title: 'Phép chiếu trực giao (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Orthographic_projection' },
+        { title: 'Orthographic projection · phép chiếu trực giao (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Orthographic_projection' },
         { title: 'Tranh Đông Hồ (Wikipedia tiếng Việt)', url: 'https://vi.wikipedia.org/wiki/Tranh_%C4%90%C3%B4ng_H%E1%BB%93' },
       ],
       knobs: { segments: 'Độ mịn của khối', wireframe: 'Chỉ vẽ khung dây' },
@@ -39,14 +48,15 @@ export default {
       objects: { giay: 'Tờ giấy', 'ga-me': 'Gà mẹ', 'ga-con': 'Mười gà con' },
     },
     'ban-mau': {
-      understand: 'Bản màu là các lần in màu của tranh Đông Hồ: mỗi màu một ván khắc, in lần lượt lên giấy, rồi bản nét đen in sau '
-        + 'cùng. Ở đây mỗi phần của con gà (mình, cánh, đuôi, mào, mỏ, chân) tra màu trong bảng năm màu tự nhiên, và mỗi gà con một '
-        + 'màu riêng; có con để trắng, chỉ có nét. Ánh sáng không đổi liền như trên đất sét: độ sáng (pháp tuyến nhân hướng nắng) làm '
-        + 'tròn xuống thành vài nấc phẳng, gọi là chia nấc. Mép nấc mềm vừa đúng một điểm ảnh nhờ fwidth, nên không răng cưa. Nấc tối '
-        + 'chỉ đậm hơn một chút: nhìn thẳng thì gà phẳng như bản in, xoay đi mới thấy khối.',
+      understand: 'Tranh Đông Hồ in bằng nhiều ván khắc, mỗi ván một màu tự nhiên: trắng từ vỏ điệp, vàng từ hoa hòe, đỏ từ sỏi son, '
+        + 'xanh từ lá chàm, đen từ than lá tre. Ở đây mỗi phần của con gà (mình, cánh, đuôi, mào, mỏ, chân) lấy màu trong bảng năm màu '
+        + 'ấy; mỗi gà con một màu lông, có con để trắng màu giấy. Ánh sáng thì chia nấc: vẫn phép tính Lambert như trên đất sét (pháp '
+        + 'tuyến nhân hướng nắng), chỉ làm tròn xuống thành vài nấc phẳng. Mặc định có hai nấc, nấc tối chỉ đậm hơn 18%, nên nhìn thẳng '
+        + 'thì gà phẳng như bản in, xoay đi mới thấy khối. Bật "Tô mịn" để so: chia nấc gần như không tốn thêm gì.',
+      diagram: chiaNacDiagram,
       learned: [
         'Chia nấc (cel shading): lấy độ sáng Lambert rồi làm tròn xuống thành vài bậc, thay cho độ sáng đổi liền.',
-        'fwidth(x) cho biết x đổi bao nhiêu giữa hai điểm ảnh kề nhau: làm mềm mép bậc đúng chừng đó thì hết răng cưa ở mọi mức zoom.',
+        'fwidth(x) cho biết x đổi bao nhiêu giữa hai điểm ảnh kề nhau: làm mềm mép nấc ít nhất chừng đó thì hết răng cưa ở mọi mức zoom.',
         'Bảng màu là mảng uniform (uniformArray) tra theo chỉ số: mười gà con dùng chung một material mà mỗi con, mỗi phần một màu.',
       ],
       readMore: [
@@ -63,24 +73,25 @@ export default {
       },
     },
     'ban-net': {
-      understand: 'Bản nét là nét mực đen in sau cùng, như ván khắc nét của tranh Đông Hồ. Viền không vẽ sẵn: cảnh vẽ xong, mỗi điểm '
-        + 'ảnh đọc ảnh độ sâu ở tám điểm quanh nó. Trên một mặt phẳng, độ sâu hai bên cộng lại bằng hai lần độ sâu ở giữa, dù mặt '
-        + 'nghiêng tới đâu; lệch hẳn là có mép vật, và điểm ảnh ấy thành mực. Nếp gấp, như chỗ đầu nối mình, đo bằng góc gãy của mặt. '
-        + 'Nét trong (vảy lông, mắt, cánh, đuôi, vằn ong) thì vẽ ngay trên vật, bằng hàm khoảng cách trên UV của từng phần. Mực không '
-        + 'đều như mực quét trên ván, và bản nét in lệch một chút so với bản màu, như tranh in tay. Với camera trực giao, ảnh độ sâu đã '
-        + 'tuyến tính nên đọc thẳng được, không tốn thêm lượt vẽ nào.',
+      understand: 'Bản nét là ván in nét đen, in sau cùng. Viền không vẽ sẵn: cảnh vẽ xong, mỗi điểm ảnh đọc ảnh độ sâu ở hai bên nó, '
+        + 'theo bốn hướng. Trên một mặt phẳng, dù nghiêng tới đâu, độ sâu hai bên cộng lại đúng bằng hai lần độ sâu ở giữa. Lệch hẳn khỏi '
+        + 'mặt phẳng là có bậc: mép của một vật đứng trước vật khác, và điểm ảnh ấy thành mực. Nhờ vậy mặt sàn nghiêng không bị bôi đen, '
+        + 'còn mép tờ giấy tự có khung. Nếp gấp, như chỗ đầu nối mình, đo riêng bằng góc gãy của mặt. Nét trong (vảy lông, mắt, cánh) vẽ '
+        + 'ngay trên vật. Như tranh in tay, mực không đều, và viền in lệch một chút so với màu.',
+      diagram: lechMatPhangDiagram,
       learned: [
-        'Dò cạnh là một bước hậu kỳ: đọc ảnh độ sâu ở các điểm lân cận, không cần biết vật nào là vật nào; mép tờ giấy cũng là một bậc '
-          + 'độ sâu, nên khung tranh tự có nét.',
-        'Độ lệch khỏi mặt phẳng (đạo hàm bậc hai) bằng 0 trên mọi mặt phẳng, nên mặt sàn nghiêng không thành nét; nếp gấp thì đo bằng góc '
-          + 'gãy của mặt.',
-        'Nét trong là hàm khoảng cách trên UV của từng phần: điểm nào cách đường nét dưới nửa bề dày thì thành mực, nên nét đi theo vật '
-          + 'và to ra khi phóng to.',
+        'Độ lệch khỏi mặt phẳng, D(+) + D(−) − 2·D(giữa), là đạo hàm bậc hai rời rạc (Laplace theo từng hướng): bằng 0 trên mọi mặt '
+          + 'phẳng, gần bằng độ cao của bậc ở mép vật. Nếp gấp thì đo bằng góc gãy.',
+        'Mẫu độ sâu phải nằm đúng tâm điểm ảnh, cách nhau số nguyên điểm ảnh: lệch nửa điểm ảnh là hai bên không còn đối xứng, và mặt sàn '
+          + 'nghiêng thành sọc mực. Vì vậy độ dày nét và lệch bản chỉ nhận số nguyên.',
+        'Nét trong là hàm khoảng cách trên UV của từng phần: điểm nào đủ gần đường nét thì thành mực, nên nét đi theo vật và to ra khi '
+          + 'phóng to.',
         'Dò cạnh trên ảnh màu (Sobel) chỉ thấy ranh màu: hai mảng cùng màu chồng nhau thì mất nét, còn ảnh độ sâu thì vẫn thấy.',
       ],
       readMore: [
+        { title: 'Discrete Laplace operator · toán tử Laplace rời rạc (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Discrete_Laplace_operator' },
+        { title: 'Sobel operator · dò cạnh Sobel (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Sobel_operator' },
         { title: 'Roystan · Outline shader', url: 'https://roystan.net/articles/outline-shader/' },
-        { title: 'Dò cạnh (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Edge_detection' },
       ],
       knobs: {
         lineWidth: 'Độ dày nét (điểm ảnh)',
@@ -103,30 +114,28 @@ export default {
       taps: { 'truoc-net': 'Trước khi in bản nét' },
     },
     'giay-diep': {
-      understand: 'Giấy điệp là tờ giấy dó quét bột vỏ sò (điệp), nền của mọi bức tranh Đông Hồ. Thay cho đất sét, tờ giấy có màu ngà, '
-        + 'thớ sợi dó chạy dọc và vệt chổi lá thông chạy xiên; cả hai là noise (fbm) kéo dài theo một hướng, và số tầng của sợi dó đổi '
-        + 'được mà không phải biên dịch lại. Hạt điệp thì khác: mỗi ô nhỏ có một mảnh vỏ sò nghiêng ngẫu nhiên, như tấm gương bé xíu. Mảnh chỉ lóe khi '
-        + 'tia nắng phản xạ trên nó đi đúng vào mắt: lấy hướng nắng phản xạ qua pháp tuyến của mảnh rồi so với hướng nhìn. Camera trực '
-        + 'giao nhìn mọi điểm theo cùng một hướng, nên đứng yên thì hạt đứng yên, kéo xoay thì hạt khác lóe. Phần lóe là emissive, nên '
-        + 'Phủ bóng làm nó tỏa.',
+      understand: 'Giấy điệp là giấy dó quét một lớp bột vỏ sò điệp, nền quen thuộc của tranh Đông Hồ. Ở đây tờ giấy có màu ngà, thớ sợi dó '
+        + 'chạy dọc và vệt chổi quét điệp chạy xiên. Phần đáng xem là hạt điệp: mặt giấy chia thành ô nhỏ, mỗi ô có một mảnh vỏ sò '
+        + 'nghiêng ngẫu nhiên, như một tấm gương bé xíu. Mảnh chỉ lóe khi tia nắng phản xạ trên nó đi đúng vào mắt người xem. Camera '
+        + 'trực giao nhìn mọi điểm theo cùng một hướng, nên tranh đứng yên thì hạt đứng yên; kéo xoay thì hạt này tắt, hạt khác lóe. Chỗ '
+        + 'lóe sáng gấp nhiều lần giấy, để tone mapping không nén mất, và là emissive, nên Phủ bóng làm nó tỏa.',
+      diagram: hatDiepDiagram,
       learned: [
-        'fbm cộng nhiều tầng noise: tầng sau tần số gấp đôi, biên độ một nửa. Kéo dài noise theo một hướng (tần số cao theo chiều này, '
-          + 'thấp theo chiều kia) thì ra sợi và vệt chổi.',
-        'Phản xạ gương: reflect(−nắng, pháp tuyến) cho hướng tia ra. Hạt sáng khi hướng ấy trùng hướng nhìn; số mũ càng lớn thì càng phải '
+        'Phản xạ gương: reflect(−nắng, pháp tuyến) cho hướng tia ra. Hạt lóe khi hướng ấy trùng hướng nhìn; số mũ càng lớn thì càng phải '
           + 'trùng đúng mới lóe.',
-        'Hạt ngẫu nhiên mà tất định: băm số của ô (hash) cho chỗ đứng và độ nghiêng của hạt, nên ô nào cũng có hạt riêng và cùng một khung '
-          + 'luôn ra cùng một ảnh.',
-        'Hạt nghiêng trong mặt phẳng của tờ giấy chứ không theo trục thế giới: vách đứng có pháp tuyến hướng ra, chỉ hạt nghiêng lên xuống '
-          + 'mới bắt được tia nắng ở góc nhìn của tranh.',
+        'Hạt nghiêng trong mặt phẳng của tờ giấy (theo hai trục tiếp tuyến), chứ không theo trục của thế giới: vách đứng cần nghiêng lên '
+          + 'xuống mới bắt được tia nắng ở góc nhìn của tranh.',
+        'Hạt ngẫu nhiên mà tất định: băm số của ô (hash) cho chỗ đứng và độ nghiêng của hạt, nên cùng một khung luôn ra cùng một ảnh.',
+        'Tone mapping nén vùng sáng: một chấm chỉ sáng gấp đôi giấy thì gần như mất hút. Phần phát sáng trên nền sáng phải có độ sáng HDR '
+          + 'cỡ hàng chục.',
       ],
       readMore: [
-        { title: 'Phản xạ gương (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Specular_reflection' },
-        { title: 'The Book of Shaders · Fractal Brownian Motion', url: 'https://thebookofshaders.com/13/' },
+        { title: 'Specular reflection · phản xạ gương (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Specular_reflection' },
         { title: 'Giấy dó (Wikipedia tiếng Việt)', url: 'https://vi.wikipedia.org/wiki/Gi%E1%BA%A5y_d%C3%B3' },
       ],
       knobs: {
         sparkle: 'Độ sáng của hạt điệp',
-        density: 'Mật độ hạt (ô mỗi đơn vị)',
+        density: 'Mật độ hạt (ô mỗi 10 cm)',
         fiber: 'Độ đậm của sợi dó',
         brush: 'Độ dày của vệt chổi điệp',
       },
@@ -139,20 +148,23 @@ export default {
       },
     },
     'dan-ga': {
-      understand: 'Đàn gà là chuyển động của tờ tranh. Gà mẹ và gà con không có mô phỏng nào: chỗ đứng, hướng, độ cúi đầu tính thẳng từ '
-        + 'thời gian theo các mốc (chạm, giữ, thả, gà mẹ bới), nên khung nào cũng tính lại được như một hàm của giờ. Thóc thì khác: mỗi hạt '
-        + 'là một phần tử của bể hạt trên GPU, mỗi khung một lần compute: rơi theo trọng lực, nảy, lăn rồi nằm yên. Mỗi luồng GPU chỉ đọc và '
-        + 'ghi hạt của chính nó, nên mỏ của mười gà con đến qua một mảng uniform: mỏ đang mổ chạm hạt nào thì hạt đó biến mất. Mài lớp này '
-        + 'thì thóc biến mất, và đàn gà đứng yên ở chỗ của mình như tượng.',
+      understand: 'Đàn gà là phần chuyển động của tờ tranh. Thóc tính trên GPU: mỗi hạt là một luồng, mỗi khung chạy cùng một luật '
+        + '(rơi, nảy, lăn rồi nằm yên) và chỉ đọc, ghi hạt của chính nó. Các hạt nằm trong một vòng đệm cấp sẵn một lần: mỗi nắm rắc ra '
+        + 'khởi tạo lại một đoạn liền của vòng, đè lên những hạt cũ nhất ("Tô theo luồng"). Mỏ của mười gà con đến với hạt qua uniform: mỏ '
+        + 'đang mổ cách hạt dưới 2 cm thì hạt biến mất. Gà mẹ, gà con thì không mô phỏng: chỗ đứng, hướng, độ cúi đầu tính thẳng từ thời '
+        + 'gian và các mốc chạm, giữ, thả, bới, nên dừng hình ở khung nào cũng ra đúng khung ấy. Mài lớp này thì thóc biến mất, gà đứng '
+        + 'yên như tượng, và chạm, giữ không làm gì.',
+      diagram: vongDemDiagram,
       learned: [
-        'Dạng đóng: vị trí là một hàm của thời gian và các mốc, không cộng dồn từng khung, nên dừng hình ở khung nào cũng ra đúng khung ấy.',
-        'Compute chạy một luồng cho mỗi hạt, cùng một luật trên dữ liệu của riêng nó: bốn nghìn hạt tính song song cùng lúc.',
+        'Compute chạy một luồng cho mỗi hạt, cùng một luật trên dữ liệu của riêng nó: hàng nghìn hạt tính song song cùng lúc.',
+        'Vòng đệm: bể hạt cấp phát một lần theo trần; rắc thêm chỉ khởi tạo lại một đoạn liền rồi con trỏ đi tiếp, nên nắm mới đè lên hạt '
+          + 'cũ nhất; đổi số lượng chỉ đổi count.',
         'Hạt không đọc được hạt khác, nhưng đọc được uniform: mảng mười mỏ mà JS ghi mỗi khung là đường đi từ đàn gà tới thóc.',
-        'Bể hạt cấp phát một lần theo trần; rắc thêm chỉ khởi tạo lại một đoạn của vòng đệm, đổi số lượng chỉ đổi count.',
+        'Dạng đóng: vị trí là một hàm của thời gian và các mốc, không cộng dồn từng khung, nên dừng hình ở khung nào cũng ra đúng khung ấy.',
       ],
       readMore: [
-        { title: 'three.js · Compute particles (WebGPU)', url: 'https://threejs.org/examples/#webgpu_compute_particles' },
-        { title: 'Hệ hạt (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Particle_system' },
+        { title: 'Ví dụ three.js: hạt tính bằng compute (WebGPU)', url: 'https://threejs.org/examples/#webgpu_compute_particles' },
+        { title: 'Circular buffer · vòng đệm (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Circular_buffer' },
       ],
       knobs: {
         handful: 'Số hạt mỗi nắm',
@@ -163,8 +175,10 @@ export default {
       experiments: {
         toTheoLuong: {
           label: 'Tô theo luồng',
-          explain: 'Mỗi hạt một màu theo số của luồng GPU giữ nó. Hạt cùng một nắm có màu liền nhau: mỗi nắm khởi tạo lại một đoạn liền của '
-            + 'vòng đệm, và nắm sau đè lên đoạn của những hạt cũ nhất.',
+          explain: 'Mỗi hạt tô một màu theo số của luồng GPU giữ nó. Hai luồng kề nhau lệch nhau một góc vàng (chừng 137,5°) trên vòng '
+            + 'màu, nên hạt nào cũng khác hẳn màu hạt bên cạnh. Hạt giữ nguyên màu từ lúc văng ra tới lúc nằm yên: suốt đời nó chỉ '
+            + 'một luồng tính nó. Hạ "Số hạt tối đa" rồi rắc liền tay: hết vòng đệm, nắm mới lấy lại luồng của những hạt cũ nhất, và '
+            + 'hạt ở nắm cũ biến mất.',
         },
       },
       readouts: { rac: 'Số hạt đã rắc', dangAn: 'Gà con đang mổ', quanhMe: 'Gà con quanh mẹ' },

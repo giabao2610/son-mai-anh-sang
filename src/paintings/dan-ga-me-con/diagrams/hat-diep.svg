@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" role="img" aria-labelledby="dg-dgmc-hd-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-dgmc-hd-title">Hạt điệp là những tấm gương nhỏ nghiêng ngẫu nhiên trên mặt giấy (nhìn từ bên cạnh). Nắng chiếu tới mọi hạt theo cùng một hướng, và mỗi hạt phản xạ tia nắng theo độ nghiêng của nó. Chỉ một hạt có tia phản xạ đi đúng hướng về camera, nên chỉ hạt ấy lóe sáng; tia của các hạt khác đi lệch, nên chúng tối. Với camera trực giao, hướng về camera như nhau ở mọi điểm: xoay tranh là đổi hướng ấy, và hạt khác lóe.</title>
+  <defs>
+    <marker id="dg-dgmc-hd-nang" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#F2D48A"/>
+    </marker>
+    <marker id="dg-dgmc-hd-tat" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#8A8580"/>
+    </marker>
+  </defs>
+  <!-- tờ giấy -->
+  <rect x="0" y="140" width="360" height="16" fill="#EFE6D2"/>
+  <text x="354" y="152" fill="#221E1A" text-anchor="end" font-size="11">giấy dó quét điệp</text>
+  <!-- tia nắng: cùng một hướng tới mọi hạt -->
+  <g stroke="#F2D48A" stroke-width="1.2" marker-end="url(#dg-dgmc-hd-nang)">
+    <path d="M0 60.3 L43.4 132.7"/>
+    <path d="M47.8 30 L109.4 132.7"/>
+    <path d="M113.8 30 L175.4 132.7"/>
+    <path d="M179.8 30 L241.4 132.7"/>
+    <path d="M245.8 30 L307.4 132.7"/>
+  </g>
+  <text x="6" y="22" fill="#F2D48A">nắng</text>
+  <!-- tia phản xạ của các hạt không lóe: đi lệch -->
+  <g stroke="#8A8580" stroke-width="1.2" marker-end="url(#dg-dgmc-hd-tat)">
+    <path d="M46 137 L33 99.2"/>
+    <path d="M112 137 L141.2 109.7"/>
+    <path d="M244 137 L283.9 134.9"/>
+    <path d="M310 137 L324.3 99.6"/>
+  </g>
+  <!-- tia phản xạ của hạt lóe: đúng hướng về camera -->
+  <path d="M178 137 L316.3 78.9" stroke="#F2D48A" stroke-width="1.8" marker-end="url(#dg-dgmc-hd-nang)"/>
+  <text x="316.3" y="68.9" fill="#EDE3CF" text-anchor="middle">về camera</text>
+  <!-- các hạt -->
+  <g stroke="#C9C6BD" stroke-width="4" stroke-linecap="round">
+    <path d="M34.2 142.5 L57.8 131.5"/>
+    <path d="M99.1 135.2 L124.9 138.8"/>
+    <path d="M232.5 130.9 L255.5 143.1"/>
+    <path d="M297 138.1 L323 135.9"/>
+  </g>
+  <!-- hạt lóe: quầng sáng quanh chính hạt -->
+  <circle cx="178" cy="137" r="15" fill="#F2D48A" fill-opacity="0.3"/>
+  <path d="M165.6 133 L190.4 141" stroke="#F2D48A" stroke-width="11" stroke-linecap="round" stroke-opacity="0.6"/>
+  <path d="M165.6 133 L190.4 141" stroke="#EFE6D2" stroke-width="4" stroke-linecap="round"/>
+  <text x="174" y="111" fill="#EDE3CF" font-weight="600">lóe</text>
+  <text x="180" y="174" fill="#EDE3CF" text-anchor="middle">chỉ hạt phản xạ nắng đúng về camera mới lóe</text>
+</svg>
