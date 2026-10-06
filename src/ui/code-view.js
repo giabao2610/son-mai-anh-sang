@@ -3,9 +3,10 @@
 // import.meta.glob chỉ được dùng ở file này, và luôn kèm ?code (tests/rules/imports.test.js giữ). Glob KHÔNG eager:
 // mỗi file thành một chunk riêng, chỉ tải khi Sổ tay mở tab Chỉnh của lớp đó. _mau là tranh mẫu, không deploy.
 // Lớp dùng chung: mọi file code của nó (GĐ 4: Phủ bóng có layer, display, lut), trừ meta và chữ.
+// Hộp màu (GĐ 8): file lib/tsl mà lớp kê trong files, như bể hạt của Vàng lá.
 const FILES = import.meta.glob(
   [
-    '../paintings/*/layers/*.js', '../paintings/*/parts/*.js', '../engine/stock/*/*.js',
+    '../paintings/*/layers/*.js', '../paintings/*/parts/*.js', '../engine/stock/*/*.js', '../lib/tsl/*.js',
     '!../paintings/_mau/**', '!../engine/stock/*/meta.js', '!../engine/stock/*/content.*.js',
   ],
   { query: '?code', import: 'default' },

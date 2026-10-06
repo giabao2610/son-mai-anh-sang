@@ -4206,8 +4206,9 @@ dùng được.
 
 **4. Sổ tay hiện code của hộp màu**
 - `LayerMeta.files` kê được file `lib/tsl/*.js` mà lớp dùng (§8.3), và glob của `ui/code-view.js` thêm `../lib/tsl/*.js`.
-- Kê thì phải dùng thật: test hợp đồng kiểm file `lib` được kê nằm trong bao đóng import tĩnh của file lớp. Hộp màu không biết núm, nên
-  không có marker `// @knob` ở đó.
+- Kê là tùy chọn. Kê thì phải dùng thật: test hợp đồng kiểm file `lib` được kê nằm trong `lib/tsl/` và trong bao đóng import tĩnh của file
+  lớp (thẳng hay qua part). Như mọi file trong `files`, mỗi file thuộc tối đa một lớp: `noise.js`, mà Sương và Vàng lá cùng dùng, không lớp
+  nào kê. Hộp màu không biết núm, nên không có marker `// @knob` ở đó.
 - Lý do: rút code của đom đóm lên `lib/tsl/particles.js` mà không kê thì Sổ tay của lớp Vàng lá mất đoạn code đó.
 
 **Không đổi:** cử chỉ, Dial (Bức 4 không có Dial), thí nghiệm, số đo, nấc, `quality`, chữ đi theo vật (Bức 4 không dùng).
@@ -4225,20 +4226,31 @@ dùng được.
 **Luật hai lần, lần đầu tiên.** Đom đóm (Bức 1) là bức thứ nhất cần hạt compute; thóc là bức thứ hai. Phần chung rút lên hộp màu; luật
 chuyển động ở lại trong bức.
 
-- **Bể hạt** `createPool({ capacity, init, law, spawn })` thuộc hộp màu: chỉ import three, không biết xưởng hay bức.
-  - Cấp MỘT lần hai bộ đệm vec4 (`instancedArray`) theo `capacity`.
+- **Bể hạt** `createPool({ capacity, count, init, law, spawn, tier, renderer })` thuộc hộp màu: chỉ import three, không biết xưởng hay
+  bức.
+  - Cấp MỘT lần hai bộ đệm vec4 (`instancedArray`) theo `capacity`. `count` (mặc định `capacity`) là số phần tử được tính và vẽ lúc đầu.
   - `init` và `law` là hàm TSL nhận `{ a, b, index }`, tức vec4 của CHÍNH phần tử đó. Compute khởi tạo và compute bước bọc chúng.
-  - WebGL2 chạy compute khởi tạo hai lần, để cả hai bản ping-pong có dữ liệu (Phụ lục A.29).
-  - `setCount(n)` đổi `count` của compute bước, và của vật vẽ do bức truyền vào. Sàn là 100, vì sprite có `count` > 1 mới có cache key
-    riêng.
-  - `step(renderer, dt, w)` không làm gì khi `dt === 0` hay `w ≤ 0`: `update(0, t)` không tiến mô phỏng.
+  - Mọi nhánh của `init`, `law`, `spawn` gán CẢ `a` lẫn `b`: WebGL2 chạy compute bằng transform feedback, ghi mọi phần tử mỗi lần chạy,
+    nên nhánh không gán là ghi rác.
+  - Bể nhận `renderer` và `tier` lúc dựng, vì compute khởi tạo chạy ngay lúc đó, trên cả bộ đệm (theo `capacity`). WebGL2 chạy nó hai lần,
+    để cả hai bản ping-pong có dữ liệu (Phụ lục A.29).
+  - `setCount(n, ...vật vẽ)` đổi `count` của compute bước, và của vật vẽ do bức truyền vào, rồi trả số đã kẹp. Sàn là 100, vì sprite có
+    `count` > 1 mới có cache key riêng; trần là `capacity`.
+  - `step(dt, w)` không làm gì khi `dt === 0` hay `w ≤ 0`: `update(0, t)` không tiến mô phỏng, nắm đang chờ vẫn chờ. Không thì chạy đúng
+    một compute bước. `step` không nhận `renderer`: bể đã giữ nó từ lúc dựng.
   - `dispose()` gỡ hai compute node.
-- **Rắc** (`spawn`, tùy chọn; chỉ Bức 4 dùng): `emit({ origin, count, seed, still })` ghi uniform của một nắm: đầu nắm trên vòng đệm, số
-  hạt, gốc, lúc rắc, hạt giống.
-  - Ở compute bước kế tiếp, phần tử nào thuộc nắm (`(index − đầu + capacity) mod capacity < count`) thì gọi `spawn` để tự khởi tạo lại;
-    phần tử khác gọi `law`.
-  - Mỗi khung tối đa một nắm; nắm thứ hai trong cùng khung chờ khung sau.
-  - Con trỏ vòng đệm đi tiếp sau mỗi nắm, nên nắm mới đè lên hạt cũ nhất.
+  - Hộp màu không đặt tên uniform (`setName`): một bức có thể dựng hai bể.
+- **Rắc** (`spawn`, tùy chọn; chỉ Bức 4 dùng): `emit({ origin, count, seed, still })` xếp một nắm vào hàng đợi và trả chỗ của nắm trên
+  vòng đệm, `{ start, size }` (nắm 0 hạt thì `null`). Bể không có `spawn` thì `emit` ném lỗi.
+  - Mỗi bước lấy một nắm ra, ghi vào uniform `batch = { start, count, origin, seed, still }`: đầu nắm, số hạt, gốc, hạt giống, nằm yên.
+    Không có uniform "lúc rắc": `spawn` đọc đồng hồ của cảnh (`ctx.u.time`) ở bước đó.
+  - Ở compute bước, phần tử nào thuộc nắm (`(index − đầu + count) mod count < số hạt`, với `count` là số phần tử đang tính) thì gọi
+    `spawn` để tự khởi tạo lại; phần tử khác gọi `law`.
+  - Vòng đệm quấn theo số phần tử đang tính, không theo `capacity`: nắm rơi vào phần không được tính thì không ai thấy. Nắm lớn hơn số
+    đó thì bị cắt. Con trỏ vòng đệm đi tiếp sau mỗi nắm, nên nắm mới đè lên hạt cũ nhất.
+  - Mỗi bước tối đa một nắm; nắm sau chờ bước sau. Hàng đợi giữ tối đa 16 nắm, bỏ nắm cũ nhất: chạm dồn lúc khung đứng không làm nó
+    phình mãi.
+  - `emitted()`: số phần tử đã rắc còn trong vòng đệm, không quá số đang tính.
   - `still` cho nắm nằm yên ngay từ đầu (nhúm thóc lúc mở trang).
   - Vì sao không cho mỗi hạt đọc hạt khác: compute của WebGL2 là transform feedback, mỗi luồng chỉ đọc và ghi phần tử của chính nó
     (`element(i)` bỏ qua `i`, Phụ lục A.10). Thứ cần đi giữa các vật (mỏ gà) đi qua uniform.
@@ -4247,7 +4259,8 @@ chuyển động ở lại trong bức.
     của lớp. Id lớp, núm, thí nghiệm, số đo, nấc không đổi.
   - **Test so mã:**
     - TRƯỚC khi rút, ghi mã WGSL và GLSL của compute khởi tạo, compute bước và material của đom đóm thành fixture;
-    - sau khi rút, mã phải giống từng ký tự, chỉ trừ số id của node trong tên (`NodeBuffer_<id>` và tương tự), được đổi thành chỗ giữ;
+    - sau khi rút, mã phải giống từng ký tự, chỉ trừ số id của node trong tên (`NodeBuffer_<id>`, kiểu `NodeBuffer_<id>Struct` của
+      WGSL, `buffer<id>` của GLSL), được đổi thành chỗ giữ đánh số theo thứ tự xuất hiện (`#0`, `#1`): hai bộ đệm vẫn phân biệt được;
     - helper mới `tests/helpers/nodes.js#compileCompute` dịch compute node bằng builder thật, như `compileMaterial`.
   - Biến thể CPU (`parts/vang-la-cpu.js`) ở lại Bức 1, vì chỉ đom đóm cần.
   - `meta.layers` của Vàng lá kê thêm `lib/tsl/particles.js`, nên Sổ tay vẫn hiện đủ code (§20.6 mục 4).
@@ -4299,10 +4312,10 @@ chuyển động ở lại trong bức.
   đồ thị; với camera phối cảnh, node giữ nguyên như cũ.
 - `input`: tia của camera trực giao (gốc trên mặt phẳng camera, hướng là hướng nhìn). `caption-set`: chiếu điểm neo với camera trực giao.
 - `particles` (`tests/unit/particles.test.js`):
-  - cấp phát một lần; `setCount` có sàn;
+  - cấp phát một lần; `setCount` có sàn và trần;
   - `step` không chạy khi `dt = 0` hay `w ≤ 0`; WebGL2 khởi tạo hai lần;
-  - vòng đệm của `emit`: quấn qua cuối, nắm thứ hai trong cùng khung chờ khung sau;
-  - compute bước dịch được ở cả hai backend.
+  - vòng đệm của `emit`: quấn qua cuối theo số phần tử đang tính, nắm lớn hơn bể thì cắt, mỗi bước một nắm; hàng đợi giữ tối đa 16 nắm;
+  - compute bước dịch được ở cả hai backend, và nhánh rắc đọc đầu và số hạt của nắm (`compileCompute(...).uniforms`).
 - Bức 1: **mã shader của đom đóm giống fixture** (§20.7).
 - Hợp đồng: camera trực giao đúng hình dạng; file `lib` được kê thì phải được import.
 

@@ -1,13 +1,10 @@
 // paintings/ao-sen-dem/layers/l5-vang-la.js — Lớp 5 · Vàng lá: đom đóm tính trên GPU (compute; bản CPU để so), trôi theo curl noise, tụ quanh tay.
 import {
-  Fn,
   clamp,
   cos,
   exp,
   float,
   hash,
-  instanceIndex,
-  instancedArray,
   length,
   max,
   min,
@@ -18,6 +15,7 @@ import {
   vec4,
 } from 'three/tsl';
 import { curl } from '../../../lib/tsl/noise.js';
+import { COUNT_FLOOR, createPool } from '../../../lib/tsl/particles.js';
 import { FLOCK, createFireflySprite, setAdditive } from '../parts/vang-la-dan.js';
 import { CPU_MAX, createCpuFlock } from '../parts/vang-la-cpu.js';
 
@@ -29,7 +27,6 @@ const TIER_MAX = { webgpu: 200000, webgl2: 20000 };
 /** Trần theo mức: máy yếu (điện thoại) không bị kéo quá sức, dù người xem kéo núm tới đâu. */
 const LEVEL_MAX = { cao: 200000, vua: 50000, thap: 10000 };
 const countMax = (env) => Math.min(TIER_MAX[env.tier], LEVEL_MAX[env.level]);
-const COUNT_FLOOR = 100; // sprite có count > 1 nằm trong cache key của three: không bao giờ xuống 0 hay 1
 
 export const knobs = [
   { id: 'size', min: 0.02, max: 0.5, step: 0.005, value: 0.12 },
@@ -56,59 +53,51 @@ export function createLayer(ctx, shared) {
   const t = ctx.u.time; // đồng hồ của xưởng: ?freeze cho ra đúng cùng một đàn đom đóm
   const dt = ctx.u.delta;
 
-  // Hai bộ đệm nằm trên GPU, mỗi con một ô vec4. Mỗi kernel chỉ đụng 2 bộ đệm:
-  // WebGL2 chạy compute bằng transform feedback và chỉ cho tối đa 4 bộ đệm mỗi kernel.
-  const posPhase = instancedArray(capacity, 'vec4'); // xyz = vị trí, w = pha nhấp nháy [0, 1)
-  const velSeed = instancedArray(capacity, 'vec4'); // xyz = vận tốc, w = hạt giống riêng [0, 1)
-
-  // Kernel khởi tạo: mỗi luồng GPU lo MỘT con. hash(instanceIndex) là ngẫu nhiên tất định,
-  // √u cho mật độ đều theo diện tích đĩa. Chạy một lần ngay lúc dựng lớp.
-  const init = Fn(() => {
-    const i = instanceIndex;
-    const r = sqrt(hash(i)).mul(FLOCK.radius);
-    const a = hash(i.add(1)).mul(Math.PI * 2);
-    const y = mix(FLOCK.low, FLOCK.high, hash(i.add(2)));
-    posPhase.element(i).assign(vec4(cos(a).mul(r), y, sin(a).mul(r), hash(i.add(3))));
-    velSeed.element(i).assign(vec4(0, 0, 0, hash(i.add(4))));
-  })().compute(capacity); // khởi tạo CẢ bộ đệm: tăng count lúc chạy thì con mới đã có chỗ đứng
-  ctx.renderer.compute(init);
-  // WebGL2 chạy compute bằng transform feedback: mỗi bộ đệm có HAI bản (một để đọc, một để ghi, đổi vai sau mỗi lần
-  // chạy), và kernel bước chỉ ghi [0, count). Chạy init lần nữa để bản kia cũng đầy (Phụ lục A.29): nếu không, tăng
-  // count lúc chạy thì con mới đọc từ bản chưa từng được ghi, cả đám cùng xuất phát ở (0, 0, 0).
-  if (ctx.tier === 'webgl2') ctx.renderer.compute(init);
-
-  // Kernel bước (mỗi khung): mỗi con chỉ đọc và ghi ĐÚNG ô của mình — trên WebGL2,
-  // element(i) luôn trả ô của chính luồng đang chạy, nên không đọc được hàng xóm.
-  const step = Fn(() => {
-    const cell = posPhase.element(instanceIndex);
-    const vs = velSeed.element(instanceIndex);
-    const p = cell.xyz.toVar();
-    // Hướng muốn bay: dòng curl noise (không phân kỳ: đàn trôi thành dòng xoáy mềm, không dồn một chỗ), trôi dần theo
-    // thời gian, cộng một vòng xoáy chậm quanh tâm ao.
-    const field = p.mul(ctx.knob('flowScale')).add(vec3(0, t.mul(FLOCK.drift), 0)); // @knob flowScale
-    const flow = curl(field).mul(vec3(1, FLOCK.lift, 1)).mul(ctx.knob('speed')).mul(FLOCK.flow); // @knob speed
-    const swirl = vec3(p.z.negate(), 0, p.x).mul(FLOCK.swirl);
-    // Quán tính: vận tốc chỉ ngả dần về hướng muốn bay, nên đường bay mềm, không giật.
-    const v = mix(vs.xyz, flow.add(swirl), min(dt.mul(FLOCK.turn), 1)).toVar();
-    // Tay người xem: lực > 0 hút về điểm chạm và kéo bay vòng quanh; lực < 0 đẩy ra (tản, bung).
-    // Chỉ con ở gần mới chịu lực (giảm theo exp của khoảng cách). Lực là gia tốc: cộng thẳng vào vận tốc.
-    const toward = shared.attract.point.sub(p);
-    const dist = max(length(toward), 0.001);
-    const dir = toward.div(dist);
-    const orbit = vec3(dir.z.negate(), 0, dir.x).mul(FLOCK.orbit);
-    const pull = dir.add(orbit).mul(shared.attract.strength).mul(exp(dist.div(FLOCK.reach).negate()));
-    v.addAssign(pull.mul(ctx.knob('attraction')).mul(FLOCK.pull).mul(dt)); // @knob attraction
-    v.assign(v.mul(min(float(1), float(FLOCK.maxSpeed).div(max(length(v), 0.001)))));
-    p.addAssign(v.mul(dt));
-    // Giữ đàn trong đĩa bán kính FLOCK.radius và trong khoảng độ cao.
-    const k = min(float(1), float(FLOCK.radius).div(max(length(p.xz), 0.001)));
-    cell.assign(vec4(p.x.mul(k), clamp(p.y, FLOCK.low, FLOCK.high), p.z.mul(k), cell.w));
-    vs.assign(vec4(v, vs.w));
-  })().compute(wanted);
+  // Bể hạt dùng chung (lib/tsl/particles.js): hai bộ đệm trên GPU, mỗi con một ô vec4 ở mỗi bộ đệm, cấp theo TRẦN của núm một lần.
+  // a = xyz vị trí, w pha nhấp nháy [0, 1); b = xyz vận tốc, w hạt giống riêng [0, 1).
+  const pool = createPool({
+    capacity,
+    count: wanted,
+    tier: ctx.tier,
+    renderer: ctx.renderer,
+    // Khởi tạo: mỗi luồng GPU lo MỘT con. hash(index) là ngẫu nhiên tất định, √u cho mật độ đều theo diện tích đĩa.
+    init: ({ a, b, index: i }) => {
+      const r = sqrt(hash(i)).mul(FLOCK.radius);
+      const ang = hash(i.add(1)).mul(Math.PI * 2);
+      const y = mix(FLOCK.low, FLOCK.high, hash(i.add(2)));
+      a.assign(vec4(cos(ang).mul(r), y, sin(ang).mul(r), hash(i.add(3))));
+      b.assign(vec4(0, 0, 0, hash(i.add(4))));
+    },
+    // Một bước (mỗi khung): mỗi con chỉ đọc và ghi ĐÚNG ô của mình.
+    law: ({ a: cell, b: vs }) => {
+      const p = cell.xyz.toVar();
+      // Hướng muốn bay: dòng curl noise (không phân kỳ: đàn trôi thành dòng xoáy mềm, không dồn một chỗ), trôi dần theo
+      // thời gian, cộng một vòng xoáy chậm quanh tâm ao.
+      const field = p.mul(ctx.knob('flowScale')).add(vec3(0, t.mul(FLOCK.drift), 0)); // @knob flowScale
+      const flow = curl(field).mul(vec3(1, FLOCK.lift, 1)).mul(ctx.knob('speed')).mul(FLOCK.flow); // @knob speed
+      const swirl = vec3(p.z.negate(), 0, p.x).mul(FLOCK.swirl);
+      // Quán tính: vận tốc chỉ ngả dần về hướng muốn bay, nên đường bay mềm, không giật.
+      const v = mix(vs.xyz, flow.add(swirl), min(dt.mul(FLOCK.turn), 1)).toVar();
+      // Tay người xem: lực > 0 hút về điểm chạm và kéo bay vòng quanh; lực < 0 đẩy ra (tản, bung).
+      // Chỉ con ở gần mới chịu lực (giảm theo exp của khoảng cách). Lực là gia tốc: cộng thẳng vào vận tốc.
+      const toward = shared.attract.point.sub(p);
+      const dist = max(length(toward), 0.001);
+      const dir = toward.div(dist);
+      const orbit = vec3(dir.z.negate(), 0, dir.x).mul(FLOCK.orbit);
+      const pull = dir.add(orbit).mul(shared.attract.strength).mul(exp(dist.div(FLOCK.reach).negate()));
+      v.addAssign(pull.mul(ctx.knob('attraction')).mul(FLOCK.pull).mul(dt)); // @knob attraction
+      v.assign(v.mul(min(float(1), float(FLOCK.maxSpeed).div(max(length(v), 0.001)))));
+      p.addAssign(v.mul(dt));
+      // Giữ đàn trong đĩa bán kính FLOCK.radius và trong khoảng độ cao.
+      const k = min(float(1), float(FLOCK.radius).div(max(length(p.xz), 0.001)));
+      cell.assign(vec4(p.x.mul(k), clamp(p.y, FLOCK.low, FLOCK.high), p.z.mul(k), cell.w));
+      vs.assign(vec4(v, vs.w));
+    },
+  });
 
   // Hiển thị: MỘT Sprite vẽ `count` bản sao; vị trí đọc thẳng bộ đệm compute qua toAttribute()
   // (thành vertex attribute, không cần storage buffer ở vertex stage).
-  const sprite = createFireflySprite(ctx, { cell: posPhase.toAttribute(), w, fogFactor: shared.suong.fogFactor, count: wanted });
+  const sprite = createFireflySprite(ctx, { cell: pool.a.toAttribute(), w, fogFactor: shared.suong.fogFactor, count: pool.count });
   sprite.name = 'dom-dom'; // hai đàn chung một hàm dựng: tên đặt ở đây, nơi biết đàn nào là đàn nào
   ctx.scene.add(sprite);
   const objects = [sprite]; // mảng SỐNG: đàn CPU thêm vào khi được dựng
@@ -126,9 +115,7 @@ export function createLayer(ctx, shared) {
 
   /** Số con được tính và được vẽ = min(núm, trần). Chỉ đổi SỐ: không tạo bộ đệm, không biên dịch lại. */
   const applyCount = () => {
-    const n = Math.min(wanted, cap);
-    step.count = n; // WebGPU tính lại số nhóm dispatch, WebGL2 vẽ ít/nhiều đỉnh hơn
-    sprite.count = n;
+    const n = pool.setCount(Math.min(wanted, cap), sprite);
     cpu?.setCount(n);
   };
   let before = Infinity; // trần trước khi áp nấc (bộ điều chỉnh gỡ nấc thì trả đúng số này)
@@ -140,7 +127,7 @@ export function createLayer(ctx, shared) {
       // Tắt hẳn: không tính gì. dt = 0 (xưởng vẽ lại khung đứng yên của ?freeze): đồng bộ, KHÔNG tiến đàn thêm một bước.
       if (w.value <= 0 || dt === 0) return;
       if (onCpu) cpu.step(dt, t);
-      else ctx.renderer.compute(step); // bước đọc ctx.u.delta / ctx.u.time: xưởng đã cập nhật trước khi gọi
+      else pool.step(dt, w.value); // bước đọc ctx.u.delta / ctx.u.time: xưởng đã cập nhật trước khi gọi
     },
     onKnob: {
       count: (v) => { // @knob count
@@ -196,8 +183,7 @@ export function createLayer(ctx, shared) {
       ctx.scene.remove(...objects);
       sprite.material.dispose();
       cpu?.dispose();
-      init.dispose(); // gỡ pipeline compute; bộ đệm storage được giải phóng cùng renderer
-      step.dispose();
+      pool.dispose();
     },
   };
 }

@@ -88,6 +88,22 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
     }
   });
 
+  it('files của lớp (GĐ 8) chỉ kê file lib/tsl/ mà lớp thật sự import (thẳng hay qua part): Sổ tay không hiện code lớp không dùng', () => {
+    const parts = `src/paintings/${slug}/parts/`;
+    for (const layer of meta.layers) {
+      const libs = layer.files.filter((f) => f.startsWith('lib/'));
+      if (libs.length === 0) continue;
+      const reached = new Set(layer.files.filter((f) => f.startsWith(`paintings/${slug}/layers/`)).flatMap((file) => {
+        const start = `src/${file}`;
+        return staticClosure(start, (rel) => (rel === start || rel.startsWith(parts) ? read(rel) : null));
+      }));
+      for (const lib of libs) {
+        expect(lib, `lớp "${layer.id}": chỉ kê được file trong lib/tsl/`).toMatch(/^lib\/tsl\/[\w-]+\.js$/);
+        expect(reached.has(`src/${lib}`), `lớp "${layer.id}" kê src/${lib} mà không import nó`).toBe(true);
+      }
+    }
+  });
+
   it('poster (GĐ 4): capture đọc được (at theo ?at, freeze nguyên dương); file WebP đúng cỡ và ≤ 150 KB; og 1200×630, ≤ 200 KB', () => {
     const { capture } = meta.poster;
     if (capture) {

@@ -82,6 +82,7 @@ export default {
         'paintings/ao-sen-dem/layers/l5-vang-la.js',
         'paintings/ao-sen-dem/parts/vang-la-dan.js',
         'paintings/ao-sen-dem/parts/vang-la-cpu.js',
+        'lib/tsl/particles.js', // bể hạt dùng chung (GĐ 8): Sổ tay hiện cả code của nó
       ],
     },
     phuBong,

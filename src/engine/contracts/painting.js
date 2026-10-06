@@ -29,6 +29,7 @@
  * @property {string} name        'Mặt nước': hiện trên thanh lớp, kể cả ở tầng tĩnh
  * @property {string[]} files     file mà lớp SỞ HỮU, tính từ src/; file đầu hiện trong Sổ tay.
  *                                Marker '// @knob' chỉ hợp lệ trong các file này; mỗi file thuộc tối đa MỘT lớp.
+ *                                [8] kê được file `lib/tsl/*.js` mà lớp import (test hợp đồng giữ); hộp màu không có marker `// @knob`
  * @property {Poem} [poem]        câu thơ riêng của lớp
  */
 /** Cửa vào NHẸ: src/paintings/<slug>/index.js. Trang HTML import thẳng file này: `export default { meta, load, content }`.
