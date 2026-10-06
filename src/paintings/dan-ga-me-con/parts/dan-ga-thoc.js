@@ -133,8 +133,9 @@ export function makeLaw({ dt, gravity, bounce, beaks, floor }) {
  * ảnh, Cốt đặt mỗi khung), nên trên điện thoại vẫn thấy (§20.11). Xoay theo hạt giống. Hạt bị ăn hay ô trống thu về 0; nằm quá 30 giây
  * thì nhỏ dần. Không ghi độ sâu (Bản nét không vẽ viền quanh hạt), vẫn bị gà che; transparent để vẽ sau mọi vật đục.
  * Màu qua recipe.fill (thóc là vàng hòe khi có Bản màu, đất sét khi không). `lane` (thí nghiệm "Tô theo luồng"): mỗi hạt một màu theo
- * luồng GPU giữ nó, tính ở vertex. Màu xoay một góc vàng (2,39996 rad, chừng 137,5°) mỗi luồng, nên hạt ở luồng kề bên khác màu hẳn: màu
- * cho thấy mỗi luồng giữ một hạt suốt đời, chứ không cho thấy một nắm là đoạn liền của vòng đệm.
+ * luồng GPU tính nó, tính ở vertex. Sắc màu (hue) xoay một góc vàng (2,39996 rad, chừng 137,5°) mỗi luồng, nên hạt ở luồng kề bên khác màu
+ * hẳn. Màu cho thấy mỗi hạt ở yên một luồng (một màu) suốt đời, và hết vòng đệm thì nắm mới lấy lại luồng của những hạt cũ nhất; nó không
+ * cho thấy một nắm là đoạn liền của vòng đệm.
  * @param {{ pool: object, recipe: object, time: any, pixel: any, lane: any, w: any }} p
  */
 export function createGrainSprite({ pool, recipe, time, pixel, lane, w }) {

@@ -47,7 +47,7 @@
   <path d="M86 178 L86 157" stroke="#EDE3CF" stroke-width="1.6" marker-end="url(#dg-dgmc-vd-mui)"/>
   <text x="86" y="192" fill="#EDE3CF" text-anchor="middle">đầu nắm kế tiếp</text>
   <path d="M61.5 151.1 L56.9 162.2" stroke="#8A8580"/>
-  <text x="2" y="176" fill="#8A8580" font-size="11">hạt cũ nhất</text>
+  <text x="2" y="176" fill="#8A8580">hạt cũ nhất</text>
   <!-- mảng mười mỏ (uniform) đi vào luật của mỗi hạt -->
   <text x="279" y="24" fill="#EDE3CF" text-anchor="middle">mười mỏ (uniform)</text>
   <g fill="#E0AC3A">
@@ -62,13 +62,13 @@
     <rect x="318" y="34" width="11" height="11" rx="2"/>
     <rect x="331" y="34" width="11" height="11" rx="2"/>
   </g>
-  <text x="279" y="62" fill="#8A8580" text-anchor="middle" font-size="11">JS ghi mỗi khung</text>
+  <text x="279" y="62" fill="#8A8580" text-anchor="middle">JS ghi mỗi khung</text>
   <path d="M279 68 V92" stroke="#EDE3CF" stroke-width="1.4" marker-end="url(#dg-dgmc-vd-mui)"/>
-  <rect x="208" y="96" width="142" height="44" rx="8" fill="none" stroke="#EDE3CF"/>
+  <rect x="204" y="96" width="150" height="44" rx="8" fill="none" stroke="#EDE3CF"/>
   <text x="279" y="114" fill="#EDE3CF" text-anchor="middle">luật của mỗi hạt</text>
-  <text x="279" y="130" fill="#8A8580" text-anchor="middle" font-size="11">mỏ đang mổ, gần thì ăn</text>
+  <text x="279" y="130" fill="#8A8580" text-anchor="middle">mỏ đang mổ, gần thì ăn</text>
   <!-- mỗi luồng chỉ đọc, ghi ô của mình: mũi tên hai đầu -->
-  <path d="M149.1 67.5 C185.1 67.5 180 118 205 118" fill="none" stroke="#B9472E" stroke-width="1.4" marker-start="url(#dg-dgmc-vd-mui)" marker-end="url(#dg-dgmc-vd-mui)"/>
-  <text x="279" y="164" fill="#EDE3CF" text-anchor="middle" font-size="11">mỗi luồng chỉ đọc, ghi</text>
-  <text x="279" y="178" fill="#EDE3CF" text-anchor="middle" font-size="11">ô của chính nó</text>
+  <path d="M149.1 67.5 C185.1 67.5 176 118 201 118" fill="none" stroke="#B9472E" stroke-width="1.4" marker-start="url(#dg-dgmc-vd-mui)" marker-end="url(#dg-dgmc-vd-mui)"/>
+  <text x="279" y="164" fill="#EDE3CF" text-anchor="middle">mỗi luồng chỉ đọc, ghi</text>
+  <text x="279" y="180" fill="#EDE3CF" text-anchor="middle">ô của chính nó</text>
 </svg>

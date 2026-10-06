@@ -4273,9 +4273,10 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   - Ma trận instance giữ đơn vị và `frustumCulled = false` (lớp 1), nên không ghi ma trận và không cần `computeBoundingSphere()`.
   - `pose`, `head` ghi lại mỗi khung, nên là `instancedDynamicBufferAttribute` (`DynamicDrawUsage`).
 - **Núm:** `handful` (số hạt mỗi nắm), `bounce`, `gravity` (select: `traiDat`, `trang`), `count` (trần số hạt, `via: 'js'`, như đom đóm).
-- **Thí nghiệm "Tô theo luồng"** (`toTheoLuong`): mỗi hạt một màu theo chỉ số luồng GPU (`instanceIndex`). Màu xoay một góc vàng
-  (2,4 rad, chừng 137,5°) mỗi luồng, nên hai hạt kề nhau trên vòng đệm khác màu hẳn: màu không cho thấy một nắm là đoạn liền.
-  - Thấy được mỗi luồng giữ một hạt suốt đời nó: hạt giữ nguyên màu khi rơi, nảy, lăn.
+- **Thí nghiệm "Tô theo luồng"** (`toTheoLuong`): mỗi hạt một màu theo chỉ số luồng GPU (`instanceIndex`). Sắc màu (hue) xoay một góc
+  vàng (2,4 rad, chừng 137,5°) mỗi luồng, nên hai hạt kề nhau trên vòng đệm khác màu hẳn: màu không cho thấy một nắm là đoạn liền.
+  - Thấy được mỗi hạt ở yên một luồng (nên một màu) suốt đời: hạt giữ nguyên màu khi rơi, nảy, lăn. Ngược lại thì không đúng: một luồng
+    tính nhiều hạt nối nhau, vì hết vòng đệm thì nắm mới lấy lại luồng (ý dưới).
   - Hạ `count` rồi rắc liền tay thì thấy nắm mới lấy lại luồng của những hạt cũ nhất (mỗi nắm là một đoạn liền của vòng đệm): hạt ở nắm
     cũ biến mất.
   - Bản đầu của chữ trong Sổ tay viết "hạt cùng một nắm có màu liền nhau", sai với góc vàng (sửa ở GĐ 8 Task 10).
