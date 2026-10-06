@@ -1,32 +1,9 @@
-// e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; chữ của trang nằm trên ván tối; độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ, có nét trong, lệch bản, không vệt mực ở mép khung, hai thí nghiệm; tranh tự khép lại (kéo rồi buông thì camera về góc của tranh); (Task 6–9) các lớp, cử chỉ, chất lượng.
+// e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; chữ của trang nằm trên ván tối; độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ, có nét trong, lệch bản, không vệt mực ở mép khung, hai thí nghiệm; tranh tự khép lại (kéo rồi buông thì camera về góc của tranh); (Task 7–9) cử chỉ, chất lượng. Giấy điệp ở e2e/dan-ga-me-con-giay.spec.js; tiện ích và các vùng dùng chung ở e2e/dan-ga-me-con.helpers.js.
 import { test, expect } from '@playwright/test';
+import { STAGE_ONLY, waitForFrames, canvasRegions, collectConsole, twoFrames, toggleExperiment } from './helpers.js';
 import {
-  STAGE_ONLY, waitForSettled, waitForFrames, canvasRegions, collectConsole, gpuReport, twoFrames, toggleExperiment,
-} from './helpers.js';
-
-/** Tag của test khói: nếu CI bật ciWebgpuSmoke cho Bức 4 (Task 13), job WebGPU chỉ chạy các test này. */
-const SMOKE = { tag: '@khoi' };
-/**
- * Vùng (phần của canvas 640 × 400), chốt theo ảnh thật (GPU thật và SwiftShader; chốt lại sau điểm duyệt ảnh, Task 4: khung cao 13,2, vách
- * thấp 4,5). Khung nhìn 21,12 × 13,2 đơn vị; tờ giấy từ y 0,184 tới 0,765, x từ 0,169 tới 0,831; vách tới y 0,362, sàn phẳng từ y 0,557.
- * BOARD_TOP, BOARD_BOTTOM: ván tối trên và dưới tờ giấy. WALL: vách giấy, không có gà. HEN: mình gà mẹ, phía trên cánh và dưới con trèo
- * lưng (chỉ có màu vàng hòe, không nếp gấp nào). LEFT_EDGE: mép trái tờ giấy (nửa ván, nửa giấy): viền của Bản nét nằm ở đây. FLOOR: mặt
- * sàn trống phía trước bên trái, nghiêng so với camera: không có nét nào.
- */
-const BOARD_TOP = { x0: 0.25, y0: 0.01, x1: 0.75, y1: 0.08 };
-const BOARD_BOTTOM = { x0: 0.25, y0: 0.93, x1: 0.75, y1: 0.99 };
-const WALL = { x0: 0.25, y0: 0.21, x1: 0.4, y1: 0.33 };
-const HEN = { x0: 0.455, y0: 0.46, x1: 0.495, y1: 0.495 };
-const LEFT_EDGE = { x0: 0.15, y0: 0.3, x1: 0.19, y1: 0.7 };
-const FLOOR = { x0: 0.18, y0: 0.65, x1: 0.24, y1: 0.745 };
-/** Giữa tờ giấy: gà mẹ và sáu gà con quanh mẹ (viền, vảy lông, mắt, cánh của Bản nét đều ở đây). */
-const PAPER_MID = { x0: 0.3, y0: 0.4, x1: 0.7, y1: 0.72 };
-/**
- * Phóng to 2,5 lần (quanh tâm khung): tờ giấy phủ kín khung. Hàng điểm ảnh sát mép dưới (sàn trống, bên phải các chân gà) và bốn hàng sàn
- * ngay phía trên nó (gần, để vignette của Phủ bóng gần như bằng nhau).
- */
-const ZOOM_BOTTOM = { x0: 0.75, y0: 0.9975, x1: 0.97, y1: 1 };
-const ZOOM_ABOVE = { x0: 0.75, y0: 0.985, x1: 0.97, y1: 0.995 };
+  BOARD_BOTTOM, BOARD_TOP, FLOOR, HEN, LEFT_EDGE, PAPER_MID, SMOKE, WALL, ZOOM_ABOVE, ZOOM_BOTTOM, layerView, open, skipWithoutWebgpu,
+} from './dan-ga-me-con.helpers.js';
 
 /**
  * Khung tờ giấy trên trang (px CSS), đo trên điểm ảnh của canvas (đã ẩn chữ): hàng có hơn 15% điểm ảnh sáng (giấy, gà) thuộc tờ giấy; cột
@@ -61,33 +38,7 @@ async function sheetBox(page) {
   }, { b64: png.toString('base64'), at: box });
 }
 
-async function open(page, testInfo, frames, extra = '') {
-  const query = testInfo.project.metadata.query ?? '';
-  const freeze = frames ? `&freeze=${frames}` : '';
-  await page.goto(`./tranh/dan-ga-me-con/?${query.replace(/^\?/, '')}${freeze}${extra}`);
-  const settled = await waitForSettled(page, { timeout: 60_000 });
-  expect(settled.state, `về tĩnh: ${settled.reason}`).toBe('live');
-  if (frames) await waitForFrames(page, frames, { timeout: 120_000 });
-}
-
-/** Lột lớp về nấc "Depth" (nấc đầu bên trái), như e2e của Bức 3. */
-async function depthView(page) {
-  await page.evaluate(() => window.__sma.setTool('lot-lop'));
-  const range = page.locator('[data-tool-slot="lot-lop"] input[type="range"]');
-  await range.evaluate((el) => {
-    el.value = '0';
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-  await expect(range).toHaveAttribute('aria-valuetext', 'Depth');
-  await twoFrames(page);
-}
-
-test.beforeEach(async ({ page }, testInfo) => {
-  const { kind, backend } = testInfo.project.metadata;
-  if (kind !== '3d' || backend !== 'webgpu') return;
-  await page.goto('./tranh/dan-ga-me-con/?static');
-  test.skip(!(await gpuReport(page)).webgpu, 'Không có WebGPU adapter trong môi trường này');
-});
+test.beforeEach(skipWithoutWebgpu);
 
 test.describe('Đàn Gà Mẹ Con · khung', () => {
   test.beforeEach(({}, testInfo) => {
@@ -113,7 +64,7 @@ test.describe('Đàn Gà Mẹ Con · khung', () => {
   test('độ sâu của camera trực giao: view Depth có độ dốc; gà (gần) sáng hơn vách (xa), không phải một bóng trắng', SMOKE, async ({ page }, testInfo) => {
     // Lỗi cũ (công thức phối cảnh trên độ sâu trực giao, Phụ lục A.89): mọi vật trắng như nhau, gà và vách bằng nhau.
     await open(page, testInfo, 30);
-    await depthView(page);
+    await layerView(page, '0', 'Depth');
     const r = await canvasRegions(page, { hen: HEN, wall: WALL });
     await page.screenshot({ path: testInfo.outputPath('depth.png') });
     expect(r.hen.mean, 'gà gần hơn vách').toBeGreaterThan(r.wall.mean + 0.02);

@@ -25,7 +25,7 @@ export default {
   // Năm màu tự nhiên của tranh Đông Hồ (spec §20.3): trắng điệp, vàng hoa hòe, đỏ sỏi son, xanh lá chàm, đen than lá tre.
   palette: { diep: '#EFE6D2', hoe: '#E0AC3A', sonSoi: '#B9472E', xanhDong: '#41705F', muc: '#221E1A' },
   // THỨ TỰ PHỦ: lớp đầu là Cốt; lớp cuối là Phủ bóng dùng chung của xưởng. Thứ tự in của làng: màu trước (Bản màu), nét đen sau cùng
-  // (Bản nét). Task 6 và Task 8 thêm Giấy điệp và Đàn gà.
+  // (Bản nét); giấy điệp là việc của tờ giấy, độc lập với gà. Task 8 thêm Đàn gà.
   layers: [
     {
       id: 'cot',
@@ -50,6 +50,12 @@ export default {
         'paintings/dan-ga-me-con/parts/ban-net-do-canh.js',
         'paintings/dan-ga-me-con/parts/ban-net-net-trong.js',
       ],
+    },
+    {
+      id: 'giay-diep',
+      name: 'Giấy điệp',
+      // lib/tsl/noise.js (GĐ 8): fbm của sợi dó và vệt chổi; Sổ tay hiện cả code của nó.
+      files: ['paintings/dan-ga-me-con/layers/l4-giay-diep.js', 'paintings/dan-ga-me-con/parts/giay-diep-mat.js', 'lib/tsl/noise.js'],
     },
     phuBong,
   ],

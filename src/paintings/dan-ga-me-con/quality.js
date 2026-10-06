@@ -12,6 +12,6 @@ export const quality = {
     vua: { dpr: 1.5, grains: 2048, paper: 2, bloom: 0.25 },
     thap: { dpr: 1.25, grains: 1024, paper: 2, bloom: 0.25 },
   },
-  // Máy chậm thì hạ độ nét trước, rồi bloom. Task 6 và Task 8 thêm nấc của Giấy điệp và Đàn gà vào giữa.
-  ladder: ['dpr', 'phu-bong.bloom'],
+  // Máy chậm thì hạ độ nét trước, rồi bớt một tầng noise của sợi dó (giấy phủ gần bốn phần mười số điểm ảnh), rồi bloom. Task 8 thêm nấc thóc ngay sau dpr.
+  ladder: ['dpr', 'giay-diep.chi-tiet', 'phu-bong.bloom'],
 };

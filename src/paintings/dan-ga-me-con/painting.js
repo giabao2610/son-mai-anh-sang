@@ -2,6 +2,7 @@
 import * as cot from './layers/l1-cot.js';
 import * as banMau from './layers/l2-ban-mau.js';
 import * as banNet from './layers/l3-ban-net.js';
+import * as giayDiep from './layers/l4-giay-diep.js';
 import * as phuBong from '../../engine/stock/phu-bong/layer.js';
 import { CAMERA } from './parts/cot-bo-cuc.js';
 
@@ -9,7 +10,7 @@ import { CAMERA } from './parts/cot-bo-cuc.js';
  * Mỗi lớp là một module { id, knobs, createLayer }; import namespace (`* as`) cho ra đúng object đó.
  * @type {import('../../engine/contracts/runtime.js').LayerModule[]}
  */
-export const layers = [cot, banMau, banNet, phuBong];
+export const layers = [cot, banMau, banNet, giayDiep, phuBong];
 
 /**
  * Góc nhìn của tranh: camera trực giao (CameraSpec.kind 'ortho', spec §20.2). Số nằm ở parts/cot-bo-cuc.js, nơi lớp Cốt cũng đọc.

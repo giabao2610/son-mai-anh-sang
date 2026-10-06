@@ -4161,19 +4161,38 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
 
 #### Lớp 4 · Giấy điệp (`layers/l4-giay-diep.js`)
 - **Thấy gì:** tờ giấy từ đất sét thành giấy dó quét điệp: màu ngà, sợi dó, vệt chổi lá thông chạy xiên. Hạt điệp lấp lánh khi xoay tranh.
-- **Kỹ thuật** (`parts/giay-diep-mat.js`):
-  - **sợi dó:** noise kéo dài theo một hướng (`lib/tsl/noise.js`); số tầng là node, theo mức;
-  - **vệt chổi:** noise kéo dài theo hướng xiên, đổi độ dày của lớp điệp;
-  - **hạt điệp:**
-    - mặt giấy chia thành ô (`density` ô mỗi đơn vị); mỗi ô có một hạt với pháp tuyến nghiêng ngẫu nhiên (băm theo ô);
-    - hạt sáng khi tia nắng phản xạ trên nó đi vào mắt: `pow(saturate(dot(reflect(−nắng, n_hạt), hướng_nhìn)), mũ)`;
-    - với camera trực giao, hướng nhìn như nhau ở mọi điểm ảnh (Phụ lục A.91): đứng yên thì hạt đứng yên, xoay camera thì hạt khác lóe
-      lên;
-    - phần sáng của hạt là `emissiveNode`, nên Phủ bóng làm nó tỏa nhẹ.
-- **Núm:** `sparkle`, `density`, `fiber`, `brush`.
-- **Thí nghiệm "Giấy dó trơn"** (`giayTron`): bỏ lớp điệp, chỉ còn sợi dó.
-- **Nấc** `chi-tiet`: bớt một tầng noise của sợi dó.
-- Không có vật riêng.
+- **Màu giấy** (`parts/giay-diep-mat.js#paperColor`, theo UV của tờ giấy, đơn vị cảnh): `mix(nền dó, điệp, lớp điệp) · (1 − sợi)`. Không có
+  phần ánh sáng nào: tranh in phẳng, chỗ uốn chỉ hiện ra ở hình dạng và ở hạt điệp.
+  - nền dó là `diep` nhân 0,82; lớp điệp là đúng `diep`, nên điệp sáng và ngà hơn nền;
+  - **sợi dó:** `fbm` (`lib/tsl/noise.js`) kéo dài theo chiều dài cung (tần số 16 theo u, 1,2 theo v), nên sợi chạy dọc tờ giấy. Số tầng là
+    node (một uniform, theo mức), nên nấc `chi-tiet` đổi nó mà không biên dịch lại. Nhân với `0,3 · fiber`: biên độ 0,06 của bản đầu
+    chỉ lệch chừng ±2% độ sáng ngay ở `fiber` 1, không thấy, và núm thành vô dụng;
+  - **vệt chổi:** `fbm` 2 tầng kéo dài theo hướng xiên 0,5 rad (tần số 0,35 dọc vệt, 3 ngang vệt); `smoothstep(−0,2; 0,4; ·) · brush` là độ
+    dày của lớp điệp.
+- **Hạt điệp** (`parts/giay-diep-mat.js#glints`):
+  - mặt giấy chia thành ô (`density` ô mỗi đơn vị cảnh); mỗi ô có một hạt: một vệt sáng mềm `e^(−4·(d/r)²)` ở chỗ lệch ngẫu nhiên, bán trục
+    0,2 ô; vị trí và độ nghiêng băm theo số ô, nên cùng một khung luôn ra cùng một ảnh;
+  - **hạt nghiêng trong mặt phẳng tiếp tuyến của tờ giấy:** pháp tuyến hạt là pháp tuyến giấy cộng `dx·T + dy·B`, với T là trục x của tờ
+    giấy, B = n × T chạy theo chiều dài cung, dx và dy ngẫu nhiên trong ±1,4 (là tan của góc nghiêng, tới chừng 54°). Nghiêng theo trục
+    x và z của thế giới thì sai: vách có pháp tuyến (0, 0, 1), nghiêng theo z không đổi gì, mà vách cần nghiêng lên xuống mới bắt được nắng;
+  - hạt sáng khi tia nắng phản xạ trên nó đi vào mắt: `pow(saturate(dot(reflect(−nắng, n_hạt), hướng_nhìn)), 80)`. Hạt chỉ lóe khi pháp
+    tuyến của nó trùng nửa vector H của hướng nắng và hướng nhìn, nên tầm nghiêng phải với tới H:
+    - ở góc của tranh, H lệch khỏi pháp tuyến sàn tới 1,32 (53°), khỏi pháp tuyến vách 0,76 (37°), và gần như trùng pháp tuyến giữa chỗ uốn;
+    - tầm nghiêng ±0,6 theo x và z (bản đầu) cho 0 hạt lóe trên sàn và vách, ở góc của tranh và khi xoay ±30° (mô phỏng cùng phép tính
+      của shader), chỉ chỗ uốn có: một dải, không phải một lớp điệp phủ khắp tờ giấy. Với ±1,4, chừng 0,3–1% số ô lóe hơn nửa độ sáng ở mỗi
+      vùng, ở các góc nhìn trên;
+  - với camera trực giao, hướng nhìn như nhau ở mọi điểm ảnh (Phụ lục A.91): đứng yên thì hạt đứng yên, xoay camera thì hạt khác lóe lên;
+  - **cỡ chấm** không nhỏ hơn 0,8 điểm ảnh MÀN HÌNH theo từng trục (bề rộng một điểm ảnh tính bằng ô: `|dFdx| + |dFdy|` của lưới ô) và
+    không quá 0,25 ô. Sàn nhìn chếch 20° bị co dọc còn 1/3: chấm tròn trên mặt giấy thành vạch mảnh chưa tới một điểm ảnh và chớp tắt khi
+    xoay, nếu đặt sàn theo đơn vị cảnh của một điểm ảnh (`shared.cot.pixel`, cách của Bản nét: đúng theo chiều ngang, nhưng chiều sâu của sàn bị co);
+  - phần sáng của hạt là `emissiveNode` với độ sáng HDR `16 · sparkle`. Tone mapping AgX nén vùng sáng: hạt chỉ sáng gấp đôi giấy thì gần
+    như không thấy (đo trên GPU thật, DPR 2, góc của tranh: đỉnh 1 và 3,4 gần như không thấy hạt trong ảnh cuối; 8 mờ; 16 thấy rõ), và bloom của
+    Phủ bóng chỉ có gì để tỏa khi đỉnh từ chừng 10. Hạt ở mép giấy tỏa cả ra ván tối (quầng).
+- **Núm:** `sparkle` (0–4, mặc định 1,2), `density` (4–40 ô mỗi đơn vị, mặc định 14), `fiber` (0–1, mặc định 0,5), `brush` (0–1, mặc định
+  0,6). Số hạt không đổi chi phí: không có vòng lặp nào theo số ô.
+- **Thí nghiệm "Giấy dó trơn"** (`giayTron`): bỏ lớp điệp và hạt, chỉ còn nền dó và sợi.
+- **Nấc** `chi-tiet`: bớt một tầng noise của sợi dó. Chỉ có khi `paper` lớn hơn 1.
+- Không có vật riêng. Cốt: `recipe.paper` và `recipe.glint` là hai hàm duy nhất lớp này bọc, nên gà không đổi.
 
 #### Lớp 5 · Đàn gà (`layers/l5-dan-ga.js`)
 - **Thấy gì:** thóc rắc ra, nảy, lăn; gà con chạy, mổ, rỉa lông; gà mẹ gọi con, cào chân bới thóc.
@@ -4382,6 +4401,9 @@ chuyển động ở lại trong bức.
     60 của xưởng), 17 draw call, CPU 1,1–1,8 ms mỗi khung, bộ điều chỉnh không hạ nấc nào; Bản nét về 0 cũng vậy. Tải nặng 2560×1600,
     DPR 2, mức cao: vẫn 60 khung/giây, không hạ nấc. Ms GPU ở mức vừa 8,2, thấp 5,9; ở mức cao GPU Apple báo các lượt chồng lên nhau nên
     bị coi là không đo được (README).
+  - (GĐ 8, Task 6, thêm Giấy điệp: Cốt, Bản màu, Bản nét, Giấy điệp, Phủ bóng; cùng máy) 1280×800, DPR 2, mức cao: 60 khung/giây, 19 draw
+    call, CPU 1,4 ms, không hạ nấc. Tải nặng 2560×1600, DPR 2 (5120×3200 điểm ảnh): 50 khung/giây, bộ điều chỉnh hạ dpr một nấc (1,75).
+    Chưa tách riêng chi phí của giấy (năm lần lấy mẫu noise mỗi điểm ảnh ở mức cao); Task 9 đo lại đủ sáu lớp ở ba mức.
 - **JS:** chunk của bức cộng chunk content. `lib/tsl/particles.js` vào một chunk dùng chung với Bức 1 (Vite tự tách). Số đo ghi vào
   README.
 
@@ -4439,6 +4461,12 @@ chuyển động ở lại trong bức.
   - Cốt: gà mẹ ba mesh có `positionNode`, mỗi mesh đọc đúng uniform dáng của nó; `pose`, `head` là thuộc tính ghi mỗi khung; Tấm bìa
     phẳng chỉ đổi uniform (`material.version` không đổi); dịch được ở `segments` 8 và 48;
   - Bản màu: đồ thị màu của gà đọc `w_ban_mau` và ba núm; núm ở hai đầu dịch được; `pigment` ghi một lần; Tô mịn là kiểu so;
+  - Giấy điệp:
+    - đồ thị màu của tờ giấy đọc `w_giay_diep`, bốn núm, số tầng noise và Giấy dó trơn; shader của tờ giấy có `reflect` (hạt điệp), shader của
+      gà thì không và không đọc `w_giay_diep`; cỡ chấm đọc đạo hàm màn hình;
+    - tầm nghiêng của hạt với tới nửa vector của nắng và hướng nhìn ở sàn, chỗ uốn và vách (góc của tranh, xoay ±30°);
+    - núm ở hai đầu (`density` 4 và 40, `sparkle` 0 và 4, `fiber` 0 và 1, `brush` 0 và 1) dịch được; nấc `chi-tiet` hạ số tầng một bậc rồi
+      gỡ về như cũ, chỉ có khi `paper` > 1; Giấy dó trơn chỉ đổi uniform;
   - thí nghiệm và số đo đủ, có nhãn; nấc chỉ có khi có tác dụng.
 - Cử chỉ:
   - chạm thì có mốc rắc ở đúng điểm trên sàn, kể cả khi chạm ra ngoài sàn;
@@ -4446,7 +4474,9 @@ chuyển động ở lại trong bức.
   - `'swipe'`, `'double-tap'` không làm gì riêng.
 - Chữ của Sổ tay, chất lượng: như Bức 2 và Bức 3.
 
-**E2e riêng** (`e2e/dan-ga-me-con.spec.js`; WebGL2 trên SwiftShader là cổng chặn, WebGPU không chặn):
+**E2e riêng** (`e2e/dan-ga-me-con*.spec.js`; WebGL2 trên SwiftShader là cổng chặn, WebGPU không chặn). Một file quá 300 dòng thì tách theo lớp
+(`dan-ga-me-con-giay.spec.js`); tiện ích và các vùng của canvas dùng chung ở `e2e/dan-ga-me-con.helpers.js`, và `tests/rules/e2e.test.js` kiểm
+mọi `describe` của các file ấy bắt đầu bằng tên bức:
 - Góc nhìn của tranh: vùng giữa khung sáng (giấy), hai dải trên và dưới tối (ván); mình gà mẹ in màu vàng hòe (độ bão hòa > 0,15).
   Vòng mặt đa diện thành nét (§20.4 lớp 3) chỉ thấy rõ ở DPR 2, nên kiểm bằng ảnh ở điểm duyệt ảnh, không bằng e2e ở khung 640 × 400.
 - Chữ trên ván tối: ở 1280 × 800, 1440 × 900, 1920 × 1080 và 390 × 844, khung tờ giấy (đo trên điểm ảnh của canvas) nằm dưới tên tranh và
@@ -4455,9 +4485,13 @@ chuyển động ở lại trong bức.
   - Bản nét về 0 thì tỉ lệ điểm tối trong vùng giấy giảm hẳn;
   - `misregister` bằng 6 thì ảnh khác lúc bằng 0;
   - phóng to 2,5 lần (tờ giấy chạm khung, không lệch bản): hàng sát mép dưới không tối hơn sàn ngay trên (không vệt mực giả);
-  - Giấy điệp về 0 thì vùng giấy về xám đất sét.
+  - Giấy điệp về 0 thì vùng vách về xám đất sét: sắc độ giảm ít nhất 0,03 (đo trên GPU thật: 0,110 so với 0,047), và có Giấy điệp thì kênh đỏ hơn kênh lam.
 - Độ sâu của camera trực giao: view Độ sâu của Lột lớp không phải một mảng đều (độ lệch chuẩn đủ lớn), và vùng gà sáng hơn vùng vách.
-- Điệp: xoay camera một góc nhỏ thì view Emissive đổi, vì hạt khác lóe lên.
+- Điệp (view "Chỉ emissive" của Lột lớp):
+  - ở góc của tranh đã có hạt lóe (ảnh không đen); `sparkle` 0 hay Giấy điệp về 0 thì đen tuyền, vì gà không phát sáng;
+  - camera đứng yên thì hạt đứng yên (vùng vách, hai lần cách nhau hai khung, giống hệt); kéo chuột 30 px thì hạt khác lóe lên;
+  - Giấy dó trơn bật thì ảnh đổi, tắt thì về đúng ảnh cũ;
+  - trọng số lệch nhau: Bản màu về 0 thì vùng vách y nguyên (giấy không đọc bảng màu); Phủ bóng về 0 thì giấy sáng hơn mà không cháy trắng và vẫn ngà.
 - Chạm vào sàn: số đo `rac` > 0; chừng 3 giây cảnh sau, `dangAn` > 0.
 - Trước khi giữ, `quanhMe` ≤ 4; giữ 3 giây cảnh thì `quanhMe` ≥ 8. Thả thì số đó giảm dần.
 - Kéo camera: `goc` > 15; buông tay rồi chờ thì `goc` < 1 (tranh tự khép lại). Giảm chuyển động: camera về MỘT bước khi đủ 3 giây cảnh;
@@ -5036,3 +5070,12 @@ Các mục dưới đây đã được kiểm bằng ba cách:
       còn 0,004. Lệch bản mặc định (2, 1) dời điểm giữa lên một hàng, mẫu ngoài khung không trùng điểm giữa nữa, góc gãy chỉ còn chừng 16°,
       nên ở góc của tranh vệt giả không hiện; kéo xoay chừng 65° (mặt sàn nghiêng theo chiều ngang) rồi phóng to thì nó hiện dọc mép trái
       của khung (thấy trên GPU thật).
+100. **Tone mapping AgX nén vùng sáng: hạt emissive trên giấy sáng phải có độ sáng HDR cỡ chục** (`agxToneMapping` và bloom chọn lọc trên kênh
+     `emissive` của Phủ bóng; GĐ 8 Task 6, đo trên GPU thật, DPR 2, góc của tranh):
+    - giấy ngà (màu tuyến tính chừng 0,8) hiện ra RGB 196, 187, 168 ở vách, cùng LUT và vignette mặc định của Phủ bóng;
+    - hạt điệp là chấm hai điểm ảnh có đỉnh tuyến tính 1 (`sparkle` 1,2), 3,4 (`sparkle` 4), 8 và 16. Ảnh cuối gần như không thấy hạt ở 1
+      và 3,4, mờ ở 8, rõ ở 16 (điểm trắng, quầng nhỏ). View "Chỉ emissive" thì thấy hạt ở mọi mức, vì không qua tone mapping: đừng chỉnh
+      độ sáng của hạt theo view ấy;
+    - bloom (ngưỡng 0, cường độ 1) trên kênh emissive chỉ tỏa đáng kể từ đỉnh chừng 10: chấm hai điểm ảnh bị nhòe ở nửa độ phân giải;
+    - hệ quả: phần phát sáng của một vật trên nền sáng đặt theo HDR (hàng chục), không theo độ sáng của nền. Ở góc nhìn của Bức 4,
+      hạt ở mép giấy tỏa cả ra ván tối.

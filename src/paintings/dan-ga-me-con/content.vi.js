@@ -102,6 +102,42 @@ export default {
       },
       taps: { 'truoc-net': 'Trước khi in bản nét' },
     },
+    'giay-diep': {
+      understand: 'Giấy điệp là tờ giấy dó quét bột vỏ sò (điệp), nền của mọi bức tranh Đông Hồ. Thay cho đất sét, tờ giấy có màu ngà, '
+        + 'thớ sợi dó chạy dọc và vệt chổi lá thông chạy xiên; cả hai là noise (fbm) kéo dài theo một hướng, và số tầng của sợi dó đổi '
+        + 'được mà không phải biên dịch lại. Hạt điệp thì khác: mỗi ô nhỏ có một mảnh vỏ sò nghiêng ngẫu nhiên, như tấm gương bé xíu. Mảnh chỉ lóe khi '
+        + 'tia nắng phản xạ trên nó đi đúng vào mắt: lấy hướng nắng phản xạ qua pháp tuyến của mảnh rồi so với hướng nhìn. Camera trực '
+        + 'giao nhìn mọi điểm theo cùng một hướng, nên đứng yên thì hạt đứng yên, kéo xoay thì hạt khác lóe. Phần lóe là emissive, nên '
+        + 'Phủ bóng làm nó tỏa.',
+      learned: [
+        'fbm cộng nhiều tầng noise: tầng sau tần số gấp đôi, biên độ một nửa. Kéo dài noise theo một hướng (tần số cao theo chiều này, '
+          + 'thấp theo chiều kia) thì ra sợi và vệt chổi.',
+        'Phản xạ gương: reflect(−nắng, pháp tuyến) cho hướng tia ra. Hạt sáng khi hướng ấy trùng hướng nhìn; số mũ càng lớn thì càng phải '
+          + 'trùng đúng mới lóe.',
+        'Hạt ngẫu nhiên mà tất định: băm số của ô (hash) cho chỗ đứng và độ nghiêng của hạt, nên ô nào cũng có hạt riêng và cùng một khung '
+          + 'luôn ra cùng một ảnh.',
+        'Hạt nghiêng trong mặt phẳng của tờ giấy chứ không theo trục thế giới: vách đứng có pháp tuyến hướng ra, chỉ hạt nghiêng lên xuống '
+          + 'mới bắt được tia nắng ở góc nhìn của tranh.',
+      ],
+      readMore: [
+        { title: 'Phản xạ gương (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Specular_reflection' },
+        { title: 'The Book of Shaders · Fractal Brownian Motion', url: 'https://thebookofshaders.com/13/' },
+        { title: 'Giấy dó (Wikipedia tiếng Việt)', url: 'https://vi.wikipedia.org/wiki/Gi%E1%BA%A5y_d%C3%B3' },
+      ],
+      knobs: {
+        sparkle: 'Độ sáng của hạt điệp',
+        density: 'Mật độ hạt (ô mỗi đơn vị)',
+        fiber: 'Độ đậm của sợi dó',
+        brush: 'Độ dày của vệt chổi điệp',
+      },
+      experiments: {
+        giayTron: {
+          label: 'Giấy dó trơn',
+          explain: 'Bỏ lớp điệp: tờ giấy chỉ còn nền dó và sợi dó, phẳng và sẫm hơn một chút. Mất vệt chổi sáng chạy xiên, và mất cả hạt '
+            + 'lóe: kéo xoay thì giấy trơn không lấp lánh, mọi ánh lóe của tranh đều đến từ lớp điệp.',
+        },
+      },
+    },
     'phu-bong': { ...phuBong.layers['phu-bong'] },
   },
 };

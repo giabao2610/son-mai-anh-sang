@@ -1,0 +1,70 @@
+// e2e/dan-ga-me-con.helpers.js — dùng chung cho các spec e2e của Bức 4 (e2e/dan-ga-me-con*.spec.js, mỗi file dưới 300 dòng): tag khói, các vùng của canvas, mở trang, Lột lớp về một view, bỏ qua khi thiếu WebGPU. Không phải file test (Playwright chỉ chạy *.spec.js).
+import { test, expect } from '@playwright/test';
+import { gpuReport, twoFrames, waitForFrames, waitForSettled } from './helpers.js';
+
+/** Tag của test khói: nếu CI bật ciWebgpuSmoke cho Bức 4 (Task 13), job WebGPU chỉ chạy các test này. */
+export const SMOKE = { tag: '@khoi' };
+/**
+ * Vùng (phần của canvas 640 × 400), chốt theo ảnh thật (GPU thật và SwiftShader; chốt lại sau điểm duyệt ảnh, Task 4: khung cao 13,2, vách
+ * thấp 4,5). Khung nhìn 21,12 × 13,2 đơn vị; tờ giấy từ y 0,184 tới 0,765, x từ 0,169 tới 0,831; vách tới y 0,362, sàn phẳng từ y 0,557.
+ * BOARD_TOP, BOARD_BOTTOM: ván tối trên và dưới tờ giấy. WALL: vách giấy, không có gà. HEN: mình gà mẹ, phía trên cánh và dưới con trèo
+ * lưng (chỉ có màu vàng hòe, không nếp gấp nào). LEFT_EDGE: mép trái tờ giấy (nửa ván, nửa giấy): viền của Bản nét nằm ở đây. FLOOR: mặt
+ * sàn trống phía trước bên trái, nghiêng so với camera: không có nét nào.
+ */
+export const BOARD_TOP = { x0: 0.25, y0: 0.01, x1: 0.75, y1: 0.08 };
+export const BOARD_BOTTOM = { x0: 0.25, y0: 0.93, x1: 0.75, y1: 0.99 };
+export const WALL = { x0: 0.25, y0: 0.21, x1: 0.4, y1: 0.33 };
+export const HEN = { x0: 0.455, y0: 0.46, x1: 0.495, y1: 0.495 };
+export const LEFT_EDGE = { x0: 0.15, y0: 0.3, x1: 0.19, y1: 0.7 };
+export const FLOOR = { x0: 0.18, y0: 0.65, x1: 0.24, y1: 0.745 };
+/** Giữa tờ giấy: gà mẹ và sáu gà con quanh mẹ (viền, vảy lông, mắt, cánh của Bản nét đều ở đây). */
+export const PAPER_MID = { x0: 0.3, y0: 0.4, x1: 0.7, y1: 0.72 };
+/**
+ * Phóng to 2,5 lần (quanh tâm khung): tờ giấy phủ kín khung. Hàng điểm ảnh sát mép dưới (sàn trống, bên phải các chân gà) và bốn hàng sàn
+ * ngay phía trên nó (gần, để vignette của Phủ bóng gần như bằng nhau).
+ */
+export const ZOOM_BOTTOM = { x0: 0.75, y0: 0.9975, x1: 0.97, y1: 1 };
+export const ZOOM_ABOVE = { x0: 0.75, y0: 0.985, x1: 0.97, y1: 0.995 };
+
+/**
+ * Mở trang của Bức 4 theo project (query của ?webgl, ?force3d…), chờ live; `frames` > 0 thì thêm ?freeze=frames và chờ đủ khung (đã dừng).
+ * @param {import('@playwright/test').Page} page
+ * @param {import('@playwright/test').TestInfo} testInfo
+ * @param {number} frames  0 là chạy live, không ?freeze
+ * @param {string} [extra]  phần query thêm, đã có '&' ở đầu
+ */
+export async function open(page, testInfo, frames, extra = '') {
+  const query = testInfo.project.metadata.query ?? '';
+  const freeze = frames ? `&freeze=${frames}` : '';
+  await page.goto(`./tranh/dan-ga-me-con/?${query.replace(/^\?/, '')}${freeze}${extra}`);
+  const settled = await waitForSettled(page, { timeout: 60_000 });
+  expect(settled.state, `về tĩnh: ${settled.reason}`).toBe('live');
+  if (frames) await waitForFrames(page, frames, { timeout: 120_000 });
+}
+
+/**
+ * Lột lớp về một view, như e2e của Bức 3. `value` là giá trị của thanh trượt (0 là nấc đầu bên trái, tức view cuối danh sách; Bức 4
+ * hiện có Depth ở '0' và Chỉ emissive ở '2': ảnh cuối, ba tap, emissive, normal, depth); `label` là chữ của view (aria-valuetext, lấy từ
+ * t.views của giao diện).
+ * @param {import('@playwright/test').Page} page
+ * @param {string} value
+ * @param {string} label
+ */
+export async function layerView(page, value, label) {
+  await page.evaluate(() => window.__sma.setTool('lot-lop'));
+  const range = page.locator('[data-tool-slot="lot-lop"] input[type="range"]');
+  await range.evaluate((el, v) => {
+    el.value = v;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }, value);
+  await expect(range).toHaveAttribute('aria-valuetext', label);
+  await twoFrames(page);
+}
+
+/** Móc test.beforeEach: project WebGPU mà không có adapter thì bỏ qua (adapter chỉ hỏi được trên một trang thật: mở trang tĩnh rồi hỏi). */
+export async function skipWithoutWebgpu({ page }, testInfo) {
+  const { kind, backend } = testInfo.project.metadata;
+  if (kind !== '3d' || backend !== 'webgpu') return;
+  await page.goto('./tranh/dan-ga-me-con/?static');
+  test.skip(!(await gpuReport(page)).webgpu, 'Không có WebGPU adapter trong môi trường này');
+}
