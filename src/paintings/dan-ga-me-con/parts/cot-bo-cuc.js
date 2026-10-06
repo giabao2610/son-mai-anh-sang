@@ -1,4 +1,4 @@
-// paintings/dan-ga-me-con/parts/cot-bo-cuc.js — bố cục của tờ tranh (dữ liệu thuần): tờ giấy cong, gà mẹ, chỗ "nhà" và tám chỗ núp của gà con, nhúm thóc lúc mở trang, khung và đầu mỏ của gà con khi cúi, hướng nắng, góc nhìn của tranh; điểm chạm trên sàn; góc lệch của camera khỏi góc của tranh; không import three.
+// paintings/dan-ga-me-con/parts/cot-bo-cuc.js — bố cục của tờ tranh (dữ liệu thuần): tờ giấy cong, gà mẹ, chỗ "nhà" và tám chỗ núp của gà con, thân mẹ trên sàn (cho gà con tránh), nhúm thóc lúc mở trang, khung và đầu mỏ của gà con khi cúi, hướng nắng, góc nhìn của tranh; điểm chạm trên sàn; góc lệch của camera khỏi góc của tranh; không import three.
 
 const RAD = Math.PI / 180;
 const unit = (v) => v.map((c) => c / Math.hypot(...v));
@@ -15,7 +15,12 @@ export const FLOOR = Object.freeze({ x: Object.freeze([-6.7, 6.7]), z: Object.fr
 /** Hướng nắng (đơn vị, chỉ VỀ phía nắng): từ trên, bên trái, phía trước (§20.1). */
 export const SUN = Object.freeze(unit([-0.45, 0.75, 0.5]));
 /** Gà mẹ đứng giữa sàn, quay sang trái (−x): hướng h nghĩa là phía trước là (sin h, 0, cos h), như rotation.y của three. */
-export const HEN = Object.freeze({ at: Object.freeze([0, 0]), heading: -Math.PI / 2, length: 4, height: 3.2, back: 2.6 });
+export const HEN = Object.freeze({ at: Object.freeze([0, 0]), heading: -Math.PI / 2, length: 4, height: 3.2, back: 2.6, width: 2.4 });
+/**
+ * Thân gà mẹ trên sàn, cho đàn gà dạng đóng tránh (parts/dan-ga-duong.js): hình viên thuốc, là mọi điểm cách đoạn xương sống a–b không quá
+ * r. Bầu dục của mình mẹ (nửa trục 2 × 1,2) nằm trọn trong nó; xương sống chạy dọc mẹ (trục x), dài length − width = 1,6.
+ */
+export const HEN_BODY = Object.freeze({ a: Object.freeze([-0.8, 0]), b: Object.freeze([0.8, 0]), r: HEN.width / 2 });
 
 /**
  * Gà con trong khung của nó (chân ở gốc, trước +z, lên +y; hình ở parts/cot-hinh-ga.js):
@@ -68,14 +73,16 @@ export const HOMES = Object.freeze([
 export const SLOTS = Object.freeze([[2.1, 0], [1.65, 1.3], [-1.3, 1.65], [-2.05, 0.45], [-1.9, -0.9], [-0.9, -1.9], [0.45, -2.05], [1.65, -1.3]]
   .map((s) => Object.freeze(s)));
 /**
- * Nhúm thóc nằm sẵn lúc mở trang, và chỗ gà mẹ bới: trước mặt mẹ (mẹ quay sang −x), cách đầu mỏ chừng 0,7 (mỏ ở x = −2,6, con ong ở −3).
- * Đủ xa ngực mẹ để các con xúm lại (đứng trên vòng bán kính 1 quanh nắm) không lún vào ngực: đo bằng chỗ thật của khối (nhúm gà mẹ bới,
- * 120 lần, mọi khung mổ), đặt ở x = −2,6 thì chừng một khung mổ trong chín có con lún vào ngực mẹ, ở −3,3 không khung nào trong 9000.
+ * Nhúm thóc nằm sẵn lúc mở trang, và chỗ gà mẹ bới: trước mặt mẹ (mẹ quay sang −x), cách đầu mỏ chừng 1,35 (mỏ ở x = −2,6, con ong ở −3).
+ * Đúng chỗ gà con xúm quanh được: các con đứng trên vòng bán kính 1 quanh nắm và nhảy tối đa 0,25, nên tâm nắm cách đầu xương sống
+ * (−0,8; 0) từ 3,1 (parts/dan-ga-cho.js#createPlacer dời mọi điểm rắc gần hơn ra tới đó: đặt gần hơn thì nhúm bị dời).
  */
-export const PILE = Object.freeze([-3.3, 0.4]);
-export const HEN_FRONT = Object.freeze([-3.3, 0]);
+export const PILE = Object.freeze([-3.95, 0.4]);
+export const HEN_FRONT = Object.freeze([-3.95, 0]);
 /** Bố cục mà đàn gà dạng đóng cần (shared.js truyền vào dan-ga-song.js, vì lớp Đàn gà không import part của Cốt). */
-export const LAYOUT = Object.freeze({ homes: HOMES, hen: HEN.at, slots: SLOTS, pile: PILE, henFront: HEN_FRONT, beakTip, back: HEN.back, floor: FLOOR });
+export const LAYOUT = Object.freeze({
+  homes: HOMES, hen: HEN.at, slots: SLOTS, pile: PILE, henFront: HEN_FRONT, beakTip, back: HEN.back, floor: FLOOR, body: HEN_BODY,
+});
 
 /**
  * Góc nhìn của tranh (CameraSpec, §20.2). Nhìn chếch xuống 20° (position − target = [0; 4,4; 12]). Khung cao 13,2 và tờ giấy cao 7,67 trên

@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { Raycaster, Vector2, Vector3 } from 'three/webgpu';
 import { createCamera } from '../../../src/engine/gpu/camera.js';
 import {
-  CAMERA, CHICK, FLOOR, HEN, HEN_FRONT, HOMES, LAYOUT, PAPER, PILE, SLOTS, beakTip, floorPoint, viewAngle,
+  CAMERA, CHICK, FLOOR, HEN, HEN_BODY, HEN_FRONT, HOMES, LAYOUT, PAPER, PILE, SLOTS, beakTip, floorPoint, viewAngle,
 } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
 
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -93,9 +93,23 @@ describe('cot-bo-cuc', () => {
     }
   });
 
-  it('LAYOUT gom đủ bố cục cho đàn gà dạng đóng (nhà, tâm mẹ, chỗ núp, nhúm thóc, chỗ bới, đầu mỏ, lưng mẹ, sàn; đóng băng); nhúm thóc và chỗ gà mẹ bới nằm trên sàn, trước mặt mẹ, ngoài đầu mẹ', () => {
-    expect(LAYOUT).toEqual({ homes: HOMES, hen: HEN.at, slots: SLOTS, pile: PILE, henFront: HEN_FRONT, beakTip, back: HEN.back, floor: FLOOR });
-    expect([LAYOUT, SLOTS, ...SLOTS, PILE, HEN_FRONT].every(Object.isFrozen)).toBe(true);
+  it('thân mẹ (HEN_BODY): xương sống dọc trục dài của mẹ, nửa bề ngang HEN.width / 2; bầu dục thân mẹ nằm trọn trong viên thuốc; chỗ núp và nhà của con nấp bụng nằm ngoài thân', () => {
+    const { a, b, r } = HEN_BODY;
+    expect(r).toBe(HEN.width / 2);
+    expect(Math.hypot(b[0] - a[0], b[1] - a[1])).toBeCloseTo(HEN.length - HEN.width, 12); // hai nắp tròn bán kính r khép lại đúng chiều dài mẹ
+    expect([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]).toEqual(HEN.at);
+    expect(a[1]).toBe(b[1]); // mẹ quay sang −x: xương sống nằm ngang theo x
+    const gap = ([x, z]) => Math.hypot(x - Math.min(Math.max(x, a[0]), b[0]), z - a[1]); // tới đoạn a–b (nằm ngang)
+    for (let k = 0; k < 360; k += 1) {
+      const th = (k * Math.PI) / 180; // bầu dục nửa trục (length / 2, width / 2)
+      expect(gap([HEN.at[0] + (HEN.length / 2) * Math.cos(th), HEN.at[1] + (HEN.width / 2) * Math.sin(th)]), `góc ${k}`).toBeLessThanOrEqual(r + 1e-9);
+    }
+    for (const s of [...SLOTS, HOMES.find((h) => h.kind === 'belly').at]) expect(gap(s), `${s} nằm trong thân mẹ`).toBeGreaterThanOrEqual(r);
+  });
+
+  it('LAYOUT gom đủ bố cục cho đàn gà dạng đóng (nhà, tâm mẹ, chỗ núp, nhúm thóc, chỗ bới, đầu mỏ, lưng mẹ, sàn, thân mẹ; đóng băng); nhúm thóc và chỗ gà mẹ bới nằm trên sàn, trước mặt mẹ, ngoài đầu mẹ', () => {
+    expect(LAYOUT).toEqual({ homes: HOMES, hen: HEN.at, slots: SLOTS, pile: PILE, henFront: HEN_FRONT, beakTip, back: HEN.back, floor: FLOOR, body: HEN_BODY });
+    expect([LAYOUT, SLOTS, ...SLOTS, PILE, HEN_FRONT, HEN_BODY, HEN_BODY.a, HEN_BODY.b].every(Object.isFrozen)).toBe(true);
     for (const p of [PILE, HEN_FRONT]) {
       expect(inFloor(p), `${p} ngoài sàn`).toBe(true);
       expect(p[0], `${p} không ở trước mặt mẹ`).toBeLessThan(HEN.at[0] - HEN.length / 2); // mẹ quay sang −x: trước mặt là phía x nhỏ, ngoài thân mẹ

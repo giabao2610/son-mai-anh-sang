@@ -1,6 +1,9 @@
-// paintings/dan-ga-me-con/parts/dan-ga-song.js — đàn gà tính thẳng từ thời gian (dạng đóng) theo các mốc rắc, giữ, thả, bới: mười gà con (chỗ, hướng, cúi đầu, mỏ) và dáng gà mẹ (cánh, gật, ngoảnh, cào); không import three.
+// paintings/dan-ga-me-con/parts/dan-ga-song.js — đàn gà tính thẳng từ thời gian (dạng đóng) theo các mốc rắc, giữ, thả, bới: mười gà con (chỗ, hướng, cúi đầu, mỏ) và dáng gà mẹ (cánh, gật, ngoảnh, cào); gà con tránh thân mẹ, không chồng nhau; không import three.
 import { mulberry32 } from '../../../lib/random.js';
-import { FLOCK, dist, endOf, evaluate, facing, hide, move, peck, perch, rest, stay } from './dan-ga-pha.js';
+import { FLOCK, dist, evaluate, facing, perch, rest } from './dan-ga-pha.js';
+import { createRouter } from './dan-ga-duong.js';
+import { assign, createPlacer } from './dan-ga-cho.js';
+import { createPlanner } from './dan-ga-ke.js';
 
 export { FLOCK };
 /**
@@ -11,10 +14,13 @@ export { FLOCK };
  * @typedef {{ chicks: ChickState[], hen: { wing: number, nod: number, look: number, scratch: number }, near: number, eating: number }} FlockState
  *   hen: cánh (rad), gật (0–1), ngoảnh (rad), cào chân (rad); near: số con cách tâm mẹ dưới FLOCK.near; eating: số con đang ở pha mổ
  */
-/** Giữ tối đa chừng này mốc: mỗi mốc mang sẵn kế hoạch của từng con lúc đó, nên mốc cũ bỏ được (như cây bay của Bức 3). */
+/**
+ * Giữ tối đa chừng này mốc: mỗi mốc mang sẵn kế hoạch của từng con lúc đó, nên mốc cũ bỏ được (như cây bay của Bức 3). Sau khi bỏ, state(t)
+ * với t sớm hơn mốc cũ nhất (marks[0].t) đọc kế hoạch của chính mốc ấy ở thời điểm t: mỗi pha còn ở trạng thái đầu của nó, đàn đứng yên
+ * như lúc mốc ấy bắt đầu. Chỉ gặp khi hỏi một thời điểm đã cách quá 32 mốc.
+ */
 const KEEP = 32;
 const TAU = Math.PI * 2;
-const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
 
 /** Ném lỗi (tiếng Việt, cho lập trình viên) nếu thời điểm hay điểm không hữu hạn: NaN lọt vào mốc thì hỏng mọi trạng thái sau đó. */
 function need(label, ...values) {
@@ -24,81 +30,47 @@ function need(label, ...values) {
 /**
  * @param {{ homes: { at: [number, number], heading: number, kind: 'free'|'back'|'belly' }[], hen: [number, number],
  *   slots: [number, number][], pile: [number, number] | null, henFront: [number, number], beakTip: (k: number) => [number, number],
- *   back: number, floor: { x: [number, number], z: [number, number] } }} layout   bố cục (cot-bo-cuc.js#LAYOUT)
+ *   back: number, floor: { x: [number, number], z: [number, number] },
+ *   body: { a: [number, number], b: [number, number], r: number } }} layout   bố cục (cot-bo-cuc.js#LAYOUT)
  * @param {{ reduced?: boolean }} [o]   giảm chuyển động: chạy và đi chậm còn một nửa, cánh mở chậm gấp đôi, gà mẹ không bới
  */
 export function createFlock(layout, { reduced = false } = {}) {
   const speed = { run: FLOCK.run * (reduced ? 0.5 : 1), walk: FLOCK.walk * (reduced ? 0.5 : 1) };
-  const { homes, hen } = layout;
-  for (const key of ['homes', 'hen', 'slots', 'henFront', 'floor', 'beakTip', 'back']) {
+  for (const key of ['homes', 'hen', 'slots', 'henFront', 'floor', 'beakTip', 'back', 'body']) {
     if (layout[key] === undefined) throw new Error(`dan-ga-song: bố cục thiếu \`${key}\` (cot-bo-cuc.js#LAYOUT)`);
   }
+  const { homes, hen } = layout;
   const free = homes.flatMap((h, i) => (h.kind === 'free' ? [i] : []));
   if (layout.slots.length < free.length) throw new Error(`dan-ga-song: ${free.length} gà con rảnh mà chỉ có ${layout.slots.length} chỗ núp`);
+  const router = createRouter(layout.body, layout.body.r + FLOCK.clear, FLOCK.standOff);
+  const placer = createPlacer(layout, router);
+  const { homeward, forage, shelter } = createPlanner({ homes, hen, speed }, router);
   /** Mốc theo thời gian: { t, kind, plans, wing: { y, v }, open, underGrip, …rắc: at, seed, count, still, fly, auto, taken }. */
   const marks = [];
+  /** "Bây giờ": thời điểm lớn nhất mà mọi hàm ghi (scatter, grip, release, drift) đã nhận. Mốc lùi xếp vào đây, không lùi hơn (xem push). */
+  let clock = 0;
 
-  function homeward(i, from, t) {
-    const home = homes[i].at;
-    if (dist(from.at, home) < 1e-6) return [rest(home, t, from.h, homes[i].heading)];
-    const go = move(from.at, home, t, speed.walk, from.h, 'home');
-    return [go, rest(home, go.t1, go.h1, homes[i].heading)];
-  }
+  /** Chỗ đứng của các con khác lúc này: con đang mổ hay sắp tới một nắm thì chỗ mổ, còn lại chỗ đang đứng (nhà, con nấp bụng…). */
+  const occupiedBy = (who, states, plans) => states.flatMap((s, j) => {
+    if (who.includes(j)) return [];
+    const eat = s.goal === 'food' ? plans[j].find((p) => p.kind === 'peck') : null;
+    return [eat ? eat.at : s.at];
+  });
   /**
-   * Chạy tới chỗ đứng `target` quanh nắm thóc `look` (sau phản xạ), mổ FLOCK.peck giây nhìn về nắm, rồi về nhà. `already`: đang đứng ở
-   * chỗ đó (nhúm lúc mở trang): vẫn chờ phản xạ, để các con bắt đầu mổ lệch nhịp nhau, không cúi đầu cùng lúc như máy.
+   * Các con `who` (gần nắm nhất trước) chạy tới nắm thóc `at`, mỗi con một chỗ trên vòng quanh nắm (không chồng nhau, không chồng các con
+   * khác, ngoài vòng cấm quanh mẹ), gán sao cho tổng quãng đường ngắn nhất; thay kế hoạch trong `plans`. Có ít chỗ hợp lệ hơn con thì các
+   * con xa nắm nhất ở yên.
    */
-  function forage(i, from, t, target, look, rand, already = false) {
-    const react = FLOCK.react[0] + rand() * (FLOCK.react[1] - FLOCK.react[0]);
-    const phases = [stay(from.at, t, t + react, from.h, 'food')];
-    let now = from;
-    let t0 = t + react;
-    if (!already) {
-      const go = move(from.at, target, t0, speed.run, from.h, 'food');
-      phases.push(go);
-      now = endOf(go);
-      t0 = go.t1;
-    }
-    const eat = peck(target, t0, now.h, rand, look);
-    return [...phases, eat, ...homeward(i, endOf(eat), eat.t1)];
-  }
-  /** Chạy về chỗ núp (sau 0,1 s), rồi đứng quay ra ngoài, lưng về phía mẹ, đầu ngó nghiêng (FLOCK.peek). */
-  function shelter(from, t, slot) {
-    const wait = stay(from.at, t, t + 0.1, from.h, 'hide');
-    const go = move(from.at, slot, wait.t1, speed.run, from.h, 'hide');
-    return [wait, go, hide(slot, go.t1, go.h1, facing(hen, slot))];
-  }
-  /**
-   * Tâm vòng đứng quanh một nắm thóc: điểm rắc kéo vào trong sàn (chừa cả vòng và bước nhảy), nên chạm sát mép thì gà con vẫn đứng trên
-   * giấy, không con nào ra ngoài.
-   */
-  const ringCenter = (at) => {
-    const pad = FLOCK.spread + FLOCK.hopRadius[1];
-    return [clamp(at[0], layout.floor.x[0] + pad, layout.floor.x[1] - pad), clamp(at[1], layout.floor.z[0] + pad, layout.floor.z[1] - pad)];
-  };
-  /** Chỗ đứng quanh tâm `c` cho n con: trên vòng bán kính FLOCK.spread, cách đều nhau theo góc (hạt giống xoay cả vòng). */
-  const ring = (c, n, rand) => {
-    const base = rand() * TAU;
-    return Array.from({ length: n }, (_, k) => [c[0] + Math.cos(base + (k * TAU) / n) * FLOCK.spread, c[1] + Math.sin(base + (k * TAU) / n) * FLOCK.spread]);
-  };
-  /** Mỗi con của `who` (theo thứ tự) lấy chỗ trống gần nó nhất trong `spots`; không hai con một chỗ. Trả chỗ của từng con, cùng thứ tự với `who`. */
-  function claim(who, states, spots) {
-    const taken = new Set();
-    return who.map((i) => {
-      let best = -1;
-      spots.forEach((spot, k) => {
-        if (!taken.has(k) && (best < 0 || dist(states[i].at, spot) < dist(states[i].at, spots[best]))) best = k;
-      });
-      taken.add(best);
-      return spots[best];
-    });
-  }
-  /** Các con `who` chạy tới nắm thóc `at`, mỗi con một chỗ trên vòng quanh nắm (nên không chồng lên nhau), thay kế hoạch trong `plans`. */
   function converge(plans, who, states, at, t, rand, already = false) {
-    const c = ringCenter(at);
-    const spots = claim(who, states, ring(c, who.length, rand));
-    who.forEach((i, k) => {
-      plans[i] = forage(i, already ? { at: spots[k], h: facing(spots[k], c) } : states[i], t, spots[k], c, rand, already);
+    const c = placer.ringCenter(at);
+    const spots = placer.ringSpots(c, who.length, rand, occupiedBy(who, states, plans));
+    const crew = who.slice(0, spots.length);
+    const jys = crew.map((i) => spots.map((s) => (already ? null : router.journey(states[i].at, s))));
+    const pick = assign(crew.map((i, a) => spots.map((s, k) => (already ? dist(states[i].at, s) : router.length(jys[a][k])))));
+    crew.forEach((i, a) => {
+      const spot = spots[pick[a]];
+      const from = already ? { at: spot, h: facing(spot, c), head: 0 } : states[i];
+      plans[i] = forage(i, from, t, jys[a][pick[a]], spot, c, rand, already);
     });
   }
   /** Các con rảnh hay đang về, gần `at` nhất; số con theo hạt giống trong [lo, hi]. */
@@ -128,7 +100,10 @@ export function createFlock(layout, { reduced = false } = {}) {
     return { y: m.open + (A + B * s) * e, v: (B - (A + B * s) / tau) * e };
   }
 
-  /** Thêm một mốc lúc t (không lùi: mốc lùi xếp vào ngay sau mốc cuối); mỗi con nhận kế hoạch mới theo thứ tự ưu tiên của §20.5. */
+  /**
+   * Thêm một mốc lúc t (không lùi hơn mốc cuối); mỗi con nhận kế hoạch mới theo thứ tự ưu tiên của §20.5. Người gọi đã kẹp t vào "bây giờ"
+   * (clock) nên mốc lùi không viết lại các khung đã vẽ: kế hoạch mới bắt đầu từ chỗ đàn đang đứng ở t.
+   */
   function push(kind, t, extra = {}) {
     need('thời điểm của mốc', t);
     const tt = Math.max(t, last().t);
@@ -137,11 +112,11 @@ export function createFlock(layout, { reduced = false } = {}) {
     const plans = [...prev.plans];
     const rand = mulberry32(Math.round(tt * 1000) * 31 + (extra.seed ?? 0) + 1);
     if (kind === 'grip') {
-      // Núp (ưu tiên cao nhất): con gần mẹ chọn trước, mỗi con lấy chỗ trống gần nó nhất; không hai con một chỗ.
-      const who = [...free].sort((a, b) => dist(states[a].at, hen) - dist(states[b].at, hen) || a - b);
-      const spots = claim(who, states, layout.slots);
-      who.forEach((i, k) => {
-        plans[i] = shelter(states[i], tt, spots[k]);
+      // Núp (ưu tiên cao nhất): gán tám con vào tám chỗ sao cho tổng quãng đường ngắn nhất, nên con nào cũng về chỗ phía mình trước.
+      const jys = free.map((i) => layout.slots.map((slot) => router.journey(states[i].at, slot)));
+      const pick = assign(jys.map((row) => row.map(router.length)));
+      free.forEach((i, a) => {
+        plans[i] = shelter(states[i], tt, layout.slots[pick[a]], jys[a][pick[a]]);
       });
     } else if (kind === 'release') {
       for (const i of free) plans[i] = homeward(i, states[i], tt);
@@ -157,47 +132,63 @@ export function createFlock(layout, { reduced = false } = {}) {
     const open = kind === 'grip' ? FLOCK.wing : kind === 'release' ? 0 : prev.open;
     // Rắc trong lúc giữ không làm mất trạng thái "đang giữ": grip, release, drift hỏi underGrip của mốc cuối, không hỏi loại mốc.
     const underGrip = kind === 'grip' || (kind === 'scatter' && prev.underGrip);
-    marks.push({ ...extra, t: tt, kind, plans, wing: wingAt(prev, tt), open, underGrip, taken: false });
+    const { delay = 0, ...rest0 } = extra;
+    marks.push({ ...rest0, t: tt, kind, plans, wing: wingAt(prev, tt), open, underGrip, fly: tt + delay, taken: false });
     if (marks.length > KEEP) marks.splice(0, marks.length - KEEP);
   }
 
   // Mốc đầu, lúc 0: mọi con ở nhà. Có nhúm thóc lúc mở trang thì hai ba con gần nó đang đứng mổ sẵn (§20.2), và nhúm ấy là một nắm
   // nằm yên mà lớp Đàn gà rắc ở khung đầu.
-  const plans0 = homes.map((h, i) => [h.kind === 'free' ? rest(h.at, 0, h.heading, h.heading) : perch(h)]);
+  const plans0 = homes.map((h, i) => [h.kind === 'free' ? rest(h.at, 0, { h: h.heading, head: 0 }, h.heading) : perch(h)]);
   const first = { t: 0, kind: 'start', plans: plans0, wing: { y: 0, v: 0 }, open: 0, underGrip: false, taken: true };
   if (layout.pile) {
     const rand = mulberry32(17);
     const states = plans0.map((plan, i) => evaluate(plan, 0, i));
-    converge(plans0, nearest(states, layout.pile, FLOCK.henResponders, rand), states, layout.pile, 0, rand, true);
-    Object.assign(first, { kind: 'scatter', at: layout.pile, seed: 17, count: FLOCK.pileHandful, still: true, fly: 0, auto: false, taken: false });
+    const at = placer.awayFromHen(layout.pile);
+    converge(plans0, nearest(states, at, FLOCK.henResponders, rand), states, at, 0, rand, true);
+    Object.assign(first, { kind: 'scatter', at, seed: 17, count: FLOCK.pileHandful, still: true, fly: 0, auto: false, taken: false });
   }
   marks.push(first);
 
   return {
-    /** Chạm: một nắm thóc rơi ở `at` (x, z). count null: lớp dùng núm handful. */
+    /** Chạm: một nắm thóc rơi ở `at` (x, z); gần hay trúng thân mẹ thì rơi bên cạnh mẹ (takeScatters trả điểm đã dời). count null: lớp dùng núm handful. */
     scatter(t, at, seed) {
       need('điểm rắc', at[0], at[1]);
-      push('scatter', t, { at: [at[0], at[1]], seed, count: null, still: false, fly: t, auto: false });
+      need('thời điểm rắc', t);
+      const since = clock;
+      clock = Math.max(clock, t);
+      push('scatter', Math.max(t, since), { at: [...placer.awayFromHen([at[0], at[1]])], seed, count: null, still: false, auto: false });
     },
     grip(t) {
       need('thời điểm giữ', t);
-      if (!last().underGrip) push('grip', t); // đang giữ thì bỏ qua
+      const since = clock;
+      clock = Math.max(clock, t);
+      if (!last().underGrip) push('grip', Math.max(t, since)); // đang giữ thì bỏ qua
     },
     release(t) {
       need('thời điểm thả', t);
-      if (last().underGrip) push('release', t); // chưa giữ thì bỏ qua
+      const since = clock;
+      clock = Math.max(clock, t);
+      if (last().underGrip) push('release', Math.max(t, since)); // chưa giữ thì bỏ qua
     },
-    /** Gà mẹ bới: không ai chạm FLOCK.auto giây kể từ mốc cuối thì một nhúm trước mặt mẹ. Gọi mỗi khung; gọi lại cùng t không thêm gì. */
+    /**
+     * Gà mẹ bới: không ai chạm FLOCK.auto giây kể từ mốc cuối thì một nhúm trước mặt mẹ. Hợp đồng gọi: mỗi khung, một lần, TRƯỚC cử chỉ và
+     * trước state(t): lúc đó `clock` là "bây giờ", nên một mốc lùi (scatter, grip, release với t cũ) xếp vào đúng lúc này, không viết lại
+     * khung đã vẽ. Gọi lại cùng t không thêm gì; gọi một lần với t lớn hay từng khung ra cùng dãy mốc.
+     */
     drift(t) {
       need('thời điểm', t);
+      const since = clock;
+      clock = Math.max(clock, t);
       if (reduced) return;
       for (;;) {
         const due = last().t + FLOCK.auto;
         if (last().underGrip || due > t) return;
-        const seed = Math.round(due * 10);
+        const tt = Math.max(due, since); // mốc không xếp vào khung đã vẽ (trước lần gọi này)
+        const seed = Math.round(tt * 10);
         const jitter = mulberry32(seed);
         const at = [layout.henFront[0] + (jitter() - 0.5) * 0.6, layout.henFront[1] + (jitter() - 0.5) * 0.6];
-        push('scatter', due, { at, seed, count: FLOCK.henHandful, still: false, fly: due + FLOCK.scratch / 2, auto: true });
+        push('scatter', tt, { at: [...placer.awayFromHen(at)], seed, count: FLOCK.henHandful, still: false, delay: FLOCK.scratch / 2, auto: true });
       }
     },
     /**

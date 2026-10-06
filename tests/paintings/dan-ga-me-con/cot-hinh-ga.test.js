@@ -1,12 +1,14 @@
-// tests/paintings/dan-ga-me-con/cot-hinh-ga.test.js — hình gà đủ phần (spec §20.3) và chỗ của chúng: phần nào của gà mẹ, gà con có trong geometry; đầu mỏ khớp CHICK; khớp của gà mẹ ở tọa độ thế giới; cực của cầu mắt ở giữa chỏm mắt; con trèo lưng, con nấp bụng sát mẹ mà không lún vào mọi khối của mẹ (đọc chỗ thật qua placement()); tám chỗ núp (quay ra ngoài, ngó nghiêng) không lún vào mẹ, không chồng lên nhau hay lên con nấp bụng; ở góc nhìn của tranh thấy được cả mười con.
+// tests/paintings/dan-ga-me-con/cot-hinh-ga.test.js — hình gà đủ phần (spec §20.3) và chỗ của chúng: phần nào của gà mẹ, gà con có trong geometry; đầu mỏ khớp CHICK; khớp của gà mẹ ở tọa độ thế giới; cực của cầu mắt ở giữa chỏm mắt; con trèo lưng, con nấp bụng sát mẹ mà không lún vào mọi khối của mẹ (đọc chỗ thật qua placement()); tám chỗ núp (quay ra ngoài, ngó nghiêng) không lún vào mẹ, không chồng lên nhau hay lên con nấp bụng; cả chuyến đi của đàn gà (giữ, thả, chạm ngay vào mẹ, mẹ bới), không chỉ lúc đã núp, không khung nào có gà con lún vào mẹ; ở góc nhìn của tranh thấy được cả mười con.
 import { describe, it, expect } from 'vitest';
 import { ConeGeometry, CylinderGeometry, Matrix4, Mesh, MeshBasicMaterial, Raycaster, SphereGeometry, Vector2, Vector3 } from 'three/webgpu';
 import { createCamera } from '../../../src/engine/gpu/camera.js';
-import { CAMERA, CHICK, HEN, HOMES, SLOTS } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
+import { CAMERA, CHICK, FLOOR, HEN, HOMES, LAYOUT, SLOTS } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
 import {
   CHICK_SHAPE, HEN_JOINTS, HEN_SHAPE, PART, chickGeometry, henGeometry, placement,
 } from '../../../src/paintings/dan-ga-me-con/parts/cot-hinh-ga.js';
-import { FLOCK } from '../../../src/paintings/dan-ga-me-con/parts/dan-ga-song.js';
+import { FLOCK, createFlock } from '../../../src/paintings/dan-ga-me-con/parts/dan-ga-song.js';
+import { nearestOnSegment } from '../../../src/paintings/dan-ga-me-con/parts/dan-ga-duong.js';
+import { mulberry32 } from '../../../src/lib/random.js';
 
 const SEGMENTS = 24;
 const partsOf = (geometry) => new Set(geometry.attributes.part.array);
@@ -252,6 +254,52 @@ describe('cot-hinh-ga', () => {
     }
     expect(pairs, 'số cặp kề nhau đã thử').toBeGreaterThanOrEqual(9); // vòng 8 chỗ có 7 cặp kề (con nấp bụng ngắt vòng), cộng 2 cặp kề con nấp bụng
   });
+
+  it('cả chuyến đi của đàn gà, không chỉ lúc đã núp (giữ từ lúc nghỉ, giữ giữa các cú chạm và lúc đang chờ, chạy, mổ; chạm ngay vào mẹ, sau lưng mẹ, ở hai đầu; thả rồi giữ lại; mẹ bới): không khung nào có đỉnh gà con nằm trong khối của mẹ', () => {
+    const chick = vertices(chickGeometry({ segments: COARSE })).filter((_, i) => i % 2 === 0);
+    const { a, b } = LAYOUT.body;
+    const sunk = [];
+    let checked = 0;
+    /** Chạy một cảnh 30 Hz (drift trước cử chỉ như update); mỗi khung thử các con rảnh ở gần mẹ. Gà con đã núp (kind hide) chỉ ngó nghiêng quanh dáng đã thử ở trên, nên bỏ qua. */
+    const play = (tag, events, seconds, layout = LAYOUT) => {
+      const flock = createFlock(layout);
+      let e = 0;
+      for (let k = 0; k <= seconds * 30; k += 1) {
+        const t = k / 30;
+        flock.drift(t);
+        while (e < events.length && events[e][0] <= t) {
+          const [when, kind, at, seed] = events[e];
+          e += 1;
+          if (kind === 'scatter') flock.scatter(when, at, seed);
+          else if (kind === 'grip') flock.grip(when);
+          else flock.release(when);
+        }
+        flock.state(t).chicks.forEach((c, i) => {
+          if (HOMES[i].kind !== 'free' || c.kind === 'hide') return;
+          const q = nearestOnSegment([c.x, c.z], a, b);
+          if (Math.hypot(c.x - q[0], c.z - q[1]) > 2.1) return; // xa hơn thì không thể chạm: khối của mẹ ở độ cao gà con nằm trong viên thuốc bán kính 1,2, gà con rộng chưa tới 0,85
+          checked += 1;
+          const n = sunkInHen(chick, [c.x, 0, c.z, c.heading]);
+          if (n > 0) sunk.push(`${tag}, lúc ${t.toFixed(2)}, con ${i} ${c.kind} ở [${c.x.toFixed(2)}, ${c.z.toFixed(2)}]: ${n} đỉnh`);
+        });
+      }
+    };
+    play('giữ từ lúc nghỉ, thả', [[2, 'grip'], [6, 'release']], 14);
+    play('thả rồi giữ lại', [[2, 'grip'], [6, 'release'], [6.2, 'grip'], [9, 'release']], 16);
+    for (const at of [1.2, 1.5, 3]) play(`giữ lúc ${at} (chờ, chạy, mổ)`, [[1, 'scatter', [-4.5, 2.5], 7], [at, 'grip'], [at + 4, 'release']], at + 9);
+    for (const [k, tap] of [[0, 0], [0.4, -2.7], [-2.5, 0.2], [2.5, 0], [0.2, 2.6], [-3, -2.7]].entries()) play(`chạm vào mẹ ${tap}`, [[1, 'scatter', tap, k]], 13);
+    const rand = mulberry32(4);
+    for (let n = 0; n < 6; n += 1) {
+      const events = [];
+      for (let k = 0; k < 4; k += 1) events.push([1 + k * 1.5, 'scatter', [FLOOR.x[0] + rand() * 13.4, FLOOR.z[0] + rand() * 7.4], n * 10 + k]);
+      const tg = 5.6 + rand() * 8;
+      events.push([tg, 'grip'], [tg + 3, 'release']);
+      play(`giữ sau bốn cú chạm, lần ${n}`, events, tg + 8);
+    }
+    play('mở trang và mẹ bới', [], 40);
+    expect(checked, 'số tư thế đã thử').toBeGreaterThan(300);
+    expect(sunk).toEqual([]);
+  }, 60000); // nặng (nhiều cảnh, từng khung, đỉnh thật của khối): chừa thời gian cho máy chạy chậm hay đang bận
 
   it.each([1.6, 390 / 844])('ở góc nhìn của tranh (khung tỉ lệ %s), thấy được cả mười con: tia qua đầu và mình mỗi con trúng chính nó trước', (aspect) => {
     const cam = createCamera(CAMERA, aspect);
