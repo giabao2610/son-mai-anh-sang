@@ -1,4 +1,4 @@
-// e2e/dan-ga-me-con.helpers.js — dùng chung cho các spec e2e của Bức 4 (e2e/dan-ga-me-con*.spec.js, mỗi file dưới 300 dòng): tag khói, các vùng của canvas, mở trang, Lột lớp về một view, bỏ qua khi thiếu WebGPU. Không phải file test (Playwright chỉ chạy *.spec.js).
+// e2e/dan-ga-me-con.helpers.js — dùng chung cho các spec e2e của Bức 4 (e2e/dan-ga-me-con*.spec.js, mỗi file dưới 300 dòng): tag khói, các vùng của canvas, mở trang, Lột lớp về một view, đọc số đo `goc`, bỏ qua khi thiếu WebGPU. Không phải file test (Playwright chỉ chạy *.spec.js).
 import { test, expect } from '@playwright/test';
 import { gpuReport, twoFrames, waitForFrames, waitForSettled } from './helpers.js';
 
@@ -60,6 +60,14 @@ export async function layerView(page, value, label) {
   await expect(range).toHaveAttribute('aria-valuetext', label);
   await twoFrames(page);
 }
+
+/**
+ * Số đo `goc` của Cốt (độ): độ lệch của camera SỐNG khỏi góc nhìn của tranh, 0 khi đứng ở góc ấy (`__sma.readouts('cot')`). Các test kéo xoay và
+ * tranh tự khép lại poll theo nó.
+ * @param {import('@playwright/test').Page} page
+ * @returns {Promise<number>}
+ */
+export const goc = (page) => page.evaluate(() => Number(window.__sma.readouts('cot').find((r) => r.id === 'goc')?.value));
 
 /** Móc test.beforeEach: project WebGPU mà không có adapter thì bỏ qua (adapter chỉ hỏi được trên một trang thật: mở trang tĩnh rồi hỏi). */
 export async function skipWithoutWebgpu({ page }, testInfo) {

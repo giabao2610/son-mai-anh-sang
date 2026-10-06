@@ -4475,8 +4475,9 @@ chuyển động ở lại trong bức.
 - Chữ của Sổ tay, chất lượng: như Bức 2 và Bức 3.
 
 **E2e riêng** (`e2e/dan-ga-me-con*.spec.js`; WebGL2 trên SwiftShader là cổng chặn, WebGPU không chặn). Một file quá 300 dòng thì tách theo lớp
-(`dan-ga-me-con-giay.spec.js`); tiện ích và các vùng của canvas dùng chung ở `e2e/dan-ga-me-con.helpers.js`, và `tests/rules/e2e.test.js` kiểm
-mọi `describe` của các file ấy bắt đầu bằng tên bức:
+(`dan-ga-me-con-giay.spec.js`); tiện ích, các vùng của canvas và tag khói (`SMOKE`) dùng chung ở `e2e/dan-ga-me-con.helpers.js`. `tests/rules/e2e.test.js`
+gom file theo slug dài nhất (slug `dan-ga` không nhận nhầm `dan-ga-me-con*.spec.js`), kiểm mọi `describe` của các file ấy bắt đầu bằng tên bức, và
+(bức có `ciWebgpuSmoke`) đếm test mang tag khói trên cả các file, tag khai báo trong file hay import từ `<slug>.helpers.js`:
 - Góc nhìn của tranh: vùng giữa khung sáng (giấy), hai dải trên và dưới tối (ván); mình gà mẹ in màu vàng hòe (độ bão hòa > 0,15).
   Vòng mặt đa diện thành nét (§20.4 lớp 3) chỉ thấy rõ ở DPR 2, nên kiểm bằng ảnh ở điểm duyệt ảnh, không bằng e2e ở khung 640 × 400.
 - Chữ trên ván tối: ở 1280 × 800, 1440 × 900, 1920 × 1080 và 390 × 844, khung tờ giấy (đo trên điểm ảnh của canvas) nằm dưới tên tranh và

@@ -2,7 +2,7 @@
 import { test, expect } from '@playwright/test';
 import { STAGE_ONLY, waitForFrames, canvasRegions, collectConsole, twoFrames, toggleExperiment } from './helpers.js';
 import {
-  BOARD_BOTTOM, BOARD_TOP, FLOOR, HEN, LEFT_EDGE, PAPER_MID, SMOKE, WALL, ZOOM_ABOVE, ZOOM_BOTTOM, layerView, open, skipWithoutWebgpu,
+  BOARD_BOTTOM, BOARD_TOP, FLOOR, HEN, LEFT_EDGE, PAPER_MID, SMOKE, WALL, ZOOM_ABOVE, ZOOM_BOTTOM, goc, layerView, open, skipWithoutWebgpu,
 } from './dan-ga-me-con.helpers.js';
 
 /**
@@ -189,8 +189,6 @@ test.describe('Đàn Gà Mẹ Con · tranh tự khép lại', () => {
   test.beforeEach(({}, testInfo) => {
     test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
   });
-  /** Số đo `goc` của Cốt: độ lệch của camera khỏi góc nhìn của tranh. */
-  const goc = (page) => page.evaluate(() => Number(window.__sma.readouts('cot').find((r) => r.id === 'goc')?.value));
   /** Kéo ngang trên vách giấy (không chạm gà): OrbitControls xoay camera. */
   async function dragCamera(page) {
     const box = await page.locator('[data-stage] canvas').boundingBox();

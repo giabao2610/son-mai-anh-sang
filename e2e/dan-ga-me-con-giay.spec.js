@@ -2,10 +2,7 @@
 import { test, expect } from '@playwright/test';
 import t from '../src/ui/strings.vi.js';
 import { FULL, canvasRegions, collectConsole, toggleExperiment, twoFrames, waitForFrames } from './helpers.js';
-import { SMOKE, WALL, layerView, open, skipWithoutWebgpu } from './dan-ga-me-con.helpers.js';
-
-/** Số đo `goc` của Cốt: độ lệch của camera khỏi góc nhìn của tranh. */
-const goc = (page) => page.evaluate(() => Number(window.__sma.readouts('cot').find((r) => r.id === 'goc')?.value));
+import { SMOKE, WALL, goc, layerView, open, skipWithoutWebgpu } from './dan-ga-me-con.helpers.js';
 
 test.beforeEach(skipWithoutWebgpu);
 
