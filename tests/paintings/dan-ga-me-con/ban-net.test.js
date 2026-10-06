@@ -1,4 +1,4 @@
-// tests/paintings/dan-ga-me-con/ban-net.test.js — Lớp 3 · Bản nét: viền đọc thẳng texture độ sâu của camera trực giao (không qua công thức phối cảnh), lấy mẫu đúng tâm điểm ảnh; có tap truoc-net; chỉ chạy với camera trực giao; nét trong trên gà theo trọng số của Bản nét; lệch bản; hai thí nghiệm chỉ đổi uniform.
+// tests/paintings/dan-ga-me-con/ban-net.test.js — Lớp 3 · Bản nét: viền đọc thẳng texture độ sâu của camera trực giao (không qua công thức phối cảnh), lấy mẫu đúng tâm điểm ảnh; có tap truoc-net; chỉ chạy với camera trực giao; nét trong trên gà theo trọng số của Bản nét, mép mềm tối thiểu một điểm ảnh; lệch bản; hai thí nghiệm chỉ đổi uniform.
 import { describe, it, expect } from 'vitest';
 import { NodeMaterial, NoToneMapping, PerspectiveCamera, QuadMesh, SRGBColorSpace, Scene } from 'three/webgpu';
 import { float, vec2, vec3 } from 'three/tsl';
@@ -73,6 +73,13 @@ describe('l3-ban-net (Bức 4)', () => {
       expect(uniforms).toEqual(expect.arrayContaining(['w_ban_net', 'banNetChiNet']));
     }
     expect(compileMaterial(built.shared.cot.paper, built.ctx, backend).uniforms).not.toContain('w_ban_net');
+  });
+
+  it.each(['webgpu', 'webgl2'])('%s: nét trong có mép mềm tối thiểu một điểm ảnh (fwidth của khoảng cách tới nét): nét mảnh hơn một điểm ảnh (DPR 1, điện thoại) mờ đi chứ không đứt thành vạch nhấp nháy khi gà chạy', (backend) => {
+    // Tám nét dài (vảy lông; viền, chỗ lún vào sườn và ba nét lông của cánh; đuôi; vằn ong) mỗi nét một fwidth; Bản màu có một (mép nấc).
+    const built = upToInk({ tier: backend });
+    const { fragmentShader } = compileMaterial(built.shared.cot.chicks.mesh, built.ctx, backend);
+    expect((fragmentShader.match(/fwidth\(/g) ?? []).length).toBeGreaterThanOrEqual(1 + 8);
   });
 
   it.each(['webgpu', 'webgl2'])('%s: núm ở hai đầu (lineWidth 1 và 3, threshold 0,05 và 2, crease 0 và 1, misregister 0 và 6): lượt cuối và mọi mesh gà dịch được, không lỗi', async (backend) => {

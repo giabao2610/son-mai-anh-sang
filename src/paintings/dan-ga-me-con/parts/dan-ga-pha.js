@@ -9,6 +9,7 @@ export const FLOCK = Object.freeze({
   spots: 3, // nhảy giữa ba chỗ gần nhau
   spread: 1, // các con chạy tới một nắm đứng trên vòng bán kính này quanh điểm rắc, cách đều nhau theo góc, nhìn vào tâm vòng: không chồng lên nhau, mỏ chạm sàn gần điểm rắc (cúi hẳn thì mỏ ở trước chân chừng 0,75)
   hopRadius: [0.1, 0.25], // ba chỗ mổ cách chỗ đứng chừng này: nhảy ngắn, nên hai con kề nhau trên vòng (4 con: cách 1,41) vẫn cách ≥ 0,9
+  hopCone: Math.PI / 3, // và lệch tối đa chừng này khỏi hướng từ tâm nắm ra chỗ đứng: nhảy vào trong thì đầu hai con cạnh nhau đâm vào nhau
   gap: 1.4, // chỗ đứng của hai con khác nhau (nắm khác nhau, con đang nghỉ, con nấp bụng) cách nhau từ chừng này: cộng hai bước nhảy thì mình không chồng nhau
   hop: 0.25, // nhảy sang chỗ mới mất chừng này giây
   bob: 2.5, // nhịp cúi đầu khi mổ (lần mỗi giây)
@@ -29,6 +30,7 @@ export const FLOCK = Object.freeze({
   wing: Math.PI / 3, // gà mẹ xòe cánh 60° khi giữ
   wingTau: 0.15, // lò xo tắt dần tới hạn của cánh
   cluck: 2, // gà mẹ gật đầu "cục cục" 2 lần mỗi giây khi giữ
+  nod: 0.4, // gật sâu nhất chừng này (rad, 23°): gật 1 rad thì đầu và con ong của mẹ chạm xuống gà con núp trước ngực (đo bằng chỗ thật của khối)
   near: 2.2, // bán kính "quanh mẹ" (số đo quanhMe)
 });
 
@@ -79,11 +81,14 @@ export const hide = (slot, t0, from, h1) => ({ kind: 'hide', at: slot, t0, t1: I
 export const perch = (home) => ({ kind: 'perch', at: home.at, t0: 0, t1: Infinity, h0: home.heading, h1: home.heading, goal: 'perch', head0: 0 });
 /**
  * Mổ quanh `center` (chỗ đứng) từ t0 tới t1: nhảy giữa ba chỗ gần đó, luôn nhìn về `look` (tâm nắm thóc), nên mỏ chạm sàn ở gần nắm thóc.
- * t1 mặc định FLOCK.peck giây sau t0; các con cùng một nắm thì chung một t1 (dan-ga-ke.js#forage).
+ * Chỗ nhảy ở phía ngoài vòng (trong ±FLOCK.hopCone quanh hướng từ tâm nắm ra chỗ đứng): mỏ các con cùng chụm về tâm nắm, nên nhảy vào
+ * trong thì đầu hai con cạnh nhau (bán kính 0,3) đâm vào nhau. t1 mặc định FLOCK.peck giây sau t0; các con cùng một nắm thì chung một t1
+ * (dan-ga-ke.js#forage).
  */
 export function peck(center, t0, from, rand, look, t1 = t0 + FLOCK.peck) {
+  const out = Math.atan2(center[1] - look[1], center[0] - look[0]); // góc của hướng từ tâm nắm ra chỗ đứng (trên mặt sàn x, z)
   const spots = Array.from({ length: FLOCK.spots }, () => {
-    const a = rand() * TAU;
+    const a = out + (rand() * 2 - 1) * FLOCK.hopCone;
     const r = FLOCK.hopRadius[0] + rand() * (FLOCK.hopRadius[1] - FLOCK.hopRadius[0]);
     return [center[0] + Math.cos(a) * r, center[1] + Math.sin(a) * r];
   });

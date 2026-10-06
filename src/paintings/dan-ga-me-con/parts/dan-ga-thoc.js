@@ -24,7 +24,7 @@ export const GRAIN = Object.freeze({
   rest: 0.05, // trên sàn mà chậm hơn chừng này thì nằm yên
   life: 30, // nằm chừng này giây không ai ăn thì nhỏ dần
   fade: 2,
-  eat: 0.15, // mỏ đang mổ cách hạt dưới chừng này (đo trên mặt sàn) thì hạt bị ăn
+  eat: 0.2, // mỏ đang mổ cách hạt dưới chừng này (đo trên mặt sàn) thì hạt bị ăn: chín mười hai chỗ mổ mỗi nắm phủ được nắm thóc
   reach: 0.3, // khi cả đầu mỏ lẫn hạt thấp hơn chừng này
   pile: 0.35, // bán kính nhúm nằm yên (lúc mở trang)
 });

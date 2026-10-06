@@ -1,7 +1,8 @@
 // tests/paintings/dan-ga-me-con/dan-ga-song.test.js — đàn gà dạng đóng (spec §20.5): rắc thì 3–4 con rảnh gần nhất chạy tới, mỗi con một chỗ trên vòng quanh nắm (không chồng nhau, không ra khỏi giấy), tới đúng lúc, mổ rồi cả nhóm cùng về; con về nhà không đứng sát con đang mổ; chạm sát mép thì thóc rơi ở tâm vòng; giữ thì núp (quay ra ngoài, không hai con một chỗ), thả thì tản; liên tục ở mỗi mốc kể cả giữ lúc gà đang chờ, chạy hay mổ; thứ tự gọi không đổi kết quả; tối đa 32 mốc; bão chạm, giữ, thả với nhiều hạt giống; chạm dồn; giảm chuyển động; gà mẹ bới (drift); nhúm thóc lúc mở trang; đầu vào hỏng thì ném lỗi.
 import { describe, it, expect } from 'vitest';
 import { FLOCK, createFlock } from '../../../src/paintings/dan-ga-me-con/parts/dan-ga-song.js';
-import { FLOOR, LAYOUT } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
+import { CHICK, FLOOR, LAYOUT } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
+import { CHICK_SHAPE } from '../../../src/paintings/dan-ga-me-con/parts/cot-hinh-ga.js';
 import { nearestOnSegment } from '../../../src/paintings/dan-ga-me-con/parts/dan-ga-duong.js';
 import { mulberry32 } from '../../../src/lib/random.js';
 
@@ -131,6 +132,38 @@ describe('dan-ga-song', () => {
     expect(worst).toBeLessThanOrEqual(Math.max(FLOCK.spread - 0.73, 0.8 - FLOCK.spread) + FLOCK.hopRadius[1] + 0.02);
     expect(worst).toBeLessThan(0.55);
     expect(closest).toBeLessThan(0.3);
+  }, SLOW);
+
+  it('các con cùng mổ một nắm không đâm đầu vào nhau (120 cảnh, mọi khung): mỗi con nhảy ra phía ngoài vòng, nên tâm hai đầu (đọc từ CHICK_SHAPE) cách nhau gần đủ hai bán kính', () => {
+    const head = CHICK_SHAPE.find((s) => s.part === 'HEAD');
+    const [py, pz] = CHICK.pivot;
+    const [dy, dz] = [head.at[1] - py, head.at[2] - pz];
+    /** Tâm đầu của con c (thế giới): cùng phép xoay quanh CHICK.pivot với positionNode và beakTip. */
+    const centre = (c) => {
+      const a = c.head * CHICK.headDown;
+      const f = pz + dz * Math.cos(a) + dy * Math.sin(a);
+      return [c.x + Math.sin(c.heading) * f, c.y + py + dy * Math.cos(a) - dz * Math.sin(a), c.z + Math.cos(c.heading) * f];
+    };
+    let pairs = 0;
+    let touching = 0;
+    let closest = Infinity;
+    for (let n = 0; n < 120; n += 1) {
+      const rand = mulberry32(77 + n);
+      const flock = createFlock(NO_PILE);
+      flock.scatter(1, [-5 + rand() * 10, -1 + rand() * 4.2], n);
+      for (let t = 1; t < 13; t += 1 / 30) {
+        const heads = flock.state(t).chicks.filter((c) => c.kind === 'peck').map(centre);
+        heads.forEach((p, i) => heads.slice(i + 1).forEach((q) => {
+          const d = Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+          pairs += 1;
+          if (d < 2 * head.r) touching += 1;
+          closest = Math.min(closest, d);
+        }));
+      }
+    }
+    expect(pairs).toBeGreaterThan(50000);
+    expect(touching / pairs, 'phần khung hai đầu chạm nhau').toBeLessThan(0.005);
+    expect(closest, 'hai đầu lún vào nhau').toBeGreaterThan(2 * head.r - 0.1);
   }, SLOW);
 
   it('các nắm cùng lúc không dồn các con vào nhau: hai nắm cách 0,6 thì mọi cặp con đang mổ cách ≥ gap − hai bước nhảy; nắm cạnh con nấp bụng thì con mổ gần nhất cách nó ≥ gap − bước nhảy', () => {
@@ -279,9 +312,12 @@ describe('dan-ga-song', () => {
     }
   }, SLOW);
 
-  it('giữ: tám con chạy về tám chỗ núp, không hai con một chỗ; quanhMe = 10 sau 3 giây; cánh mẹ mở 60°; thả thì tản dần rồi về nhà', () => {
+  it('giữ: tám con chạy về tám chỗ núp, không hai con một chỗ; quanhMe = 10 sau 3 giây; cánh mẹ mở 60°, gật "cục cục" tới FLOCK.nod (rad); thả thì tản dần rồi về nhà', () => {
     const flock = createFlock(NO_PILE);
     flock.grip(2);
+    let nod = 0;
+    for (let t = 4; t < 5; t += 0.01) nod = Math.max(nod, flock.state(t).hen.nod);
+    expect(nod).toBeCloseTo(FLOCK.nod, 2);
     const st = flock.state(5);
     const slots = FREE.map((i) => slotOf(st.chicks[i]));
     expect(slots.every((k) => k >= 0)).toBe(true);

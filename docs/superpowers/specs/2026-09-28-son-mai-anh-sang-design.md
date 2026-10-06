@@ -3942,10 +3942,10 @@ spec.
        - Trọng lực là của Trái Đất: 9,81 m/s², tức 98,1 đơn vị/s². Thóc chạm sàn chừng 0,25 giây sau khi văng, như rắc thật.
        - Núm `gravity` cho chọn trọng lực của trăng, để so với lá rơi của Bức 3.
      - Ba tới bốn gà con đang rảnh, ở gần chỗ rắc nhất, chạy tới. Tới nơi thì mổ quanh đó chừng 8 giây, rồi đi về chỗ của mình.
-     - Mỏ đang mổ chạm hạt nào thì hạt đó biến mất (§20.4 lớp 5): nắm vơi đi thấy rõ, các con ăn chừng nửa nắm. Hạt không con
+     - Mỏ đang mổ chạm hạt nào thì hạt đó biến mất (§20.4 lớp 5): nắm vơi đi thấy rõ, các con ăn quá nửa nắm. Hạt không con
        nào ăn thì nằm 30 giây rồi nhỏ dần.
   2. **Giữ là gà mẹ gọi con** (`'hold-start'` → `'hold-end'`):
-     - Gà mẹ xòe hai cánh, cúi đầu gọi "cục cục" theo nhịp. Mọi gà con đang rảnh chạy về tám chỗ quanh và dưới cánh mẹ; con
+     - Gà mẹ xòe hai cánh, cúi đầu gọi "cục cục" theo nhịp (gật sâu nhất 23°). Mọi gà con đang rảnh chạy về tám chỗ quanh và dưới cánh mẹ; con
        trèo lưng và con nấp bụng vốn đã ở sát mẹ, nên ở yên.
      - Buông tay thì mẹ khép cánh, các con tản ra: tới chỗ rắc mới nhất nếu nắm đó mới rắc chưa tới 20 giây, không thì về chỗ của mình.
      - Camera không xoay trong lúc giữ: xưởng tắt OrbitControls khi giữ (§8.1).
@@ -4126,6 +4126,11 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     có một mẫu, hay điểm giữa, nằm ngoài texture thì bỏ cả cặp: vẫn chín lần đọc, chỉ nhân 0.
 - **Nét trong** (`recipe.ink`, `parts/ban-net-net-trong.js`): hàm khoảng cách 2D trên UV của từng phần, chỉ trên gà (tờ giấy, thóc không
   có). Nét dày theo đơn vị cảnh (chừng 0,025, tức 3 điểm ảnh ở DPR 2), nên to ra khi zoom.
+  - **Mép mềm của nét** (GĐ 8 Task 8): 0,3 nửa bề dày, nhưng không mỏng hơn một điểm ảnh (`fwidth` của khoảng cách tới nét), đặt quanh
+    0,85 nửa bề dày (chỗ mép mềm của bản đầu). Ở DPR 1 (máy tính thường, mức thấp, khung e2e) nét dài mảnh hơn một điểm ảnh: không có sàn
+    này thì nét đứt thành vạch nhấp nháy khi gà chạy (thấy trên GPU thật); có sàn thì thành nét mềm liền. Mép mềm đặt quanh 0,85 chứ không
+    lùi vào trong (plan: `smoothstep(half − soft, half, d)`) để ở DPR 2 nét vẫn dày như bản đầu đã duyệt ảnh. Chỗ khoảng cách nhảy (đường
+    nối hai hàng vảy) `fwidth` vọt lên, nhưng ở đó khoảng cách lớn ở cả hai phía nên không thành vệt.
   - **Vảy lông** (mình): hàng cung võng xuống, như vảy cá, hàng trên lệch nửa ô; ở nửa trên của mình (uv.y 0,55–0,88). Gà mẹ 14 cột quanh
     mình và 8 hàng từ chân lên đỉnh, gà con 8 và 6: ở giữa sườn mỗi hàng cao chừng nửa bề rộng một cột, nên mỗi cung là nửa vòng tròn và
     đáy cung chạm chỗ hai cung của hàng dưới gặp nhau.
@@ -4219,13 +4224,14 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
       rộng gấp đôi.
   - **Mổ:** một mảng uniform 10 điểm (`uniformArray`, vec4) giữ mỏ của mười gà con; thành phần w là "đang mổ". Gà mẹ ngậm con ong
     nên không mổ. Mỗi hạt tự kiểm các mỏ đang mổ: đầu mỏ thấp hơn 0,3, hạt cũng thấp hơn 0,3 (hạt đang bay qua thì không), cách hạt dưới
-    0,15 đo trên mặt sàn, thì tự xóa. Mỗi hạt chỉ đọc và ghi chính nó, vì compute của WebGL2 chỉ cho như vậy (§20.7).
-    - Vì sao 0,15 chứ không 0,06 (số cũ của spec): mỗi nắm chỉ có chín tới mười hai chỗ mổ (ba bốn con, mỗi con ba chỗ nhảy), và mỏ đứng
-      yên suốt mỗi chỗ; ở 0,06 mỗi lần mổ trúng chừng một hạt, một nắm 120 hạt gần như không vơi.
+    0,2 đo trên mặt sàn, thì tự xóa. Mỗi hạt chỉ đọc và ghi chính nó, vì compute của WebGL2 chỉ cho như vậy (§20.7).
+    - Vì sao 0,2 chứ không 0,06 (số cũ của spec): mỗi nắm chỉ có chín tới mười hai chỗ mổ (ba bốn con, mỗi con ba chỗ nhảy), và mỏ đứng
+      yên suốt mỗi chỗ; ở 0,06 mỗi lần mổ trúng chừng một hạt, một nắm 120 hạt gần như không vơi. 0,15 (plan) đủ khi các con còn nhảy vào
+      giữa nắm; từ khi chỉ nhảy ra phía ngoài (§20.5, để đầu hai con không đâm vào nhau), 0,2 mới phủ được nắm.
     - Đo bằng bản JS của luật cùng đàn gà thật (`tests/paintings/dan-ga-me-con/dan-ga-thoc.test.js`): một nắm rắc giữa sàn hay sát mép
-      bị ăn chừng 40–65% (60 khung/giây), nhúm lúc mở trang chừng một nửa; cảnh bận (chạm khắp sàn, giữ, thả), nắm có con tới bị ăn trung
-      bình chừng 40%, chừng 5% số nắm dưới 10%. Ở 10 khung/giây ít hơn một chút: mỏ "đang mổ" chừng 0,1 giây mỗi nhịp cúi, nên mỗi nhịp
-      chỉ một khung, có nhịp không khung nào.
+      bị ăn chừng 60–80% (60 khung/giây), nhúm lúc mở trang chừng một nửa; cảnh bận (chạm khắp sàn, giữ, thả), nắm có con tới bị ăn trung
+      bình chừng 45%, hiếm nắm nào dưới 10%. Ở 10 khung/giây ít hơn một chút: mỏ "đang mổ" chừng 0,1 giây mỗi nhịp cúi, nên mỗi nhịp chỉ
+      một khung, có nhịp không khung nào.
   - **Rắc** đi qua `emit` của bể: các hạt của nắm mới tự khởi tạo lại ở bước kế tiếp (§20.7). Thóc rơi ở điểm `takeScatters` trả, là tâm
     vòng các con đứng quanh (§20.5 luật 1): sát mép thì vào trong một chút, sát mẹ thì ra bên cạnh mẹ. `origin.y` của nắm là độ cao văng:
     3 (tầm tay) khi rắc, 1 khi gà mẹ bới (chân cào hất thóc lên thấp; nhúm gọn hơn).
@@ -4311,6 +4317,9 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   - **mổ:** quanh điểm đích, nhảy giữa ba chỗ cách chỗ đứng 0,1–0,25 (mỗi chỗ 8/3 giây), luôn nhìn về tâm vòng (nắm thóc). Nhảy ngắn thì
     hai con kề nhau trên vòng (bốn con thì cách 1,41) vẫn cách nhau ≥ 0,9. Đầu cúi theo nhịp 2,5 lần mỗi giây; mỏ "đang mổ" ở đáy nhịp,
     trước chân chừng 0,75, nên chạm sàn trong 0,55 quanh tâm vòng: vòng luôn bán kính 1, và tâm vòng là chỗ thóc rơi (luật 1 ở trên).
+    - Chỗ nhảy ở phía ngoài vòng: lệch tối đa ±60° khỏi hướng từ tâm nắm ra chỗ đứng (GĐ 8 Task 8). Mỏ mọi con chụm về tâm nắm, nên nhảy
+      vào trong thì đầu hai con cạnh nhau (bán kính 0,3) đâm vào nhau: đo bằng tâm đầu thật, 8% số cặp-khung hai đầu lún vào nhau, sâu tới
+      0,4; nhảy ra ngoài ±60° thì dưới 0,5%, sâu không quá chừng 0,04.
     - Cả nhóm cùng một nắm thôi mổ cùng lúc: con tới sau cùng mổ 8 giây, con tới trước mổ lâu hơn một chút (chỗ nhảy cuối dài ra, nhịp
       cúi vẫn liền). Con tới trước mà về trước thì có thể đứng nghỉ ở nhà ngay sát chỗ một con cùng nhóm còn đang mổ (GĐ 8 Task 8: 15
       trong 200 cảnh bận, sau khi đã tính nhà của con đi vắng);
@@ -4331,7 +4340,9 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     π rad trong 0,3 giây;
   - đứng yên ở nhà thì theo dáng của bố cục (lắc nhẹ); đứng mổ thì nhìn về nắm thóc; núp thì quay ra ngoài, lưng về phía mẹ.
 - **Gà mẹ:** đứng yên giữa sàn; đầu ngoảnh chậm theo thời gian.
-  - Giữ: hai cánh mở tới 60° theo lò xo tắt dần tới hạn (như cây bay của Bức 3); đầu gật "cục cục" 2 lần mỗi giây.
+  - Giữ: hai cánh mở tới 60° theo lò xo tắt dần tới hạn (như cây bay của Bức 3); đầu gật "cục cục" 2 lần mỗi giây, sâu nhất 0,4 rad
+    (23°, `FLOCK.nod`). Mọi góc của gà mẹ trong trạng thái (cánh, gật, ngoảnh, cào) là radian, Cốt áp thẳng. Plan để gật 0–1 rồi áp như
+    radian (tới 57°): đầu và con ong của mẹ lún vào gà con núp trước ngực (test đọc chỗ thật của khối giữ điều này).
   - Thả: cánh khép theo cùng lò xo.
   - Bới: chân cào trong 0,6 giây; thóc văng ra ở giữa nhịp cào. Không ai chạm 25 giây (kể từ mốc cuối, và không đang giữ) thì bới một
     lần: một nhúm 24 hạt ở `HEN_FRONT`, hai ba con gần nhất xúm lại.
@@ -4535,7 +4546,8 @@ chuyển động ở lại trong bức.
   trước (không con nào bị che hẳn). Tám chỗ núp, gà con quay ra ngoài và ngó nghiêng hết cỡ: không đỉnh gà con nào nằm trong khối của
   mẹ và không đỉnh mẹ nào nằm trong khối gà con; cánh mở 60° nằm trên đầu gà con; hai gà con ở hai chỗ kề nhau, hay kề con nấp bụng,
   không chồng nhau. Cả chuyến đi (giữ từ lúc nghỉ, giữ lúc chờ/chạy/mổ, chạm ngay vào mẹ và sau lưng mẹ, thả rồi giữ lại, mẹ bới), lấy
-  mẫu 30 Hz: không khung nào có đỉnh gà con nằm trong khối của mẹ.
+  mẫu 30 Hz: không khung nào có đỉnh gà con nằm trong khối của mẹ. Gà mẹ gật hết cỡ (`FLOCK.nod`) và ngoảnh ±0,25: đầu, mỏ, mào, con ong
+  không lún vào gà con núp ở tám chỗ (gật 1 rad thì lún: test bắt được).
 - `dan-ga-song`:
   - chạm thì 3–4 con rảnh ở gần nhất chạy tới, và tới nơi đúng lúc tính theo tốc độ; mổ 8 giây rồi về. Các con tới cùng một nắm đứng
     cách nhau ≥ 0,9 và luôn trên sàn, kể cả chạm sát mép và góc; hai nắm cách 0,6, hay nắm cạnh con nấp bụng, cũng không dồn các con vào
@@ -4576,7 +4588,7 @@ chuyển động ở lại trong bức.
   - cảnh không có đèn nào của three, `shadowMap` tắt;
   - Bản nét có tap `truoc-net`; đồ thị màu của gà đọc `w_ban_net` (nét trong), tờ giấy thì không; núm ở hai đầu (`lineWidth` 1 và 3,
     `threshold` 0,05 và 2, `crease` 0 và 1, `misregister` 0 và 6) dịch được cả lượt cuối lẫn gà; hai thí nghiệm chỉ đổi uniform; tám mẫu
-    Sobel nằm trong nhánh `If`;
+    Sobel nằm trong nhánh `If`; mỗi nét trong đọc `fwidth` của khoảng cách (mép mềm tối thiểu một điểm ảnh);
   - Cốt: gà mẹ ba mesh có `positionNode`, mỗi mesh đọc đúng uniform dáng của nó; `pose`, `head` là thuộc tính ghi mỗi khung; Tấm bìa
     phẳng chỉ đổi uniform (`material.version` không đổi); dịch được ở `segments` 8 và 48;
   - Bản màu: đồ thị màu của gà đọc `w_ban_mau` và ba núm; núm ở hai đầu dịch được; `pigment` ghi một lần; Tô mịn là kiểu so;

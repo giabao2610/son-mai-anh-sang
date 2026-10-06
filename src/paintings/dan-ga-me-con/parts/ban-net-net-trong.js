@@ -1,14 +1,20 @@
 // paintings/dan-ga-me-con/parts/ban-net-net-trong.js — của lớp Bản nét: nét trong vẽ ngay trên vật (vảy lông, mắt, nét và viền cánh, nét đuôi, vằn ong) bằng hàm khoảng cách 2D trên UV của từng phần.
 import { Matrix3 } from 'three/webgpu';
 import {
-  abs, cos, dot, float, fract, length, mat3, mat4, max, mix, positionGeometry, sin, smoothstep, sqrt, step, vec2, vec4,
+  abs, cos, dot, float, fract, fwidth, length, mat3, mat4, max, mix, positionGeometry, sin, smoothstep, sqrt, step, vec2, vec4,
 } from 'three/tsl';
 
 /**
- * Một nét: khoảng cách d tới đường giữa nét dưới 0,7 nửa bề dày `half` thì đậm hẳn, tới `half` thì hết. d và half cùng đơn vị (ô UV,
- * radian hay đơn vị cảnh), nên nét và cả mép mềm của nó to ra khi zoom, như mực in. half > 0, nên 0,7·half < half.
+ * Một nét: đậm hẳn quanh đường giữa, nhạt dần qua mép mềm rộng `soft` đặt quanh 0,85 nửa bề dày `half` (bản đầu: đậm tới 0,7·half, hết ở
+ * half). d và half cùng đơn vị (ô UV, radian hay đơn vị cảnh), nên nét to ra khi zoom, như mực in. Mép mềm là 0,3·half nhưng không mỏng
+ * hơn một điểm ảnh (fwidth(d): d đổi bao nhiêu giữa hai điểm ảnh kề nhau): ở DPR 1 hay trên điện thoại, nét mảnh hơn một điểm ảnh thành
+ * nét mềm liền, không đứt thành vạch nhấp nháy khi gà chạy; ở DPR 2 nét vẫn dày như bản đầu (GĐ 8 Task 8, chụp trên GPU thật). soft > 0.
  */
-const stroke = (d, half) => float(1).sub(smoothstep(float(half).mul(0.7), half, d));
+const stroke = (d, half) => {
+  const soft = max(float(half).mul(0.3), fwidth(d)).mul(0.5);
+  const mid = float(half).mul(0.85);
+  return float(1).sub(smoothstep(mid.sub(soft), mid.add(soft), d));
+};
 /** Giữ phần t trong [lo, hi], mép mềm 0,05 mỗi bên. */
 const band = (t, lo, hi) => smoothstep(lo - 0.05, lo + 0.05, t).mul(float(1).sub(smoothstep(hi - 0.05, hi + 0.05, t)));
 

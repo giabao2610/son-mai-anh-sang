@@ -12,7 +12,7 @@ export { FLOCK };
  *   chỗ đứng, hướng (rad, như rotation.y của three), góc cúi đầu 0 (ngẩng) … 1 (mổ), "đang mổ" (mỏ ở đáy nhịp), đầu mỏ ở tọa độ thế
  *   giới, việc đang làm, và pha ('idle', 'stay', 'move', 'peck', 'hide', 'perch')
  * @typedef {{ chicks: ChickState[], hen: { wing: number, nod: number, look: number, scratch: number }, near: number, eating: number }} FlockState
- *   hen: cánh (rad), gật (0–1), ngoảnh (rad), cào chân (rad); near: số con cách tâm mẹ dưới FLOCK.near; eating: số con đang ở pha mổ
+ *   hen: cánh, gật, ngoảnh, cào chân (đều là góc, rad: Cốt áp thẳng); near: số con cách tâm mẹ dưới FLOCK.near; eating: số con đang ở pha mổ
  */
 /**
  * Giữ tối đa chừng này mốc: mỗi mốc mang sẵn kế hoạch của từng con lúc đó, nên mốc cũ bỏ được (như cây bay của Bức 3). Sau khi bỏ, state(t)
@@ -235,7 +235,7 @@ export function createFlock(layout, { reduced = false } = {}) {
         chicks,
         hen: {
           wing,
-          nod: (wing / FLOCK.wing) * (0.5 - 0.5 * Math.cos(TAU * FLOCK.cluck * t)), // gật khi cánh mở: thả là thôi gật, không giật
+          nod: FLOCK.nod * (wing / FLOCK.wing) * (0.5 - 0.5 * Math.cos(TAU * FLOCK.cluck * t)), // gật khi cánh mở: thả là thôi gật, không giật
           look: 0.25 * Math.sin((TAU * t) / 7), // ngoảnh chậm
           scratch: 0.7 * scratch,
         },

@@ -234,6 +234,40 @@ describe('cot-hinh-ga', () => {
     }
   });
 
+  it('gà mẹ gọi con: gật đầu hết cỡ (đỉnh của nhịp "cục cục") và ngoảnh tới ±0,25 thì đầu, mỏ, mào, con ong không lún vào gà con núp ở tám chỗ, và ngược lại', () => {
+    // Gật quanh trục ngang qua cổ (góc dương cúi xuống), rồi ngoảnh quanh trục đứng qua cổ, như henPosition; làm trong khung của mẹ.
+    const neck = toHen(HEN_JOINTS.neck);
+    const turn = ([x, y, z], nod, look) => {
+      let [py, pz] = [y - neck[1], z - neck[2]];
+      [py, pz] = [py * Math.cos(nod) - pz * Math.sin(nod), py * Math.sin(nod) + pz * Math.cos(nod)];
+      const px = x - neck[0];
+      return [px * Math.cos(look) + pz * Math.sin(look) + neck[0], py + neck[1], pz * Math.cos(look) - px * Math.sin(look) + neck[2]];
+    };
+    const unturn = ([x, y, z], nod, look) => {
+      const [px, qz] = [x - neck[0], z - neck[2]];
+      const [rx, rz] = [px * Math.cos(look) - qz * Math.sin(look), qz * Math.cos(look) + px * Math.sin(look)];
+      const py = y - neck[1];
+      return [rx + neck[0], py * Math.cos(nod) + rz * Math.sin(nod) + neck[1], rz * Math.cos(nod) - py * Math.sin(nod) + neck[2]];
+    };
+    expect(unturn(turn([0.3, 2.9, 2.2], 0.4, 0.2), 0.4, 0.2).map((v) => v.toFixed(9))).toEqual(['0.300000000', '2.900000000', '2.200000000']);
+    const fromHen = ([x, y, z]) => [HEN.at[0] + x * Math.cos(HEN.heading) + z * Math.sin(HEN.heading), y, HEN.at[1] + z * Math.cos(HEN.heading) - x * Math.sin(HEN.heading)];
+    const headSolids = HEN_SHAPE.body.filter((s) => PART[s.part] >= PART.HEAD);
+    const henHead = vertices(henGeometry({ segments: COARSE }).body, (part) => part >= PART.HEAD).map(toHen);
+    const chick = vertices(chickGeometry({ segments: COARSE }));
+    expect(FLOCK.nod, 'gật thấy được (rad)').toBeGreaterThan(0.2);
+    expect(createFlock(LAYOUT).state(0).hen.nod, 'không giữ: không gật').toBe(0);
+    for (const look of [-0.25, 0, 0.25]) {
+      for (const slot of SLOTS) {
+        for (const sway of SWAYS) {
+          const pose = hidePose(slot, sway);
+          const tag = `gật ${FLOCK.nod}, ngoảnh ${look}, chỗ ${slot}, ngó ${sway}`;
+          expect(henHead.filter((v) => { const w = fromHen(turn(v, FLOCK.nod, look)); return nearChick(pose, w) && insideChick(pose, w); }).length, `${tag}: đầu mẹ lún vào gà con`).toBe(0);
+          expect(chick.filter((v) => { const p = unturn(toHen(place(v, pose)), FLOCK.nod, look); return headSolids.some((s) => inside(s, p)); }).length, `${tag}: gà con lún vào đầu mẹ`).toBe(0);
+        }
+      }
+    }
+  }, 60000);
+
   it('tám chỗ núp: gà con ở hai chỗ kề nhau, hay kề con nấp bụng, không chồng lên nhau, kể cả lúc ngó nghiêng hết cỡ (con nấp bụng lắc ±FLOCK.perchSway)', () => {
     const verts = vertices(chickGeometry({ segments: COARSE }));
     const belly = HOMES.find((h) => h.kind === 'belly');
