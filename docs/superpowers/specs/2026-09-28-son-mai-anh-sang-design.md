@@ -4406,7 +4406,12 @@ chuyển động ở lại trong bức.
     đó thì bị cắt. Con trỏ vòng đệm đi tiếp sau mỗi nắm, nên nắm mới đè lên hạt cũ nhất.
   - Mỗi bước tối đa một nắm; nắm sau chờ bước sau. Hàng đợi giữ tối đa 16 nắm, bỏ nắm cũ nhất: chạm dồn lúc khung đứng không làm nó
     phình mãi.
-  - `emitted()`: số phần tử đã rắc còn trong vòng đệm, không quá số đang tính.
+  - `emit` chép `origin` ngay lúc xếp hàng: người gọi dùng lại mảng của mình cũng không đổi nắm đang chờ.
+  - `clear()` bỏ mọi nắm đang chờ, không đụng tới shader; con trỏ vòng đệm lùi về đầu nắm chờ cũ nhất, nên nắm sau vẫn đè lên hạt cũ
+    nhất. Lý do: `step` không chạy khi `w ≤ 0` mà nắm chờ thì vẫn chờ, nên mài lớp về 0 rồi phủ lại là các nắm cũ bung ra cùng lúc. Bức
+    gọi `clear()` mỗi khung lớp tắt hẳn (Bức 4, lớp Đàn gà).
+  - `emitted()`: số phần tử đã rắc THẬT (nắm đã ra khỏi hàng đợi ở một bước) còn trong vòng đệm, không quá số đang tính. Đếm lúc rắc,
+    không lúc xếp hàng: nắm đang chờ, nắm bị trần hàng đợi hay `clear()` bỏ không tính.
   - `still` cho nắm nằm yên ngay từ đầu (nhúm thóc lúc mở trang).
   - Vì sao không cho mỗi hạt đọc hạt khác: compute của WebGL2 là transform feedback, mỗi luồng chỉ đọc và ghi phần tử của chính nó
     (`element(i)` bỏ qua `i`, Phụ lục A.10). Thứ cần đi giữa các vật (mỏ gà) đi qua uniform.
@@ -4477,6 +4482,8 @@ chuyển động ở lại trong bức.
   - cấp phát một lần; `setCount` có sàn và trần;
   - `step` không chạy khi `dt = 0` hay `w ≤ 0`; WebGL2 khởi tạo hai lần;
   - vòng đệm của `emit`: quấn qua cuối theo số phần tử đang tính, nắm lớn hơn bể thì cắt, mỗi bước một nắm; hàng đợi giữ tối đa 16 nắm;
+  - nắm đang chờ thì chờ khi `dt = 0` hay `w ≤ 0`; `emitted()` đếm lúc rắc thật (nắm bị trần hàng đợi bỏ không tính); `emit` chép
+    `origin`; `clear()` bỏ nắm chờ (không bung ra, không tính, nắm sau đè hạt cũ nhất); `dispose()` hai lần vẫn an toàn;
   - compute bước dịch được ở cả hai backend, và nhánh rắc đọc đầu và số hạt của nắm (`compileCompute(...).uniforms`).
 - Bức 1: **mã shader của đom đóm giống fixture** (§20.7).
 - Hợp đồng: camera trực giao đúng hình dạng; file `lib` được kê thì phải được import.

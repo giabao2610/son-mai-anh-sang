@@ -1,4 +1,4 @@
-// tests/unit/particles.test.js — bể hạt dùng chung (lib/tsl/particles.js, GĐ 8): cấp phát một lần; sàn của count; không bước khi dt = 0 hay trọng số 0; WebGL2 khởi tạo hai lần; vòng đệm của emit; hàng đợi có trần; dịch được ở hai backend.
+// tests/unit/particles.test.js — bể hạt dùng chung (lib/tsl/particles.js, GĐ 8): cấp phát một lần; sàn của count; không bước khi dt = 0 hay trọng số 0 (nắm chờ vẫn chờ); WebGL2 khởi tạo hai lần; vòng đệm của emit; hàng đợi có trần; emitted đếm lúc rắc thật; emit chép origin; clear bỏ nắm chờ; dispose hai lần; dịch được ở hai backend.
 import { describe, it, expect, vi } from 'vitest';
 import { float, vec3, vec4 } from 'three/tsl';
 import { COUNT_FLOOR, createPool } from '../../src/lib/tsl/particles.js';
@@ -78,6 +78,62 @@ describe('createPool', () => {
     pool.step(1 / 60, 1);
     expect(pool.batch.seed.value).toBe(24); // 40 − 16
     expect(pool.batch.start.value).toBeLessThan(100);
+  });
+
+  it('nắm đang chờ thì chờ khi dt = 0 (update(0, t) của ?freeze) hay trọng số ≤ 0, rồi rắc ở bước thật đầu tiên', () => {
+    const { pool, renderer } = make();
+    pool.emit({ origin: ORIGIN, count: 50, seed: 3 });
+    renderer.compute.mockClear();
+    pool.step(0, 1);
+    pool.step(1 / 60, 0);
+    pool.step(1 / 60, -1);
+    expect(renderer.compute).not.toHaveBeenCalled();
+    expect(pool.emitted(), 'chưa rắc').toBe(0);
+    pool.step(1 / 60, 1);
+    expect([pool.batch.count.value, pool.batch.seed.value, pool.emitted()]).toEqual([50, 3, 50]);
+  });
+
+  it('emitted() đếm lúc nắm ra khỏi hàng đợi (rắc thật), không lúc xếp: nắm bị trần hàng đợi bỏ không tính; không quá số đang tính', () => {
+    const { pool } = make();
+    for (let i = 0; i < 20; i += 1) pool.emit({ origin: ORIGIN, count: 10, seed: i });
+    expect(pool.emitted(), 'mới xếp hàng, chưa rắc').toBe(0);
+    for (let i = 0; i < 30; i += 1) pool.step(1 / 60, 1);
+    expect(pool.emitted(), '16 nắm còn trong hàng đợi (4 nắm cũ nhất bị bỏ), mỗi nắm 10 hạt').toBe(160);
+    for (let i = 0; i < 40; i += 1) pool.emit({ origin: ORIGIN, count: 100, seed: i });
+    for (let i = 0; i < 20; i += 1) pool.step(1 / 60, 1);
+    expect(pool.emitted(), 'vòng đệm 300: không quá số đang tính').toBe(300);
+  });
+
+  it('emit chép origin ngay: người gọi sửa mảng của mình sau đó thì nắm đang chờ vẫn rơi ở chỗ cũ', () => {
+    const { pool } = make();
+    const origin = [1, 2, 3];
+    pool.emit({ origin, count: 10, seed: 1 });
+    origin[0] = 99;
+    pool.step(1 / 60, 1);
+    expect(pool.batch.origin.value.toArray()).toEqual([1, 2, 3]);
+  });
+
+  it('clear() bỏ mọi nắm đang chờ: bật lại không bung ra, không tính vào emitted; nắm sau vẫn bắt đầu ở đầu nắm chờ cũ nhất (đè hạt cũ nhất)', () => {
+    const { pool } = make();
+    pool.emit({ origin: ORIGIN, count: 100, seed: 1 });
+    pool.step(1 / 60, 1);
+    pool.emit({ origin: ORIGIN, count: 120, seed: 2 });
+    pool.emit({ origin: ORIGIN, count: 30, seed: 3 });
+    pool.clear();
+    for (let i = 0; i < 5; i += 1) pool.step(1 / 60, 1);
+    expect(pool.batch.count.value, 'không nắm nào rắc thêm').toBe(0);
+    expect(pool.emitted()).toBe(100);
+    expect(pool.emit({ origin: ORIGIN, count: 10, seed: 4 })).toEqual({ start: 100, size: 10 });
+  });
+
+  it('dispose() gỡ hai compute node; gọi hai lần vẫn an toàn', () => {
+    const { pool } = make();
+    const gone = [];
+    pool.initNode.addEventListener('dispose', () => gone.push('init'));
+    pool.stepNode.addEventListener('dispose', () => gone.push('step'));
+    pool.dispose();
+    expect(() => pool.dispose()).not.toThrow();
+    expect(gone.slice(0, 2)).toEqual(['init', 'step']);
   });
 
   it('bể không có spawn thì không rắc được (lỗi tiếng Việt); nắm 0 hạt không vào hàng đợi', () => {

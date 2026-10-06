@@ -16,6 +16,7 @@ const QUEUE_MAX = 16;
  *   giữ giá trị cũ ở cả hai backend (WebGL2: three chép bản đọc sang bản ghi trước khi chạy luật; Phụ lục A.97), không phải ghi rác.
  * - Rắc: emit() xếp một nắm vào hàng đợi; mỗi bước lấy một nắm ra, ghi vào uniform `batch`. Phần tử nào thuộc nắm thì gọi spawn để tự
  *   khởi tạo lại, phần tử khác gọi law. Nắm nối tiếp nhau trên vòng đệm của số phần tử đang tính, nên nắm mới đè lên hạt cũ nhất.
+ *   clear() bỏ các nắm đang chờ (bức gọi khi tắt hẳn lớp, để bật lại không có nắm cũ bung ra).
  * - File này không đặt tên uniform: một bức có thể dựng hai bể.
  *
  * @param {object} p
@@ -89,17 +90,27 @@ export function createPool({ capacity, count = capacity, init, law, spawn = null
       for (const o of objects) o.count = active;
       return active;
     },
-    /** Xếp một nắm vào hàng đợi; bước kế tiếp còn trống thì nó khởi tạo lại các phần tử của nắm. Trả chỗ của nắm trên vòng đệm. */
+    /**
+     * Xếp một nắm vào hàng đợi; bước kế tiếp còn trống thì nó khởi tạo lại các phần tử của nắm. Trả chỗ của nắm trên vòng đệm.
+     * `origin` được chép ngay (người gọi dùng lại mảng của mình cũng không đổi nắm đang chờ).
+     */
     emit({ origin, count: n, seed, still = false }) {
       if (!spawn) throw new Error('Bể hạt này không có spawn: không rắc được.');
       const size = Math.min(Math.max(Math.round(n), 0), active);
       if (size === 0) return null;
       const start = head % active;
       head = (start + size) % active;
-      emitted += size;
-      queue.push({ start, size, origin, seed, still });
+      queue.push({ start, size, origin: [origin[0], origin[1], origin[2]], seed, still });
       if (queue.length > QUEUE_MAX) queue.shift();
       return { start, size };
+    },
+    /**
+     * Bỏ mọi nắm đang chờ (không đụng tới shader). Con trỏ vòng đệm lùi về đầu nắm chờ cũ nhất, nên nắm sau vẫn đè lên hạt cũ nhất.
+     * Bức gọi khi tắt hẳn lớp: step() không chạy lúc trọng số ≤ 0, mà nắm chờ thì vẫn chờ, nên bật lại lớp là chúng bung ra cùng lúc.
+     */
+    clear() {
+      if (queue.length > 0) head = queue[0].start % active;
+      queue.length = 0;
     },
     /**
      * Một bước của cả bể. dt = 0 (xưởng vẽ lại khung đứng yên của ?freeze) hay trọng số ≤ 0: không làm gì, nắm đang chờ vẫn chờ.
@@ -114,15 +125,20 @@ export function createPool({ capacity, count = capacity, init, law, spawn = null
         batch.origin.value.set(...next.origin);
         batch.seed.value = next.seed;
         batch.still.value = next.still ? 1 : 0;
+        emitted += Math.min(next.size, active); // đếm lúc rắc thật: nắm bị bỏ (trần hàng đợi, clear) không tính
       }
       renderer.compute(stepNode);
       return true;
     },
-    /** Số phần tử đã rắc còn trong vòng đệm (chưa bị nắm sau đè): không quá số đang tính. */
+    /**
+     * Số phần tử đã rắc thật (nắm đã ra khỏi hàng đợi ở một bước) còn trong vòng đệm, chưa bị nắm sau đè: không quá số đang tính. Nắm
+     * đang chờ hay đã bị bỏ không tính.
+     */
     emitted: () => Math.min(emitted, active),
     dispose() {
-      initNode.dispose(); // gỡ pipeline compute; bộ đệm storage được giải phóng cùng renderer
+      initNode.dispose(); // gỡ pipeline compute; bộ đệm storage được giải phóng cùng renderer. Gọi hai lần vẫn an toàn.
       stepNode.dispose();
+      queue.length = 0;
     },
   };
 }
