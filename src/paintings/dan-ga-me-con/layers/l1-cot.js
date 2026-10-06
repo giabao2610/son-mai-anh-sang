@@ -1,28 +1,40 @@
 // paintings/dan-ga-me-con/layers/l1-cot.js — Lớp 1 · Cốt của Bức 4: tờ giấy cong, gà mẹ (mình, hai cánh), mười gà con bằng đất sét dưới đèn xưởng viết trong shader; dáng đi qua positionNode; công bố "công thức tô" (recipe) cho các lớp sau.
-import { Group, InstancedBufferAttribute, InstancedMesh, Mesh, NodeMaterial } from 'three/webgpu';
+import { Group, InstancedBufferAttribute, InstancedMesh, Matrix4, Mesh, NodeMaterial } from 'three/webgpu';
 import {
   Fn, attribute, color, dot, float, instancedBufferAttribute, instancedDynamicBufferAttribute, max, mix, normalWorld, positionWorld, uniform,
   uv, vec3,
 } from 'three/tsl';
 import { CAMERA, FLOOR, HEN, HOMES, SUN, viewAngle } from '../parts/cot-bo-cuc.js';
 import { paperGeometry } from '../parts/cot-giay.js';
-import { PART, chickGeometry, chickPosition, henGeometry, henPosition, henWingPosition } from '../parts/cot-hinh-ga.js';
+import {
+  HEN_SHAPE, PART, chickGeometry, chickPosition, henGeometry, henPosition, henWingPosition, placement,
+} from '../parts/cot-hinh-ga.js';
 
 export const id = 'cot';
 
 export const knobs = [
   // Số vòng quanh của mỗi khối: ít thì gà thành khối nhiều mặt. Dựng lại hình, không biên dịch lại. Mặc định 32: hai mặt kề nhau của mọi
   // khối gãy dưới 20° (mình gà mẹ, cầu kéo dãn, tới 18,6°; khối dẹt như cánh, bàn chân có nhiều vòng hơn: `detail` ở parts/cot-hinh-ga.js),
-  // dưới góc mà Bản nét bắt đầu coi là nếp gấp (chừng 21°).
+  // dưới góc mà Bản nét bắt đầu coi là nếp gấp (chừng 21°). Riêng cánh ong mỏng 0,09 lần gãy 95°: vành của nó là nét viền.
   { id: 'segments', via: 'rebuild', min: 8, max: 48, step: 4, value: 32 },
   { id: 'wireframe', kind: 'bool', via: 'rebuild', value: false },
 ];
 
-/** Hướng nhìn của tranh (đơn vị, từ điểm nhìn về camera): Tấm bìa phẳng dẹt gà theo hướng này; Bản nét vẽ con ngươi phía này. */
+/** Hướng nhìn của tranh (đơn vị, từ điểm nhìn về camera): Tấm bìa phẳng dẹt gà theo hướng này. */
 const VIEW = (() => {
   const d = CAMERA.position.map((v, i) => v - CAMERA.target[i]);
   return d.map((v) => v / Math.hypot(...d));
 })();
+
+/**
+ * Ma trận đưa điểm thế giới về khung của khối mình gà mẹ ở dáng nghỉ, nơi mặt khối là cầu đơn vị: cùng phép đặt với henGeometry (khối đặt
+ * bằng placement(), xoay theo HEN.heading, dời tới HEN.at). Bản nét đo chỗ cánh áp vào sườn bằng nó.
+ */
+function henBodyFrame() {
+  const body = HEN_SHAPE.body.find((s) => s.part === 'BODY');
+  const place = new Matrix4().makeTranslation(HEN.at[0], 0, HEN.at[1]).multiply(new Matrix4().makeRotationY(HEN.heading));
+  return place.multiply(placement(body)).multiply(new Matrix4().makeScale(body.r, body.r, body.r)).invert();
+}
 
 /**
  * @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx
@@ -124,8 +136,10 @@ export function createLayer(ctx, shared) {
     pixel,
     paper,
     PART,
-    view,
-    hen: { group: hen, body: henBody, wingL, wingR, wing: henWing, nod: henNod, look: henLook, scratch: henScratch },
+    // bodyFrame: điểm thế giới → khung của khối mình (mặt khối là cầu đơn vị), ở dáng nghỉ: Bản nét vẽ viền cánh chỗ cánh áp sườn.
+    hen: {
+      group: hen, body: henBody, wingL, wingR, wing: henWing, nod: henNod, look: henLook, scratch: henScratch, bodyFrame: henBodyFrame(),
+    },
     chicks: { mesh: chicks, pose: poseAttr, head: headAttr },
   };
 

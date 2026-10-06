@@ -1,4 +1,4 @@
-// tests/paintings/dan-ga-me-con/cot-hinh-ga.test.js — hình gà đủ phần (spec §20.3) và chỗ của chúng: phần nào của gà mẹ, gà con có trong geometry; đầu mỏ khớp CHICK; khớp của gà mẹ ở tọa độ thế giới; con trèo lưng, con nấp bụng sát mẹ mà không lún vào mọi khối của mẹ (đọc chỗ thật qua placement()); ở góc nhìn của tranh thấy được cả mười con.
+// tests/paintings/dan-ga-me-con/cot-hinh-ga.test.js — hình gà đủ phần (spec §20.3) và chỗ của chúng: phần nào của gà mẹ, gà con có trong geometry; đầu mỏ khớp CHICK; khớp của gà mẹ ở tọa độ thế giới; cực của cầu mắt ở giữa chỏm mắt; con trèo lưng, con nấp bụng sát mẹ mà không lún vào mọi khối của mẹ (đọc chỗ thật qua placement()); ở góc nhìn của tranh thấy được cả mười con.
 import { describe, it, expect } from 'vitest';
 import { ConeGeometry, CylinderGeometry, Matrix4, Mesh, MeshBasicMaterial, Raycaster, SphereGeometry, Vector2, Vector3 } from 'three/webgpu';
 import { createCamera } from '../../../src/engine/gpu/camera.js';
@@ -48,10 +48,12 @@ const centerOf = (part) => CHICK_SHAPE.find((s) => s.part === part).at;
 const chickFeet = () => CHICK_SHAPE.filter((s) => s.part === 'LEG').map((s) => [s.at[0], s.at[1] - s.h / 2, s.at[2]]);
 
 describe('cot-hinh-ga', () => {
-  it('gà con đủ phần: mình, đuôi, chân, cánh, đầu, mỏ, mắt; gà mẹ: mình có cả mào và con ong, hai cánh là hai geometry riêng', () => {
+  it('gà con đủ phần: mình, đuôi, chân, cánh, đầu, mỏ, mắt; gà mẹ: mình có cả mào và con ong (thân, cánh ong), hai cánh là hai geometry riêng', () => {
     expect(named(partsOf(chickGeometry({ segments: SEGMENTS })))).toEqual(['BEAK', 'BODY', 'EYE', 'HEAD', 'LEG', 'TAIL', 'WING']);
     const hen = henGeometry({ segments: SEGMENTS });
-    expect(named(partsOf(hen.body))).toEqual(['BEAK', 'BEE', 'BODY', 'COMB', 'EYE', 'HEAD', 'LEG', 'TAIL']);
+    expect(named(partsOf(hen.body))).toEqual(['BEAK', 'BEE', 'BEE_WING', 'BODY', 'COMB', 'EYE', 'HEAD', 'LEG', 'TAIL']);
+    // Cánh ong là phần riêng: vằn của Bản nét chỉ ở thân ong. Mọi phần của ong đi theo đầu (từ HEAD trở lên).
+    expect(Math.min(PART.BEE, PART.BEE_WING)).toBeGreaterThan(PART.HEAD);
     expect(named(partsOf(hen.wingL))).toEqual(['WING']);
     expect(named(partsOf(hen.wingR))).toEqual(['WING']);
     // Mỗi geometry có đủ thuộc tính cho các lớp sau: pháp tuyến (nấc sáng), UV (nét trong của Task 5), part.
@@ -85,6 +87,28 @@ describe('cot-hinh-ga', () => {
     expect(HEN_JOINTS.shoulderR[2]).toBeLessThan(0);
     expect(HEN_JOINTS.center).toEqual([HEN.at[0], HEN.height / 2, HEN.at[1]]);
     expect(HEN_JOINTS.neck[0], 'cổ ở phía trước tâm mình').toBeLessThan(HEN.at[0] - 0.5);
+  });
+
+  it('mắt (gà con, gà mẹ, cả hai bên): đỉnh có uv.y = 1 (cực trên của cầu mắt) nằm đúng hướng từ tâm đầu ra tâm mắt; Bản nét vẽ vòng mắt và con ngươi quanh cực ấy', () => {
+    // Gà mẹ dựng sẵn ở tọa độ thế giới: đưa đỉnh về khung của mẹ trước khi so với bảng khối.
+    for (const [shapes, geometry, back] of [
+      [CHICK_SHAPE, chickGeometry({ segments: SEGMENTS }), (v) => v],
+      [HEN_SHAPE.body, henGeometry({ segments: SEGMENTS }).body, toHen],
+    ]) {
+      const head = shapes.find((s) => s.part === 'HEAD');
+      const { position, part, uv } = geometry.attributes;
+      for (const eye of shapes.filter((s) => s.part === 'EYE')) {
+        const out = new Vector3(...eye.at).sub(new Vector3(...head.at)).normalize();
+        const poles = [];
+        for (let i = 0; i < position.count; i += 1) {
+          if (part.getX(i) !== PART.EYE || uv.getY(i) < 0.9999) continue;
+          const p = new Vector3(...back([position.getX(i), position.getY(i), position.getZ(i)]));
+          if (Math.sign(p.x) === Math.sign(eye.at[0])) poles.push(p);
+        }
+        expect(poles.length, `mắt ở ${eye.at}`).toBeGreaterThan(0);
+        for (const p of poles) expect(p.sub(new Vector3(...eye.at)).normalize().dot(out), `mắt ở ${eye.at}`).toBeCloseTo(1, 6);
+      }
+    }
   });
 
   it('phép thử "nằm trong khối" khớp hình thật của three: mọi đỉnh của từng khối gà mẹ (cầu xoay, nón dẹt, trụ) co 1% về tâm thì trong, nở 1% thì ngoài', () => {

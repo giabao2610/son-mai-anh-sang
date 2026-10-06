@@ -1,6 +1,8 @@
-// e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; chữ của trang nằm trên ván tối; độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ; tranh tự khép lại (kéo rồi buông thì camera về góc của tranh); (Task 4–9) các lớp, cử chỉ, chất lượng.
+// e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; chữ của trang nằm trên ván tối; độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ, có nét trong, lệch bản, không vệt mực ở mép khung, hai thí nghiệm; tranh tự khép lại (kéo rồi buông thì camera về góc của tranh); (Task 6–9) các lớp, cử chỉ, chất lượng.
 import { test, expect } from '@playwright/test';
-import { STAGE_ONLY, waitForSettled, waitForFrames, canvasRegions, collectConsole, gpuReport, twoFrames } from './helpers.js';
+import {
+  STAGE_ONLY, waitForSettled, waitForFrames, canvasRegions, collectConsole, gpuReport, twoFrames, toggleExperiment,
+} from './helpers.js';
 
 /** Tag của test khói: nếu CI bật ciWebgpuSmoke cho Bức 4 (Task 13), job WebGPU chỉ chạy các test này. */
 const SMOKE = { tag: '@khoi' };
@@ -17,6 +19,14 @@ const WALL = { x0: 0.25, y0: 0.21, x1: 0.4, y1: 0.33 };
 const HEN = { x0: 0.455, y0: 0.46, x1: 0.495, y1: 0.495 };
 const LEFT_EDGE = { x0: 0.15, y0: 0.3, x1: 0.19, y1: 0.7 };
 const FLOOR = { x0: 0.18, y0: 0.65, x1: 0.24, y1: 0.745 };
+/** Giữa tờ giấy: gà mẹ và sáu gà con quanh mẹ (viền, vảy lông, mắt, cánh của Bản nét đều ở đây). */
+const PAPER_MID = { x0: 0.3, y0: 0.4, x1: 0.7, y1: 0.72 };
+/**
+ * Phóng to 2,5 lần (quanh tâm khung): tờ giấy phủ kín khung. Hàng điểm ảnh sát mép dưới (sàn trống, bên phải các chân gà) và bốn hàng sàn
+ * ngay phía trên nó (gần, để vignette của Phủ bóng gần như bằng nhau).
+ */
+const ZOOM_BOTTOM = { x0: 0.75, y0: 0.9975, x1: 0.97, y1: 1 };
+const ZOOM_ABOVE = { x0: 0.75, y0: 0.985, x1: 0.97, y1: 0.995 };
 
 /**
  * Khung tờ giấy trên trang (px CSS), đo trên điểm ảnh của canvas (đã ẩn chữ): hàng có hơn 15% điểm ảnh sáng (giấy, gà) thuộc tờ giấy; cột
@@ -126,6 +136,67 @@ test.describe('Đàn Gà Mẹ Con · khung', () => {
     expect(Math.abs(withInk.floor.mean - without.floor.mean), 'mặt sàn không có nét').toBeLessThan(0.01);
     expect(await calls(), 'Bản nét đọc thẳng texture độ sâu: không thêm lượt vẽ').toBe(before);
     expect(before).toBeLessThanOrEqual(30);
+  });
+});
+
+test.describe('Đàn Gà Mẹ Con · bản nét', () => {
+  test.describe.configure({ timeout: 180_000 });
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  test('mài Bản nét về 0 thì giữa tờ giấy sáng hẳn lên: viền, vảy lông, mắt, cánh đều là mực của Bản nét', SMOKE, async ({ page }, testInfo) => {
+    const log = collectConsole(page);
+    await open(page, testInfo, 60);
+    const withInk = await canvasRegions(page, { mid: PAPER_MID });
+    await page.screenshot({ path: testInfo.outputPath('co-net.png') });
+    await page.evaluate(() => window.__sma.setWeight('ban-net', 0));
+    await twoFrames(page);
+    const without = await canvasRegions(page, { mid: PAPER_MID });
+    expect(withInk.mid.mean, `có nét ${withInk.mid.mean.toFixed(3)}, không nét ${without.mid.mean.toFixed(3)}`).toBeLessThan(without.mid.mean - 0.02);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('lệch bản: misregister 6 thì viền ở mép giấy dời đi (ảnh khác lúc 0); không lỗi', async ({ page }, testInfo) => {
+    const log = collectConsole(page);
+    await open(page, testInfo, 30);
+    await page.evaluate(() => window.__sma.restore({ knobs: { 'ban-net.misregister': 0 } })); // restore vẽ lại khung đứng yên
+    const aligned = await canvasRegions(page, { edge: LEFT_EDGE });
+    await page.evaluate(() => window.__sma.restore({ knobs: { 'ban-net.misregister': 6 } }));
+    const shifted = await canvasRegions(page, { edge: LEFT_EDGE });
+    await page.screenshot({ path: testInfo.outputPath('lech-ban-6.png') });
+    expect(shifted.edge.checksum).not.toBe(aligned.edge.checksum);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('phóng to 2,5 lần cho tờ giấy chạm khung: không có vệt mực giả dọc mép khung (mẫu độ sâu ra ngoài khung bị bỏ)', async ({ page }, testInfo) => {
+    // Mẫu ngoài khung đọc điểm ảnh ở mép (Phụ lục A.99). Không lệch bản thì mẫu dưới của hàng sát mép dưới đọc lại chính điểm giữa: mặt sàn
+    // nghiêng ra góc gãy 70°, và hàng ấy thành vệt mực khi chưa bỏ cặp mẫu ngoài khung.
+    const log = collectConsole(page);
+    await open(page, testInfo, 30);
+    const box = await page.locator('[data-stage] canvas').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.wheel(0, -3000); // OrbitControls: zoom kẹp ở 2,5 (CameraSpec.zoom)
+    await page.evaluate(() => window.__sma.restore({ knobs: { 'ban-net.misregister': 0 } })); // vẽ lại khung đứng yên với camera mới
+    const r = await canvasRegions(page, { bottom: ZOOM_BOTTOM, above: ZOOM_ABOVE });
+    await page.screenshot({ path: testInfo.outputPath('zoom-2.5.png') });
+    expect(Math.abs(r.bottom.mean - r.above.mean), `mép dưới ${r.bottom.mean.toFixed(3)}, ngay trên ${r.above.mean.toFixed(3)}`).toBeLessThan(0.02);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('bật lần lượt Chỉ bản nét và Dò cạnh theo màu: ảnh đổi, không lỗi console', async ({ page }, testInfo) => {
+    const log = collectConsole(page);
+    await open(page, testInfo, 30);
+    const before = await canvasRegions(page, { mid: PAPER_MID });
+    for (const exp of ['chiNet', 'netTheoMau']) {
+      await toggleExperiment(page, 'ban-net', exp, true);
+      await twoFrames(page);
+      const on = await canvasRegions(page, { mid: PAPER_MID });
+      await page.screenshot({ path: testInfo.outputPath(`${exp}.png`) });
+      expect(on.mid.checksum, exp).not.toBe(before.mid.checksum);
+      await toggleExperiment(page, 'ban-net', exp, false);
+    }
+    expect(log.errors).toEqual([]);
   });
 });
 

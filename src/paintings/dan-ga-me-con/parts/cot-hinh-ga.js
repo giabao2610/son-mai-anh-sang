@@ -4,8 +4,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Fn, abs, attribute, cos, cross, dot, float, normalLocal, positionLocal, sin, step, vec3 } from 'three/tsl';
 import { CHICK, HEN } from './cot-bo-cuc.js';
 
-/** Phần của hình gà (thuộc tính `part`, số thực). Mọi phần từ HEAD trở lên đi theo đầu khi cúi, gật, ngoảnh. */
-export const PART = Object.freeze({ BODY: 0, TAIL: 1, LEG: 2, WING: 3, HEAD: 4, BEAK: 5, COMB: 6, EYE: 7, BEE: 8 });
+/** Phần của hình gà (thuộc tính `part`, số thực). Mọi phần từ HEAD trở lên đi theo đầu. Cánh ong tách khỏi thân ong: vằn chỉ ở thân. */
+export const PART = Object.freeze({ BODY: 0, TAIL: 1, LEG: 2, WING: 3, HEAD: 4, BEAK: 5, COMB: 6, EYE: 7, BEE: 8, BEE_WING: 9 });
 
 const RAD = Math.PI / 180;
 /** Hướng của đỉnh nón: đuôi gà con chĩa ra sau (−z), ngóc lên 35°; đuôi gà mẹ ngóc lên 55°; mỏ chĩa ra trước (+z). */
@@ -27,6 +27,16 @@ const pair = (shape) => [
   shape,
   { ...shape, at: [-shape.at[0], shape.at[1], shape.at[2]], tilt: shape.tilt && [shape.tilt[0], -shape.tilt[1], -shape.tilt[2]] },
 ];
+/**
+ * Mắt: cầu lún vào đầu, chỉ ló ra một chỏm quanh hướng từ tâm đầu ra tâm mắt. Xoay (x rồi y) cho cực trên của cầu (uv.y = 1) nằm giữa chỏm:
+ * Bản nét vẽ vòng mắt và con ngươi theo góc tính từ cực ấy.
+ */
+const eye = (r, head, at) => {
+  const [x, y, z] = new Vector3(...at).sub(new Vector3(...head)).normalize().toArray();
+  return ball('EYE', r, [1, 1, 1], at, { detail: 0.75, tilt: [Math.acos(y), Math.atan2(x, z), 0] });
+};
+const CHICK_HEAD = [0, 0.88, 0.38];
+const HEN_HEAD = [0, 2.7, 1.6];
 
 /**
  * Gà con trong khung của nó (chân ở gốc, trước +z, lên +y): tròn mập như tượng đất (spec §20.3); mỏ, đuôi là khối đơn giản. Số thiết kế,
@@ -37,9 +47,9 @@ export const CHICK_SHAPE = Object.freeze([
   cone('TAIL', 0.14, 0.3, TAIL, [0, 0.62, -0.6]),
   ...pair(rod('LEG', 0.04, 0.22, [0.14, 0.11, 0])),
   ...pair(ball('WING', 0.3, [0.35, 0.6, 1], [0.4, 0.5, -0.05], { detail: 1.75 })),
-  ball('HEAD', 0.3, [1, 1, 1], [0, 0.88, 0.38]),
+  ball('HEAD', 0.3, [1, 1, 1], CHICK_HEAD),
   cone('BEAK', 0.07, 0.16, AHEAD, [0, 0.86, 0.72]),
-  ...pair(ball('EYE', 0.045, [1, 1, 1], [0.2, 0.95, 0.55], { detail: 0.75 })),
+  ...pair(eye(0.045, CHICK_HEAD, [0.2, 0.95, 0.55])),
 ]);
 
 // Cánh gà mẹ: cầu dẹt áp vào sườn, đuôi cánh hơi hếch lên và quặp vào thân (mình hẹp dần về phía sau, cánh thẳng thì chĩa ra như mái chèo).
@@ -47,8 +57,8 @@ const [wingL, wingR] = pair(ball('WING', 1, [0.3, 0.55, 1.1], [0.95, 1.55, -0.25
 /**
  * Gà mẹ trong khung của nó (như gà con): mình và đầu như bản khung; phần nhỏ (chân, mỏ, mắt) lấy số của gà con nhân chừng 2,7; đuôi là cái
  * quạt (nón dẹt) mọc từ phía trên lưng sau, cánh to hơn để thành mảng màu. Mào là ba cầu nhỏ trên đỉnh đầu; con ong ngậm ở đầu mỏ, có hai
- * cánh mỏng (mọi phần của ong mang PART.BEE, nên đi theo đầu). Hai cánh là hai geometry riêng: cánh trái (+x, phía người xem khi mẹ quay
- * sang −x) và cánh phải.
+ * cánh mỏng (thân BEE, cánh BEE_WING: đều sau HEAD, nên đi theo đầu). Hai cánh là hai geometry riêng: cánh trái (+x, phía người xem khi mẹ
+ * quay sang −x) và cánh phải.
  */
 export const HEN_SHAPE = Object.freeze({
   body: Object.freeze([
@@ -56,13 +66,13 @@ export const HEN_SHAPE = Object.freeze({
     cone('TAIL', 0.62, 1.4, HEN_TAIL, [0, 2.3, -1.75], { flat: 0.45, detail: 1.25 }),
     ...pair(rod('LEG', 0.11, 0.6, [0.38, 0.3, 0])),
     ...pair(ball('LEG', 0.2, [0.8, 0.3, 1.4], [0.38, 0.06, 0.12], { detail: 2.25 })), // bàn chân: cầu dẹt chĩa ra trước, đáy chạm sàn
-    ball('HEAD', 0.6, [1, 1, 1], [0, 2.7, 1.6]),
+    ball('HEAD', 0.6, [1, 1, 1], HEN_HEAD),
     cone('BEAK', 0.19, 0.43, AHEAD, [0, 2.62, 2.36]),
     ...[[3.25, 1.3], [3.32, 1.58], [3.24, 1.86]].map(([y, z]) => ball('COMB', 0.16, [0.6, 1, 1], [0, y, z])),
-    ...pair(ball('EYE', 0.1, [1, 1, 1], [0.4, 2.84, 1.94], { detail: 0.75 })),
+    ...pair(eye(0.1, HEN_HEAD, [0.4, 2.84, 1.94])),
     ball('BEE', 0.16, [1, 0.8, 1.4], [0, 2.6, 2.76]),
     // Cánh ong mỏng 0,09 lần: vành gãy gắt ở số vòng nào cũng vậy, nên vành thành nét viền của cánh, như nét khắc.
-    ...pair(ball('BEE', 0.17, [0.09, 0.65, 1], [0.05, 2.8, 2.72], { tilt: [-0.5, 0, 0.35] })),
+    ...pair(ball('BEE_WING', 0.17, [0.09, 0.65, 1], [0.05, 2.8, 2.72], { tilt: [-0.5, 0, 0.35] })),
   ]),
   wingL,
   wingR,

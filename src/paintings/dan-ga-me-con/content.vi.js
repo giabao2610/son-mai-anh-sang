@@ -63,23 +63,43 @@ export default {
       },
     },
     'ban-net': {
-      understand: 'Bản nét là nét mực đen in sau cùng, như ván khắc nét của tranh Đông Hồ. Không nét nào được vẽ sẵn: cảnh vẽ xong thì '
-        + 'mỗi điểm ảnh đọc ảnh độ sâu ở tám điểm quanh nó. Trên một mặt phẳng, độ sâu hai bên cộng lại bằng hai lần độ sâu ở giữa, '
-        + 'dù mặt nghiêng tới đâu; lệch hẳn là có mép vật, và điểm ảnh ấy thành mực. Nếp gấp, như chỗ đầu nối mình, thì đo bằng góc: mặt '
-        + 'gãy quá chừng 30° là thành nét. Đo góc chứ không đo độ dốc, vì gần mép khối mặt gần như dựng đứng, nên hai mặt kề nhau của '
-        + 'khối đa diện dù gãy ít cũng chênh độ dốc rất lớn. Với camera trực giao, ảnh độ sâu đã tuyến tính nên đọc thẳng được, không tốn '
-        + 'thêm lượt vẽ nào.',
+      understand: 'Bản nét là nét mực đen in sau cùng, như ván khắc nét của tranh Đông Hồ. Viền không vẽ sẵn: cảnh vẽ xong, mỗi điểm '
+        + 'ảnh đọc ảnh độ sâu ở tám điểm quanh nó. Trên một mặt phẳng, độ sâu hai bên cộng lại bằng hai lần độ sâu ở giữa, dù mặt '
+        + 'nghiêng tới đâu; lệch hẳn là có mép vật, và điểm ảnh ấy thành mực. Nếp gấp, như chỗ đầu nối mình, đo bằng góc gãy của mặt. '
+        + 'Nét trong (vảy lông, mắt, cánh, đuôi, vằn ong) thì vẽ ngay trên vật, bằng hàm khoảng cách trên UV của từng phần. Mực không '
+        + 'đều như mực quét trên ván, và bản nét in lệch một chút so với bản màu, như tranh in tay. Với camera trực giao, ảnh độ sâu đã '
+        + 'tuyến tính nên đọc thẳng được, không tốn thêm lượt vẽ nào.',
       learned: [
-        'Dò cạnh là một bước hậu kỳ: đọc ảnh độ sâu ở các điểm lân cận, không cần biết vật nào là vật nào.',
-        'Độ lệch khỏi mặt phẳng (đạo hàm bậc hai) bằng 0 trên mọi mặt phẳng, nên mặt sàn nghiêng không thành nét.',
-        'Mép tờ giấy cũng là một bậc độ sâu (giấy đứng trước khoảng trống), nên khung tranh tự có nét.',
-        'Nếp gấp đo bằng góc gãy của mặt, tính từ độ dốc của độ sâu hai bên: khối cầu đủ nhiều mặt thì không thành vòng nét.',
+        'Dò cạnh là một bước hậu kỳ: đọc ảnh độ sâu ở các điểm lân cận, không cần biết vật nào là vật nào; mép tờ giấy cũng là một bậc '
+          + 'độ sâu, nên khung tranh tự có nét.',
+        'Độ lệch khỏi mặt phẳng (đạo hàm bậc hai) bằng 0 trên mọi mặt phẳng, nên mặt sàn nghiêng không thành nét; nếp gấp thì đo bằng góc '
+          + 'gãy của mặt.',
+        'Nét trong là hàm khoảng cách trên UV của từng phần: điểm nào cách đường nét dưới nửa bề dày thì thành mực, nên nét đi theo vật '
+          + 'và to ra khi phóng to.',
+        'Dò cạnh trên ảnh màu (Sobel) chỉ thấy ranh màu: hai mảng cùng màu chồng nhau thì mất nét, còn ảnh độ sâu thì vẫn thấy.',
       ],
       readMore: [
         { title: 'Roystan · Outline shader', url: 'https://roystan.net/articles/outline-shader/' },
         { title: 'Dò cạnh (Wikipedia)', url: 'https://en.wikipedia.org/wiki/Edge_detection' },
       ],
-      knobs: { lineWidth: 'Độ dày nét (điểm ảnh)', threshold: 'Bậc độ sâu thành viền', crease: 'Độ đậm của nét nếp gấp' },
+      knobs: {
+        lineWidth: 'Độ dày nét (điểm ảnh)',
+        threshold: 'Bậc độ sâu thành viền',
+        crease: 'Độ đậm của nét nếp gấp',
+        misregister: 'Lệch bản (điểm ảnh)',
+      },
+      experiments: {
+        chiNet: {
+          label: 'Chỉ bản nét',
+          explain: 'Màu in thành trắng giấy, chỉ còn nét đen, như bản nét in thử riêng trước khi in màu. Thấy rõ đâu là viền dò trên ảnh '
+            + 'độ sâu (quanh mọi vật, ở chỗ đầu nối mình), đâu là nét trong vẽ ngay trên vật (vảy lông, mắt, cánh, đuôi).',
+        },
+        netTheoMau: {
+          label: 'Dò cạnh theo màu',
+          explain: 'Dò cạnh trên độ sáng của ảnh màu (Sobel) thay cho ảnh độ sâu. Nét mọc ở ranh của nấc sáng và hai bên nét trong; còn '
+            + 'chỗ hai mảng cùng màu chồng nhau, như đầu gà mẹ trước mình cùng màu vàng hòe, thì mất nét: ảnh màu không biết vật nào ở trước.',
+        },
+      },
       taps: { 'truoc-net': 'Trước khi in bản nét' },
     },
     'phu-bong': { ...phuBong.layers['phu-bong'] },

@@ -1,9 +1,10 @@
-// tests/paintings/dan-ga-me-con/cot.test.js — Lớp 1 · Cốt của Bức 4: tờ giấy, gà mẹ (mình, hai cánh), mười gà con bằng NodeMaterial gốc tô theo recipe; dáng đi qua positionNode (thuộc tính instance, bốn uniform); Tấm bìa phẳng không biên dịch lại; camera trực giao; không đèn, không shadow map; dịch được ở hai backend.
+// tests/paintings/dan-ga-me-con/cot.test.js — Lớp 1 · Cốt của Bức 4: tờ giấy, gà mẹ (mình, hai cánh), mười gà con bằng NodeMaterial gốc tô theo recipe; dáng đi qua positionNode (thuộc tính instance, bốn uniform); Tấm bìa phẳng không biên dịch lại; khung khối mình gà mẹ cho Bản nét; camera trực giao; không đèn, không shadow map; dịch được ở hai backend.
 import { describe, it, expect } from 'vitest';
-import { DynamicDrawUsage, InstancedMesh, NodeMaterial, OrthographicCamera, Vector3 } from 'three/webgpu';
+import { DynamicDrawUsage, InstancedMesh, Matrix4, NodeMaterial, OrthographicCamera, Vector3 } from 'three/webgpu';
 import meta from '../../../src/paintings/dan-ga-me-con/meta.js';
 import * as painting from '../../../src/paintings/dan-ga-me-con/painting.js';
 import { CAMERA, HEN, HOMES } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
+import { PART } from '../../../src/paintings/dan-ga-me-con/parts/cot-hinh-ga.js';
 import { buildPainting } from '../../helpers/fake-ctx.js';
 import { compileMaterial } from '../../helpers/nodes.js';
 
@@ -90,6 +91,20 @@ describe('l1-cot (Bức 4)', () => {
     const pose = ['wing', 'nod', 'look', 'scratch'].map((k) => shared.cot.hen[k]);
     expect(pose.map((u) => u.name)).toEqual(['henWing', 'henNod', 'henLook', 'henScratch']);
     expect(pose.map((u) => u.value)).toEqual([0, 0, 0, 0]);
+  });
+
+  it('shared.cot.hen.bodyFrame (cho viền cánh của Bản nét) đưa điểm thế giới về khung của khối mình gà mẹ: mọi đỉnh của khối mình trong geometry thật nằm trên mặt cầu đơn vị', () => {
+    const { shared } = build();
+    const { bodyFrame, body } = shared.cot.hen;
+    expect(bodyFrame).toBeInstanceOf(Matrix4);
+    const { position, part } = body.geometry.attributes;
+    let n = 0;
+    for (let i = 0; i < position.count; i += 1) {
+      if (part.getX(i) !== PART.BODY) continue;
+      expect(new Vector3().fromBufferAttribute(position, i).applyMatrix4(bodyFrame).length()).toBeCloseTo(1, 6);
+      n += 1;
+    }
+    expect(n).toBeGreaterThan(100);
   });
 
   it.each(['webgpu', 'webgl2'])('%s: mỗi mesh của gà mẹ đọc đúng uniform dáng của nó; positionNode đọc uniform của Tấm bìa phẳng', (backend) => {

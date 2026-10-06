@@ -3979,12 +3979,14 @@ spec.
   | `xanhDong` | xanh | lá chàm, gỉ đồng | `#41705F` |
   | `muc` | đen | than lá tre | `#221E1A` |
 
-  - Gà mẹ: mình `hoe`; cánh `sonSoi`; đuôi `xanhDong`; mào `sonSoi`; mỏ và chân `hoe`; con ong `hoe`.
+  - Gà mẹ: mình `hoe`; cánh `sonSoi`; đuôi `xanhDong`; mào `sonSoi`; mỏ và chân `hoe`; con ong `hoe` (thân và cánh).
+    - Mắt (gà mẹ và mọi gà con) `diep`, như mắt khắc trên ván: vòng mắt và con ngươi là nét trong của Bản nét (GĐ 8 Task 5), nên mắt đọc
+      được trên mọi màu lông, cả gà con đen lẫn gà con trắng.
     - Không có mảng cổ riêng: Bản màu tô theo phần (`part`), mà cổ là chỗ đầu nối mình, không phải một phần. Muốn có mảng cổ đỏ thì thêm
       một phần NECK vào hình (điểm duyệt ảnh, GĐ 8 Task 4, hỏi Bao).
     - Nét `muc` trên đuôi và vằn của con ong là nét trong của Bản nét (GĐ 8 Task 5), không phải màu in.
   - Gà con: mỗi con một màu như tranh gốc (`hoe`, `sonSoi`, `xanhDong`, `muc`); có con "trắng", tức để màu giấy và chỉ có nét.
-  - Con ong: `hoe` có vằn `muc`. Thóc: `hoe`. Nét: `muc`. Giấy: `diep`.
+  - Con ong: `hoe` có vằn `muc` ở thân; cánh ong là phần riêng (`BEE_WING`), không có vằn. Thóc: `hoe`. Nét: `muc`. Giấy: `diep`.
   - LUT "sơn mài" sinh từ bảng đã ghép như mọi bức. Năm token mới không đổi LUT, vì LUT chỉ đọc `canhGian`, `vangLa`, `cham`.
 - **Thứ tự in của làng quyết thứ tự lớp:** màu in trước (đỏ, xanh, vàng, trắng), bản nét đen in sau cùng (§20.4).
 - **Dáng:** khối tròn, mập, như tượng đất rồi in màu. Mỏ, mào, đuôi là khối đơn giản. Không tả từng sợi lông: lông chỉ có ở nét trong.
@@ -4022,8 +4024,12 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   - Đèn xưởng viết trong shader: một hướng sáng cộng một phần sáng đều, như `HemisphereLight` của hai bức đầu.
 - **Kỹ thuật:**
   - **Hình gà** ghép từ khối cơ bản (cầu kéo dãn, nón, trụ) thành một `BufferGeometry` (`parts/cot-hinh-ga.js`). Mỗi đỉnh mang thuộc tính
-    `part` (mình, đầu, mỏ, mào, cánh, đuôi, chân, mắt, ong), để Bản nét vẽ nét trong và để đầu cúi được.
+    `part` (mình, đầu, mỏ, mào, cánh, đuôi, chân, mắt, thân ong, cánh ong), để Bản nét vẽ nét trong và để đầu cúi được.
     Bảng khối của gà con (`CHICK_SHAPE`) và gà mẹ (`HEN_SHAPE`) nằm ở đó; số chốt ở điểm duyệt ảnh (GĐ 8 Task 4).
+    - Mắt là cầu lún vào đầu, chỉ ló ra một chỏm (chừng 55° quanh hướng từ tâm đầu ra tâm mắt ở gà con, 60° ở gà mẹ). Cầu mắt xoay cho
+      cực trên (uv.y = 1) nằm giữa chỏm, nên Bản nét vẽ vòng mắt và con ngươi theo góc tính từ cực ấy (GĐ 8 Task 5).
+    - Cốt công bố `shared.cot.hen.bodyFrame`: ma trận đưa điểm thế giới về khung của khối mình gà mẹ (mặt khối là cầu đơn vị), ở dáng
+      nghỉ, cho viền cánh của Bản nét.
   - **Mười gà con** là MỘT `InstancedMesh`, ma trận instance giữ đơn vị, `frustumCulled = false` (vị trí thật chỉ có trong shader), như lá
     của Bức 3. Mỗi con mang ba thuộc tính instance riêng:
     - `pose` (x, y, z, hướng) và `head` (góc cúi, 0–1): lớp Đàn gà ghi mỗi khung, nên dùng `instancedDynamicBufferAttribute`;
@@ -4097,8 +4103,8 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
       nét bên trong viền (thấy trên GPU thật ở DPR 2, GĐ 8 Task 4). Góc thì không phụ thuộc mặt nghiêng bao nhiêu: mặt kề nhau của khối gãy
       dưới 20° (lớp 1, `segments`), còn chỗ nối thật gãy nhiều hơn.
     - Góc ở chỗ nối, đo dọc đường giao của hai mặt (góc giữa hai pháp tuyến): đầu vào mình 92–123°, mào 87–90°, chân 68–102°, mỏ 42–60°,
-      mắt 48–51°, đuôi 34–69°, cánh gà con 52–90°. Riêng cánh gà mẹ áp sát sườn: có đoạn chỉ gãy 13–20° (giữa 32°), nên nét quanh cánh mẹ
-      đứt ở chỗ cánh nằm sát sườn, và ở đó chỉ còn ranh màu (đỏ trên vàng).
+      mắt 48–51°, đuôi 34–69°, cánh gà con 52–90°. Riêng cánh gà mẹ áp sát sườn: có đoạn chỉ gãy 13–20° (giữa 32°), nên ảnh độ sâu không
+      có nét ở chỗ cánh nằm sát sườn. Nét trong vẽ viền cánh ở đó (ở dưới).
 
     Vì sao không dùng Sobel trên độ sâu: ở góc nhìn của tranh, độ sâu của mặt sàn đổi chừng 0,02 đơn vị mỗi điểm ảnh (khung cao 13,2 trên
     1600 điểm ảnh thiết bị, nhìn chếch 20°); kéo xuống góc thấp nhất và ở DPR 1 thì gấp bốn. Độ dốc của Sobel trên mặt sàn khi ấy vượt
@@ -4110,21 +4116,46 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     trên GPU thật, GĐ 8 Task 1).
   - Mép tờ giấy cũng là một bậc độ sâu (giấy đứng trước khoảng trống), nên khung tranh tự có nét.
   - Thóc không ghi độ sâu (lớp 5), nên không bao giờ thành chấm đen.
-- **Nét trong** (`recipe.ink`, `parts/ban-net-net-trong.js`): hàm khoảng cách 2D trên UV của từng phần.
-  - Vảy lông là chuỗi cung, mắt là vòng tròn có chấm, cánh có ba nét lông.
-  - Nét dày theo đơn vị cảnh, nên to ra khi zoom.
-- **Mực không đều:** độ đậm của nét nhân với một noise thưa, như mực quét trên ván in.
-- **Lệch bản** (`misregister`): viền lấy mẫu ở `uv + lệch` (tính bằng điểm ảnh, theo một hướng cố định), nên bản nét lệch khỏi màu như
-  tranh in tay. Nét trong nằm trong màu của vật nên không lệch theo; ở 1–2 điểm ảnh thì không thấy.
+  - **Mẫu ngoài khung bị bỏ:** cả hai backend đọc điểm ảnh ở mép cho mẫu ngoài khung (Phụ lục A.99). Mẫu ấy trùng điểm giữa thì mặt sàn
+    nghiêng ra góc gãy 70°, và hàng sát khung thành vệt mực giả khi phóng to tới mức tờ giấy chạm khung (hay khi xoay tranh). Cặp mẫu nào
+    có một mẫu, hay điểm giữa, nằm ngoài texture thì bỏ cả cặp: vẫn chín lần đọc, chỉ nhân 0.
+- **Nét trong** (`recipe.ink`, `parts/ban-net-net-trong.js`): hàm khoảng cách 2D trên UV của từng phần, chỉ trên gà (tờ giấy, thóc không
+  có). Nét dày theo đơn vị cảnh (chừng 0,025, tức 3 điểm ảnh ở DPR 2), nên to ra khi zoom.
+  - **Vảy lông** (mình): hàng cung võng xuống, như vảy cá, hàng trên lệch nửa ô; ở nửa trên của mình (uv.y 0,55–0,88). Gà mẹ 14 cột quanh
+    mình và 8 hàng từ chân lên đỉnh, gà con 8 và 6: ở giữa sườn mỗi hàng cao chừng nửa bề rộng một cột, nên mỗi cung là nửa vòng tròn và
+    đáy cung chạm chỗ hai cung của hàng dưới gặp nhau.
+  - **Mắt:** vòng có chấm trên chính cầu mắt, quanh cực của nó (lớp 1): con ngươi dưới 22° tính từ cực, lòng trắng tới 40°, vòng mực từ
+    40° ra tới mép chỏm. Không đặt theo hướng nhìn của tranh: mắt chỉ là chỏm ló ra khỏi đầu, mà ở góc của tranh, điểm của cầu mắt quay
+    về người xem nằm lệch mép chỏm ở gà mẹ và gà con nấp bụng (chỏm lệch 39°), và nằm hẳn trong đầu ở hai gà con quay đi (56°, 78°; một con
+    lông đen). Con ngươi theo hướng nhìn thì mất ở hai con ấy, vòng theo hướng nhìn thì bị đầu cắt. Vòng có chấm trên chính mắt thì con nào
+    cũng có, chỉ nghiêng đi như hình tròn vẽ trên mặt nghiêng. Mắt luôn đậm (không nhân mực không đều): mắt gà con chỉ chừng 9 điểm ảnh ở
+    DPR 2.
+  - **Cánh:** ba nét lông song song mép, ở nửa dưới phía sau (bầu dục ρ = 0,55, 0,72, 0,88 của cầu dẹt nhìn từ bên). Gà mẹ có thêm viền:
+    mép riêng của cánh (ρ = 1), và chỗ cánh lún vào sườn, đo bằng khoảng cách từ hình ở dáng nghỉ (`positionGeometry`) tới mặt khối mình
+    (`shared.cot.hen.bodyFrame`). Dọc lưng và phía sau, mép riêng của cánh nằm trong mình; mép thấy được là chỗ mặt cánh chui vào sườn
+    (ρ chừng 0,88–0,94), nên viền vẽ ở mép riêng của cánh không thấy được ở đó. Gà con không có viền: cánh con đứng ra khỏi mình, đã có viền
+    dò trên độ sâu.
+  - **Đuôi:** các nét dọc nón đuôi, chụm lại ở chóp (gà mẹ năm nét ở mặt quay ra người xem, gà con hai).
+  - **Con ong:** ba vằn quanh trục dài của thân ong; cánh ong (`BEE_WING`) không có vằn.
+- **Mực không đều:** độ đậm của nét nhân `1 − 0,3·smoothstep(0; 0,6; n)` với n là một noise thưa: phần lớn nét đậm hẳn, chỗ n cao mực mỏng
+  còn 70%, như chỗ ván ăn ít mực. Nét trong lấy noise theo hình gốc của gà (`positionGeometry`, cộng chỉ số màu), nên vết mực đi theo con gà
+  khi nó cúi, chạy; viền lấy noise 2D theo điểm ảnh của màn, vì hậu kỳ không biết điểm ảnh thuộc vật nào, và chỉ tính ở điểm ảnh có mực
+  (nhánh `If`): tính cho mọi điểm ảnh thì tốn chừng 3 ms mỗi khung ở 2560 × 1600, DPR 2 (Mac M2).
+- **Lệch bản** (`misregister`): bản nét in lệch xuống phải so với bản màu, như tờ giấy trượt khi in tay. Hướng trên màn (0,82; 0,57) (x
+  sang phải, y xuống, như `screenUV`) nhân với núm rồi làm tròn tới số nguyên điểm ảnh: 2 là (2, 1), 6 là (5, 3). Điểm ảnh đọc ảnh độ sâu
+  ở phía ngược lại, nên viền ở chỗ Q hiện ra ở Q + lệch. Nét trong nằm trong màu của vật nên không lệch theo; ở 1–2 điểm ảnh thì gần như
+  không thấy.
 - **Chỉ chạy với camera trực giao.** Bức dùng camera phối cảnh mà muốn nét như thế thì bọc độ sâu bằng `convertToTexture`, tốn thêm một
   lượt vẽ.
 - **Núm:** `lineWidth` (1–3 điểm ảnh thiết bị, bước 1, mặc định 2: chỉ số nguyên, vì mẫu độ sâu phải cách nhau số nguyên điểm ảnh),
   `threshold` (bậc độ sâu tối thiểu, đơn vị cảnh; mặc định 0,3, tức 3 cm), `crease` (độ đậm của nét nếp gấp, 0–1), `misregister`
-  (0–6 điểm ảnh, mặc định 1,5; làm tròn như `lineWidth`).
-- **Thí nghiệm:**
-  - "Chỉ bản nét" (`chiNet`): giấy trắng với nét đen, như bản nét in riêng trước khi in màu;
-  - "Dò cạnh theo màu" (`netTheoMau`): dò trên độ sáng của ảnh màu thay cho độ sâu. Nét mọc ở ranh của nấc sáng, và mất ở chỗ hai mảng
-    cùng màu chồng nhau.
+  (0–6 điểm ảnh thiết bị, bước 1, mặc định 2: số nguyên như `lineWidth`, vì độ sâu đọc ở tâm điểm ảnh; shader vẫn làm tròn).
+- **Thí nghiệm** (chỉ đổi uniform, không biên dịch lại):
+  - "Chỉ bản nét" (`chiNet`): màu in của gà thành trắng giấy, chỉ còn nét đen, như bản nét in riêng trước khi in màu. Bọc `recipe.fill`
+    bằng `mix(fill, diep, chiNet · w3)`: Bản nét về 0 thì màu in trở lại, nên mọi trọng số bằng 0 vẫn về đất sét;
+  - "Dò cạnh theo màu" (`netTheoMau`): Sobel trên độ sáng của ảnh màu (scene pass) thay cho độ sâu, cùng lưới, bước và lệch bản. Nét mọc ở
+    ranh của nấc sáng và hai bên nét trong, và mất ở chỗ hai mảng cùng màu chồng nhau (đầu gà mẹ trước mình, cùng vàng hòe). Tám mẫu màu
+    nằm trong nhánh `If` theo uniform của thí nghiệm, nên lúc tắt không đọc thêm texture nào.
 - **Tap:** `truoc-net` (ảnh trước khi có viền).
 - Không có vật riêng.
 
@@ -4402,7 +4433,9 @@ chuyển động ở lại trong bức.
 - Từng lớp, dựng cả bức bằng `buildPainting`:
   - material của các mesh là `NodeMaterial` gốc; mọi material có `emissiveNode`;
   - cảnh không có đèn nào của three, `shadowMap` tắt;
-  - Bản nét có tap `truoc-net`;
+  - Bản nét có tap `truoc-net`; đồ thị màu của gà đọc `w_ban_net` (nét trong), tờ giấy thì không; núm ở hai đầu (`lineWidth` 1 và 3,
+    `threshold` 0,05 và 2, `crease` 0 và 1, `misregister` 0 và 6) dịch được cả lượt cuối lẫn gà; hai thí nghiệm chỉ đổi uniform; tám mẫu
+    Sobel nằm trong nhánh `If`;
   - Cốt: gà mẹ ba mesh có `positionNode`, mỗi mesh đọc đúng uniform dáng của nó; `pose`, `head` là thuộc tính ghi mỗi khung; Tấm bìa
     phẳng chỉ đổi uniform (`material.version` không đổi); dịch được ở `segments` 8 và 48;
   - Bản màu: đồ thị màu của gà đọc `w_ban_mau` và ba núm; núm ở hai đầu dịch được; `pigment` ghi một lần; Tô mịn là kiểu so;
@@ -4421,6 +4454,7 @@ chuyển động ở lại trong bức.
 - Mài:
   - Bản nét về 0 thì tỉ lệ điểm tối trong vùng giấy giảm hẳn;
   - `misregister` bằng 6 thì ảnh khác lúc bằng 0;
+  - phóng to 2,5 lần (tờ giấy chạm khung, không lệch bản): hàng sát mép dưới không tối hơn sàn ngay trên (không vệt mực giả);
   - Giấy điệp về 0 thì vùng giấy về xám đất sét.
 - Độ sâu của camera trực giao: view Độ sâu của Lột lớp không phải một mảng đều (độ lệch chuẩn đủ lớn), và vùng gà sáng hơn vùng vách.
 - Điệp: xoay camera một góc nhỏ thì view Emissive đổi, vì hạt khác lóe lên.
@@ -4990,3 +5024,15 @@ Các mục dưới đây đã được kiểm bằng ba cách:
       Quán tính tắt theo giây của cảnh ở mọi nhịp khung và đúng bằng mặc định ở 60 khung/giây. Test: OrbitControls thật, `rotateLeft(1)`
       rồi buông, 8 giây cảnh ở 10, 30, 60 khung/giây: sai lệch khỏi nhà dưới 0,01° (bỏ dòng đặt `dampingFactor` thì ở 10 khung/giây còn
       chừng 5,5°, ở 30 khung/giây chừng 0,08°). E2e SwiftShader ở máy dựng thử chạy đủ nhanh nên chưa thấy lỗi này.
+99. **Mẫu ngoài khung của texture độ sâu đọc điểm ảnh ở mép, ở cả hai backend** (`renderers/webgpu/nodes/WGSLNodeBuilder.js`,
+    `generateTextureLod`; GĐ 8 Task 5, đọc mã WGSL sinh ra và chạy thật trên GPU thật lẫn SwiftShader):
+    - WebGPU: texture độ sâu lọc kiểu nearest là texture không lọc được, đọc bằng `textureLoad`. three kẹp uv theo cách quấn của texture
+      (`ClampToEdgeWrapping`: `tsl_coord_clampS_clampT_2d`), rồi kẹp chỉ số điểm ảnh vào [0, cỡ − 1]. Lần đọc ngoài khung vì vậy không bao
+      giờ tới GPU (không phải chuyện "tùy máy" của WGSL), mà ra điểm ảnh ở mép.
+    - WebGL2: `texture()` với `CLAMP_TO_EDGE` cũng ra điểm ảnh ở mép.
+    - Hệ quả cho dò cạnh lấy mẫu lân cận: ở hàng sát khung, mẫu ngoài khung có thể trùng chính điểm giữa, nên độ lệch khỏi mặt phẳng thành
+      hiệu bậc một và góc gãy của mặt sàn nghiêng 20° là 70°: một vệt mực giả dọc khung. Bản nét của Bức 4 bỏ cặp mẫu có điểm ngoài khung
+      (§20.4 lớp 3). E2e: phóng to 2,5 lần, không lệch bản: chưa bỏ thì hàng sát mép dưới tối hơn sàn ngay trên 0,07 (độ sáng 0–1), bỏ rồi
+      còn 0,004. Lệch bản mặc định (2, 1) dời điểm giữa lên một hàng, mẫu ngoài khung không trùng điểm giữa nữa, góc gãy chỉ còn chừng 16°,
+      nên ở góc của tranh vệt giả không hiện; kéo xoay chừng 65° (mặt sàn nghiêng theo chiều ngang) rồi phóng to thì nó hiện dọc mép trái
+      của khung (thấy trên GPU thật).

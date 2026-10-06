@@ -45,7 +45,11 @@ export default {
     {
       id: 'ban-net',
       name: 'Bản nét',
-      files: ['paintings/dan-ga-me-con/layers/l3-ban-net.js', 'paintings/dan-ga-me-con/parts/ban-net-do-canh.js'],
+      files: [
+        'paintings/dan-ga-me-con/layers/l3-ban-net.js',
+        'paintings/dan-ga-me-con/parts/ban-net-do-canh.js',
+        'paintings/dan-ga-me-con/parts/ban-net-net-trong.js',
+      ],
     },
     phuBong,
   ],
