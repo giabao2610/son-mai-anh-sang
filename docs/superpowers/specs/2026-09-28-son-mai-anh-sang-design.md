@@ -3935,7 +3935,8 @@ spec.
 - **Hai cử chỉ** (`setup().onGesture`). Công cụ học vẫn được ưu tiên như ở mọi bức.
   1. **Chạm là rắc thóc** (`'tap'`):
      - Tia của camera trực giao cắt mặt sàn (y = 0) ở chỗ chạm. Chạm ra ngoài sàn (lên vách, ra ván) thì lấy điểm gần nhất trên sàn,
-       nên chạm ở đâu cũng có phản hồi.
+       nên chạm ở đâu cũng có phản hồi. Chạm sát mép sàn thì thóc rơi vào trong một chút (tới 1,25), đúng tâm vòng gà con đứng quanh
+       (§20.5), để mỏ chạm sàn ngay trên nắm thóc.
      - Một nắm chừng 120 hạt (núm `handful`) văng ra từ cao chừng 3 (tầm tay), tỏa hình nón, rơi theo trọng lực, nảy một hai lần, lăn rồi
        nằm yên.
        - Trọng lực là của Trái Đất: 9,81 m/s², tức 98,1 đơn vị/s². Thóc chạm sàn chừng 0,25 giây sau khi văng, như rắc thật.
@@ -4252,7 +4253,9 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   cách 1,75 còn lún, từ 1,78 hết; lấy 1,85). Ba luật:
   1. **Nắm rơi bên cạnh mẹ.** Gà con xúm quanh nắm trên vòng bán kính 1 và nhảy tối đa 0,25, nên tâm vòng phải cách xương sống từ 3,1. Điểm
      rắc mà tâm vòng của nó (kéo vào trong sàn) gần hơn thì dời tới điểm gần nhất trong sàn thỏa điều ấy. Nắm ném vào mẹ, sát mẹ, hay chạm
-     lên vách (điểm rắc kẹp về mép sau sàn, ngay sau lưng mẹ) thì rơi bên cạnh mẹ; `takeScatters` trả điểm đã dời, lớp Đàn gà rắc thóc ở đó.
+     lên vách (điểm rắc kẹp về mép sau sàn, ngay sau lưng mẹ) thì rơi bên cạnh mẹ. Rồi điểm rắc kéo vào trong sàn thành chính tâm vòng (GĐ 8
+     Task 8): `takeScatters` trả tâm vòng ấy, lớp Đàn gà rắc thóc ở đó, nên thóc nằm đúng giữa các con. Trước đó thóc rơi ở điểm chạm, mà
+     chạm sát mép thì tâm vòng bị kéo vào tới 1,25: các con mổ cách nắm thóc cả đơn vị, không trúng hạt nào.
   2. **Đường chạy không cắt vòng cấm.** Đường thẳng cắt vòng cấm thì vòng qua đầu hay đuôi mẹ, bên nào gần: một đường gấp khúc, cả đường chung
      MỘT lần tăng giảm tốc (không dừng ở góc), hướng quay dần trong 0,3 giây sau mỗi góc.
   3. **Tới chỗ núp không quay mỏ vào mẹ.** Sáu trong tám chỗ núp nằm trong vòng cấm. Gà con chạy tới điểm dừng ngoài vòng cấm (cách vòng 0,35,
@@ -4271,14 +4274,22 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     - Các con chạy tới cùng một nắm đứng cách đều nhau trên vòng ấy, mỗi con một chỗ (hạt giống xoay cả vòng), nên không chồng lên nhau: gà
       con rộng chừng 1. Điểm rắc sát mép sàn thì tâm vòng được kéo vào trong sàn (chừa cả vòng và bước nhảy), nên gà con luôn đứng trên giấy.
     - Mỗi chỗ đứng cách chỗ đứng của mọi con khác (đang mổ nắm khác, đang nghỉ ở nhà, con nấp bụng) từ 1,4: cộng hai bước nhảy thì hai con
-      cách nhau ≥ 0,9. Vòng vướng thì xoay hay nở (bán kính ×1,4; ×1,8) tới khi nhiều chỗ nhất hợp lệ; chỗ nào không hợp lệ thì con ấy ở
-      yên. Đông tới mức không còn chỗ nào thì không con nào tới nắm mới (các con khác đang vây rồi): spacing không bao giờ nới.
+      cách nhau ≥ 0,9. Nhà của mọi con đang đi vắng hay đang về cũng là chỗ đã có người, vì xong việc nó về đứng ở đó (GĐ 8 Task 8: trước
+      đó con mổ đứng sát nhà một con đang vắng, rồi con kia về đứng chồng lên, 93 trong 200 cảnh bận).
+    - Vòng vướng thì xoay tới góc có nhiều chỗ hợp lệ nhất; chỗ nào không hợp lệ thì con ấy ở yên. Vòng không bao giờ nở: mỏ lúc mổ chỉ với
+      tới trước chân chừng 0,75, nên đứng trên vòng nở (×1,4; ×1,8, cách của GĐ 8 Task 7) là mổ cạnh nắm thóc. Đo bằng bản JS của luật
+      thóc (GĐ 8 Task 8, 40 cảnh bận, chạm khắp sàn): giữ vòng nở làm đường lùi khi vòng bán kính 1 không còn chỗ nào thì 51 trong 474 nắm
+      có con tới bị ăn dưới 10%; bỏ hẳn vòng nở thì 11 trong 420 (có thêm vài nắm không con nào tới).
+      Đông tới mức không còn chỗ nào thì không con nào tới nắm mới (các con khác đang vây rồi): spacing không bao giờ nới.
     - Con nào vào chỗ nào gán sao cho tổng quãng đường (cả đoạn vòng qua mẹ) ngắn nhất, như chỗ núp.
     - Tốc độ 9 đơn vị/s (0,9 m/s), có tăng giảm tốc (`smootherstep`) trên cả đường.
     - Bắt đầu sau 0,1–0,4 giây (phản xạ, theo hạt giống).
-  - **mổ:** 8 giây quanh điểm đích, nhảy giữa ba chỗ cách chỗ đứng 0,1–0,25, luôn nhìn về tâm vòng (nắm thóc). Nhảy ngắn thì hai con kề
-    nhau trên vòng (bốn con thì cách 1,41) vẫn cách nhau ≥ 0,9. Đầu cúi theo nhịp 2,5 lần mỗi giây; mỏ "đang mổ" ở đáy nhịp, trước chân
-    chừng 0,75, nên chạm sàn gần điểm rắc (trong 0,55);
+  - **mổ:** quanh điểm đích, nhảy giữa ba chỗ cách chỗ đứng 0,1–0,25 (mỗi chỗ 8/3 giây), luôn nhìn về tâm vòng (nắm thóc). Nhảy ngắn thì
+    hai con kề nhau trên vòng (bốn con thì cách 1,41) vẫn cách nhau ≥ 0,9. Đầu cúi theo nhịp 2,5 lần mỗi giây; mỏ "đang mổ" ở đáy nhịp,
+    trước chân chừng 0,75, nên chạm sàn trong 0,55 quanh tâm vòng: vòng luôn bán kính 1, và tâm vòng là chỗ thóc rơi (luật 1 ở trên).
+    - Cả nhóm cùng một nắm thôi mổ cùng lúc: con tới sau cùng mổ 8 giây, con tới trước mổ lâu hơn một chút (chỗ nhảy cuối dài ra, nhịp
+      cúi vẫn liền). Con tới trước mà về trước thì có thể đứng nghỉ ở nhà ngay sát chỗ một con cùng nhóm còn đang mổ (GĐ 8 Task 8: 15
+      trong 200 cảnh bận, sau khi đã tính nhà của con đi vắng);
   - **về:** đi bộ về chỗ "nhà", 5 đơn vị/s;
   - **núp** (khi giữ): chạy về một trong tám chỗ quanh và dưới cánh mẹ (luật 3 ở trên), đứng sát, quay ra ngoài (lưng về phía mẹ), đầu ngó
     nghiêng (hướng lắc ±0,5 rad). Chỗ gán sao cho tổng quãng đường của tám con (cả đoạn vòng qua mẹ) ngắn nhất, nên con nào cũng ưu tiên
@@ -4505,6 +4516,8 @@ chuyển động ở lại trong bức.
   - chạm thì 3–4 con rảnh ở gần nhất chạy tới, và tới nơi đúng lúc tính theo tốc độ; mổ 8 giây rồi về. Các con tới cùng một nắm đứng
     cách nhau ≥ 0,9 và luôn trên sàn, kể cả chạm sát mép và góc; hai nắm cách 0,6, hay nắm cạnh con nấp bụng, cũng không dồn các con vào
     nhau (≥ gap − hai bước nhảy); lúc mổ nhìn về nắm, mỏ chạm sàn trong 0,55 quanh điểm rắc; con đang bận nắm này không bị nắm khác gọi đi;
+  - chạm sát mép hay góc thì thóc rơi ở tâm vòng (trong sàn, chừa vòng và bước nhảy) và mỏ chạm sàn trong 0,55 quanh đó; cả nhóm thôi mổ
+    cùng lúc; 200 cảnh bận (bốn cú chạm khắp sàn): con mổ cách con đang đứng ở nhà ≥ gap − wander·√2 − bước nhảy;
   - giữ thì mọi con rảnh về các chỗ quanh mẹ, quay ra ngoài, không hai con một chỗ; thả thì tản ra, tới nắm mới nhất nếu chưa quá 20 giây;
   - vị trí liên tục ở mỗi mốc, kể cả giữ lúc một con đang chờ phản xạ, đang chạy hay đang mổ; "bão" chạm, giữ, thả (20 hạt giống PRNG × 100 bước,
     mốc lùi, khoảng lặng cho gà mẹ bới) giữ vị trí và cánh liên tục KỂ CẢ MỐC LÙI, mọi số hữu hạn, luôn trên sàn, không con nào vào thân
@@ -4515,8 +4528,10 @@ chuyển động ở lại trong bức.
   - đầu vào hỏng (thời điểm hay điểm rắc không hữu hạn, bố cục thiếu chỗ núp) thì ném lỗi.
 - `dan-ga-duong`: hình học viên thuốc (đoạn gần nhất, khoảng cách hai đoạn); hành trình vòng qua đầu hay đuôi mẹ (mọi đoạn và đỉnh ngoài
   vòng cấm, đối xứng, 300 cặp điểm ngẫu nhiên); điểm dừng và lùi vào chỗ núp; `assign` bằng vét cạn; điểm rắc dời tới điểm gần nhất đứng
-  quanh được; chỗ đứng quanh nắm (cách đều, tránh con khác, không bao giờ phạm sàn hay vòng cấm: 300 trường hợp).
-- `dan-ga-tranh-me`: nắm ném vào mẹ, sau lưng mẹ, ở hai đầu rơi bên cạnh mẹ (nắm xa mẹ giữ nguyên); 24 cảnh ngẫu nhiên × 24 giây, từng
+  quanh được; chỗ đứng quanh nắm (cách đều, chỉ trên vòng bán kính 1, tránh con khác, không bao giờ phạm sàn hay vòng cấm: 300 trường
+  hợp).
+- `dan-ga-tranh-me`: nắm ném vào mẹ, sau lưng mẹ, ở hai đầu rơi bên cạnh mẹ (nắm xa mẹ giữ nguyên, sát mép thì kéo vào tâm vòng); 24 cảnh
+  ngẫu nhiên × 24 giây, từng
   khung: không con nào vào thân mẹ, vào vòng cấm chỉ khi ra vào chỗ núp và mặt quay ra ngoài (trong 60°); giữ gán tổng quãng đường ngắn
   nhất (vét cạn 8!); chạy từ trước mặt ra sau lưng mẹ thì vòng qua đầu hay đuôi.
 - `dan-ga-muot`: từng khung 60 Hz qua rắc, giữ, thả, giữ lại ngay (0,05–0,8 giây), giữ lúc chờ/chạy/mổ, mở trang, mẹ bới, bão: hướng không
@@ -4635,7 +4650,8 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
   - Cách tránh: ba luật của §20.5 (nắm dời ra bên cạnh mẹ, đường vòng qua đầu hay đuôi mẹ, điểm dừng rồi lùi vào chỗ núp); test đo từng
     khung bằng chỗ thật của khối (`cot-hinh-ga`, `dan-ga-tranh-me`).
   - Còn lại: nắm người chạm lên mẹ hay vách rơi bên cạnh mẹ chứ không ở chỗ chạm (thóc rơi ở đầu hay đuôi mẹ, cách 2–4 đơn vị); gà con
-    tới chỗ núp lâu hơn chừng nửa giây (quay tại chỗ, lùi vào); sau lưng mẹ sàn hẹp nên ở đó không có vòng gà con nào.
+    tới chỗ núp lâu hơn chừng nửa giây (quay tại chỗ, lùi vào); sau lưng mẹ sàn hẹp nên ở đó không có vòng gà con nào. Chạm sát mép sàn thì
+    thóc rơi vào trong tới 1,25 (tâm vòng). Sân đông thì nắm mới có khi không con nào tới: vòng không nở, spacing không nới.
 - **Thóc quá nhỏ trên điện thoại:** 0,08 đơn vị là chừng 2 điểm ảnh ở 390×844. Cách tránh: cỡ hạt có sàn theo điểm ảnh (chia theo
   `u.resolution` và zoom).
 - **Tranh tự khép lại đánh nhau với quán tính của OrbitControls:** `end` đến khi buông tay, nhưng damping còn quay thêm một lúc, và phần

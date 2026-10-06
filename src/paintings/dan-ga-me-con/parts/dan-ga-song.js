@@ -44,18 +44,27 @@ export function createFlock(layout, { reduced = false } = {}) {
   if (layout.slots.length < free.length) throw new Error(`dan-ga-song: ${free.length} gà con rảnh mà chỉ có ${layout.slots.length} chỗ núp`);
   const router = createRouter(layout.body, layout.body.r + FLOCK.clear, FLOCK.standOff);
   const placer = createPlacer(layout, router);
-  const { homeward, forage, shelter } = createPlanner({ homes, hen, speed }, router);
+  const { homeward, approach, forage, shelter } = createPlanner({ homes, hen, speed }, router);
   /** Mốc theo thời gian: { t, kind, plans, wing: { y, v }, open, underGrip, …rắc: at, seed, count, still, fly, auto, taken }. */
   const marks = [];
   /** "Bây giờ": thời điểm lớn nhất mà mọi hàm ghi (scatter, grip, release, drift) đã nhận. Mốc lùi xếp vào đây, không lùi hơn (xem push). */
   let clock = 0;
 
-  /** Chỗ đứng của các con khác lúc này: con đang mổ hay sắp tới một nắm thì chỗ mổ, còn lại chỗ đang đứng (nhà, con nấp bụng…). */
+  /**
+   * Chỗ đứng của các con khác: con đang mổ hay sắp tới một nắm thì chỗ mổ, còn lại chỗ đang đứng (nhà, con nấp bụng…); và nhà của mọi con
+   * rảnh đang đi vắng hay đang về (việc 'food', 'home'), vì xong việc nó về đứng ở đó, có khi lúc con khác còn đang mổ.
+   */
   const occupiedBy = (who, states, plans) => states.flatMap((s, j) => {
     if (who.includes(j)) return [];
     const eat = s.goal === 'food' ? plans[j].find((p) => p.kind === 'peck') : null;
-    return [eat ? eat.at : s.at];
+    const away = homes[j].kind === 'free' && (s.goal === 'food' || s.goal === 'home');
+    return [eat ? eat.at : s.at, ...(away ? [homes[j].at] : [])];
   });
+  /**
+   * Chỗ thóc rơi của một điểm chạm: dời ra bên cạnh mẹ nếu sát mẹ, rồi kéo vào trong sàn đúng như tâm vòng các con đứng quanh. Thóc rơi
+   * đúng giữa vòng, nên mỏ của các con (với tới trước chân chừng 0,75 trên vòng bán kính 1) chạm sàn ngay trên nắm thóc, kể cả khi chạm sát mép.
+   */
+  const dropAt = (g) => placer.ringCenter(placer.awayFromHen([g[0], g[1]]));
   /**
    * Các con `who` (gần nắm nhất trước) chạy tới nắm thóc `at`, mỗi con một chỗ trên vòng quanh nắm (không chồng nhau, không chồng các con
    * khác, ngoài vòng cấm quanh mẹ), gán sao cho tổng quãng đường ngắn nhất; thay kế hoạch trong `plans`. Có ít chỗ hợp lệ hơn con thì các
@@ -67,11 +76,14 @@ export function createFlock(layout, { reduced = false } = {}) {
     const crew = who.slice(0, spots.length);
     const jys = crew.map((i) => spots.map((s) => (already ? null : router.journey(states[i].at, s))));
     const pick = assign(crew.map((i, a) => spots.map((s, k) => (already ? dist(states[i].at, s) : router.length(jys[a][k])))));
-    crew.forEach((i, a) => {
+    const goes = crew.map((i, a) => {
       const spot = spots[pick[a]];
       const from = already ? { at: spot, h: facing(spot, c), head: 0 } : states[i];
-      plans[i] = forage(i, from, t, jys[a][pick[a]], spot, c, rand, already);
+      return approach(from, t, jys[a][pick[a]], spot, c, rand, already);
     });
+    // Cả nhóm thôi mổ cùng lúc: con tới sau cùng mổ đủ FLOCK.peck giây.
+    const until = Math.max(...goes.map((go) => go.at)) + FLOCK.peck;
+    crew.forEach((i, a) => { plans[i] = forage(i, goes[a], rand, until); });
   }
   /** Các con rảnh hay đang về, gần `at` nhất; số con theo hạt giống trong [lo, hi]. */
   function nearest(states, at, [lo, hi], rand) {
@@ -144,20 +156,23 @@ export function createFlock(layout, { reduced = false } = {}) {
   if (layout.pile) {
     const rand = mulberry32(17);
     const states = plans0.map((plan, i) => evaluate(plan, 0, i));
-    const at = placer.awayFromHen(layout.pile);
+    const at = dropAt(layout.pile);
     converge(plans0, nearest(states, at, FLOCK.henResponders, rand), states, at, 0, rand, true);
     Object.assign(first, { kind: 'scatter', at, seed: 17, count: FLOCK.pileHandful, still: true, fly: 0, auto: false, taken: false });
   }
   marks.push(first);
 
   return {
-    /** Chạm: một nắm thóc rơi ở `at` (x, z); gần hay trúng thân mẹ thì rơi bên cạnh mẹ (takeScatters trả điểm đã dời). count null: lớp dùng núm handful. */
+    /**
+     * Chạm: một nắm thóc rơi ở `at` (x, z); gần hay trúng thân mẹ thì rơi bên cạnh mẹ, sát mép sàn thì rơi vào trong một chút (dropAt;
+     * takeScatters trả điểm đã dời). count null: lớp dùng núm handful.
+     */
     scatter(t, at, seed) {
       need('điểm rắc', at[0], at[1]);
       need('thời điểm rắc', t);
       const since = clock;
       clock = Math.max(clock, t);
-      push('scatter', Math.max(t, since), { at: [...placer.awayFromHen([at[0], at[1]])], seed, count: null, still: false, auto: false });
+      push('scatter', Math.max(t, since), { at: dropAt(at), seed, count: null, still: false, auto: false });
     },
     grip(t) {
       need('thời điểm giữ', t);
@@ -188,7 +203,7 @@ export function createFlock(layout, { reduced = false } = {}) {
         const seed = Math.round(tt * 10);
         const jitter = mulberry32(seed);
         const at = [layout.henFront[0] + (jitter() - 0.5) * 0.6, layout.henFront[1] + (jitter() - 0.5) * 0.6];
-        push('scatter', tt, { at: [...placer.awayFromHen(at)], seed, count: FLOCK.henHandful, still: false, delay: FLOCK.scratch / 2, auto: true });
+        push('scatter', tt, { at: dropAt(at), seed, count: FLOCK.henHandful, still: false, delay: FLOCK.scratch / 2, auto: true });
       }
     },
     /**

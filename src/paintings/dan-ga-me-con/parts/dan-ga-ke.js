@@ -39,10 +39,11 @@ export function createPlanner({ homes, hen, speed }, router) {
     return [...tr.phases, rest(home, tr.t1, tr.end, homes[i].heading)];
   }
   /**
-   * Phản xạ, chạy tới chỗ đứng `spot` quanh nắm thóc `look` theo hành trình jy, mổ FLOCK.peck giây nhìn về nắm, rồi về nhà. `already`: đang
-   * đứng ở chỗ đó (nhúm lúc mở trang): vẫn chờ phản xạ, để các con bắt đầu mổ lệch nhịp nhau, không cúi đầu cùng lúc như máy.
+   * Phản xạ rồi chạy tới chỗ đứng `spot` quanh nắm thóc `look` theo hành trình jy: các pha tới lúc bắt đầu mổ, trạng thái và thời điểm tới
+   * nơi (`now`, `at`). `already`: đang đứng ở chỗ đó (nhúm lúc mở trang): vẫn chờ phản xạ, để các con bắt đầu mổ lệch nhịp nhau, không cúi
+   * đầu cùng lúc như máy.
    */
-  function forage(i, from, t, jy, spot, look, rand, already) {
+  function approach(from, t, jy, spot, look, rand, already) {
     const react = FLOCK.react[0] + rand() * (FLOCK.react[1] - FLOCK.react[0]);
     const wait = stay(from, t, t + react, 'food');
     const phases = [wait];
@@ -54,8 +55,16 @@ export function createPlanner({ homes, hen, speed }, router) {
       now = tr.end;
       at = tr.t1;
     }
-    const eat = peck(spot, at, now, rand, look);
-    return [...phases, eat, ...homeward(i, endOf(eat), eat.t1)];
+    return { phases, now, at, spot, look };
+  }
+  /**
+   * Kế hoạch đủ của một con tới nắm thóc: các pha của `approach` (go), mổ nhìn về nắm tới lúc `until`, rồi về nhà. Cả nhóm cùng một nắm
+   * thôi mổ cùng lúc `until` (con tới sau cùng mổ đủ FLOCK.peck giây): con tới trước mà về trước thì có thể đứng nghỉ ở nhà sát chỗ một con
+   * cùng nhóm còn đang mổ.
+   */
+  function forage(i, go, rand, until) {
+    const eat = peck(go.spot, go.at, go.now, rand, go.look, until);
+    return [...go.phases, eat, ...homeward(i, endOf(eat), eat.t1)];
   }
   /** Chạy về chỗ núp (sau 0,1 s), rồi đứng quay ra ngoài, lưng về phía mẹ, đầu ngó nghiêng (FLOCK.peek). */
   function shelter(from, t, slot, jy) {
@@ -64,5 +73,5 @@ export function createPlanner({ homes, hen, speed }, router) {
     const tr = trip(jy, wait.t1, endOf(wait), 'hide', out, speed.run);
     return [wait, ...tr.phases, hide(slot, tr.t1, tr.end, out)];
   }
-  return { homeward, forage, shelter };
+  return { homeward, approach, forage, shelter };
 }

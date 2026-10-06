@@ -3,8 +3,7 @@ import { FLOCK, dist } from './dan-ga-pha.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
-/** Vòng thử khi chỗ quanh nắm bị các con khác hay mẹ chiếm: bán kính nhân với các số này, mỗi vòng thử TURNS góc xoay. */
-const SCALES = [1, 1.4, 1.8];
+/** Chỗ quanh nắm bị các con khác hay mẹ chiếm thì xoay vòng: thử chừng này góc xoay giữa hai chỗ kề nhau. */
 const TURNS = 12;
 /** Lưới ô đứng quanh được của từng bố cục (xem createPlacer). */
 const GRIDS = new WeakMap();
@@ -101,9 +100,11 @@ export function createPlacer(layout, router) {
   const valid = (p, occupied) => p[0] >= floor.x[0] + hop && p[0] <= floor.x[1] - hop && p[1] >= floor.z[0] + hop && p[1] <= floor.z[1] - hop
     && router.gap(p) >= router.keep + hop && occupied.every((o) => dist(p, o) >= FLOCK.gap);
   /**
-   * Chỗ đứng cho tối đa n con quanh tâm c, cách đều nhau trên một vòng (hạt giống xoay vòng). Lấy phương án có nhiều chỗ hợp lệ nhất, rồi vòng
-   * nhỏ nhất, rồi góc xoay gần hạt giống nhất, và chỉ trả các chỗ hợp lệ: chỗ nào đè lên con khác thì bỏ, con ấy ở yên; đông tới mức không
+   * Chỗ đứng cho tối đa n con quanh tâm c, cách đều nhau trên vòng bán kính FLOCK.spread (hạt giống xoay vòng). Lấy góc xoay có nhiều chỗ
+   * hợp lệ nhất (hòa thì góc gần hạt giống nhất), và chỉ trả các chỗ hợp lệ: chỗ nào đè lên con khác thì bỏ, con ấy ở yên; đông tới mức không
    * còn chỗ nào thì không con nào tới (các con khác đang vây quanh nắm rồi), chứ không bao giờ nới cho chồng lên nhau.
+   * Vòng không bao giờ nở: mỏ lúc mổ chỉ với tới trước chân chừng 0,75, nên chỉ trên vòng bán kính 1 mỏ mới chạm sàn ngay trên nắm thóc
+   * (thóc rơi trong chừng 0,5 quanh tâm); đứng trên vòng nở ×1,4 hay ×1,8 thì mổ cạnh nắm, không trúng hạt nào.
    * @param {[number, number]} c
    * @param {number} n
    * @param {() => number} rand
@@ -112,13 +113,11 @@ export function createPlacer(layout, router) {
   function ringSpots(c, n, rand, occupied) {
     const base = rand() * TAU;
     let best = [];
-    for (const scale of SCALES) {
-      for (let j = 0; j < TURNS; j += 1) {
-        const phase = base + (j * TAU) / (n * TURNS);
-        const spots = Array.from({ length: n }, (_, k) => [c[0] + Math.cos(phase + (k * TAU) / n) * FLOCK.spread * scale, c[1] + Math.sin(phase + (k * TAU) / n) * FLOCK.spread * scale]);
-        const ok = spots.filter((p) => valid(p, occupied));
-        if (ok.length > best.length) best = ok;
-      }
+    for (let j = 0; j < TURNS; j += 1) {
+      const phase = base + (j * TAU) / (n * TURNS);
+      const spots = Array.from({ length: n }, (_, k) => [c[0] + Math.cos(phase + (k * TAU) / n) * FLOCK.spread, c[1] + Math.sin(phase + (k * TAU) / n) * FLOCK.spread]);
+      const ok = spots.filter((p) => valid(p, occupied));
+      if (ok.length > best.length) best = ok;
     }
     return best;
   }

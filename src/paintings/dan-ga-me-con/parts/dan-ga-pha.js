@@ -77,14 +77,17 @@ export function move(pts, t0, speed, from, goal, face = null) {
 export const rest = (home, t0, from, h1) => ({ kind: 'idle', at: home, t0, t1: Infinity, h0: from.h, h1, goal: 'home', head0: from.head ?? 0 });
 export const hide = (slot, t0, from, h1) => ({ kind: 'hide', at: slot, t0, t1: Infinity, h0: from.h, h1, goal: 'hide', head0: from.head ?? 0 });
 export const perch = (home) => ({ kind: 'perch', at: home.at, t0: 0, t1: Infinity, h0: home.heading, h1: home.heading, goal: 'perch', head0: 0 });
-/** Mổ quanh `center` (chỗ đứng): nhảy giữa ba chỗ gần đó, luôn nhìn về `look` (tâm nắm thóc), nên mỏ chạm sàn ở gần nắm thóc. */
-export function peck(center, t0, from, rand, look) {
+/**
+ * Mổ quanh `center` (chỗ đứng) từ t0 tới t1: nhảy giữa ba chỗ gần đó, luôn nhìn về `look` (tâm nắm thóc), nên mỏ chạm sàn ở gần nắm thóc.
+ * t1 mặc định FLOCK.peck giây sau t0; các con cùng một nắm thì chung một t1 (dan-ga-ke.js#forage).
+ */
+export function peck(center, t0, from, rand, look, t1 = t0 + FLOCK.peck) {
   const spots = Array.from({ length: FLOCK.spots }, () => {
     const a = rand() * TAU;
     const r = FLOCK.hopRadius[0] + rand() * (FLOCK.hopRadius[1] - FLOCK.hopRadius[0]);
     return [center[0] + Math.cos(a) * r, center[1] + Math.sin(a) * r];
   });
-  return { kind: 'peck', at: center, spots, t0, t1: t0 + FLOCK.peck, h0: from.h, h1: facing(center, look), goal: 'food', head0: from.head ?? 0 };
+  return { kind: 'peck', at: center, spots, t0, t1, h0: from.h, h1: facing(center, look), goal: 'food', head0: from.head ?? 0 };
 }
 /** Hướng lúc đứng ở chỗ mổ thứ j: về phía nắm thóc; j < 0 là hướng lúc vào pha (quay dần sang hướng ấy trong FLOCK.turn giây). */
 const peckDir = (p, j) => (j < 0 ? p.h0 : p.h1);
@@ -115,7 +118,9 @@ export function phaseState(p, t, index) {
     return { ...base, at, h: p.face === null ? legHeading(p, k, t) : turn(p.h0, p.face, ease), head: carry };
   }
   if (p.kind === 'peck') {
-    const slot = (p.t1 - p.t0) / FLOCK.spots;
+    // Mỗi chỗ mổ FLOCK.peck / spots giây, nhịp cúi gần 0 ở cuối mỗi chỗ, nên nhảy sang chỗ mới không giật đầu. Mổ lâu hơn FLOCK.peck
+    // (con tới trước, chờ cả nhóm) thì chỗ cuối dài ra: nhịp cúi vẫn liền.
+    const slot = FLOCK.peck / FLOCK.spots;
     const j = Math.min(Math.floor(s / slot), FLOCK.spots - 1);
     const u = s - j * slot;
     const at = lerp2(j === 0 ? p.at : p.spots[j - 1], p.spots[j], smooth(u / FLOCK.hop));

@@ -58,10 +58,12 @@ describe('dan-ga-tranh-me', () => {
         for (const c of flock.state(t).chicks.filter((x) => x.kind === 'peck')) expect(spineGap(c), `chạm ${tap}, lúc ${t.toFixed(1)}`).toBeGreaterThanOrEqual(KEEP - 1e-9);
       }
     }
-    for (const tap of [[-4, 0.4], [-5.5, 2], [6.5, 4.6], [3, 3.4]]) {
+    // Xa mẹ, trong sàn: giữ nguyên. Sát mép: kéo vào tâm vòng (dan-ga-song.test.js kiểm), không dời ra bên cạnh mẹ.
+    for (const [tap, want] of [[[-4, 0.4], [-4, 0.4]], [[3, 3.4], [3, 3.4]], [[-5.5, 2], [-5.45, 2]], [[6.5, 4.6], [5.45, 3.45]]]) {
       const flock = createFlock(NO_PILE);
       flock.scatter(1, tap, 1);
-      expect(flock.takeScatters(1)[0].at, `chạm ${tap} xa mẹ`).toEqual(tap);
+      const [x, z] = flock.takeScatters(1)[0].at;
+      expect([x, z], `chạm ${tap} xa mẹ`).toEqual(want.map((v) => expect.closeTo(v, 12)));
     }
   }, SLOW);
 

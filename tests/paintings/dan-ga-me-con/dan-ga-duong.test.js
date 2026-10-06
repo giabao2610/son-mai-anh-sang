@@ -1,4 +1,4 @@
-// tests/paintings/dan-ga-me-con/dan-ga-duong.test.js — hình học đường đi và chỗ đứng quanh thân gà mẹ (parts/dan-ga-duong.js, parts/dan-ga-cho.js): đoạn gần nhất, khoảng cách giữa hai đoạn; hành trình vòng qua đầu hay đuôi mẹ khi đường thẳng cắt vòng cấm; điểm dừng và lùi vào chỗ núp; gán chỗ tổng ngắn nhất; điểm rắc dời ra bên cạnh mẹ; chỗ đứng quanh nắm thóc tránh mẹ, sàn và các con khác.
+// tests/paintings/dan-ga-me-con/dan-ga-duong.test.js — hình học đường đi và chỗ đứng quanh thân gà mẹ (parts/dan-ga-duong.js, parts/dan-ga-cho.js): đoạn gần nhất, khoảng cách giữa hai đoạn; hành trình vòng qua đầu hay đuôi mẹ khi đường thẳng cắt vòng cấm; điểm dừng và lùi vào chỗ núp; gán chỗ tổng ngắn nhất; điểm rắc dời ra bên cạnh mẹ; chỗ đứng quanh nắm thóc (chỉ trên vòng bán kính spread) tránh mẹ, sàn và các con khác.
 import { describe, it, expect } from 'vitest';
 import { FLOCK } from '../../../src/paintings/dan-ga-me-con/parts/dan-ga-pha.js';
 import { createRouter, nearestOnSegment, pathLength, segmentGap } from '../../../src/paintings/dan-ga-me-con/parts/dan-ga-duong.js';
@@ -161,13 +161,21 @@ describe('dan-ga-cho · gán chỗ và chỗ đứng', () => {
     expect(blocked.length).toBeGreaterThanOrEqual(3);
     for (const p of blocked) expect(dist(p, open[0])).toBeGreaterThanOrEqual(FLOCK.gap - 1e-9);
     const rand = mulberry32(6);
+    let blockedRings = 0;
     for (let k = 0; k < 300; k += 1) {
       const c = placer.ringCenter(randomIn(rand, FLOOR.x, FLOOR.z));
       const occupied = Array.from({ length: Math.floor(rand() * 10) }, () => randomIn(rand, FLOOR.x, FLOOR.z));
-      for (const p of placer.ringSpots(c, 2 + Math.floor(rand() * 3), rand, occupied)) {
+      const n = 2 + Math.floor(rand() * 3);
+      const spots = placer.ringSpots(c, n, rand, occupied);
+      if (spots.length < n) blockedRings += 1;
+      for (const p of spots) {
         expect(p[0] >= FLOOR.x[0] + HOP - 1e-9 && p[0] <= FLOOR.x[1] - HOP + 1e-9 && p[1] >= FLOOR.z[0] + HOP - 1e-9 && p[1] <= FLOOR.z[1] - HOP + 1e-9, `${p} ngoài sàn`).toBe(true);
         expect(spineGap(p), `${p} trong vòng cấm`).toBeGreaterThanOrEqual(KEEP + HOP - 1e-9);
+        // Vòng không bao giờ nở: mỏ lúc mổ chỉ với tới trước chân chừng 0,75, nên đứng xa hơn bán kính spread là mổ cạnh nắm thóc.
+        expect(dist(p, c), `${p}: ngoài vòng bán kính ${FLOCK.spread}`).toBeCloseTo(FLOCK.spread, 9);
+        for (const o of occupied) expect(dist(p, o), `${p} sát con khác ở ${o}`).toBeGreaterThanOrEqual(FLOCK.gap - 1e-9);
       }
     }
+    expect(blockedRings, 'phải có vòng bị vướng để thử').toBeGreaterThan(20);
   });
 });

@@ -185,7 +185,7 @@ describe('cot-hinh-ga', () => {
         for (const s of henSolids) expect(inside(s, p), `con ${kind}: đỉnh ${p.map((c) => c.toFixed(2))} lún vào ${nameOf(s)}`).toBe(false);
       }
     }
-  });
+  }, 60000); // nặng (mọi đỉnh của gà con × mọi khối của mẹ, hàng trăm nghìn lần so): 3,6 s khi máy bận, sát trần mặc định 5 s
 
   it('con trèo lưng đứng ĐÚNG trên lưng mẹ: đáy mỗi chân (đọc từ CHICK_SHAPE) chạm mặt lưng (lệch dưới 0,05), không lơ lửng', () => {
     const home = HOMES.find((h) => h.kind === 'back');
