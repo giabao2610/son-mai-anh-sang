@@ -107,6 +107,27 @@ describe('l1-cot (Bức 4)', () => {
     expect(n).toBeGreaterThan(100);
   });
 
+  it('shared.cot.hen.bodyRadius (viền cánh của Bản nét): uniform henBodyRadius = cos(π/n), n là số vòng quanh của khối mình; nằm giữa đỉnh (mặt bầu dục thật) và chỗ lõm nhất của mặt đa diện; đổi theo núm segments', async () => {
+    const { shared, knobs } = build();
+    const { bodyRadius, bodyFrame } = shared.cot.hen;
+    expect(bodyRadius.isUniformNode).toBe(true);
+    expect(bodyRadius.name).toBe('henBodyRadius');
+    for (const n of [32, 8, 24, 48]) {
+      await knobs.cot.set('segments', n);
+      expect(bodyRadius.value, `segments ${n}`).toBeCloseTo(Math.cos(Math.PI / n), 12);
+      // Đỉnh của khối mình nằm trên mặt thật (bán kính 1 trong khung đơn vị), mặt phẳng giữa các đỉnh lõm vào trong. Mặt co lại phải cắt
+      // qua mặt đa diện (đỉnh ở ngoài, tâm tam giác lõm nhất ở trong): co quá sâu thì nét của Bản nét dày thêm vô ích về phía trong mình.
+      const { index, attributes: { position, part } } = shared.cot.hen.body.geometry;
+      const at = (i) => new Vector3().fromBufferAttribute(position, index.getX(i));
+      let deepest = 1;
+      for (let i = 0; i < index.count; i += 3) {
+        if (part.getX(index.getX(i)) !== PART.BODY) continue;
+        deepest = Math.min(deepest, at(i).add(at(i + 1)).add(at(i + 2)).divideScalar(3).applyMatrix4(bodyFrame).length());
+      }
+      expect(deepest, `segments ${n}`).toBeLessThan(bodyRadius.value);
+    }
+  });
+
   it.each(['webgpu', 'webgl2'])('%s: mỗi mesh của gà mẹ đọc đúng uniform dáng của nó; positionNode đọc uniform của Tấm bìa phẳng', (backend) => {
     const built = build();
     const { body, wingL, wingR } = built.shared.cot.hen;

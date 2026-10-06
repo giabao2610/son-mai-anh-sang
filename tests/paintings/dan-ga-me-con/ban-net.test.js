@@ -75,6 +75,11 @@ describe('l3-ban-net (Bức 4)', () => {
     expect(compileMaterial(built.shared.cot.paper, built.ctx, backend).uniforms).not.toContain('w_ban_net');
   });
 
+  it.each(['webgpu', 'webgl2'])('%s: viền cánh gà mẹ chỗ áp sườn đo tới khối mình co lại theo số vòng (uniform henBodyRadius của Cốt, không phải hằng): đổi segments thì nét theo, không biên dịch lại', (backend) => {
+    const built = upToInk();
+    for (const mesh of birds(built)) expect(compileMaterial(mesh, built.ctx, backend).uniforms).toContain('henBodyRadius');
+  });
+
   it.each(['webgpu', 'webgl2'])('%s: nét trong có mép mềm tối thiểu một điểm ảnh (fwidth của khoảng cách tới nét): nét mảnh hơn một điểm ảnh (DPR 1, điện thoại) mờ đi chứ không đứt thành vạch nhấp nháy khi gà chạy', (backend) => {
     // Tám nét dài (vảy lông; viền, chỗ lún vào sườn và ba nét lông của cánh; đuôi; vằn ong) mỗi nét một fwidth; Bản màu có một (mép nấc).
     const built = upToInk({ tier: backend });

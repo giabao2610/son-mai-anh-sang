@@ -136,9 +136,12 @@ export function placement(shape) {
   return m.premultiply(new Matrix4().makeTranslation(...shape.at));
 }
 
+/** Số vòng quanh của một khối ở `segments` của núm Cốt (đã nhân `detail`; ít nhất 6). */
+export const ringsOf = (shape, segments) => Math.max(6, Math.round(segments * shape.detail));
+
 /** Dựng một khối thành geometry: dạng chuẩn của three rồi đặt bằng placement(). `segments`: số vòng quanh của khối (núm Cốt). */
 function solid(shape, segments) {
-  const n = Math.max(6, Math.round(segments * shape.detail));
+  const n = ringsOf(shape, segments);
   let g;
   if (shape.kind === 'ball') g = new SphereGeometry(shape.r, n, Math.max(6, Math.round(n * 0.6)));
   else if (shape.kind === 'cone') g = new ConeGeometry(shape.r, shape.h, n);

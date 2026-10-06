@@ -1,4 +1,4 @@
-// e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; chữ của trang nằm trên ván tối; độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ, có nét trong, lệch bản, không vệt mực ở mép khung, hai thí nghiệm; tranh tự khép lại (kéo rồi buông thì camera về góc của tranh). Giấy điệp ở e2e/dan-ga-me-con-giay.spec.js, Đàn gà (cử chỉ, thóc) ở e2e/dan-ga-me-con-dan-ga.spec.js; tiện ích và các vùng dùng chung ở e2e/dan-ga-me-con.helpers.js.
+// e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; chữ của trang nằm trên ván tối; độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ, có nét trong (vảy lông trên mình gà mẹ, tách khỏi viền), lệch bản, không vệt mực ở mép khung, hai thí nghiệm; tranh tự khép lại (kéo rồi buông thì camera về góc của tranh). Giấy điệp ở e2e/dan-ga-me-con-giay.spec.js, Đàn gà (cử chỉ, thóc) ở e2e/dan-ga-me-con-dan-ga.spec.js, chất lượng (draw call, mức thấp, mọi thí nghiệm) ở e2e/dan-ga-me-con-chat-luong.spec.js; tiện ích và các vùng dùng chung ở e2e/dan-ga-me-con.helpers.js.
 import { test, expect } from '@playwright/test';
 import { STAGE_ONLY, waitForFrames, canvasRegions, collectConsole, twoFrames, toggleExperiment } from './helpers.js';
 import {
@@ -99,12 +99,15 @@ test.describe('Đàn Gà Mẹ Con · bản nét', () => {
   test('mài Bản nét về 0 thì giữa tờ giấy sáng hẳn lên: viền, vảy lông, mắt, cánh đều là mực của Bản nét', SMOKE, async ({ page }, testInfo) => {
     const log = collectConsole(page);
     await open(page, testInfo, 60);
-    const withInk = await canvasRegions(page, { mid: PAPER_MID });
+    const withInk = await canvasRegions(page, { mid: PAPER_MID, hen: HEN });
     await page.screenshot({ path: testInfo.outputPath('co-net.png') });
     await page.evaluate(() => window.__sma.setWeight('ban-net', 0));
     await twoFrames(page);
-    const without = await canvasRegions(page, { mid: PAPER_MID });
+    const without = await canvasRegions(page, { mid: PAPER_MID, hen: HEN });
     expect(withInk.mid.mean, `có nét ${withInk.mid.mean.toFixed(3)}, không nét ${without.mid.mean.toFixed(3)}`).toBeLessThan(without.mid.mean - 0.02);
+    // Nét trong riêng (không lẫn viền): mình gà mẹ phía trên cánh không có viền hay nếp gấp nào, chỉ có vảy lông. Ở khung 640 × 400, DPR 1,
+    // vảy lông mảnh hơn một điểm ảnh nên chỉ sẫm chừng 0,014 (GPU thật và SwiftShader); không có nét trong thì không đổi gì.
+    expect(withInk.hen.mean, `vảy lông: có nét ${withInk.hen.mean.toFixed(4)}, không nét ${without.hen.mean.toFixed(4)}`).toBeLessThan(without.hen.mean - 0.005);
     expect(log.errors).toEqual([]);
   });
 
@@ -131,6 +134,8 @@ test.describe('Đàn Gà Mẹ Con · bản nét', () => {
     await page.evaluate(() => window.__sma.restore({ knobs: { 'ban-net.misregister': 0 } })); // vẽ lại khung đứng yên với camera mới
     const r = await canvasRegions(page, { bottom: ZOOM_BOTTOM, above: ZOOM_ABOVE });
     await page.screenshot({ path: testInfo.outputPath('zoom-2.5.png') });
+    // Hai vùng phải là giấy (chừng 0,5): ván tối ở cả hai thì hiệu số nhỏ mà không kiểm được gì (khung chưa phóng to, hay bố cục đổi).
+    expect(r.above.mean, 'vùng ngay trên mép dưới là giấy sáng, không phải ván tối').toBeGreaterThan(0.2);
     expect(Math.abs(r.bottom.mean - r.above.mean), `mép dưới ${r.bottom.mean.toFixed(3)}, ngay trên ${r.above.mean.toFixed(3)}`).toBeLessThan(0.02);
     expect(log.errors).toEqual([]);
   });

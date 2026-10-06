@@ -46,7 +46,7 @@ export function createLayer(ctx, shared) {
   // Nét trong (spec §20.4): bọc recipe.ink của Cốt TRƯỚC lần biên dịch đầu; Cốt phủ mực lên màu in của gà theo độ phủ này. Mực ăn giấy
   // không đều: độ đậm nhân một noise thưa đặt theo hình gốc của gà (positionGeometry, trước dáng), nên vết mực đi theo con gà khi nó cúi,
   // chạy, không trôi trên mình nó. Gà con dùng chung một hình: cộng chỉ số màu để mỗi màu một kiểu vết.
-  const shell = shellDistance(shared.cot.hen.bodyFrame);
+  const shell = shellDistance(shared.cot.hen.bodyFrame, shared.cot.hen.bodyRadius);
   const prevInk = recipe.ink;
   recipe.ink = (s) => {
     if (s.kind !== 'ga') return prevInk(s); // tờ giấy, thóc: không có nét trong

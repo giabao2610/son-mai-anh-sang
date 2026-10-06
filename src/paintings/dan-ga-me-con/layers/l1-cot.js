@@ -7,16 +7,18 @@ import {
 import { CAMERA, FLOOR, HEN, HOMES, SUN, viewAngle } from '../parts/cot-bo-cuc.js';
 import { paperGeometry } from '../parts/cot-giay.js';
 import {
-  HEN_SHAPE, PART, chickGeometry, chickPosition, henGeometry, henPosition, henWingPosition, placement,
+  HEN_SHAPE, PART, chickGeometry, chickPosition, henGeometry, henPosition, henWingPosition, placement, ringsOf,
 } from '../parts/cot-hinh-ga.js';
 
 export const id = 'cot';
 
 export const knobs = [
-  // Số vòng quanh của mỗi khối: ít thì gà thành khối nhiều mặt. Dựng lại hình, không biên dịch lại. Mặc định 32: hai mặt kề nhau của mọi
-  // khối gãy dưới 20° (mình gà mẹ, cầu kéo dãn, tới 18,6°; khối dẹt như cánh, bàn chân có nhiều vòng hơn: `detail` ở parts/cot-hinh-ga.js),
-  // dưới góc mà Bản nét bắt đầu coi là nếp gấp (chừng 21°). Riêng cánh ong mỏng 0,09 lần gãy 95°: vành của nó là nét viền.
-  { id: 'segments', via: 'rebuild', min: 8, max: 48, step: 4, value: 32 },
+  // Số vòng quanh của mỗi khối: ít thì gà thành khối nhiều mặt. Dựng lại hình, không biên dịch lại. Mặc định và trần theo mức (bảng
+  // quality.js: segments, segmentsMax). Ở 32 (mức cao) hai mặt kề nhau của mọi khối gãy dưới 20° (mình gà mẹ, cầu kéo dãn, tới 18,6°;
+  // khối dẹt như cánh, bàn chân có nhiều vòng hơn: `detail` ở parts/cot-hinh-ga.js), dưới góc mà Bản nét bắt đầu coi là nếp gấp (chừng
+  // 21°); 28 (mức vừa) tới 21,3°; 24 (mức thấp) tới 24,6°, chỉ còn vệt mực rất nhạt. Riêng cánh ong mỏng 0,09 lần gãy gắt ở số vòng nào
+  // cũng vậy: vành của nó là nét viền.
+  { id: 'segments', via: 'rebuild', min: 8, max: (env) => env.budget.segmentsMax ?? 48, step: 4, value: (env) => env.budget.segments ?? 32 },
   { id: 'wireframe', kind: 'bool', via: 'rebuild', value: false },
 ];
 
@@ -30,15 +32,27 @@ const VIEW = (() => {
   return d.map((v) => v / Math.hypot(...d));
 })();
 
+/** Khối mình gà mẹ (cầu kéo dãn) trong bảng khối của gà mẹ. */
+const HEN_BODY_SHAPE = HEN_SHAPE.body.find((s) => s.part === 'BODY');
+
 /**
  * Ma trận đưa điểm thế giới về khung của khối mình gà mẹ ở dáng nghỉ, nơi mặt khối là cầu đơn vị: cùng phép đặt với henGeometry (khối đặt
  * bằng placement(), xoay theo HEN.heading, dời tới HEN.at). Bản nét đo chỗ cánh áp vào sườn bằng nó.
  */
 function henBodyFrame() {
-  const body = HEN_SHAPE.body.find((s) => s.part === 'BODY');
+  const body = HEN_BODY_SHAPE;
   const place = new Matrix4().makeTranslation(HEN.at[0], 0, HEN.at[1]).multiply(new Matrix4().makeRotationY(HEN.heading));
   return place.multiply(placement(body)).multiply(new Matrix4().makeScale(body.r, body.r, body.r)).invert();
 }
+
+/**
+ * Bán kính (trong khung trên) của mặt mà Bản nét đo viền cánh tới, ở `segments` của núm: cos(π/n), n là số vòng quanh của khối mình. Khối
+ * là đa diện: đỉnh nằm trên mặt bầu dục thật, mặt phẳng giữa các đỉnh lõm vào trong, sâu nhất 1 − cos(π/n)·cos(π/2m) ở tâm mặt (m vòng
+ * từ chân lên đỉnh); cos(π/n) là tâm cạnh của một vòng, chỗ mặt đa diện nằm ở giữa. Đo tới mặt thật thì chỗ cánh chui vào mình đa diện
+ * nằm trong mặt thật, nét viền ra ngoài cánh, để lại một dải màu cánh giữa nét và sườn: chừng 3–5 điểm ảnh ở 24 vòng khi phóng to (GĐ 8
+ * Task 9, chụp trên GPU thật).
+ */
+const bodyRadiusAt = (segments) => Math.cos(Math.PI / ringsOf(HEN_BODY_SHAPE, segments));
 
 /**
  * @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx
@@ -90,6 +104,7 @@ export function createLayer(ctx, shared) {
   const henLook = uniform(0).setName('henLook');
   const henScratch = uniform(0).setName('henScratch');
   const segments = ctx.knobValue('segments');
+  const bodyRadius = uniform(bodyRadiusAt(segments)).setName('henBodyRadius'); // núm segments đổi số này, không biên dịch lại
   const henShape = henGeometry({ segments });
   const henBody = new Mesh(henShape.body, make('ga', { position: henPosition({ nod: henNod, look: henLook, scratch: henScratch, view, keep }) }));
   const wingL = new Mesh(henShape.wingL, make('ga', { position: henWingPosition({ sign: 1, wing: henWing, view, keep }) }));
@@ -163,9 +178,11 @@ export function createLayer(ctx, shared) {
     pixel,
     paper,
     PART,
-    // bodyFrame: điểm thế giới → khung của khối mình (mặt khối là cầu đơn vị), ở dáng nghỉ: Bản nét vẽ viền cánh chỗ cánh áp sườn.
+    // bodyFrame: điểm thế giới → khung của khối mình (mặt khối là cầu đơn vị), ở dáng nghỉ; bodyRadius: bán kính trong khung ấy của mặt
+    // mà viền đo tới (bodyRadiusAt). Bản nét vẽ viền cánh chỗ cánh áp sườn bằng hai thứ này.
     hen: {
       group: hen, body: henBody, wingL, wingR, wing: henWing, nod: henNod, look: henLook, scratch: henScratch, bodyFrame: henBodyFrame(),
+      bodyRadius,
     },
     chicks: { mesh: chicks, pose: poseAttr, head: headAttr },
     pose,
@@ -187,6 +204,7 @@ export function createLayer(ctx, shared) {
           mesh.geometry.dispose();
           mesh.geometry = geometry;
         }
+        bodyRadius.value = bodyRadiusAt(v);
       },
       // wireframe nằm trong cache key: đổi là biên dịch lại (vì vậy là núm 'rebuild'), như Bức 1.
       wireframe: (v) => { // @knob wireframe

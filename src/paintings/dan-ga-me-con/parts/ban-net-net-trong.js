@@ -55,16 +55,22 @@ function eyeInk(uv) {
 }
 
 /**
- * Khoảng cách (đơn vị cảnh, xấp xỉ bậc một) từ điểm p tới mặt một khối bầu dục, cho bởi ma trận `frame` đưa p về khung mà mặt khối là cầu
- * đơn vị (shared.cot.hen.bodyFrame): F = |q|² − 1 với q = frame·p, chia |∇F| = 2·|Mᵀq| (M: phần tuyến tính của frame).
+ * Khoảng cách (đơn vị cảnh, xấp xỉ bậc một) từ điểm p tới mặt một khối bầu dục co lại: ma trận `frame` đưa p về khung mà mặt khối thật là
+ * cầu đơn vị (shared.cot.hen.bodyFrame), mặt co lại là cầu bán kính `radius` trong khung ấy (uniform shared.cot.hen.bodyRadius: khối thật
+ * là đa diện lõm vào trong mặt bầu dục, l1-cot.js#bodyRadiusAt). F = |q|² − radius² với q = frame·p, chia |∇F| = 2·|Mᵀq| (M: phần tuyến
+ * tính của frame). Kèm `sag`: khoảng cách từ mặt thật vào mặt co lại, theo cùng cách xấp xỉ.
  * @param {import('three/webgpu').Matrix4} frame
+ * @param {any} radius  uniform: bán kính của mặt co lại trong khung đơn vị (≤ 1)
+ * @returns {(p: any) => { distance: any, sag: any }}
  */
-export function shellDistance(frame) {
+export function shellDistance(frame, radius) {
   const m = mat4(frame);
   const mt = mat3(new Matrix3().setFromMatrix4(frame).transpose());
+  const r2 = radius.mul(radius);
   return (p) => {
     const q = m.mul(vec4(p, 1)).xyz;
-    return abs(dot(q, q).sub(1)).div(length(mt.mul(q)).mul(2).max(1e-4));
+    const grad = length(mt.mul(q)).mul(2).max(1e-4);
+    return { distance: abs(dot(q, q).sub(r2)).div(grad), sag: float(1).sub(r2).div(grad) };
   };
 }
 
@@ -72,16 +78,18 @@ export function shellDistance(frame) {
  * Cánh (cầu dẹt theo x): viền và các nét lông ở nửa dưới phía sau, chạy song song mép. Nhìn từ bên, cánh là hình bầu dục bán trục a (nửa
  * bề cao) và b (nửa bề dài), đơn vị cảnh; điểm (y, z) của cầu đơn vị nằm trên bầu dục "bán kính" ρ² = y² + z² = 1 − x². Khoảng cách (đơn
  * vị cảnh) tới đường ρ = k xấp xỉ |ρ² − k²| / |∇ρ²|, với |∇ρ²| = 2·√(y²/a² + z²/b²) (chặn dưới để giữa cánh không chia cho 0).
- * Viền (chỉ khi rim = 1): mép riêng của cánh (ρ = 1) cộng chỗ cánh lún vào sườn (`seam`: khoảng cách tới mặt khối mình). Gà mẹ áp cánh sát
- * sườn: dọc lưng và phía sau, mép riêng của cánh nằm trong mình, mép thấy được là chỗ mặt cánh chui vào sườn (ρ chừng 0,88–0,94), mà ở
- * đó hai mặt gặp nhau chỉ 13–20°, nên ảnh độ sâu không có nét. Đo bằng hình ở dáng nghỉ (positionGeometry): cánh xòe ra thì nét vẫn ở
- * trên cánh, như vẽ sẵn.
+ * Viền (chỉ khi rim = 1): mép riêng của cánh (ρ = 1) cộng chỗ cánh lún vào sườn (`seam`: khoảng cách tới mặt khối mình co lại, và độ
+ * co `sag`, shellDistance). Gà mẹ áp cánh sát sườn: dọc lưng và phía sau, mép riêng của cánh nằm trong mình, mép thấy được là chỗ mặt cánh
+ * chui vào sườn (ρ chừng 0,88–0,94), mà ở đó hai mặt gặp nhau chỉ 13–20°, nên ảnh độ sâu không có nét. Nét của chỗ lún đặt quanh mặt co
+ * lại và dày thêm đúng độ co, nên mép ngoài của nét vẫn ở chỗ cũ (gần mặt thật, nơi đỉnh của khối mình nằm), còn mép trong với tới tâm
+ * các mặt đa diện: nét chạm sườn ở mọi chỗ, không để dải màu cánh nào giữa nét và mình, ở số vòng nào cũng vậy. Đo bằng hình ở dáng nghỉ
+ * (positionGeometry): cánh xòe ra thì nét vẫn ở trên cánh, như vẽ sẵn.
  */
 function wingInk(uv, { a, b, rim, seam, line, rings }) {
   const { x, y, z } = onSphere(uv);
   const grad = sqrt(y.mul(y).div(a.mul(a)).add(z.mul(z).div(b.mul(b)))).mul(2).max(1e-4);
   const r2 = float(1).sub(x.mul(x));
-  const edge = max(stroke(x.mul(x).div(grad), 0.03), stroke(seam, 0.008)).mul(rim);
+  const edge = max(stroke(x.mul(x).div(grad), 0.03), stroke(seam.distance, seam.sag.add(0.008))).mul(rim);
   const feathers = rings.map((k) => stroke(abs(r2.sub(k * k)).div(grad), line)).reduce((m, v) => max(m, v));
   const back = float(1).sub(smoothstep(-0.05, 0.3, z)).mul(float(1).sub(smoothstep(0.05, 0.4, y))); // nửa sau, nửa dưới
   return max(edge, feathers.mul(back));
@@ -96,7 +104,8 @@ function wingInk(uv, { a, b, rim, seam, line, rings }) {
  * - EYE: vòng có chấm (eyeInk);
  * - BEE: ba vằn ngang thân ong (vòng quanh trục dài z của cầu ong); cánh ong (BEE_WING) không có vằn.
  * @param {object} s  điểm tô (recipe của Cốt): part, uv, pigment
- * @param {{ PART: Record<string, number>, blot: any, shell: (p: any) => any }} p   shell: khoảng cách tới mặt khối mình gà mẹ (shellDistance)
+ * @param {{ PART: Record<string, number>, blot: any, shell: (p: any) => { distance: any, sag: any } }} p   shell: khoảng cách tới mặt khối
+ *   mình gà mẹ co lại, và độ co (shellDistance)
  */
 export function innerInk(s, { PART, blot, shell }) {
   const is = (part) => float(1).sub(step(0.5, abs(s.part.sub(part))));

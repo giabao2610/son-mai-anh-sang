@@ -4032,7 +4032,8 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     - Mắt là cầu lún vào đầu, chỉ ló ra một chỏm (chừng 55° quanh hướng từ tâm đầu ra tâm mắt ở gà con, 60° ở gà mẹ). Cầu mắt xoay cho
       cực trên (uv.y = 1) nằm giữa chỏm, nên Bản nét vẽ vòng mắt và con ngươi theo góc tính từ cực ấy (GĐ 8 Task 5).
     - Cốt công bố `shared.cot.hen.bodyFrame`: ma trận đưa điểm thế giới về khung của khối mình gà mẹ (mặt khối là cầu đơn vị), ở dáng
-      nghỉ, cho viền cánh của Bản nét.
+      nghỉ, và `shared.cot.hen.bodyRadius` (GĐ 8 Task 9): uniform `henBodyRadius` = cos(π/n), n là số vòng quanh của khối mình; núm
+      `segments` đổi số này, không biên dịch lại. Hai thứ này cho viền cánh của Bản nét (lớp 3).
     - Cốt công bố `shared.cot.pose(state, k)` (GĐ 8 Task 8): lớp Đàn gà gọi mỗi khung với trạng thái của đàn gà và k là trọng số của nó.
       Cốt hòa từ dáng nghỉ (nhà, hướng của bố cục, đầu ngẩng) tới dáng của đàn gà theo k (hướng đi đường ngắn nhất), ghi `pose`, `head` và
       đặt `needsUpdate`, rồi đặt bốn uniform của gà mẹ bằng góc của đàn gà nhân k. Chưa có lớp Đàn gà thì gà đứng ở dáng nghỉ ghi lúc dựng.
@@ -4055,12 +4056,17 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     ở chỗ uốn.
   - Góc nhìn của tranh (`CAMERA`) nằm trong `parts/cot-bo-cuc.js`; `painting.js` và lớp này cùng đọc.
 - **Núm:** `segments` (độ mịn của khối, dựng lại), `wireframe` (bool, dựng lại).
-  - `segments` mặc định 32: số vòng của mỗi khối là `segments` × `detail` của khối. Ở mặc định, hai mặt kề nhau của mọi khối gãy dưới
-    20°, dưới góc Bản nét bắt đầu in nếp gấp (chừng 21°, lớp 3): mình gà mẹ (cầu kéo dãn) 18,6°, mình gà con 14°, đầu 11,3°.
+  - `segments` mặc định và tối đa theo mức (§20.8: cao 32 và 48, vừa 28 và 32, thấp 24 và 32): số vòng của mỗi khối là `segments` ×
+    `detail` của khối. Ở 32, hai mặt kề nhau của mọi khối gãy dưới 20°, dưới góc Bản nét bắt đầu in nếp gấp (chừng 21°, lớp 3): mình gà mẹ
+    (cầu kéo dãn) 18,6°, mình gà con 14°, đầu 11,3°.
+  - Ở 28 (mức vừa) mình gà mẹ và mào tới 21,3°, ngay ngưỡng: không thấy vệt nào, kể cả khi phóng to. Ở 24 (mức thấp) 24,3–24,6°: còn
+    vệt mực rất nhạt ở ngực và cuối mình gà mẹ khi phóng to trên máy tính; ở cỡ điện thoại (gà mẹ chừng 100 điểm ảnh, DPR 1,25) không
+    phân biệt được với 32. Từ 20 trở xuống vòng mặt đa diện thành nét rõ (GĐ 8 Task 9, chụp trên GPU thật).
   - Khối dẹt gãy gắt ở vành: cùng 32 vòng thì cánh gà mẹ 39,7°, cánh gà con 31,4°, mào 36,3° (16 vòng), bàn chân 69,8° (16 vòng), và vành
     của chúng thành sọc mực khi phóng to. Vì vậy chúng có nhiều vòng hơn: cánh mẹ 2,25 lần, cánh con 1,75, bàn chân 2,25, mào và ong 1.
   - Riêng cánh ong mỏng 0,09 lần: vành luôn gãy gắt (95° ở 32 vòng), và thành nét viền của cánh.
-  - Lưới giữ index, nên mỗi đỉnh chạy `positionNode` một lần. Ở mặc định, cả cảnh có chừng 86 nghìn đỉnh, 148 nghìn tam giác.
+  - Lưới giữ index, nên mỗi đỉnh chạy `positionNode` một lần. Ở 32, cả cảnh có chừng 86 nghìn đỉnh, 148 nghìn tam giác (28: 113
+    nghìn, 24: 82 nghìn, 48: 334 nghìn; §20.8).
 - **Thí nghiệm "Tấm bìa phẳng"** (`biaPhang`):
   - dẹt từng con gà quanh tâm của nó, theo hướng nhìn của tranh, còn 5%;
   - ở góc nhìn của tranh, ảnh gần như không đổi; kéo xoay mới thấy gà chỉ là tấm bìa;
@@ -4146,6 +4152,12 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     (`shared.cot.hen.bodyFrame`). Dọc lưng và phía sau, mép riêng của cánh nằm trong mình; mép thấy được là chỗ mặt cánh chui vào sườn
     (ρ chừng 0,88–0,94), nên viền vẽ ở mép riêng của cánh không thấy được ở đó. Gà con không có viền: cánh con đứng ra khỏi mình, đã có viền
     dò trên độ sâu.
+    - Khối mình là đa diện (GĐ 8 Task 9): đỉnh nằm trên mặt bầu dục thật, mặt phẳng giữa các đỉnh lõm vào trong, sâu nhất
+      1 − cos(π/n)·cos(π/2m) ở tâm mặt (n vòng quanh, m vòng từ chân lên đỉnh). Đo tới mặt thật thì nét nằm ngoài chỗ cánh chui vào mình đa
+      diện: một dải màu cánh giữa nét và sườn, 1–2 điểm ảnh ở 32 vòng, 3–5 ở 24, hơn chục ở 8 (phóng to 2,5 lần, DPR 2, GPU thật).
+    - Vì vậy nét đo tới mặt co lại `bodyRadius` = cos(π/n) lần (tâm cạnh của một vòng, lớp 1), và dày thêm đúng độ co (`sag`, cùng cách
+      xấp xỉ bậc một). Mép ngoài của nét vẫn ở chỗ cũ, mép trong với tới tâm các mặt: nét chạm sườn ở mọi số vòng, từ 8 tới 48.
+    - Chỉ co lại mà không dày thêm thì nét mảnh đi một nửa, và có chỗ gần đứt ở hàng đỉnh, nơi mặt đa diện chạm mặt thật.
   - **Đuôi:** các nét dọc nón đuôi, chụm lại ở chóp (gà mẹ năm nét ở mặt quay ra người xem, gà con hai).
   - **Con ong:** ba vằn quanh trục dài của thân ong; cánh ong (`BEE_WING`) không có vằn.
 - **Mực không đều:** độ đậm của nét nhân `1 − 0,3·smoothstep(0; 0,6; n)` với n là một noise thưa: phần lớn nét đậm hẳn, chỗ n cao mực mỏng
@@ -4480,17 +4492,31 @@ chuyển động ở lại trong bức.
 ### 20.8 Chất lượng và ngân sách
 **Bảng của Bức 4** (`paintings/dan-ga-me-con/quality.js`):
 
-| Mức | DPR tối đa | Thóc tối đa (`grains`) | Tầng noise của giấy (`paper`) | Bloom (`resolutionScale`) |
-|---|---|---|---|---|
-| **cao** | 2 | 4096 | 3 | 0.5 |
-| **vừa** | 1.5 | 2048 | 2 | 0.25 |
-| **thấp** | 1.25 | 1024 | 2 | 0.25 |
+| Mức | DPR tối đa | Vòng của khối gà (`segments`; tối đa `segmentsMax`) | Thóc tối đa (`grains`) | Tầng noise của giấy (`paper`) | Bloom (`resolutionScale`) |
+|---|---|---|---|---|---|
+| **cao** | 2 | 32; 48 | 4096 | 3 | 0.5 |
+| **vừa** | 1.5 | 28; 32 | 2048 | 2 | 0.25 |
+| **thấp** | 1.25 | 24; 32 | 1024 | 2 | 0.25 |
 
-- Khóa: `dpr`, `grains`, `paper`, `bloom`.
-- Thang: `['dpr', 'dan-ga.thoc', 'giay-diep.chi-tiet', 'phu-bong.bloom']`. Nấc `giay-diep.chi-tiet` chỉ có khi `paper` lớn hơn 1.
-- Trần núm theo mức: `count` tối đa `budget.grains`; `handful` tối đa 300 ở mọi mức, vì số hạt đã có trần riêng.
+- Khóa: `dpr`, `segments`, `segmentsMax`, `grains`, `paper`, `bloom`.
+- Thang: `['dpr', 'dan-ga.thoc', 'giay-diep.chi-tiet', 'phu-bong.bloom']`. Nấc `giay-diep.chi-tiet` chỉ có khi `paper` lớn hơn 1. Số vòng
+  của khối gà không có nấc: đổi hình lúc chạy là dựng lại geometry, và số tam giác đã theo mức.
+- Trần núm theo mức: `count` tối đa `budget.grains`; `segments` mặc định `budget.segments`, tối đa `budget.segmentsMax`; `handful` tối đa
+  300 ở mọi mức, vì số hạt đã có trần riêng.
+  - `segments` theo mức có từ GĐ 8 Task 9. Trước đó mọi mức 32, và núm kéo tới 48 (334 nghìn tam giác) ở mức nào cũng được.
+  - Mức vừa 28 tới ngay góc thành nét của Bản nét, không thấy vệt nào; mức thấp 24 có vệt rất nhạt khi phóng to, ở cỡ điện thoại không
+    phân biệt được với 32 (§20.4 lớp 1). Trần của hai mức ấy là 32, hình đã duyệt ảnh.
+- **Tam giác** của các vật có hình (tờ giấy 480, gà mẹ, mười gà con). `renderer.info` đếm thêm 2 mỗi hạt thóc đang vẽ và 1 mỗi lượt hậu kỳ:
+
+  | Mức | Mặc định | `segments` hết cỡ | `renderer.info` lúc mặc định (đo, GĐ 8 Task 9) |
+  |---|---|---|---|
+  | **cao** | 148 112 | 334 248 (48) | 156 318 |
+  | **vừa** | 113 278 | 148 112 (32) | 117 388 |
+  | **thấp** | 82 236 | 148 112 (32) | 84 298 |
+
+  `quality.test.js` giữ ngân sách: 150, 115, 85 nghìn ở mặc định; 335, 150, 150 nghìn khi kéo hết cỡ.
 - **Draw call:** giấy, mình gà mẹ, hai cánh, gà con (instanced), thóc (sprite) là 6 lần vẽ. Mức cao có `6 + 12 (bloom) + 1 (FXAA) + 1
-  (quad) = 20`. Bản nét không thêm lượt vẽ nào, vì nó đọc thẳng texture độ sâu. E2e giữ ≤ 30.
+  (quad) = 20`. Bản nét không thêm lượt vẽ nào, vì nó đọc thẳng texture độ sâu. E2e giữ ≤ 30. Đo được 20 ở cả ba mức (GĐ 8 Task 9).
 - **Chi phí:** thấp.
   - Mỗi điểm ảnh: 9 mẫu độ sâu (Bản nét), noise và hạt điệp trên giấy.
   - Thóc: 4096 phần tử, mỗi phần tử một vòng qua 10 mỏ.
@@ -4503,8 +4529,25 @@ chuyển động ở lại trong bức.
   - (GĐ 8, Task 6, thêm Giấy điệp: Cốt, Bản màu, Bản nét, Giấy điệp, Phủ bóng; cùng máy) 1280×800, DPR 2, mức cao: 60 khung/giây, 19 draw
     call, CPU 1,4 ms, không hạ nấc. Tải nặng 2560×1600, DPR 2 (5120×3200 điểm ảnh): 50 khung/giây, bộ điều chỉnh hạ dpr một nấc (1,75).
     Chưa tách riêng chi phí của giấy (năm lần lấy mẫu noise mỗi điểm ảnh ở mức cao); Task 9 đo lại đủ sáu lớp ở ba mức.
-- **JS:** chunk của bức cộng chunk content. `lib/tsl/particles.js` vào một chunk dùng chung với Bức 1 (Vite tự tách). Số đo ghi vào
-  README.
+  - (GĐ 8, Task 9, đủ sáu lớp; cùng máy, mỗi ô đo sau 12–15 giây live; hai lượt ở hai khung tham chiếu, một lượt ở tải nặng) Điện
+    thoại là Chrome giả lập (`isMobile`, `hasTouch`) trên GPU của Mac: chỉ để so, máy thật là việc kiểm tay (§20.9).
+
+    | Mức | 1280 × 800, DPR 2 | 390 × 844, DPR 3, giả lập điện thoại | 2560 × 1600, DPR 2 (tải nặng) |
+    |---|---|---|---|
+    | **cao** | 60 khung/giây, không hạ nấc, CPU 1,1–1,4 ms | 60, không hạ nấc, CPU 1,1–1,5 ms | 56,5, hạ dpr một nấc (1,75) |
+    | **vừa** | 60, không hạ nấc, CPU 1,4 ms | 60, không hạ nấc, CPU 1,3–1,7 ms; GPU 10,9–11,7 ms | 60, không hạ nấc |
+    | **thấp** | 60, không hạ nấc, CPU 1,0–1,4 ms | 60, không hạ nấc, CPU 1,5–1,6 ms; GPU 7,1–7,4 ms | 60, không hạ nấc |
+
+    - Mọi ô 20 draw call, số tam giác như bảng trên. Ms GPU chỉ đo được ở khung điện thoại, mức vừa và thấp; ở đó GPU Apple cộng các lượt
+      chồng lên nhau, nên số cao hơn thời gian thật và dao động nhiều (README). Cùng khung, ở 32 vòng (trước Task 9): mức thấp 9,1 ms,
+      mức vừa 12,1–15,4.
+    - Tải nền lúc đo: chính trình duyệt đo (40–45% CPU), WindowServer 15–20%; vài ô có dịch vụ hệ thống (ANECompilerService) tới 95%.
+    - Tải nặng, mức cao: chi phí theo điểm ảnh. Bớt một tầng noise của giấy (`paper` 2) vẫn hạ dpr một nấc rồi giữ 60 (thay vì 56,5):
+      một tầng noise không đủ giữ DPR 2 ở 16,4 triệu điểm ảnh. Thang hạ độ nét trước là đúng; ở hai khung tham chiếu mức cao giữ 60 mà
+      không hạ nấc nào, nên không cần đường rẻ hơn cho giấy.
+- **JS** (GĐ 8 Task 9, `npm run build`, gzip): chunk của bức (`painting-*`) 36,0 kB (15,4 kB gzip), content (`content.vi-*`) 11,9 kB
+  (4,7 kB gzip; chữ của Phủ bóng ở chunk dùng chung của mọi bức). `lib/tsl/particles.js` thành chunk riêng 1,5 kB (0,8 kB gzip), Bức 1 và
+  Bức 4 cùng import. Mã của nó tô màu cho Sổ tay (33 kB, 4,6 kB gzip) chỉ tải khi mở code. Số đo ghi vào README.
 
 ### 20.9 Kiểm thử
 **Tự chạy cho Bức 4**, vì các test này lặp qua registry:
@@ -4594,9 +4637,11 @@ chuyển động ở lại trong bức.
   - cảnh không có đèn nào của three, `shadowMap` tắt;
   - Bản nét có tap `truoc-net`; đồ thị màu của gà đọc `w_ban_net` (nét trong), tờ giấy thì không; núm ở hai đầu (`lineWidth` 1 và 3,
     `threshold` 0,05 và 2, `crease` 0 và 1, `misregister` 0 và 6) dịch được cả lượt cuối lẫn gà; hai thí nghiệm chỉ đổi uniform; tám mẫu
-    Sobel nằm trong nhánh `If`; mỗi nét trong đọc `fwidth` của khoảng cách (mép mềm tối thiểu một điểm ảnh);
+    Sobel nằm trong nhánh `If`; mỗi nét trong đọc `fwidth` của khoảng cách (mép mềm tối thiểu một điểm ảnh); mọi mesh gà đọc uniform
+    `henBodyRadius` (viền cánh chỗ áp sườn theo số vòng, không phải hằng);
   - Cốt: gà mẹ ba mesh có `positionNode`, mỗi mesh đọc đúng uniform dáng của nó; `pose`, `head` là thuộc tính ghi mỗi khung; Tấm bìa
-    phẳng chỉ đổi uniform (`material.version` không đổi); dịch được ở `segments` 8 và 48;
+    phẳng chỉ đổi uniform (`material.version` không đổi); dịch được ở `segments` 8 và 48; `bodyRadius` (uniform `henBodyRadius`) bằng
+    cos(π/n), nằm giữa đỉnh và tâm mặt lõm nhất của khối mình thật, đổi theo núm `segments`;
   - Bản màu: đồ thị màu của gà đọc `w_ban_mau` và ba núm; núm ở hai đầu dịch được; `pigment` ghi một lần; Tô mịn là kiểu so;
   - Giấy điệp:
     - đồ thị màu của tờ giấy đọc `w_giay_diep`, bốn núm, số tầng noise và Giấy dó trơn; shader của tờ giấy có `reflect` (hạt điệp), shader của
@@ -4612,7 +4657,12 @@ chuyển động ở lại trong bức.
   - `'swipe'`, `'double-tap'`, `'hold-move'` không làm gì riêng; hai mươi lần chạm trong một giây: tối đa 32 mốc, đàn gà hữu hạn;
   - `drift` chạy trước cử chỉ: cú chạm đầu tiên sau 25 giây lặng không xóa lần gà mẹ bới đã tới hạn;
   - lớp Đàn gà mài về 0: chạm và giữ không thêm mốc, không con nào chạy hay mổ; gà mẹ vẫn bới; cái giữ bắt đầu lúc lớp còn phủ vẫn được thả.
-- Chữ của Sổ tay, chất lượng: như Bức 2 và Bức 3.
+- Chữ của Sổ tay: như Bức 2 và Bức 3.
+- Chất lượng (`quality.test.js`, như Bức 3):
+  - ba mức đúng bảng §20.8, cùng bộ khóa; thang đúng thứ tự; mọi nấc của thang có thật ở lớp ở cả ba mức;
+  - `count` và `segments` mặc định và tối đa theo mức (kéo quá thì kẹp lại); Sprite thóc vẽ đúng `grains`; `handful` tối đa 300;
+  - số tam giác của các vật trong ngân sách của mức, ở mặc định và khi kéo `segments` hết cỡ; ở mức cao, 48 vòng thì hơn gấp đôi;
+  - `paper` = 1 thì không có nấc `chi-tiet`.
 
 **E2e riêng** (`e2e/dan-ga-me-con*.spec.js`; WebGL2 trên SwiftShader là cổng chặn, WebGPU không chặn). Một file quá 300 dòng thì tách theo lớp
 (`dan-ga-me-con-giay.spec.js`); tiện ích, các vùng của canvas và tag khói (`SMOKE`) dùng chung ở `e2e/dan-ga-me-con.helpers.js`. `tests/rules/e2e.test.js`
@@ -4623,9 +4673,11 @@ gom file theo slug dài nhất (slug `dan-ga` không nhận nhầm `dan-ga-me-co
 - Chữ trên ván tối: ở 1280 × 800, 1440 × 900, 1920 × 1080 và 390 × 844, khung tờ giấy (đo trên điểm ảnh của canvas) nằm dưới tên tranh và
   dải link, trên gợi ý và thơ; cả tờ giấy trong khung.
 - Mài:
-  - Bản nét về 0 thì tỉ lệ điểm tối trong vùng giấy giảm hẳn;
+  - Bản nét về 0 thì tỉ lệ điểm tối trong vùng giấy giảm hẳn; riêng vùng mình gà mẹ phía trên cánh (không viền, không nếp gấp) cũng sáng
+    lên: nét trong có thật, không chỉ viền (GĐ 8 Task 9: chừng 0,014 ở khung 640 × 400, DPR 1; bỏ nét trong thì kiểm này đỏ);
   - `misregister` bằng 6 thì ảnh khác lúc bằng 0;
-  - phóng to 2,5 lần (tờ giấy chạm khung, không lệch bản): hàng sát mép dưới không tối hơn sàn ngay trên (không vệt mực giả);
+  - phóng to 2,5 lần (tờ giấy chạm khung, không lệch bản): hàng sát mép dưới không tối hơn sàn ngay trên (không vệt mực giả); vùng ngay
+    trên phải là giấy (độ sáng > 0,2), không thì hai vùng cùng là ván tối và kiểm trôi qua mà không kiểm gì;
   - Giấy điệp về 0 thì vùng vách về xám đất sét: sắc độ giảm ít nhất 0,03 (đo trên GPU thật: 0,110 so với 0,047), và có Giấy điệp thì kênh đỏ hơn kênh lam.
 - Độ sâu của camera trực giao: view Độ sâu của Lột lớp không phải một mảng đều (độ lệch chuẩn đủ lớn), và vùng gà sáng hơn vùng vách.
 - Điệp (view "Chỉ emissive" của Lột lớp):
@@ -4640,7 +4692,8 @@ gom file theo slug dài nhất (slug `dan-ga` không nhận nhầm `dan-ga-me-co
   - mài Đàn gà về 0 khi thóc đang rơi rồi chạm: không lỗi console, phủ lại thì `rac` không đổi (không có nắm cũ bung ra).
 - Kéo camera: `goc` > 15; buông tay rồi chờ thì `goc` < 1 (tranh tự khép lại). Giảm chuyển động: camera về MỘT bước khi đủ 3 giây cảnh;
   `goc` ghi ở mỗi khung rAF không có mẫu nào lượn giữa chỗ buông và nhà.
-- Draw call ≤ 30 ở mức cao; `?level=thap` chạy được; bật từng thí nghiệm không có lỗi console.
+- Chất lượng (`e2e/dan-ga-me-con-chat-luong.spec.js`): draw call ≤ 30 ở mức cao; `?level=thap` chạy được, đúng mức và đúng ngân sách
+  (24 vòng, 1024 hạt), tờ giấy sáng giữa hai dải ván tối; bật rồi tắt từng thí nghiệm của năm lớp riêng không có lỗi console.
 - E2e chạy live và chờ rộng tay như Bức 3, vì đồng hồ của cảnh theo khung vẽ.
 - `e2e/lat-tranh.spec.js` thêm Bức 3 ⇄ Bức 4; `e2e/phong-tranh.spec.js` đếm bốn mục.
 
@@ -4685,12 +4738,13 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
     một cảnh khung chạy thật.
 - **Dò cạnh chỉ trên độ sâu bỏ sót nét:** hai mặt chạm nhau mà cùng độ sâu thì không có bậc.
   - Cách tránh: ngoài bậc (độ lệch khỏi mặt phẳng), Bản nét đo góc gãy của mặt, nên bắt cả nếp gấp (§20.4 lớp 3); nét trong vẽ trong
-    shader. Chỗ nối nông (cánh gà mẹ áp sát sườn, 13–20°) vẫn không có nét: ranh màu thay cho nét ở đó.
+    shader. Chỗ nối nông (cánh gà mẹ áp sát sườn, 13–20°) không có nét trên độ sâu: nét trong vẽ viền cánh ở đó, đo tới mặt khối mình co lại
+    theo số vòng (§20.4 lớp 3).
   - Nếu vẫn thiếu: thêm kênh normal vào MRT từ đầu cho bức cần (một trường tùy chọn mới, biên dịch một lần lúc dựng). Việc này để ở §16.
 - **Dò nếp gấp vẽ cả mặt đa diện:** khối cầu của gà là đa diện; đo độ đổi độ dốc thì gần mép khối, nơi mặt nghiêng gần 90°, hai mặt kề
   nhau cũng thành nét (GĐ 8 Task 4).
-  - Cách tránh: đo góc gãy của mặt (§20.4 lớp 3); `segments` mặc định 32, khối dẹt (cánh, bàn chân) nhiều vòng hơn (`detail`, §20.4
-    lớp 1).
+  - Cách tránh: đo góc gãy của mặt (§20.4 lớp 3); `segments` theo mức (32, 28, 24: §20.8), khối dẹt (cánh, bàn chân) nhiều vòng hơn
+    (`detail`, §20.4 lớp 1).
 - **Lấy mẫu texture độ sâu ở WebGL2.** View Độ sâu đã đọc texture này ở cả hai backend từ GĐ 4, nên lấy mẫu ở điểm lân cận chỉ là cùng
   phép đọc. Nếu hỏng: bọc `convertToTexture`, thêm một lượt vẽ như FXAA.
 - **Bức 1 đổi ảnh khi rút bể hạt.**
