@@ -140,7 +140,9 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
       expect(cam.height, 'camera trực giao cần height > 0').toBeGreaterThan(0);
       if (cam.minWidth !== undefined) expect(cam.minWidth).toBeGreaterThan(0);
       if (cam.zoom) expect(0 < cam.zoom[0] && cam.zoom[0] <= cam.zoom[1], `zoom ${cam.zoom}`).toBe(true);
+      if (cam.shortFrame) expect(cam.shortFrame.below > 0 && cam.shortFrame.maxGrow >= 1, 'shortFrame: below > 0, maxGrow ≥ 1').toBe(true);
     } else {
+      expect(cam.shortFrame, 'shortFrame chỉ dành cho camera trực giao (camera phối cảnh bỏ qua nó)').toBeUndefined();
       expect(cam.fov, 'camera phối cảnh cần fov > 0').toBeGreaterThan(0);
       expect(cam.distance[0]).toBeLessThanOrEqual(cam.distance[1]);
     }

@@ -22,6 +22,10 @@
  * @property {number} [height]              [8] camera trực giao (bắt buộc): bề cao khung nhìn ở zoom 1, đơn vị cảnh
  * @property {number} [minWidth]            [8] camera trực giao: khung hẹp thì xưởng nới height để bề ngang thấy đủ chừng này
  *                                          (engine/gpu/fov.js#fitOrtho)
+ * @property {{ below: number, maxGrow: number }} [shortFrame]   [8] camera trực giao: canvas thấp hơn `below` điểm ảnh CSS thì xưởng
+ *                                          nhân bề cao khung nhìn với below / bề cao canvas, tới `maxGrow` lần (≥ 1), để chữ của trang (cỡ
+ *                                          CSS cố định) còn chỗ trên ván ở laptop màn thấp; gộp với minWidth bằng max; camera phối cảnh bỏ
+ *                                          qua (engine/gpu/fov.js#shortGrow)
  * @property {[number, number]} [zoom]      [8] camera trực giao: minZoom, maxZoom của OrbitControls; thiếu thì không zoom
  * @property {[number, number]} azimuth     giới hạn xoay ngang (rad); [-Infinity, Infinity] là xoay trọn vòng (GĐ 7)
  * @property {[number, number]} polar       giới hạn xoay dọc (rad)

@@ -90,6 +90,9 @@ export const LAYOUT = Object.freeze({
  * cao), tên tranh, dải link ở trên và gợi ý, thơ ở dưới đều nằm trên ván tối, không đè lên giấy (điểm duyệt ảnh GĐ 8 Task 4; khung cao 12
  * cũ để giấy chiếm 75% bề cao, chữ đè lên giấy). Điểm nhìn gần tâm gà mẹ, nên kéo xoay thì đàn gà quay quanh chính nó.
  * polar đo từ trục y: xoay dọc 10°–70° trên mặt sàn là polar 80°–20°.
+ * `shortFrame`: canvas thấp hơn 800 điểm ảnh CSS (laptop 1366 × 768, trang còn chừng 650) thì khung nhìn cao thêm 800 / bề cao, tới 1,3
+ * lần: dải ván trên và dưới còn chừng số điểm ảnh của chúng ở 1280 × 800, đủ chỗ cho chữ (vòng sau điểm duyệt ảnh, spec §20.2). Trần 1,3
+ * đủ cho bề cao 615 trở lên; điện thoại xoay ngang (cao 390) giữ tờ giấy chừng 45% bề cao, gợi ý còn đè một phần như ba bức đầu.
  * `home`: buông tay 3 giây thì camera êm êm về góc này trong 1,2 giây (spec §20.2, CameraSpec.home, engine/gpu/home.js).
  * @type {import('../../../engine/contracts/runtime.js').CameraSpec}
  */
@@ -99,6 +102,7 @@ export const CAMERA = Object.freeze({
   target: [0, 1.86, -0.1],
   height: 13.2,
   minWidth: 15.5,
+  shortFrame: { below: 800, maxGrow: 1.3 },
   zoom: [1, 2.5],
   azimuth: [-75 * RAD, 75 * RAD],
   polar: [20 * RAD, 80 * RAD],

@@ -1,4 +1,4 @@
-// e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; chữ của trang nằm trên ván tối; độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ, có nét trong (vảy lông trên mình gà mẹ, tách khỏi viền), lệch bản, không vệt mực ở mép khung, hai thí nghiệm; tranh tự khép lại (kéo rồi buông thì camera về góc của tranh). Giấy điệp ở e2e/dan-ga-me-con-giay.spec.js, Đàn gà (cử chỉ, thóc) ở e2e/dan-ga-me-con-dan-ga.spec.js, chất lượng (draw call, mức thấp, mọi thí nghiệm) ở e2e/dan-ga-me-con-chat-luong.spec.js; tiện ích và các vùng dùng chung ở e2e/dan-ga-me-con.helpers.js.
+// e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; chữ của trang nằm trên ván tối (cả ở laptop màn thấp); độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ, có nét trong (vảy lông trên mình gà mẹ, tách khỏi viền), lệch bản, không vệt mực ở mép khung, hai thí nghiệm; tranh tự khép lại (kéo rồi buông thì camera về góc của tranh). Giấy điệp ở e2e/dan-ga-me-con-giay.spec.js, Đàn gà (cử chỉ, thóc) ở e2e/dan-ga-me-con-dan-ga.spec.js, chất lượng (draw call, mức thấp, mọi thí nghiệm) ở e2e/dan-ga-me-con-chat-luong.spec.js; tiện ích và các vùng dùng chung ở e2e/dan-ga-me-con.helpers.js.
 import { test, expect } from '@playwright/test';
 import { STAGE_ONLY, waitForFrames, canvasRegions, collectConsole, twoFrames, toggleExperiment } from './helpers.js';
 import {
@@ -163,13 +163,16 @@ test.describe('Đàn Gà Mẹ Con · chữ trên ván tối', () => {
   });
 
   // Điểm duyệt ảnh (Task 4): tờ giấy chiếm chừng 58% bề cao khung máy tính, nên chữ màu ngà của trang nằm trên ván tối, không trên giấy
-  // sáng (spec §20.1). Khung đổi cỡ thì vẽ lại ở khung kế: chạy live, vì khung đã dừng (?freeze) chỉ bị xóa khi đổi cỡ.
-  test('tên tranh, dải link ở trên và gợi ý, thơ ở dưới nằm trên ván tối, không đè lên tờ giấy: máy tính 16 : 10, 16 : 9, điện thoại dọc', async ({ page }, testInfo) => {
+  // sáng (spec §20.1). Laptop màn thấp (trang của 1366 × 768 chỉ còn chừng 1366 × 650): CameraSpec.shortFrame nới khung nhìn dưới 800
+  // điểm ảnh CSS (spec §20.2). Khung đổi cỡ thì vẽ lại ở khung kế: chạy live, vì khung đã dừng (?freeze) chỉ bị xóa khi đổi cỡ.
+  test('tên tranh, dải link ở trên và gợi ý, thơ ở dưới nằm trên ván tối, không đè lên tờ giấy: laptop màn thấp, máy tính 16 : 10, 16 : 9, điện thoại dọc', async ({ page }, testInfo) => {
     const log = collectConsole(page);
     await open(page, testInfo, 0);
-    for (const [width, height] of [[1280, 800], [1440, 900], [1920, 1080], [390, 844]]) {
+    for (const [width, height] of [[1366, 650], [1280, 720], [1280, 800], [1440, 900], [1920, 1080], [390, 844]]) {
       await page.setViewportSize({ width, height });
-      await expect.poll(() => page.evaluate((w) => document.querySelector('[data-stage] canvas').clientWidth === w, width)).toBe(true);
+      // Đợi canvas đúng CẢ hai chiều: 1280 × 720 → 1280 × 800 giữ bề ngang.
+      const size = () => page.evaluate(() => ['clientWidth', 'clientHeight'].map((k) => document.querySelector('[data-stage] canvas')[k]));
+      await expect.poll(size).toEqual([width, height]);
       const frames = await page.evaluate(() => window.__sma.frames);
       await waitForFrames(page, frames + 3, { timeout: 120_000 });
       const sheet = await sheetBox(page);

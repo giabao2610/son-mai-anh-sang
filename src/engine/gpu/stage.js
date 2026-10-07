@@ -56,8 +56,9 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
 
   let controls = null;
   let home = null; // tranh tự khép lại (CameraSpec.home): bộ đếm giờ trên controls; null khi bức không khai báo
-  let cameraSpec = null; // CameraSpec của bức: khung nhìn tính lại theo tỉ lệ khung mỗi lần resize (minHorizontalFov, minWidth)
+  let cameraSpec = null; // CameraSpec của bức: khung nhìn tính lại theo khung mỗi lần resize (minHorizontalFov, minWidth, shortFrame)
   let aspect = 1; // tỉ lệ khung hiện tại: camera mới của useCamera() dựng theo số này
+  let cssHeight = 0; // bề cao canvas (điểm ảnh CSS): khung nhìn trực giao nới ở canvas thấp (CameraSpec.shortFrame)
   let breathAmp = 0; // biên độ "thở" của camera (CameraSpec.breathe; 0 khi giảm chuyển động)
   const base = new Vector3(); // điểm nhìn gốc của bức; thở = lệch quanh điểm này
   let dprMax = 1;
@@ -74,7 +75,8 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
     renderer.setPixelRatio(ratio);
     renderer.setSize(width, height);
     aspect = width / height;
-    fitCamera(camera, cameraSpec ?? PLACEHOLDER, aspect);
+    cssHeight = height;
+    fitCamera(camera, cameraSpec ?? PLACEHOLDER, aspect, cssHeight);
     renderer.getDrawingBufferSize(u.resolution.value);
   };
   const observer = new win.ResizeObserver(resize);
@@ -102,7 +104,7 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
       home?.dispose();
       controls?.dispose();
       cameraSpec = spec;
-      camera = createCamera(spec, aspect);
+      camera = createCamera(spec, aspect, cssHeight);
       controls = new OrbitControls(camera, renderer.domElement);
       limitControls(controls, spec, reducedMotion);
       base.set(...spec.target);

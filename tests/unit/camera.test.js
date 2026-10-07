@@ -1,7 +1,8 @@
-// tests/unit/camera.test.js — camera của sân khấu theo CameraSpec (GĐ 8): phối cảnh như cũ khi thiếu kind; trực giao có khung nhìn đúng tỉ lệ, giữ zoom khi khớp khung; giới hạn OrbitControls theo loại camera.
+// tests/unit/camera.test.js — camera của sân khấu theo CameraSpec (GĐ 8): phối cảnh như cũ khi thiếu kind; trực giao có khung nhìn đúng tỉ lệ, giữ zoom khi khớp khung, nới khung nhìn ở canvas thấp (shortFrame); giới hạn OrbitControls theo loại camera.
 import { describe, it, expect } from 'vitest';
 import { OrthographicCamera, PerspectiveCamera, Vector3 } from 'three/webgpu';
 import { FAR, NEAR, createCamera, fitCamera, isOrtho, limitControls } from '../../src/engine/gpu/camera.js';
+import { fitFov } from '../../src/engine/gpu/fov.js';
 
 const PERSPECTIVE = {
   position: [0, 1, 5], target: [0, 1, 0], fov: 48, minHorizontalFov: 30,
@@ -50,6 +51,27 @@ describe('fitCamera', () => {
     fitCamera(cam, PERSPECTIVE, 390 / 844);
     expect(cam.fov).toBeGreaterThan(48);
     expect(cam.aspect).toBeCloseTo(390 / 844, 9);
+  });
+
+  it('camera trực giao, canvas thấp hơn shortFrame.below (laptop 1366 × 650): khung nhìn cao height · below / bề cao, đúng tỉ lệ; zoom giữ nguyên', () => {
+    const spec = { ...ORTHO, shortFrame: { below: 800, maxGrow: 1.3 } };
+    const aspect = 1366 / 650;
+    const cam = createCamera(spec, aspect, 650);
+    expect(cam.top - cam.bottom).toBeCloseTo((12 * 800) / 650, 9);
+    expect(cam.right - cam.left).toBeCloseTo(((12 * 800) / 650) * aspect, 9);
+    cam.zoom = 2;
+    fitCamera(cam, spec, 1.6, 900); // cao lại: như cũ
+    expect([cam.top, cam.bottom, cam.zoom]).toEqual([6, -6, 2]);
+    fitCamera(cam, spec, 844 / 390, 390); // điện thoại xoay ngang: có trần
+    expect(cam.top - cam.bottom).toBeCloseTo(12 * 1.3, 9);
+  });
+
+  it('camera phối cảnh bỏ qua shortFrame: fov như fitFov dù canvas thấp', () => {
+    const spec = { ...PERSPECTIVE, shortFrame: { below: 800, maxGrow: 1.3 } };
+    const cam = createCamera(spec, 844 / 390, 390);
+    expect(cam.fov).toBe(48);
+    fitCamera(cam, spec, 390 / 844, 390);
+    expect(cam.fov).toBe(fitFov(PERSPECTIVE, 390 / 844));
   });
 });
 

@@ -1,4 +1,4 @@
-// tests/paintings/dan-ga-me-con/cot-bo-cuc.test.js — bố cục của tờ tranh: góc nhìn của tranh đúng số §20.2 (cả số của tranh tự khép lại); chỗ nhà của gà con trên sàn, không chồng nhau; tám chỗ núp quanh mẹ (dưới 2,2 để quanhMe đếm đủ mười, ngoài thân mẹ, cách nhau và cách con nấp bụng) và nhúm thóc trước mặt mẹ; đầu mỏ của gà con khi cúi (beakTip); cú chạm của camera trực giao trúng đúng điểm trên sàn; số đo `goc` (viewAngle).
+// tests/paintings/dan-ga-me-con/cot-bo-cuc.test.js — bố cục của tờ tranh: góc nhìn của tranh đúng số §20.2 (cả số của tranh tự khép lại và của canvas thấp); chỗ nhà của gà con trên sàn, không chồng nhau; tám chỗ núp quanh mẹ (dưới 2,2 để quanhMe đếm đủ mười, ngoài thân mẹ, cách nhau và cách con nấp bụng) và nhúm thóc trước mặt mẹ; đầu mỏ của gà con khi cúi (beakTip); cú chạm của camera trực giao trúng đúng điểm trên sàn; số đo `goc` (viewAngle).
 import { describe, it, expect } from 'vitest';
 import { Raycaster, Vector2, Vector3 } from 'three/webgpu';
 import { createCamera } from '../../../src/engine/gpu/camera.js';
@@ -23,6 +23,7 @@ describe('cot-bo-cuc', () => {
     expect(CAMERA.azimuth.map((a) => a * DEG)).toEqual([-75, 75].map((a) => expect.closeTo(a, 6)));
     expect(CAMERA.polar.map((a) => 90 - a * DEG)).toEqual([70, 10].map((a) => expect.closeTo(a, 6))); // polar đo từ trục y
     expect([CAMERA.height, CAMERA.minWidth, CAMERA.zoom, CAMERA.breathe]).toEqual([13.2, 15.5, [1, 2.5], 0]);
+    expect(CAMERA.shortFrame).toEqual({ below: 800, maxGrow: 1.3 }); // canvas thấp (vòng sau điểm duyệt ảnh, §20.2)
     expect(CAMERA.home).toEqual({ after: 3, duration: 1.2 }); // tranh tự khép lại (§20.2, §20.6 mục 3)
   });
 
@@ -36,6 +37,21 @@ describe('cot-bo-cuc', () => {
     expect((top + bottom) / 2, 'tâm giấy cao hơn tâm khung').toBeGreaterThan(0.02);
     expect((top + bottom) / 2).toBeLessThan(0.08);
     for (const p of ys) expect(Math.abs(p.x), 'giấy trong khung').toBeLessThan(0.8);
+  });
+
+  it('canvas thấp (laptop 1366 × 650, 1280 × 720, tới 800 / 1,3 ≈ 615): dải ván trên và dưới tờ giấy còn ít nhất 95% số điểm ảnh của chúng ở 1280 × 800, chỗ của chữ; điện thoại xoay ngang (cao 390): tờ giấy vẫn chiếm hơn 40% bề cao', () => {
+    /** Điểm ảnh CSS của dải ván trên và dưới tờ giấy, và phần bề cao khung mà tờ giấy chiếm, ở canvas w × h. */
+    const bands = (w, h) => {
+      const ys = sheetCorners().map((p) => new Vector3(...p).project(createCamera(CAMERA, w / h, h)).y);
+      return { above: (h / 2) * (1 - Math.max(...ys)), below: (h / 2) * (1 + Math.min(...ys)), share: (Math.max(...ys) - Math.min(...ys)) / 2 };
+    };
+    const desk = bands(1280, 800);
+    for (const [w, h] of [[1366, 650], [1280, 720], [1280, 615], [1366, 780]]) {
+      const b = bands(w, h);
+      expect(b.above, `${w}×${h}: ván trên (ở 1280×800: ${desk.above.toFixed(1)})`).toBeGreaterThan(0.95 * desk.above);
+      expect(b.below, `${w}×${h}: ván dưới (ở 1280×800: ${desk.below.toFixed(1)})`).toBeGreaterThan(0.95 * desk.below);
+    }
+    expect(bands(844, 390).share, 'điện thoại xoay ngang').toBeGreaterThan(0.4);
   });
 
   it('điện thoại dọc 390 × 844: khung nới theo minWidth, cả tờ giấy nằm trong khung', () => {

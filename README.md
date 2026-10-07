@@ -224,7 +224,9 @@ Không phải sửa xưởng, trừ khi bức cần một khả năng mới.
    - Tùy chọn: muốn một dòng chữ (thơ, chú thích) hiện cạnh một vật và đi theo nó thì ghi chữ vào `content.captions`
      (`{ lines, source, author? }`, 1–2 dòng) rồi gọi `ctx.captions.show(khóa, anchor)`; code của bức chỉ cầm khóa.
    - Tùy chọn (giai đoạn 8): tranh in hay sa bàn thì nhìn bằng camera trực giao: `camera` có `kind: 'ortho'` cùng `height` (bề cao khung
-     nhìn), `minWidth`, `zoom`. Muốn camera tự về góc của bức khi người xem buông tay thì thêm `home: { after, duration }` (giây).
+     nhìn), `minWidth`, `zoom`. Muốn camera tự về góc của bức khi người xem buông tay thì thêm `home: { after, duration }` (giây). Chữ của
+     trang đè lên tranh ở laptop màn thấp thì thêm `shortFrame: { below, maxGrow }`: canvas thấp hơn `below` điểm ảnh CSS thì khung nhìn cao
+     thêm below / bề cao, tới `maxGrow` lần (Bức 4: 800 và 1,3).
    - Tùy chọn (giai đoạn 8): hạt tính trên GPU thì dùng bể hạt `lib/tsl/particles.js` (`createPool`: cấp phát một lần, vòng đệm, rắc
      theo nắm); luật chuyển động viết trong bức, và lớp kê `lib/tsl/particles.js` trong `files`.
    - Tùy chọn: đổi mặc định của Phủ bóng (tone, lộ sáng, bloom) bằng spread trong `painting.js`, chỉ thay `value` (hay `min`, `max`),

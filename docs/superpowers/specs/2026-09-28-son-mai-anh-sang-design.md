@@ -995,7 +995,7 @@ son-mai-anh-sang/
       sma.js                         [0→5] window.__sma: state, tier, backend, level, frames, reason; GĐ 2: expose() (GĐ 4 chỉ thêm hàm qua expose); GĐ 5: readouts(layerId)
       static.js                      [0→2] tầng C theo lý do; GĐ 2: Sổ tay chỉ đọc (import() động ui/workshop.js)
       contracts/painting.js          [0→8] JSDoc hợp đồng NHẸ; GĐ 4: Poster.capture; GĐ 5: PaintingContent.captions, LayerContent.objects; GĐ 8: LayerMeta.files kê được lib/tsl
-      contracts/runtime.js           [0→8] JSDoc hợp đồng NẶNG; GĐ 4: update(0, t), Gesture 'hover'/pointer, ToolInstance.activate, Studio, Snapshot.dials; GĐ 5: Gesture 'double-tap', EngineCtx.captions, ToolApi.draws; GĐ 8: CameraSpec.kind, height, minWidth, zoom, home
+      contracts/runtime.js           [0→8] JSDoc hợp đồng NẶNG; GĐ 4: update(0, t), Gesture 'hover'/pointer, ToolInstance.activate, Studio, Snapshot.dials; GĐ 5: Gesture 'double-tap', EngineCtx.captions, ToolApi.draws; GĐ 8: CameraSpec.kind, height, minWidth, shortFrame, zoom, home
       gpu/                           PHẦN NẶNG: chỉ tải ở tầng A/B
         run.js                       [0→5] vòng đời: dựng → compileAsync → khung ẩn → hòa dần → chạy → gỡ; GĐ 2: mất GPU lần đầu → dựng lại; GĐ 4: bộ điều chỉnh đo từ lúc live; GĐ 5: bringUp kiểm gone() trước việc đầu tiên và sau mỗi lần chờ ("Dựng lại cảnh" quá hạn không đụng trang đã về tĩnh), sự kiện GPU đến khi trang đã tĩnh thì bỏ qua (không có code nào của quầng trăng)
         scene.js                     [2→8] dựng MỘT cảnh trên một sân khấu (ctx → setup → lớp → pipeline → input → bàn thợ) + một khung; GĐ 4: đồ nghề, Dial, đo GPU, vẽ lại bằng update(0, t); GĐ 5: chữ đi theo vật, móc lần vẽ; GĐ 8: stage.returnHome(dt) mỗi khung, sau breathe, trước controls.update(); bức đã nhận 'hold-start' thì luôn nhận 'hold-end' (công cụ bật giữa chừng không giữ mất nó); bộ điều chỉnh tách ra scene-quality.js
@@ -1021,7 +1021,7 @@ son-mai-anh-sang/
         gesture.js                   [1→5] phân loại cử chỉ (hàm thuần): tap / hold-* / swipe; kéo là của camera; GĐ 5: double-tap
         breath.js                    [1] camera "thở": breathAmplitude, breathOffset (hàm thuần)
         camera.js                    [8] dựng camera theo CameraSpec (phối cảnh hay trực giao), khớp khung, giới hạn OrbitControls; phần tính của stage.js tách ra để unit test
-        fov.js                       [7→8] fitFov: nới fov dọc ở khung hẹp (minHorizontalFov); GĐ 8: fitOrtho cho camera trực giao
+        fov.js                       [7→8] fitFov: nới fov dọc ở khung hẹp (minHorizontalFov); GĐ 8: fitOrtho cho camera trực giao (minWidth, shortFrame)
         home.js                      [8] tranh tự khép lại (CameraSpec.home): đếm giờ đứng yên, quay về góc của bức; phần tính là hàm thuần; đặt dampingFactor theo giây của cảnh (Phụ lục A.98)
       stock/phu-bong/                LỚP DÙNG CHUNG "Phủ bóng"
         meta.js                      [0] { id: 'phu-bong', name: 'Phủ bóng', files } (dữ liệu thuần)
@@ -1278,6 +1278,10 @@ son-mai-anh-sang/
  * @property {number} [height]              [8] camera trực giao (bắt buộc): bề cao khung nhìn ở zoom 1, đơn vị cảnh
  * @property {number} [minWidth]            [8] camera trực giao: khung hẹp thì xưởng nới height để bề ngang thấy đủ chừng này
  *                                          (engine/gpu/fov.js#fitOrtho)
+ * @property {{ below: number, maxGrow: number }} [shortFrame]   [8] camera trực giao: canvas thấp hơn `below` điểm ảnh CSS thì xưởng
+ *                                          nhân bề cao khung nhìn với below / bề cao canvas, tới `maxGrow` lần (≥ 1), để chữ của trang (cỡ
+ *                                          CSS cố định) còn chỗ trên ván ở laptop màn thấp; gộp với minWidth bằng max; camera phối cảnh bỏ
+ *                                          qua (engine/gpu/fov.js#shortGrow)
  * @property {[number, number]} [zoom]      [8] camera trực giao: minZoom, maxZoom của OrbitControls; thiếu thì không zoom
  * @property {[number, number]} azimuth     giới hạn xoay ngang (rad); [-Infinity, Infinity] là xoay trọn vòng (GĐ 7)
  * @property {[number, number]} polar       giới hạn xoay dọc (rad)
@@ -3928,10 +3932,12 @@ spec.
     (350 × 190 điểm ảnh CSS).
   - Phần ván tối ở trên và dưới là chỗ của tên, thơ, gợi ý và con dấu, vì chữ màu ngà đặt trên giấy sáng không đọc được.
     - Đo ở 1280 × 800: tờ giấy từ y 150 tới 610 (điểm ảnh CSS); tên tranh và dải link hết ở y 132, gợi ý bắt đầu ở y 628. Cách 18 điểm
-      ảnh mỗi phía; ở 1440 × 900 và 1920 × 1080 còn rộng hơn (32–83). E2e "chữ trên ván tối" giữ điều này ở ba khung máy tính và ở
-      390 × 844.
-    - Chữ của trang có cỡ cố định theo điểm ảnh, còn tờ giấy co theo bề cao khung: khung máy tính thấp hơn chừng 740 điểm ảnh CSS thì
-      gợi ý chạm mép dưới tờ giấy (1280 × 720: chạm 1 điểm ảnh; 1366 × 768 còn cách 10).
+      ảnh mỗi phía; ở 1440 × 900 và 1920 × 1080 còn rộng hơn (32–83). E2e "chữ trên ván tối" giữ điều này ở năm khung máy tính (cả hai
+      khung laptop thấp 1366 × 650, 1280 × 720) và ở 390 × 844.
+    - Chữ của trang có cỡ cố định theo điểm ảnh, còn tờ giấy co theo bề cao khung: trước vòng sau điểm duyệt ảnh, khung máy tính thấp hơn
+      chừng 740 điểm ảnh CSS thì gợi ý chạm mép dưới tờ giấy (1280 × 720: chạm 3 điểm ảnh; trang của laptop 1366 × 768, chừng
+      1366 × 650: tên và dải link đè 14, gợi ý đè 19). `CameraSpec.shortFrame` sửa điều đó (§20.2): canvas thấp hơn 800 thì tờ giấy chiếm
+      phần nhỏ hơn của bề cao.
 - **Gà mẹ** dài chừng 4, cao chừng 3,2, đứng giữa sàn, quay nghiêng sang trái. Con ong là một phần hình của đầu gà mẹ.
 - **Mười gà con**, mỗi con dài chừng 1,3. Chỗ đứng ("nhà") và dáng của từng con là dữ liệu (`parts/cot-bo-cuc.js`), theo tranh gốc:
   - hai con trước mặt mẹ, hai con phía sau mẹ;
@@ -3960,6 +3966,28 @@ spec.
   - không có điểm tụ: vật ở xa không nhỏ đi, chỉ nằm cao hơn trong khung, đúng lối vẽ của tranh dân gian;
   - ở khung hẹp (điện thoại dọc), xưởng nới bề cao của khung nhìn để bề ngang thấy đủ `minWidth`: tờ giấy rộng 14, cộng lề;
   - chốt ở điểm duyệt ảnh (§20.10), cả ở khung máy tính 16 : 10 lẫn 390×844.
+  - **Canvas thấp** (`shortFrame: { below: 800, maxGrow: 1,3 }`, vòng sau điểm duyệt ảnh Task 11, Bao đồng ý):
+    - vấn đề: chữ của trang có cỡ CSS cố định, tờ giấy luôn chiếm 58% bề cao. Trang của laptop 1366 × 768 chỉ còn chừng 1366 × 650 (thanh
+      tab, thanh địa chỉ, thanh tác vụ): tên tranh và dải link đè mép trên tờ giấy 14 điểm ảnh, gợi ý đè mép dưới 19;
+    - cách sửa (§8.4, xưởng, bức nào cũng dùng được): canvas thấp hơn `below` điểm ảnh CSS thì bề cao khung nhìn nhân với below / bề cao
+      canvas, tới `maxGrow` lần (`fov.js#shortGrow`, `fitOrtho` lấy max với phần nới theo `minWidth`). Phần bề cao mà tờ giấy chiếm co lại
+      theo bề cao canvas (58% · bề cao / 800), nên dải ván trên và dưới còn gần bằng số điểm ảnh của chúng ở 1280 × 800, chỗ của chữ.
+      `stage.js` truyền bề cao canvas mỗi lần đổi cỡ; zoom (chụm ngón, tranh tự khép lại) không đổi; ba bức đầu không khai báo nên như cũ;
+    - đo trên GPU thật (khung 120, khe = điểm ảnh CSS giữa chữ và tờ giấy, âm là đè; trên: tên và dải link, dưới: gợi ý):
+
+      | Khung | Trước: trên / dưới | Sau: trên / dưới | Tờ giấy, phần bề cao |
+      |---|---|---|---|
+      | 1366 × 650 | −14 / −19 | 24 / 13 | 58% → 47% |
+      | 1280 × 720 | 1 / −3 | 24 / 16 | 58% → 52% |
+      | 1280 × 800 | 16 / 16 | 16 / 16 (không đổi) | 58% |
+      | 844 × 390 (điện thoại xoay ngang) | −18 / −52 | 10 / −28 | 58% → 45% |
+
+      Khung 1280 × 615, 1366 × 780, 1440 × 760, 1536 × 730 đo được khe 10–26; 1440 × 900, 1920 × 1080, 390 × 844 không đổi;
+    - `maxGrow` 1,3: nới đủ cho canvas cao từ 615 (800 / 1,3; trang của laptop 1280 × 720 có thanh tác vụ, chừng 1280 × 595, đo được gợi ý
+      còn cách 4). Không trần thì điện thoại xoay ngang nới 2,05 lần, tờ giấy còn 28% bề cao (tính), một dải nhỏ giữa ván; ở 1,3 còn 45%, tên
+      tranh không đè, gợi ý đè mép dưới 28 điểm ảnh (trước là 52), như ba bức đầu cũng để chữ đè ở điện thoại xoay ngang;
+    - `below` 800, không phải 760: dải ván dưới còn gần bằng ở `below`, nên `below` 760 để khe của gợi ý chỉ chừng 6 điểm ảnh từ 760
+      xuống 650; ở 800 nó bằng khe đã duyệt ở 1280 × 800 (16).
 - **Tranh tự khép lại** (`home: { after: 3, duration: 1,2 }`):
   - buông tay 3 giây thì camera êm êm quay về góc nhìn của tranh trong 1,2 giây, cả góc xoay lẫn zoom;
   - chạm hay kéo lại giữa chừng thì camera thôi quay về;
@@ -4503,6 +4531,10 @@ dùng được.
   - `height`: bề cao của khung nhìn ở zoom 1, theo đơn vị cảnh. Nó thay cho `fov`.
   - `minWidth` (tùy chọn): khung hẹp thì xưởng nới `height` để bề ngang thấy đủ chừng này, có trần 4 lần `height`. Hàm
     `engine/gpu/fov.js#fitOrtho` tính lại mỗi lần resize, giống `minHorizontalFov` của camera phối cảnh.
+  - `shortFrame` (tùy chọn, vòng sau điểm duyệt ảnh): `{ below, maxGrow }`. Canvas thấp hơn `below` điểm ảnh CSS thì `height` nhân với
+    below / bề cao canvas, tới `maxGrow` lần (`fov.js#shortGrow`); `fitOrtho` lấy max với phần nới theo `minWidth`, không nhân dồn.
+    `stage.js` truyền bề cao canvas cho `createCamera`/`fitCamera` mỗi lần resize. Camera phối cảnh bỏ qua; test hợp đồng chỉ cho nó ở
+    camera trực giao (`below > 0`, `maxGrow ≥ 1`). Lý do và số đo ở §20.2.
   - `zoom` (tùy chọn): `[min, max]`, thành `minZoom` và `maxZoom` của OrbitControls. Thiếu thì không zoom.
   - `fov` và `distance` không dùng. Khoảng cách của camera chỉ để cắt near/far, và đứng yên: OrbitControls với camera trực giao đổi
     `zoom`, không đổi khoảng cách (Phụ lục A.92).
@@ -4692,7 +4724,9 @@ chuyển động ở lại trong bức.
 - a11y.
 
 **Unit của xưởng** (`tests/unit/`):
-- `fov`: `fitOrtho` giữ `height` ở khung rộng, nới ở khung hẹp, có trần.
+- `fov`: `fitOrtho` giữ `height` ở khung rộng, nới ở khung hẹp, có trần; `shortFrame`: như cũ từ `below` trở lên (hay khi không biết
+  bề cao canvas), nới theo below / bề cao ở canvas thấp, có trần `maxGrow`, gộp với `minWidth` bằng max; `camera`: camera phối cảnh bỏ
+  qua nó.
 - `home` (mới):
   - đứng yên đủ `after` thì về trong `duration`; có `start` giữa chừng thì dừng, buông lần nữa thì đếm lại từ đầu;
   - đi đường ngắn nhất, kể cả khi qua ±π;

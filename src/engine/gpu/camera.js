@@ -11,30 +11,33 @@ export const isOrtho = (spec) => spec?.kind === 'ortho';
 
 /**
  * Camera đúng loại cho `spec`, đặt ở `spec.position`, nhìn `spec.target` (OrbitControls.update() cũng làm vậy lúc chạy; làm sẵn ở đây
- * để test và tia chạm có camera đúng hướng ngay). Khung nhìn tính theo tỉ lệ khung `aspect`.
+ * để test và tia chạm có camera đúng hướng ngay). Khung nhìn tính theo tỉ lệ khung `aspect` (và bề cao canvas, xem fitCamera).
  * @param {import('../contracts/runtime.js').CameraSpec} spec
  * @param {number} aspect   rộng / cao của canvas
+ * @param {number} [cssHeight]   bề cao canvas (điểm ảnh CSS)
  */
-export function createCamera(spec, aspect) {
+export function createCamera(spec, aspect, cssHeight) {
   const camera = isOrtho(spec) ? new OrthographicCamera(-1, 1, 1, -1, NEAR, FAR) : new PerspectiveCamera(45, 1, NEAR, FAR);
   camera.position.set(...spec.position);
   camera.lookAt(...spec.target);
-  fitCamera(camera, spec, aspect);
+  fitCamera(camera, spec, aspect, cssHeight);
   camera.updateMatrixWorld();
   return camera;
 }
 
 /**
- * Khớp khung (gọi mỗi lần đổi cỡ). Camera phối cảnh: aspect và fov (fitFov). Camera trực giao: bốn cạnh của khung nhìn ở zoom 1
- * (fitOrtho); zoom do OrbitControls đổi thì giữ nguyên, three chia cho zoom lúc dựng ma trận chiếu.
+ * Khớp khung (gọi mỗi lần đổi cỡ). Camera phối cảnh: aspect và fov (fitFov); bề cao canvas không dùng. Camera trực giao: bốn cạnh của
+ * khung nhìn ở zoom 1 (fitOrtho, kể cả shortFrame theo bề cao canvas); zoom do OrbitControls đổi thì giữ nguyên, three chia cho zoom lúc
+ * dựng ma trận chiếu.
  * @param {any} camera
  * @param {import('../contracts/runtime.js').CameraSpec} spec
  * @param {number} aspect
+ * @param {number} [cssHeight]   bề cao canvas (điểm ảnh CSS); thiếu thì không nới theo shortFrame
  */
-export function fitCamera(camera, spec, aspect) {
+export function fitCamera(camera, spec, aspect, cssHeight) {
   const ratio = aspect > 0 && Number.isFinite(aspect) ? aspect : 1;
   if (camera.isOrthographicCamera) {
-    const half = fitOrtho(spec, ratio) / 2;
+    const half = fitOrtho(spec, ratio, cssHeight) / 2;
     camera.top = half;
     camera.bottom = -half;
     camera.right = half * ratio;
