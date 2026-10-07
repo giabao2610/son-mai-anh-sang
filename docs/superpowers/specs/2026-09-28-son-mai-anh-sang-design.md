@@ -4179,7 +4179,8 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     bằng `mix(fill, diep, chiNet · w3)`: Bản nét về 0 thì màu in trở lại, nên mọi trọng số bằng 0 vẫn về đất sét;
   - "Dò cạnh theo màu" (`netTheoMau`): Sobel trên độ sáng của ảnh màu (scene pass) thay cho độ sâu, cùng lưới, bước và lệch bản. Nét mọc ở
     ranh của nấc sáng và hai bên nét trong, và mất ở chỗ hai mảng cùng màu chồng nhau (đầu gà mẹ trước mình, cùng vàng hòe). Tám mẫu màu
-    nằm trong nhánh `If` theo uniform của thí nghiệm, nên lúc tắt không đọc thêm texture nào.
+    nằm trong nhánh `If` theo uniform của thí nghiệm, nên lúc tắt không đọc thêm texture nào. Độ sáng của mỗi mẫu kẹp ở 1 (GĐ 8 Task 11):
+    ảnh của scene pass là HDR, hạt điệp lóe sáng chừng 15 lần giấy, nên không kẹp thì mỗi hạt lóe thành một vòng mực.
 - **Tap:** `truoc-net` (ảnh trước khi có viền).
 - Không có vật riêng.
 
@@ -4209,12 +4210,23 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     đúng về H mới lóe (với camera phối cảnh, hướng nhìn và H đổi theo chỗ trên giấy). Xoay camera là đổi H cho cả tờ giấy cùng lúc, nên hạt
     này tắt, hạt khác lóe lên. Câu cũ "đứng yên thì hạt đứng yên" đúng với mọi camera đứng yên, không phải điều camera trực giao thêm vào
     (sửa ở GĐ 8 Task 10);
-  - **cỡ chấm** không nhỏ hơn 0,8 điểm ảnh MÀN HÌNH theo từng trục (bề rộng một điểm ảnh tính bằng ô: `|dFdx| + |dFdy|` của lưới ô) và
-    không quá 0,25 ô. Sàn nhìn chếch 20° bị co dọc còn 1/3: chấm tròn trên mặt giấy thành vạch mảnh chưa tới một điểm ảnh và chớp tắt khi
-    xoay, nếu đặt sàn theo đơn vị cảnh của một điểm ảnh (`shared.cot.pixel`, cách của Bản nét: đúng theo chiều ngang, nhưng chiều sâu của sàn bị co);
+  - **cỡ chấm:** bán trục 0,2 ô, không nhỏ hơn 0,8 điểm ảnh MÀN HÌNH theo từng trục (bề rộng một điểm ảnh tính bằng ô: `|dFdx| + |dFdy|`
+    của lưới ô; đặt sàn theo đơn vị cảnh của một điểm ảnh, `shared.cot.pixel` như Bản nét, thì chỉ đúng theo chiều ngang, vì chiều sâu của
+    sàn bị co), và không quá 0,25 ô để chấm nằm gọn trong ô. Trần 0,25 ô thắng khi một ô nhỏ hơn chừng 3,2 điểm ảnh (sửa ở GĐ 8 Task 11:
+    bản trước viết "hạt nào cũng to ít nhất chừng hai điểm ảnh"):
+    - vách: ô rộng chừng 4,3 điểm ảnh ở DPR 1 (khung 1280 × 800), 8,7 ở DPR 2: chấm 0,2 ô, tức chừng 0,9 và 1,7 điểm ảnh;
+    - sàn: nhìn chếch 20° co chiều sâu còn 1/3, ô chỉ cao chừng 1,5 điểm ảnh ở DPR 1, 2,9 ở DPR 2, 1,8 ở điện thoại 390 × 844 (DPR 3), nên
+      chấm chỉ cao chừng 0,37, 0,74 và 0,46 điểm ảnh: hạt trên sàn là vạch ngang mảnh, nhạt hơn hạt trên vách (đúng với mặt giấy nhìn chếch).
+      Đo trên GPU thật (view "Chỉ emissive", khung 120): số điểm ảnh có hạt trên sàn và trên vách gần như nhau (chừng 0,4–0,6%), nhưng ở ảnh
+      cuối hạt trên sàn chỉ hiện rõ ở DPR 2; ở DPR 1 và trên điện thoại gần như không thấy. Giữ như vậy: hạt điệp lóe nhẹ, và hạt to hơn trên
+      sàn phải tràn sang ô kề hay thưa hạt đi (ảnh ở trang duyệt của Task 11);
   - phần sáng của hạt là `emissiveNode` với độ sáng HDR `16 · sparkle`. Tone mapping AgX nén vùng sáng: hạt chỉ sáng gấp đôi giấy thì gần
     như không thấy (đo trên GPU thật, DPR 2, góc của tranh: đỉnh 1 và 3,4 gần như không thấy hạt trong ảnh cuối; 8 mờ; 16 thấy rõ), và bloom của
-    Phủ bóng chỉ có gì để tỏa khi đỉnh từ chừng 10. Hạt ở mép giấy tỏa cả ra ván tối (quầng).
+    Phủ bóng chỉ có gì để tỏa khi đỉnh từ chừng 10;
+  - **lề không lóe** (GĐ 8 Task 11): hạt tắt dần từ 0,5 vào tới 0,25 đơn vị cách mép tờ giấy (khoảng cách UV tới mép gần nhất; Cốt công bố
+    khổ UV ở `shared.cot.sheet`). Quầng bloom của một hạt tỏa ra vài chục điểm ảnh, mà ngoài mép là ván sơn đen: chưa có lề thì hạt sát mép
+    để lại những đốm sáng mờ trên ván. Đo trên GPU thật (khung 120, 1280 × 800, DPR 1, dải ván 3–20 điểm ảnh quanh tờ giấy): độ sáng lớn
+    nhất của ván 80 khi chưa có lề, 18 khi có (0–255; ván xa chừng 3).
 - **Núm:** `sparkle` (0–4, mặc định 1,2), `density` (4–40 ô mỗi đơn vị, mặc định 14), `fiber` (0–1, mặc định 0,5), `brush` (0–1, mặc định
   0,6). Số hạt không đổi chi phí: không có vòng lặp nào theo số ô.
 - **Thí nghiệm "Giấy dó trơn"** (`giayTron`): bỏ lớp điệp và hạt, chỉ còn nền dó và sợi.
@@ -5293,7 +5305,7 @@ Các mục dưới đây đã được kiểm bằng ba cách:
       độ sáng của hạt theo view ấy;
     - bloom (ngưỡng 0, cường độ 1) trên kênh emissive chỉ tỏa đáng kể từ đỉnh chừng 10: chấm hai điểm ảnh bị nhòe ở nửa độ phân giải;
     - hệ quả: phần phát sáng của một vật trên nền sáng đặt theo HDR (hàng chục), không theo độ sáng của nền. Ở góc nhìn của Bức 4,
-      hạt ở mép giấy tỏa cả ra ván tối.
+      hạt ở mép giấy tỏa cả ra ván tối: Giấy điệp tắt hạt trong một lề quanh mép (GĐ 8 Task 11, §20.4 lớp 4).
 101. **Mảng uniform (`uniformArray`) mà compute đọc được tải lại ở mỗi lần `renderer.compute`** (`nodes/accessors/UniformArrayNode.js`,
      `renderers/common/Renderer.js#compute`, `nodes/core/NodeFrame.js#updateNode`; GĐ 8 Task 8, chạy thật: thóc bị mỏ gà ăn ở cả hai backend):
     - `UniformArrayNode.updateType` là `RENDER`. `compute()` đặt `nodeFrame.renderId = info.calls`, số tăng ở mỗi lần gọi, nên

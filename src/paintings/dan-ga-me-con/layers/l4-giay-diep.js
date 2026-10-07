@@ -16,10 +16,10 @@ export const knobs = [
  * Bọc recipe.paper và recipe.glint của Cốt (spec §20.4): thân hàm chạy lúc biên dịch, sau khi mọi lớp đã bọc. Chỉ tờ giấy đi qua hai hàm
  * này, nên gà không đổi. Không có vật riêng.
  * @param {import('../../../engine/contracts/runtime.js').LayerCtx} ctx
- * @param {object} shared  shared.cot (recipe, sun) của Cốt
+ * @param {object} shared  shared.cot (recipe, sun, sheet) của Cốt
  */
 export function createLayer(ctx, shared) {
-  const { recipe, sun } = shared.cot;
+  const { recipe, sun, sheet } = shared.cot;
   const w = ctx.weight(id);
   const diep = color(ctx.palette.color('diep'));
   // Số tầng noise của sợi dó theo mức (bảng quality.js); nấc chi-tiet bớt một tầng. Là uniform: fbm chạy vòng lặp thật trong shader, nên đổi
@@ -36,7 +36,7 @@ export function createLayer(ctx, shared) {
   const prevPaper = recipe.paper;
   recipe.paper = (s) => mix(prevPaper(s), paperColor(s, { diep, octaves, fiber, brush, plain }), w);
   const prevGlint = recipe.glint;
-  recipe.glint = (s) => prevGlint(s).add(glints(s, { sun, density, sparkle, tint: diep }).mul(w).mul(float(1).sub(plain)));
+  recipe.glint = (s) => prevGlint(s).add(glints(s, { sun, density, sparkle, tint: diep, sheet }).mul(w).mul(float(1).sub(plain)));
 
   return {
     objects: [],

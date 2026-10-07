@@ -1,9 +1,9 @@
-// tests/paintings/dan-ga-me-con/giay-diep.test.js — Lớp 4 · Giấy điệp của Bức 4: bọc recipe.paper và recipe.glint, trộn theo w_giay_diep (mọi trọng số 0 thì về đất sét); tờ giấy có hạt điệp (emissive) còn gà thì không; hạt với tới được góc nhìn của tranh trên cả sàn lẫn vách; núm ở hai đầu dịch được; nấc chi-tiet bớt một tầng noise của sợi dó; Giấy dó trơn chỉ đổi uniform.
+// tests/paintings/dan-ga-me-con/giay-diep.test.js — Lớp 4 · Giấy điệp của Bức 4: bọc recipe.paper và recipe.glint, trộn theo w_giay_diep (mọi trọng số 0 thì về đất sét); tờ giấy có hạt điệp (emissive) còn gà thì không; hạt tắt dần sát mép tờ giấy; hạt với tới được góc nhìn của tranh trên cả sàn lẫn vách; núm ở hai đầu dịch được; nấc chi-tiet bớt một tầng noise của sợi dó; Giấy dó trơn chỉ đổi uniform.
 import { describe, it, expect } from 'vitest';
 import { float, vec2, vec3 } from 'three/tsl';
 import meta from '../../../src/paintings/dan-ga-me-con/meta.js';
 import * as painting from '../../../src/paintings/dan-ga-me-con/painting.js';
-import { TILT } from '../../../src/paintings/dan-ga-me-con/parts/giay-diep-mat.js';
+import { EDGE, TILT } from '../../../src/paintings/dan-ga-me-con/parts/giay-diep-mat.js';
 import { CAMERA, PAPER, SUN } from '../../../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
 import { PAPER_LENGTH, profile } from '../../../src/paintings/dan-ga-me-con/parts/cot-giay.js';
 import { buildPainting } from '../../helpers/fake-ctx.js';
@@ -47,6 +47,18 @@ describe('l4-giay-diep (Bức 4)', () => {
       expect(uniforms).not.toContain('w_giay_diep');
       expect(fragmentShader).not.toMatch(/\breflect\s*\(/);
     }
+  });
+
+  it.each(['webgpu', 'webgl2'])('%s: hạt điệp tắt dần trong lề EDGE quanh mép tờ giấy (quầng bloom của hạt sát mép không tỏa ra ván tối): emissive nhân smoothstep(EDGE/2, EDGE, khoảng cách UV tới mép gần nhất), khổ UV do Cốt công bố', (backend) => {
+    const built = build();
+    expect(built.shared.cot.sheet).toEqual([PAPER.width, PAPER_LENGTH]);
+    const { fragmentShader } = compileMaterial(built.shared.cot.paper, built.ctx, backend);
+    // UV của tờ giấy là một varying: min(min(u, v), min(rộng − u, dài − v)) là khoảng cách tới mép gần nhất, đơn vị cảnh.
+    const fade = fragmentShader.match(/smoothstep\( ([\d.]+), ([\d.]+), min\( min\( (\w+)\.x, \3\.y \), min\( \( ([\d.]+) - \3\.x \), \( ([\d.]+) - \3\.y \) \) \) \)/);
+    expect(fade, 'emissive có lề tắt hạt quanh mép').not.toBeNull();
+    expect(fade.slice(1, 3).map(Number)).toEqual([EDGE / 2, EDGE]);
+    expect(Number(fade[4])).toBeCloseTo(PAPER.width, 9);
+    expect(Number(fade[5])).toBeCloseTo(PAPER_LENGTH, 9);
   });
 
   it('mọi trọng số 0 thì về đất sét: recipe.paper và recipe.glint trộn theo w_giay_diep; Giấy dó trơn tắt cả lớp điệp lẫn hạt', () => {

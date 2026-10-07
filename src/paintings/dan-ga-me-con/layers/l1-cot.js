@@ -4,8 +4,8 @@ import {
   Fn, attribute, color, dot, float, instancedBufferAttribute, instancedDynamicBufferAttribute, max, mix, normalWorld, positionWorld, uniform,
   uv, vec3,
 } from 'three/tsl';
-import { CAMERA, FLOOR, HEN, HOMES, SUN, viewAngle } from '../parts/cot-bo-cuc.js';
-import { paperGeometry } from '../parts/cot-giay.js';
+import { CAMERA, FLOOR, HEN, HOMES, PAPER, SUN, viewAngle } from '../parts/cot-bo-cuc.js';
+import { PAPER_LENGTH, paperGeometry } from '../parts/cot-giay.js';
 import {
   HEN_SHAPE, PART, chickGeometry, chickPosition, henGeometry, henPosition, henWingPosition, placement, ringsOf,
 } from '../parts/cot-hinh-ga.js';
@@ -177,6 +177,7 @@ export function createLayer(ctx, shared) {
     floor: FLOOR,
     pixel,
     paper,
+    sheet: [PAPER.width, PAPER_LENGTH], // UV của tờ giấy chạy từ (0, 0) tới đây (đơn vị cảnh): Giấy điệp đo khoảng cách tới mép giấy
     PART,
     // bodyFrame: điểm thế giới → khung của khối mình (mặt khối là cầu đơn vị), ở dáng nghỉ; bodyRadius: bán kính trong khung ấy của mặt
     // mà viền đo tới (bodyRadiusAt). Bản nét vẽ viền cánh chỗ cánh áp sườn bằng hai thứ này.

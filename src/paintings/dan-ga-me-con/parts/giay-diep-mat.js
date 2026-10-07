@@ -26,6 +26,11 @@ const GAIN = 16;
 const RADIUS = 0.2;
 /** Bán trục nhỏ nhất của chấm trên màn hình, tính bằng điểm ảnh: hạt nhỏ hơn thế thì rơi giữa hai điểm ảnh và chớp tắt khi xoay. */
 const MIN_RADIUS_PX = 0.8;
+/**
+ * Lề không có hạt lóe quanh mép tờ giấy (đơn vị cảnh): hạt tắt dần từ EDGE vào tới EDGE / 2 cách mép. Quầng bloom của một hạt tỏa ra vài
+ * chục điểm ảnh, mà ngoài mép là ván sơn đen: hạt sát mép để lại những đốm sáng mờ trên ván (GĐ 8 Task 11, đo trên GPU thật).
+ */
+export const EDGE = 0.5;
 
 /**
  * Màu giấy dó quét điệp tại điểm tô s (s.uv theo đơn vị cảnh: u = x + 7, v = chiều dài cung).
@@ -45,7 +50,8 @@ export function paperColor(s, { diep, octaves, fiber, brush, plain }) {
 }
 
 /**
- * Hạt điệp (emissive). Mặt giấy chia ô (`density` ô mỗi đơn vị); mỗi ô có MỘT hạt: một chấm nhỏ ở chỗ lệch ngẫu nhiên, với pháp tuyến
+ * Hạt điệp (emissive). Trong lề EDGE quanh mép tờ giấy (`sheet`: khổ UV, shared.cot.sheet) hạt tắt dần, để quầng bloom không ra ván tối.
+ * Mặt giấy chia ô (`density` ô mỗi đơn vị); mỗi ô có MỘT hạt: một chấm nhỏ ở chỗ lệch ngẫu nhiên, với pháp tuyến
  * nghiêng ngẫu nhiên (băm theo ô) trong mặt phẳng tiếp tuyến của tờ giấy: T là trục x, B = n × T chạy theo chiều dài cung. Nghiêng theo
  * hai tiếp tuyến chứ không theo trục x và z của thế giới: vách đứng có pháp tuyến (0, 0, 1), nghiêng theo z không đổi gì, mà vách cần
  * nghiêng lên xuống mới bắt được nắng.
@@ -54,15 +60,16 @@ export function paperColor(s, { diep, octaves, fiber, brush, plain }) {
  * hướng nhìn, như nhau ở mọi điểm của tờ giấy: khắp tờ giấy chỉ hạt có pháp tuyến quay đúng về H mới lóe. Xoay camera là đổi H cho cả tờ
  * giấy cùng lúc, nên hạt này tắt, hạt khác lóe.
  */
-export function glints(s, { sun, density, sparkle, tint }) {
+export function glints(s, { sun, density, sparkle, tint, sheet }) {
   const grid = s.uv.mul(density);
   const cell = floor(grid);
   const seed = cell.x.mul(157).add(cell.y.mul(113)); // ô ≥ 0 vì UV của tờ giấy ≥ 0: số nguyên cho hash
   const r = [0, 1, 2, 3].map((k) => hash(seed.add(k)));
   // Chấm: tâm lệch ngẫu nhiên trong ô (chừa lề 0,25 ô), hình elip theo hai trục của ô. Bán trục là RADIUS ô, nhưng không nhỏ hơn
   // MIN_RADIUS_PX điểm ảnh MÀN HÌNH theo từng trục (bề rộng một điểm ảnh tính bằng ô: |dFdx| + |dFdy|), và không quá 0,25 ô để chấm nằm
-  // gọn trong ô. Sàn nhìn chếch 20° bị co dọc còn 1/3: không có sàn này thì hạt trên sàn thành vạch chưa tới một điểm ảnh và chớp tắt khi
-  // xoay; có thì hạt, trên sàn hay vách, ở DPR nào, đều to ít nhất chừng hai điểm ảnh mỗi chiều.
+  // gọn trong ô. Trần 0,25 ô thắng khi một ô nhỏ hơn chừng 3,2 điểm ảnh. Trên vách, ô rộng chừng 4,3 điểm ảnh ở DPR 1 (khung 1280 × 800):
+  // chấm 0,2 ô, chừng 0,9 điểm ảnh. Trên sàn, nhìn chếch 20° co chiều sâu còn 1/3, ô chỉ cao chừng 1,5 điểm ảnh ở DPR 1, 2,9 ở DPR 2, nên
+  // chấm chỉ cao chừng 0,37 và 0,74 điểm ảnh: hạt trên sàn là vạch ngang mảnh, nhạt hơn hạt trên vách.
   const footprint = vec2(abs(dFdx(grid.x)).add(abs(dFdy(grid.x))), abs(dFdx(grid.y)).add(abs(dFdy(grid.y))));
   const radius = min(max(footprint.mul(MIN_RADIUS_PX), RADIUS), 0.25);
   const away = fract(grid).sub(vec2(r[0], r[1]).mul(0.5).add(0.25)).div(radius);
@@ -73,5 +80,6 @@ export function glints(s, { sun, density, sparkle, tint }) {
   const n = normalize(cameraViewMatrix.mul(vec4(flake, 0)).xyz);
   const l = normalize(cameraViewMatrix.mul(vec4(sun, 0)).xyz);
   const shine = pow(saturate(dot(reflect(l.negate(), n), positionViewDirection)), SHINE);
-  return tint.mul(shine.mul(spot).mul(sparkle).mul(GAIN));
+  const edge = min(min(s.uv.x, s.uv.y), min(float(sheet[0]).sub(s.uv.x), float(sheet[1]).sub(s.uv.y))); // tới mép gần nhất
+  return tint.mul(shine.mul(spot).mul(sparkle).mul(GAIN).mul(smoothstep(EDGE / 2, EDGE, edge)));
 }

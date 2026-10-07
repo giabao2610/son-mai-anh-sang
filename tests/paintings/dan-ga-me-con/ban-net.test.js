@@ -128,7 +128,7 @@ describe('l3-ban-net (Bức 4)', () => {
     p.dispose();
   });
 
-  it.each(['webgpu', 'webgl2'])('%s: Dò cạnh theo màu tắt thì không đọc thêm texture màu nào: tám mẫu Sobel nằm trong nhánh If của uniform banNetTheoMau', (backend) => {
+  it.each(['webgpu', 'webgl2'])('%s: Dò cạnh theo màu tắt thì không đọc thêm texture màu nào: tám mẫu Sobel nằm trong nhánh If của uniform banNetTheoMau, độ sáng mỗi mẫu kẹp ở 1', (backend) => {
     const { fragmentShader: code, problems } = compilePost(upToInk(), backend);
     expect(problems).toEqual([]);
     const start = code.search(/if \( \( (?:object\.)?banNetTheoMau > 0\.5 \) \) \{/);
@@ -144,6 +144,8 @@ describe('l3-ban-net (Bức 4)', () => {
       : [...text.matchAll(/texture\( (nodeUniform\d+), /g)].filter((m) => !depthSamplers.has(m[1])).length);
     const body = code.slice(from, i - 1);
     expect(colorSamples(body), 'tám mẫu Sobel trong nhánh').toBe(8);
+    // Độ sáng của mỗi mẫu kẹp ở 1: ảnh của scene pass là HDR, hạt điệp lóe sáng chừng 15 lần giấy, không kẹp thì thành vòng mực.
+    expect((body.match(/min\( dot\(/g) ?? []).length, 'tám độ sáng kẹp ở 1').toBe(8);
     // Ngoài nhánh chỉ còn một lần đọc màu: màu của chính điểm ảnh, như khi chưa có thí nghiệm.
     expect(colorSamples(code.slice(0, from) + code.slice(i)), 'ngoài nhánh').toBe(1);
   });
