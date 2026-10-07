@@ -18,7 +18,8 @@ export default {
     height: 1000,
     alt: 'Tranh Đông Hồ đàn gà mẹ con trên giấy điệp, đặt trên ván sơn đen: gà mẹ ngậm con ong, mười gà con quây quần.',
     // scripts/poster.js chụp từ chính cảnh, ở góc nhìn của tranh. Khung 240 (4 giây, chốt ở lượt màu GĐ 8 Task 11): gà con đỏ và vàng cúi
-    // mổ nhúm thóc lúc mở trang, gà con đen bên phải quay nghiêng thấy mắt (khung 120 thì nó quay lưng: một khối đen).
+    // mổ nhúm thóc lúc mở trang, gà con đen bên phải quay nghiêng thấy mắt (khung 120 thì nó quay lưng: một khối đen). Chụp lại ở cùng
+    // khung sau khi đổi hướng hai gà con xanh (vòng sau điểm duyệt ảnh, spec §20.1), để poster hòa sang cảnh không thấy chúng quay đầu.
     capture: { at: '2026-10-05T21:00', freeze: 240 },
   },
   og: 'paintings/dan-ga-me-con/og.jpg',

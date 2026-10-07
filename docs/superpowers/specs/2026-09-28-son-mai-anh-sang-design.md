@@ -3946,6 +3946,9 @@ spec.
   - một con nấp dưới bụng mẹ, một con trèo trên lưng mẹ. Bụng mẹ chỉ cách sàn 0,5 mà gà con cao chừng 1,2, nên con nấp bụng đứng sát
     bụng mẹ phía người xem, dưới cánh trái; con trèo lưng đứng trên lưng, chân chạm lưng (y 2,6). Cả hai không lún vào mẹ (test giữ).
   - Ở góc nhìn của tranh, không con nào bị che hẳn: test bắn tia qua đầu và mình từng con (§20.9).
+  - Hướng lúc nghỉ chọn để con nào cũng lộ mắt ra người xem. Vòng sau điểm duyệt ảnh (Task 11, Bao đồng ý) xoay hai gà con xanh: con sau
+    lưng mẹ (chỉ số 2) từ −1,9 sang −1,4 rad (trước chỉ lộ một mép mắt), con ở gần (chỉ số 6) từ 2,6 sang 1,6 (trước quay lưng, không
+    thấy mắt). Mọi test của đàn gà (không chồng nhau, tia thấy được, chỗ núp, nhúm thóc lúc mở trang) vẫn qua, không sửa test nào.
 - **Ánh sáng:** một hướng nắng cố định, từ trên, bên trái, phía trước.
   - Không có đèn nào của three, và không có bóng đổ (tranh Đông Hồ không vẽ bóng).
   - Không bật `renderer.shadowMap` (test giữ).
@@ -4095,6 +4098,8 @@ spec.
     - (GĐ 8 Task 11) Chốt `{ at: '2026-10-05T21:00', freeze: 240 }` (4 giây): gà con đỏ và vàng cúi mổ nhúm thóc lúc mở trang, gà con đen bên
       phải quay nghiêng thấy mắt. Đã thử khung 120, 240, 360: khung 120 gà con đen quay lưng thành một khối đen; khung 360 gần như khung 240.
       Poster 87 KB (WebP, chất lượng 0,88), og 58 KB;
+    - (vòng sau điểm duyệt ảnh) chụp lại ở cùng khung sau khi đổi hướng hai gà con xanh (§20.1): poster cũ cho thấy hai con quay đi, nên
+      lúc poster hòa sang cảnh hai con ấy quay đầu. Poster 87 KB (WebP 0,88), og 58 KB;
   - `poster.alt`: "Tranh Đông Hồ đàn gà mẹ con trên giấy điệp, đặt trên ván sơn đen: gà mẹ ngậm con ong, mười gà con quây quần.".
 - **Lượt màu:** đo như §5 (độ sáng trung bình, độ bão hòa, tỉ lệ điểm tối; 1280×800 và 390×844; GPU thật). Đo thêm:
   - tỉ lệ điểm ảnh của giấy (sáng hơn 200);

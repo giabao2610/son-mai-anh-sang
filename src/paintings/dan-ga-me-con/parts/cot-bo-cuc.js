@@ -48,15 +48,17 @@ export function beakTip(k) {
 /**
  * Chỗ "nhà" của mười gà con (x, z), hướng lúc nghỉ, và màu (chỉ số trong bảng màu của Bản màu, Task 4), theo tinh thần tranh gốc (§20.1).
  * kind 'free': đi lại được. 'back': trèo trên lưng mẹ (y = HEN.back). 'belly': nấp dưới bụng mẹ. Hai con sau luôn ở yên.
+ * Hai con xanh (chỉ số 2 và 6) quay nghiêng hẳn ra người xem cho thấy mắt (vòng sau điểm duyệt ảnh GĐ 8: −1,9 → −1,4 và 2,6 → 1,6; trước
+ * đó con 2 chỉ lộ một mép mắt, con 6 quay lưng).
  */
 export const HOMES = Object.freeze([
   { at: [-3.4, 1.3], heading: 1.75, pigment: 0, kind: 'free' }, // trước mặt mẹ, ngước nhìn mồi
   { at: [-5.2, -0.3], heading: 0.9, pigment: 1, kind: 'free' },
-  { at: [3.4, 1.3], heading: -1.9, pigment: 2, kind: 'free' }, // sau lưng mẹ, rỉa lông
+  { at: [3.4, 1.3], heading: -1.4, pigment: 2, kind: 'free' }, // sau lưng mẹ, rỉa lông
   { at: [5.3, -0.6], heading: -2.3, pigment: 3, kind: 'free' },
   { at: [-3.4, -2.3], heading: 0.6, pigment: 4, kind: 'free' }, // ở xa: nằm cao hơn trong khung, ra ngoài đầu mẹ để không bị che
   { at: [3.3, -2.4], heading: -0.7, pigment: 0, kind: 'free' }, // ở xa, ra ngoài đuôi mẹ
-  { at: [-1.4, 3.3], heading: 2.6, pigment: 2, kind: 'free' }, // ở gần: nằm thấp hơn
+  { at: [-1.4, 3.3], heading: 1.6, pigment: 2, kind: 'free' }, // ở gần: nằm thấp hơn
   { at: [1.9, 3.6], heading: -2.6, pigment: 1, kind: 'free' },
   { at: [0.2, 1.75], heading: -Math.PI / 2, pigment: 4, kind: 'belly' }, // sát bụng mẹ, phía người xem, dưới cánh trái
   { at: [0.75, 0.0], heading: -Math.PI / 2, pigment: 3, kind: 'back' }, // đứng trên lưng mẹ, chân chạm lưng
