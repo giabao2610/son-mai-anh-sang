@@ -9,13 +9,15 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
   "Mài" là gỡ dần từng lớp, xuống tận **Cốt** (đất sét). Lớp đầu của mọi bức luôn là Cốt (`id: 'cot'`).
 - **Bức tranh**: một tác phẩm làm bằng kỹ thuật đó. Bức 1 là Ao Sen Đêm (`src/paintings/ao-sen-dem/`, trang `index.html`); Bức 2 là
   Đèn Kéo Quân (`src/paintings/den-keo-quan/`, trang `tranh/den-keo-quan/index.html`); Bức 3 là Cung Quế (`src/paintings/cung-que/`,
-  trang `tranh/cung-que/index.html`, thế giới SDF dò tia). Phòng tranh: `tranh/index.html`, trang tĩnh liệt kê mọi bức.
+  trang `tranh/cung-que/index.html`, thế giới SDF dò tia); Bức 4 là Đàn Gà Mẹ Con (`src/paintings/dan-ga-me-con/`, trang
+  `tranh/dan-ga-me-con/index.html`, tranh Đông Hồ vẽ phi hiện thực dưới camera trực giao). Phòng tranh: `tranh/index.html`, trang tĩnh
+  liệt kê mọi bức.
 - **Ba vùng:**
 
   | Vùng | Thư mục | Quy tắc |
   |---|---|---|
   | Xưởng | `src/engine/`, `src/ui/` | đồ nghề dùng chung; **không biết có bức nào** |
-  | Hộp màu | `src/lib/` | hàm "lá" (âm lịch, pha trăng, PRNG, TSL dùng chung); không import xưởng, không import bức |
+  | Hộp màu | `src/lib/` | hàm "lá" (âm lịch, pha trăng, PRNG, TSL dùng chung: noise, bể hạt compute); không import xưởng, không import bức |
   | Các bức | `src/paintings/<slug>/` | mỗi bức một thư mục, độc lập với nhau |
 
 - Phần nhẹ của xưởng (`src/engine/*.js`: boot, flags, tier, quality, palette, deadline, sma, static) chạy khi poster
@@ -25,6 +27,9 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
   khóa nhịp khỏi máy không kịp); `engine/gpu/ladder.js` ÁP nấc (`'dpr'` và `layer.degrade`);
   `engine/gpu/gpu-timer.js` đo ms GPU. Bảng số và thứ tự nấc của mỗi bức: `paintings/<slug>/quality.js`.
 - Lớp dùng chung (thuộc kỹ thuật, bức nào cũng lắp được): `src/engine/stock/<id>/`, hiện có Phủ bóng.
+- Camera (GĐ 8): `engine/gpu/camera.js` dựng camera theo `CameraSpec` (phối cảnh, hay trực giao với `kind: 'ortho'`), khớp khung, giới hạn
+  OrbitControls; `engine/gpu/home.js` cho tranh tự khép lại (`CameraSpec.home`). Bể hạt compute dùng chung: `lib/tsl/particles.js`
+  (đom đóm của Bức 1, thóc của Bức 4).
 - `src/paintings/registry.js`: danh sách các bức. Node đọc (vite.config, test, e2e); trình duyệt không import.
 - `src/paintings/_mau/`: tranh mẫu 2 lớp, KHÔNG deploy (không có trong registry). Là fixture của test hợp đồng và là
   khuôn để copy khi làm bức mới.
@@ -44,7 +49,7 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
 
 | Việc | Lệnh |
 |---|---|
-| Chạy dev | `npm run dev`, mở http://localhost:5173/son-mai-anh-sang/ (Bức 2: `…/tranh/den-keo-quan/`, Bức 3: `…/tranh/cung-que/`) |
+| Chạy dev | `npm run dev`, mở http://localhost:5173/son-mai-anh-sang/ (Bức 2: `…/tranh/den-keo-quan/`, Bức 3: `…/tranh/cung-que/`, Bức 4: `…/tranh/dan-ga-me-con/`) |
 | Sinh trang HTML | `npm run pages` (mọi trang của các bức và Phòng tranh, từ registry; rồi commit các file đổi) |
 | Unit + luật + hợp đồng | `npm test` (một file: `npx vitest run tests/unit/flags.test.js`) |
 | Build | `npm run build` (ra `dist/`) |
@@ -74,7 +79,8 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - Xưởng không import bức; các bức không import lẫn nhau. Bảng đầy đủ ở spec §8.2, do `tests/rules/imports.test.js` giữ.
 - Code xưởng không chứa từ vựng của bức nào (slug, id lớp riêng, các từ trong `meta.fence`). Bức mới khai báo từ vựng
   riêng trong `meta.fence`. Không bao giờ viết code rẽ nhánh theo `slug`.
-- Theo **luật hai lần**: chỉ rút code của một bức lên `src/lib/` hoặc `src/engine/stock/` khi bức thứ hai thật sự cần.
+- Theo **luật hai lần**: chỉ rút code của một bức lên `src/lib/` hoặc `src/engine/stock/` khi bức thứ hai thật sự cần. Rút code TSL
+  thì ghi mã shader của bức cũ thành bản ghi TRƯỚC, rút xong mã phải giống từng ký tự, trừ số id của node (GĐ 8: bể hạt của đom đóm).
 - Hợp đồng (`src/engine/contracts/`) chỉ **thêm trường tùy chọn**, không đổi nghĩa trường cũ.
 - Id đã deploy (slug, layerId, knobId, dialId) là **API công khai**: không đổi.
 - `meta.layers[].files` liệt kê mọi file `parts/` mà lớp import (trực tiếp hay qua part khác); dữ liệu dùng chung giữa các lớp đi
@@ -239,6 +245,61 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   cố định: đồng hồ của cảnh theo khung vẽ, mỗi khung tối đa 0,1 s, nên máy vẽ chậm (SwiftShader trên runner CI) cần lâu hơn. Giữ tới
   khi đạt thì dùng `e2e/helpers.js#pressAt` (nhấn, trả hàm nhấc).
 
+### Camera trực giao, tự khép lại, bể hạt dùng chung, vẽ phi hiện thực (GĐ 8)
+- Camera trực giao: `CameraSpec.kind: 'ortho'` cùng `height` (bắt buộc: bề cao khung nhìn ở zoom 1, thay cho `fov`), `minWidth` (khung
+  hẹp thì nới `height`, trần 4 lần: `fov.js#fitOrtho`) và `zoom` ([min, max] của OrbitControls; thiếu thì không zoom); `fov`, `distance`
+  không dùng. Phần tính ở `engine/gpu/camera.js` (`createCamera`, `fitCamera`, `limitControls`), tách khỏi `stage.js` để unit test được.
+- `stage.camera` là getter: `useCamera()` dựng camera mới đúng loại, nên mọi chỗ đọc `stage.camera` SAU `useCamera` và không giữ tham
+  chiếu từ trước đó.
+- Độ sâu tuyến tính lấy qua `channel('depth')`; chỉ `pipeline.js#linearDepth` chọn công thức theo loại camera (lúc dựng). Ngoài chỗ đó
+  không gọi `getLinearDepthNode()`/`getViewZNode()` của PassNode: chúng luôn dùng công thức phối cảnh, camera trực giao ra một bóng trắng
+  (spec Phụ lục A.89). Với camera trực giao, `channel('depth')` là chính texture độ sâu, đã tuyến tính (A.90): `getTextureNode('depth')` có sẵn
+  trong pass, không thêm ảnh nào vào render target.
+- Trong post, `cameraNear`, `cameraFar` của TSL là của camera vẽ quad (A.93): số của camera cảnh (`ctx.camera.near`, `far`) đi vào uniform
+  đặt từ JS; công thức theo loại camera thì chọn bằng JS lúc dựng.
+- Hướng nhìn trong shader dùng `positionViewDirection` (three tự xử lý camera trực giao, A.91); `cameraPosition − positionWorld` chỉ đúng
+  với camera phối cảnh.
+- Tranh tự khép lại (`CameraSpec.home: { after, duration }`, `engine/gpu/home.js`): `scene.step()` gọi `stage.returnHome(dt)` sau
+  `stage.breathe(t)` và TRƯỚC `controls.update()` (bộ đếm đặt thẳng vị trí và zoom, `update()` nhìn về điểm nhìn và kẹp giới hạn); khung
+  bị bỏ (thử ngừng vẽ) thì không gọi.
+- Quán tính của OrbitControls tắt theo số lần `update()`, không theo giây (A.98): bức có `CameraSpec.home` thì `home.js` đặt
+  `dampingFactor = 1 − (1 − mặc định)^(60·dt)` mỗi khung, trước `update()`; không thì máy vẽ chậm (dt kẹp 0,1 s) còn phần xoay dở, kéo
+  camera khỏi góc vừa về.
+- `scene.js` đã quá ngưỡng mềm 250 dòng (251): thêm việc vào `step()` thì tách một phần ra file khác trước.
+- Bể hạt `lib/tsl/particles.js` (`createPool`) lo cấp phát một lần, khởi tạo, bước, `count` và vòng đệm; luật chuyển động viết trong bức.
+  Hộp màu không đặt tên uniform: một bức có thể dựng hai bể.
+- Mọi nhánh của `init`, `law`, `spawn` gán CẢ `a` lẫn `b`, để mỗi nhánh nói đủ trạng thái mới của phần tử. Đó là quy ước, không phải để
+  tránh rác: nhánh không gán thì ô giữ giá trị cũ ở cả hai backend (WebGL2 chép bản đọc sang bản ghi trước khi chạy luật, A.97).
+- Vòng đệm của `emit` quấn theo số phần tử đang tính (`count`), không theo `capacity`; nắm lớn hơn thì bị cắt; mỗi bước một nắm, hàng đợi
+  tối đa 16 nắm. `emit` chép `origin` ngay; `emitted()` đếm lúc nắm ra khỏi hàng đợi (rắc thật), không lúc `emit`.
+- `step(dt, w)` không làm gì khi `dt = 0` (`update(0, t)`) hay `w ≤ 0`, mà nắm đang chờ vẫn chờ: lớp tắt hẳn thì gọi `clear()` mỗi khung,
+  không thì phủ lại là các nắm cũ bung ra cùng lúc.
+- `meta.layers[].files` kê được file `lib/tsl/*.js` mà lớp import, thẳng hay qua part (glob của `ui/code-view.js` có `lib/tsl`): tùy chọn,
+  kê thì phải import thật, và như mọi file trong `files`, mỗi file thuộc tối đa một lớp của bức (`noise.js`, mà hai lớp của Bức 1 cùng
+  dùng, thì không lớp nào kê). Test hợp đồng giữ.
+- Bản ghi mã shader (`toMatchFileSnapshot`, số id thay bằng `tests/helpers/nodes.js#normalizeIds`): bản ghi đom đóm của Bức 1
+  (`tests/paintings/ao-sen-dem/__fixtures__/vang-la/`) không bao giờ ghi lại, vì nó chứng minh việc rút bể hạt không đổi gì. Bản ghi thóc
+  của Bức 4 (`tests/paintings/dan-ga-me-con/__fixtures__/thoc/`) khóa bản JS của luật trong `dan-ga-thoc.test.js`: đỏ thì sửa bản JS
+  cho khớp trước, chạy lại các test đo phần bị ăn, rồi mới ghi lại bằng `-u`.
+- Vẽ phi hiện thực (Bức 4): không đèn của three, không `shadowMap`; material là `NodeMaterial` gốc (`lights = false`, màu ra là
+  `colorNode`); các lớp bọc hàm của công thức tô `shared.cot.recipe` (`base`, `fill`, `ink`, `paper`, `glint`) trước lần biên dịch đầu.
+- Dò cạnh trên độ sâu đo độ lệch khỏi mặt phẳng `D(+) + D(−) − 2·D(giữa)` (bằng 0 trên mọi mặt phẳng), không dùng Sobel: Sobel biến mặt
+  nhìn chếch thành nét. Nếp gấp đo bằng góc gãy của mặt, không bằng hiệu độ dốc: gần mép khối, mặt đa diện kề nhau cũng vượt ngưỡng.
+- Texture độ sâu đọc kiểu nearest (A.96): mẫu lân cận đặt ở TÂM điểm ảnh (`textureSize`), cách nhau số NGUYÊN điểm ảnh, nên núm dời mẫu
+  (`lineWidth`, `misregister` của Bản nét) chỉ có số nguyên điểm ảnh thiết bị; lệch nửa điểm ảnh thì mặt sàn nghiêng thành sọc mực.
+- Mẫu ngoài khung của texture đọc điểm ảnh ở mép, ở cả hai backend (A.99): cặp mẫu có một điểm ngoài khung thì bỏ cả cặp (nhân 0), không
+  thì sát khung có vệt mực giả.
+- Chuỗi `If` chọn view của Kính mài, Lột lớp (`tools/pick.js`) bọc view của mỗi nhánh trong `isolate(…).setParent(false)` (A.95): three
+  r186 dùng chung biến texture giữa các nhánh anh em, nên nhánh sau đọc biến chưa gán và ra đen.
+- Bức đổi mặc định của lớp dùng chung bằng spread trong `painting.js`, chỉ thay `value` (hay `min`, `max`), không đổi `id`, như Phủ bóng
+  của Bức 4 (ACES, lộ sáng 1,2, bloom 0,5; `tests/paintings/dan-ga-me-con/phu-bong.test.js` giữ). Không sửa module dùng chung: các bức
+  khác lắp chính nó.
+- Bức ghi đè tone hay lộ sáng của Phủ bóng thì hex in trong `meta.palette` là màu VÀO tone mapping, chốt cho màu hiện ra đúng màu thiết kế
+  (ACES làm vàng thành vàng chanh). Sơ đồ của Sổ tay dùng cùng các token ấy (test hợp đồng chỉ cho màu của bảng đã ghép).
+- Một bức có thể có nhiều spec e2e (`e2e/<slug>.spec.js`, `e2e/<slug>-<phần>.spec.js`): mọi `describe` vẫn bắt đầu bằng `"{tên bức} · "`;
+  tiện ích dùng chung (vùng của canvas, tag khói `SMOKE`) ở `e2e/<slug>.helpers.js`, các spec import. `tests/rules/e2e.test.js` gom file
+  theo slug dài nhất và đếm test mang tag khói trên mọi file của bức.
+
 ### Chuyển động và ngẫu nhiên
 - Không dùng `time`/`deltaTime` của TSL; dùng `ctx.u.time` và `ctx.u.delta` (nhờ vậy `?freeze` cho ảnh tất định).
 - Không dùng `Math.random`; dùng `src/lib/random.js` (PRNG có hạt giống).
@@ -273,6 +334,7 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 ### Commit
 - Dùng email cá nhân: mọi commit mang `Bao Nguyen <giabao261096@gmail.com>`, đã cấu hình local trong repo.
   Không sửa git config global.
+- Code trong plan chưa từng chạy: plan sai thì làm khác, và ghi mỗi chỗ khác thành một dòng `Lệch plan: …` trong thân commit.
 
 ## Gỡ lỗi nhanh
 - Cờ URL (spec §8.7): `?static`, `?webgl`, `?force3d`, `?debug`, `?debug=stats`, `?at=2026-09-28T21:00` (giờ Việt Nam), `?freeze=N`,
@@ -284,5 +346,6 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   `__sma.upgrade()` (hạ/nâng tay một nấc), `__sma.tools()` / `__sma.setTool('kinh-mai')` (công cụ học, `null` tắt hết;
   `__sma.setTool('tung-soi')` bật Từng sợi), `__sma.dials()` / `__sma.setDial('gio', 27)` (núm của cả bức), `__sma.readouts(id)`
   (số đo riêng của một lớp, như Sổ tay đọc: `__sma.readouts('anh-trang')` có số hoa đăng đang trôi, `__sma.readouts('keo-quan')` có
-  số vòng mỗi phút của trống; `__sma.readouts('cot')` của Bức 3 có độ cao cây đang bay). Bức 3: `__sma.setDial('ngay', 15)` đặt ngày
-  âm lịch (rằm).
+  số vòng mỗi phút của trống; `__sma.readouts('cot')` của Bức 3 có độ cao cây đang bay; `__sma.readouts('cot')` của Bức 4 có `goc`, độ
+  lệch của camera khỏi góc của tranh; `__sma.readouts('dan-ga')` có `rac` (số hạt đã rắc), `dangAn`, `quanhMe` (gà con đang mổ, quanh
+  mẹ)). Bức 3: `__sma.setDial('ngay', 15)` đặt ngày âm lịch (rằm).
