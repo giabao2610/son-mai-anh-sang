@@ -4030,8 +4030,8 @@ spec.
     | Mực (RGB) | 57, 39, 28 | 53, 41, 34 | 58, 41, 30 | 51, 42, 34 |
     | Ván sát (độ sáng lớn nhất; ván xa chừng 2–3) | 18 | 8 | 27 | 11 |
 
-    "Trước" là khi đã có lề không lóe quanh mép và mảng cổ (hai commit trước lượt màu). Trước hai việc ấy (7bf91a1) các số y như vậy, trừ
-    ván sát: 80 ở 1280×800, 47 ở 390×844.
+    "Trước" là khi đã có lề không lóe quanh mép và mảng cổ (hai commit trước lượt màu). Trước hai việc ấy (7bf91a1) các số gần như vậy
+    (lệch tới 3/255; cả khung 69,0 · 0,50 · 61,3% ở 1280×800), trừ ván sát: 80 ở 1280×800, 47 ở 390×844.
   - Trước: giấy xám be, năm màu in nhạt như phấn (AgX nén vùng sáng và kéo màu về xám), mực nâu. Bão hòa của cả khung giảm sau lượt màu
     vì ván (hơn 60% khung) từ nâu đen thành đen dưới ACES; bão hòa của mảng in tăng (mình gà mẹ 0,51 → 0,74).
   - Đổi: Phủ bóng ACES, lộ sáng 1,2, bloom 0,5 (§20.4 lớp 6); bốn màu in theo bảng trên. Đã thử: AgX lộ sáng 1,6 (giấy 214, 205, 184,
