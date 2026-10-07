@@ -2,7 +2,7 @@
 import { test, expect } from '@playwright/test';
 import t from '../src/ui/strings.vi.js';
 import { FULL, canvasRegions, collectConsole, toggleExperiment, twoFrames, waitForFrames } from './helpers.js';
-import { SMOKE, WALL, goc, layerView, open, skipWithoutWebgpu } from './dan-ga-me-con.helpers.js';
+import { SMOKE, WALL, at640, goc, layerView, open, skipWithoutWebgpu } from './dan-ga-me-con.helpers.js';
 
 test.beforeEach(skipWithoutWebgpu);
 
@@ -57,9 +57,10 @@ test.describe('Đàn Gà Mẹ Con · giấy điệp', () => {
     expect(still.wall.checksum, 'camera đứng yên thì hạt đứng yên').toBe(first.wall.checksum);
     // Kéo ngang trên vách giấy (không chạm gà): OrbitControls xoay camera.
     const box = await page.locator('[data-stage] canvas').boundingBox();
-    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.25);
+    const y = box.y + box.height * at640(0.25);
+    await page.mouse.move(box.x + box.width * 0.5, y);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width * 0.5 + 30, box.y + box.height * 0.25, { steps: 3 });
+    await page.mouse.move(box.x + box.width * 0.5 + 30, y, { steps: 3 });
     await page.mouse.up();
     await expect.poll(() => goc(page), { timeout: 15_000, message: 'kéo 30 px phải xoay camera' }).toBeGreaterThan(5);
     await twoFrames(page);

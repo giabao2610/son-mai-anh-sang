@@ -1,17 +1,17 @@
 // e2e/dan-ga-me-con-dan-ga.spec.js — Bức 4 · Đàn Gà Mẹ Con, lớp Đàn gà: chạm vào sàn thì thóc rắc thêm và gà con tới mổ; giữ thì gà mẹ gọi con, thả thì tản; mài Đàn gà về 0 khi thóc đang rơi rồi chạm thì không lỗi, phủ lại không có nắm cũ bung ra. Chạy live (đồng hồ của cảnh theo khung vẽ): chờ bằng poll theo số đo, trần rộng tay như Bức 3. Tiện ích dùng chung ở e2e/dan-ga-me-con.helpers.js.
 import { test, expect } from '@playwright/test';
 import { collectConsole, pressAt, tapAt, waitForFrames } from './helpers.js';
-import { SMOKE, open, skipWithoutWebgpu } from './dan-ga-me-con.helpers.js';
+import { SMOKE, at640, open, skipWithoutWebgpu } from './dan-ga-me-con.helpers.js';
 
 /**
- * Giữa sàn bên trái (phần của canvas): điểm (−4,5; 2,5) trên sàn, xa mép (thóc rơi đúng chỗ chạm, không bị kéo vào tâm vòng) và xa mẹ; ba bốn
- * gà con ở gần chạy tới được.
+ * Giữa sàn bên trái (phần của canvas 640 × 400, chốt ở khung chưa nới rồi qua at640): điểm (−4,5; 2,5) trên sàn, xa mép (thóc rơi đúng chỗ
+ * chạm, không bị kéo vào tâm vòng) và xa mẹ; ba bốn gà con ở gần chạy tới được.
  */
-const MID_FLOOR = [0.287, 0.7];
+const MID_FLOOR = [0.287, 0.7].map(at640);
 /** Giữa sàn bên phải: điểm (4,5; 2,5). */
-const MID_FLOOR_RIGHT = [0.713, 0.7];
+const MID_FLOOR_RIGHT = [0.713, 0.7].map(at640);
 /** Vách giấy phía trên gà mẹ: giữ ở đây không kéo trúng gà, không rắc thóc lên sàn. */
-const WALL_TOP = [0.5, 0.25];
+const WALL_TOP = [0.5, 0.25].map(at640);
 
 test.beforeEach(skipWithoutWebgpu);
 

@@ -4851,11 +4851,14 @@ các vùng của canvas và tag khói (`SMOKE`) dùng chung ở `e2e/dan-ga-me-c
 (slug `dan-ga` không nhận nhầm `dan-ga-me-con*.spec.js`), kiểm mọi `describe` của các file ấy bắt đầu bằng tên bức, và (bức có
 `ciWebgpuSmoke`) đếm test mang tag khói trên cả các file, tag khai báo trong file hay import từ `<slug>.helpers.js` (Bức 4 có 7 test như vậy).
 Ngưỡng dưới đây là ngưỡng thật của test, ở khung 640 × 400, DPR 1 (trừ khi ghi khác): độ sáng là luma 0–1, sắc độ là (kênh lớn nhất − kênh
-nhỏ nhất) / 255, kênh màu 0–255.
+nhỏ nhất) / 255, kênh màu 0–255. Khung 640 × 400 thấp hơn `shortFrame.below` (§20.2), nên khung nhìn cao gấp 1,3: vùng trên tờ giấy (và
+điểm chạm, điểm kéo) chốt ở khung chưa nới rồi đổi bằng `at640` của helpers (co về tâm khung 1/1,3, cùng chỗ của cảnh, vì camera trực giao
+chiếu tuyến tính quanh điểm nhìn); vùng ván giữ nguyên.
 - Góc nhìn của tranh (`?freeze=30`): hai dải ván trên và dưới tối (độ sáng < 0,08); vách giấy sáng hơn ván trên ít nhất 0,15; mình gà mẹ
   in màu vàng hòe (sắc độ > 0,15; đỏ hơn lam 40, lục hơn lam 20); không lỗi console. Vòng mặt đa diện thành nét (§20.4 lớp 3) chỉ thấy rõ ở
   DPR 2, nên kiểm bằng ảnh ở điểm duyệt ảnh, không bằng e2e.
-- Chữ trên ván tối (live): ở 1280 × 800, 1440 × 900, 1920 × 1080 và 390 × 844, khung tờ giấy đo trên điểm ảnh của canvas (hàng có hơn 15%
+- Chữ trên ván tối (live): ở 1366 × 650, 1280 × 720 (laptop màn thấp, `shortFrame`), 1280 × 800, 1440 × 900, 1920 × 1080 và 390 × 844,
+  khung tờ giấy đo trên điểm ảnh của canvas (hàng có hơn 15%
   điểm ảnh sáng hơn 0,25; cột sáng ở hơn 30% số hàng ấy) nằm dưới tên tranh và dải link, trên gợi ý và thơ, mỗi phía cách hơn 2 điểm ảnh;
   cả tờ giấy trong khung.
 - Bản nét:
@@ -4865,7 +4868,8 @@ nhỏ nhất) / 255, kênh màu 0–255.
     nét trong có thật, không chỉ viền (GĐ 8 Task 9: chừng 0,014 trên GPU thật, 0,015 trên SwiftShader; bỏ nét trong thì 0,001 và kiểm này
     đỏ);
   - `misregister` bằng 6 thì ảnh ở mép trái khác lúc bằng 0;
-  - phóng to 2,5 lần (tờ giấy chạm khung, không lệch bản): hàng sát mép dưới lệch sàn ngay trên dưới 0,02, tức không có vệt mực giả (chưa
+  - phóng to 2,5 lần ở 1280 × 800 (tờ giấy chạm khung, không lệch bản; ở 640 × 400 khung đã nới, mép trước tờ giấy chỉ cách mép dưới khung
+    chừng 4 điểm ảnh, sát vùng đo): hàng sát mép dưới lệch sàn ngay trên dưới 0,02, tức không có vệt mực giả (chưa
     bỏ mẫu ngoài khung: chừng 0,07); vùng ngay trên phải là giấy (độ sáng > 0,2), không thì hai vùng cùng là ván tối và kiểm trôi qua mà
     không kiểm gì;
   - bật Chỉ bản nét, rồi Dò cạnh theo màu: ảnh giữa tờ giấy đổi, không lỗi console.

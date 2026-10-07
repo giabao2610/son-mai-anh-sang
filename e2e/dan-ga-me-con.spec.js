@@ -1,42 +1,10 @@
 // e2e/dan-ga-me-con.spec.js — Bức 4 · Đàn Gà Mẹ Con: camera trực giao vẽ tờ tranh giữa ván tối; chữ của trang nằm trên ván tối (cả ở laptop màn thấp); độ sâu của camera trực giao; bản nét dò cạnh không thêm lượt vẽ, có nét trong (vảy lông trên mình gà mẹ, tách khỏi viền), lệch bản, không vệt mực ở mép khung, hai thí nghiệm; tranh tự khép lại (kéo rồi buông thì camera về góc của tranh). Giấy điệp ở e2e/dan-ga-me-con-giay.spec.js, Đàn gà (cử chỉ, thóc) ở e2e/dan-ga-me-con-dan-ga.spec.js, chất lượng (draw call, mức thấp, mọi thí nghiệm) ở e2e/dan-ga-me-con-chat-luong.spec.js; tiện ích và các vùng dùng chung ở e2e/dan-ga-me-con.helpers.js.
 import { test, expect } from '@playwright/test';
-import { STAGE_ONLY, waitForFrames, canvasRegions, collectConsole, twoFrames, toggleExperiment } from './helpers.js';
+import { waitForFrames, canvasRegions, collectConsole, twoFrames, toggleExperiment } from './helpers.js';
 import {
-  BOARD_BOTTOM, BOARD_TOP, FLOOR, HEN, LEFT_EDGE, PAPER_MID, SMOKE, WALL, ZOOM_ABOVE, ZOOM_BOTTOM, goc, layerView, open, skipWithoutWebgpu,
+  BOARD_BOTTOM, BOARD_TOP, FLOOR, HEN, LEFT_EDGE, PAPER_MID, SMOKE, WALL, ZOOM_ABOVE, ZOOM_BOTTOM, at640, goc, layerView, open, sheetBox,
+  skipWithoutWebgpu,
 } from './dan-ga-me-con.helpers.js';
-
-/**
- * Khung tờ giấy trên trang (px CSS), đo trên điểm ảnh của canvas (đã ẩn chữ): hàng có hơn 15% điểm ảnh sáng (giấy, gà) thuộc tờ giấy; cột
- * sáng ở hơn 30% số hàng ấy cũng vậy. Ván tối (màu xóa của canvas) không bao giờ sáng.
- */
-async function sheetBox(page) {
-  const canvas = page.locator('[data-stage] canvas');
-  const box = await canvas.boundingBox();
-  const png = await canvas.screenshot({ style: STAGE_ONLY });
-  return page.evaluate(async ({ b64, at }) => {
-    const img = new Image();
-    img.src = `data:image/png;base64,${b64}`;
-    await img.decode();
-    const c = new OffscreenCanvas(img.width, img.height);
-    const g = c.getContext('2d');
-    g.drawImage(img, 0, 0);
-    const d = g.getImageData(0, 0, img.width, img.height).data;
-    const bright = (x, y) => {
-      const i = (y * img.width + x) * 4;
-      return 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2] > 0.25 * 255;
-    };
-    const rows = [];
-    const cols = new Array(img.width).fill(0);
-    for (let y = 0; y < img.height; y++) {
-      let n = 0;
-      for (let x = 0; x < img.width; x++) if (bright(x, y)) { n += 1; cols[x] += 1; }
-      if (n > 0.15 * img.width) rows.push(y);
-    }
-    const xs = cols.flatMap((n, x) => (n > 0.3 * rows.length ? [x] : []));
-    const k = at.width / img.width;
-    return { left: at.x + xs[0] * k, right: at.x + (xs.at(-1) + 1) * k, top: at.y + rows[0] * k, bottom: at.y + (rows.at(-1) + 1) * k };
-  }, { b64: png.toString('base64'), at: box });
-}
 
 test.beforeEach(skipWithoutWebgpu);
 
@@ -126,6 +94,9 @@ test.describe('Đàn Gà Mẹ Con · bản nét', () => {
   test('phóng to 2,5 lần cho tờ giấy chạm khung: không có vệt mực giả dọc mép khung (mẫu độ sâu ra ngoài khung bị bỏ)', async ({ page }, testInfo) => {
     // Mẫu ngoài khung đọc điểm ảnh ở mép (Phụ lục A.99). Không lệch bản thì mẫu dưới của hàng sát mép dưới đọc lại chính điểm giữa: mặt sàn
     // nghiêng ra góc gãy 70°, và hàng ấy thành vệt mực khi chưa bỏ cặp mẫu ngoài khung.
+    // Khung 1280 × 800 (không nới theo shortFrame): ở 640 × 400 khung nhìn cao gấp 1,3, phóng 2,5 thì mép trước tờ giấy chỉ cách mép dưới
+    // khung chừng 4 điểm ảnh, sát vùng đo; ở đây hàng sát mép dưới là sàn trống, xa mép giấy, như lúc chốt vùng.
+    await page.setViewportSize({ width: 1280, height: 800 });
     const log = collectConsole(page);
     await open(page, testInfo, 30);
     const box = await page.locator('[data-stage] canvas').boundingBox();
@@ -200,9 +171,10 @@ test.describe('Đàn Gà Mẹ Con · tranh tự khép lại', () => {
   /** Kéo ngang trên vách giấy (không chạm gà): OrbitControls xoay camera. */
   async function dragCamera(page) {
     const box = await page.locator('[data-stage] canvas').boundingBox();
-    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.25);
+    const y = box.y + box.height * at640(0.25);
+    await page.mouse.move(box.x + box.width * 0.5, y);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width * 0.5 + 220, box.y + box.height * 0.25, { steps: 6 });
+    await page.mouse.move(box.x + box.width * 0.5 + 220, y, { steps: 6 });
     await page.mouse.up();
   }
 
