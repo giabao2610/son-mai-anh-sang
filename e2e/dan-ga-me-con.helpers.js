@@ -1,18 +1,20 @@
-// e2e/dan-ga-me-con.helpers.js — dùng chung cho các spec e2e của Bức 4 (e2e/dan-ga-me-con*.spec.js, mỗi file dưới 300 dòng): tag khói, các vùng của canvas (đổi sang khung 640 × 400 đã nới theo shortFrame), khung tờ giấy đo trên ảnh canvas, mở trang, Lột lớp về một view, đọc số đo `goc`, bỏ qua khi thiếu WebGPU. Không phải file test (Playwright chỉ chạy *.spec.js).
+// e2e/dan-ga-me-con.helpers.js — dùng chung cho các spec e2e của Bức 4 (e2e/dan-ga-me-con*.spec.js, mỗi file dưới 300 dòng): tag khói, các vùng của canvas (đổi sang khung 640 × 400 đã nới theo shortFrame), khung tờ giấy đo trên ảnh canvas, mở trang, Lột lớp về một view, đọc số đo `goc`, kéo xoay camera, bỏ qua khi thiếu WebGPU. Không phải file test (Playwright chỉ chạy *.spec.js).
 import { test, expect } from '@playwright/test';
+import config from '../playwright.config.js';
 import { STAGE_ONLY, gpuReport, twoFrames, waitForFrames, waitForSettled } from './helpers.js';
 import { shortGrow } from '../src/engine/gpu/fov.js';
+import { GESTURE } from '../src/engine/gpu/gesture.js';
 import { CAMERA } from '../src/paintings/dan-ga-me-con/parts/cot-bo-cuc.js';
 
 /** Tag của test khói: nếu CI bật ciWebgpuSmoke cho Bức 4 (Task 13), job WebGPU chỉ chạy các test này. */
 export const SMOKE = { tag: '@khoi' };
 /**
- * Canvas mặc định của e2e (playwright.config.js: 640 × 400) thấp hơn CameraSpec.shortFrame.below của Bức 4 (800): khung nhìn cao gấp
- * GROW = 1,3 lần (spec §20.2). Camera trực giao chiếu tuyến tính quanh tâm khung (điểm nhìn), nên mọi điểm của cảnh co về tâm khung
- * 1 / GROW lần. `at640` đổi một phần của khung CHƯA nới (16 : 10, cao từ 800, như 1280 × 800) sang phần của canvas 640 × 400: cùng một chỗ
- * của cảnh.
+ * Canvas mặc định của e2e (`use.viewport` của playwright.config.js: 640 × 400) thấp hơn CameraSpec.shortFrame.below của Bức 4 (800): khung
+ * nhìn cao gấp GROW = 1,3 lần (spec §20.2). Camera trực giao chiếu tuyến tính quanh tâm khung (điểm nhìn), nên mọi điểm của cảnh co về tâm
+ * khung 1 / GROW lần. `at640` đổi một phần của khung CHƯA nới (16 : 10, cao từ 800, như 1280 × 800) sang phần của canvas 640 × 400: cùng
+ * một chỗ của cảnh.
  */
-export const GROW = shortGrow(CAMERA.shortFrame, 400);
+export const GROW = shortGrow(CAMERA.shortFrame, config.use.viewport.height);
 export const at640 = (u) => 0.5 + (u - 0.5) / GROW;
 const onSheet = ({ x0, y0, x1, y1 }) => ({ x0: at640(x0), y0: at640(y0), x1: at640(x1), y1: at640(y1) });
 /**
@@ -80,6 +82,31 @@ export async function layerView(page, value, label) {
  * @returns {Promise<number>}
  */
 export const goc = (page) => page.evaluate(() => Number(window.__sma.readouts('cot').find((r) => r.id === 'goc')?.value));
+
+/**
+ * Kéo ngang `dx` px trên vách giấy (không chạm gà) cho OrbitControls xoay camera, bằng PointerEvent phát ngay trong trang (pointerId 1 như
+ * e2e/helpers.js#swipeAt: OrbitControls gọi setPointerCapture). Không dùng chuột của Playwright: mỗi sự kiện của nó đợi một nhịp khung
+ * (Phụ lục A.51), nên khi runner vẽ một khung lâu hơn GESTURE.holdMs (350 ms), hẹn giờ "giữ" của input.js nổ trước lần dời đầu, cú kéo
+ * thành cú giữ (gà mẹ gọi con) và camera bị khóa: lượt CI đầu của PR #9, WebGPU trên SwiftShader, `goc` đứng ở 0 suốt 15 giây. Ở đây các
+ * lần dời đi ngay sau lần xuống, trong cùng một tác vụ, nên luôn là kéo; nhấc sau GESTURE.swipeMs để cũng không thành vuốt.
+ * @param {import('@playwright/test').Page} page
+ * @param {number} dx
+ */
+export function dragCamera(page, dx) {
+  return page.evaluate(async ({ y, d, wait }) => {
+    const canvas = document.querySelector('[data-stage] canvas');
+    const box = canvas.getBoundingClientRect();
+    const x0 = box.left + box.width * 0.5;
+    const fire = (type, cx, buttons) => canvas.dispatchEvent(new PointerEvent(type, {
+      pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons, bubbles: true, cancelable: true, composed: true,
+      clientX: cx, clientY: box.top + box.height * y,
+    }));
+    fire('pointerdown', x0, 1);
+    for (let i = 1; i <= 3; i += 1) fire('pointermove', x0 + (d * i) / 3, 1);
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    fire('pointerup', x0 + d, 0);
+  }, { y: at640(0.25), d: dx, wait: GESTURE.swipeMs + 50 });
+}
 
 /**
  * Khung tờ giấy trên trang (px CSS), đo trên điểm ảnh của canvas (đã ẩn chữ): hàng có hơn 15% điểm ảnh sáng (giấy, gà) thuộc tờ giấy; cột

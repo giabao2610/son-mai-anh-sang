@@ -2,8 +2,8 @@
 import { test, expect } from '@playwright/test';
 import { waitForFrames, canvasRegions, collectConsole, twoFrames, toggleExperiment } from './helpers.js';
 import {
-  BOARD_BOTTOM, BOARD_TOP, FLOOR, HEN, LEFT_EDGE, PAPER_MID, SMOKE, WALL, ZOOM_ABOVE, ZOOM_BOTTOM, at640, goc, layerView, open, sheetBox,
-  skipWithoutWebgpu,
+  BOARD_BOTTOM, BOARD_TOP, FLOOR, HEN, LEFT_EDGE, PAPER_MID, SMOKE, WALL, ZOOM_ABOVE, ZOOM_BOTTOM, dragCamera, goc, layerView, open,
+  sheetBox, skipWithoutWebgpu,
 } from './dan-ga-me-con.helpers.js';
 
 test.beforeEach(skipWithoutWebgpu);
@@ -52,6 +52,8 @@ test.describe('Đàn Gà Mẹ Con · khung', () => {
     const without = await canvasRegions(page, { edge: LEFT_EDGE, floor: FLOOR });
     expect(withInk.edge.mean, 'có viền thì mép giấy tối hơn').toBeLessThan(without.edge.mean - 0.01);
     // Mẫu độ sâu lệch nửa điểm ảnh (đọc kiểu nearest) làm mặt sàn nghiêng thành sọc mực (Task 1): mẫu phải đối xứng, sàn không đổi.
+    // Vùng sàn phải là giấy (như phép phóng to): ván tối ở đó thì hiệu số nhỏ mà không kiểm được gì (vùng lệch khỏi tờ giấy, bố cục đổi).
+    expect(withInk.floor.mean, 'vùng sàn là giấy sáng, không phải ván tối').toBeGreaterThan(0.2);
     expect(Math.abs(withInk.floor.mean - without.floor.mean), 'mặt sàn không có nét').toBeLessThan(0.01);
     expect(await calls(), 'Bản nét đọc thẳng texture độ sâu: không thêm lượt vẽ').toBe(before);
     expect(before).toBeLessThanOrEqual(30);
@@ -73,8 +75,9 @@ test.describe('Đàn Gà Mẹ Con · bản nét', () => {
     await twoFrames(page);
     const without = await canvasRegions(page, { mid: PAPER_MID, hen: HEN });
     expect(withInk.mid.mean, `có nét ${withInk.mid.mean.toFixed(3)}, không nét ${without.mid.mean.toFixed(3)}`).toBeLessThan(without.mid.mean - 0.02);
-    // Nét trong riêng (không lẫn viền): mình gà mẹ phía trên cánh không có viền hay nếp gấp nào, chỉ có vảy lông. Ở khung 640 × 400, DPR 1,
-    // vảy lông mảnh hơn một điểm ảnh nên chỉ sẫm chừng 0,014 (GPU thật và SwiftShader); không có nét trong thì không đổi gì.
+    // Nét trong riêng (không lẫn viền): mình gà mẹ phía trên cánh không có viền hay nếp gấp nào, chỉ có vảy lông. Ở khung 640 × 400 đã nới
+    // (shortFrame), DPR 1, vảy lông mảnh nên vùng chỉ sẫm chừng 0,04 (đo lại sau lượt CI đầu, SwiftShader: 0,036 WebGL2, 0,040 WebGPU);
+    // không có nét trong thì không đổi gì (GĐ 8 Task 9: 0,001).
     expect(withInk.hen.mean, `vảy lông: có nét ${withInk.hen.mean.toFixed(4)}, không nét ${without.hen.mean.toFixed(4)}`).toBeLessThan(without.hen.mean - 0.005);
     expect(log.errors).toEqual([]);
   });
@@ -135,17 +138,32 @@ test.describe('Đàn Gà Mẹ Con · chữ trên ván tối', () => {
 
   // Điểm duyệt ảnh (Task 4): tờ giấy chiếm chừng 58% bề cao khung máy tính, nên chữ màu ngà của trang nằm trên ván tối, không trên giấy
   // sáng (spec §20.1). Laptop màn thấp (trang của 1366 × 768 chỉ còn chừng 1366 × 650): CameraSpec.shortFrame nới khung nhìn dưới 800
-  // điểm ảnh CSS (spec §20.2). Khung đổi cỡ thì vẽ lại ở khung kế: chạy live, vì khung đã dừng (?freeze) chỉ bị xóa khi đổi cỡ.
-  test('tên tranh, dải link ở trên và gợi ý, thơ ở dưới nằm trên ván tối, không đè lên tờ giấy: laptop màn thấp, máy tính 16 : 10, 16 : 9, điện thoại dọc', async ({ page }, testInfo) => {
-    const log = collectConsole(page);
-    await open(page, testInfo, 0);
-    for (const [width, height] of [[1366, 650], [1280, 720], [1280, 800], [1440, 900], [1920, 1080], [390, 844]]) {
+  // điểm ảnh CSS (spec §20.2). Gộp sáu khung vào một test, đổi cỡ trên trang đang chạy live, thì runner CI (SwiftShader) quá trần 180
+  // giây (lượt CI đầu của PR #9): ở 1920 × 1080 mỗi khung vẽ lâu, mà ảnh chụp và page.evaluate phải chen giữa các khung ấy. Nên mỗi khung
+  // một test, và trang đứng yên lúc chụp: mở ở khung mặc định với ?freeze như mọi test khác (khởi động và mười khung vẽ ở 640 × 400, khung
+  // ẩn trong hạn 10 giây của boot không vẽ ở cỡ lớn), đổi cỡ, rồi __sma.restore vẽ lại khung đứng yên ở cỡ mới (đổi cỡ chỉ xóa nó): một
+  // lần vẽ ở cỡ lớn.
+  for (const [label, width, height] of [
+    ['laptop màn thấp', 1366, 650],
+    ['laptop màn thấp 16 : 9', 1280, 720],
+    ['máy tính 16 : 10', 1280, 800],
+    ['máy tính 16 : 10', 1440, 900],
+    ['máy tính 16 : 9', 1920, 1080],
+    ['điện thoại dọc', 390, 844],
+  ]) {
+    test(`${label} ${width} × ${height}: tên tranh, dải link ở trên và gợi ý, thơ ở dưới nằm trên ván tối, không đè lên tờ giấy`, async ({ page }, testInfo) => {
+      const log = collectConsole(page);
+      await open(page, testInfo, 10);
+      const canvas = () => page.evaluate(() => {
+        const c = document.querySelector('[data-stage] canvas');
+        return [c.clientWidth, c.clientHeight, c.width, c.height];
+      });
+      const [cssWidth, , bufferWidth] = await canvas();
+      const ratio = bufferWidth / cssWidth; // tỉ lệ điểm ảnh của renderer (DPR, kẹp theo mức): không đổi theo cỡ khung
       await page.setViewportSize({ width, height });
-      // Đợi canvas đúng CẢ hai chiều: 1280 × 720 → 1280 × 800 giữ bề ngang.
-      const size = () => page.evaluate(() => ['clientWidth', 'clientHeight'].map((k) => document.querySelector('[data-stage] canvas')[k]));
-      await expect.poll(size).toEqual([width, height]);
-      const frames = await page.evaluate(() => window.__sma.frames);
-      await waitForFrames(page, frames + 3, { timeout: 120_000 });
+      // Đợi cả bộ đệm vẽ đổi cỡ (ResizeObserver của stage.js đã chạy), không chỉ khung CSS: vẽ lại trước lúc ấy thì đổi cỡ xóa mất ảnh.
+      await expect.poll(canvas, { message: 'canvas phủ cả khung', timeout: 30_000 }).toEqual([width, height, Math.floor(width * ratio), Math.floor(height * ratio)]);
+      await page.evaluate(() => window.__sma.restore({})); // vẽ lại khung đứng yên (khung 10) ở cỡ mới
       const sheet = await sheetBox(page);
       const text = await page.evaluate(() => Object.fromEntries(['header', '[data-hint]', '.poem'].map((sel) => {
         const r = document.querySelector(sel).getBoundingClientRect();
@@ -156,9 +174,9 @@ test.describe('Đàn Gà Mẹ Con · chữ trên ván tối', () => {
       expect(sheet.bottom, `${at}, gợi ý từ ${Math.round(text['[data-hint]'].top)}`).toBeLessThan(text['[data-hint]'].top - 2);
       expect(sheet.bottom, `${at}, thơ từ ${Math.round(text['.poem'].top)}`).toBeLessThan(text['.poem'].top - 2);
       expect([sheet.left > 0, sheet.right < width, sheet.top > 0, sheet.bottom < height], `${at}: cả tờ giấy trong khung`).toEqual([true, true, true, true]);
-    }
-    expect(log.errors).toEqual([]);
-  });
+      expect(log.errors).toEqual([]);
+    });
+  }
 });
 
 test.describe('Đàn Gà Mẹ Con · tranh tự khép lại', () => {
@@ -168,23 +186,14 @@ test.describe('Đàn Gà Mẹ Con · tranh tự khép lại', () => {
   test.beforeEach(({}, testInfo) => {
     test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
   });
-  /** Kéo ngang trên vách giấy (không chạm gà): OrbitControls xoay camera. */
-  async function dragCamera(page) {
-    const box = await page.locator('[data-stage] canvas').boundingBox();
-    const y = box.y + box.height * at640(0.25);
-    await page.mouse.move(box.x + box.width * 0.5, y);
-    await page.mouse.down();
-    await page.mouse.move(box.x + box.width * 0.5 + 220, y, { steps: 6 });
-    await page.mouse.up();
-  }
 
   test('kéo xoay thì góc lệch hơn 15°; buông tay rồi chờ thì camera về góc của tranh (dưới 1°)', SMOKE, async ({ page }, testInfo) => {
     const log = collectConsole(page);
     await open(page, testInfo, 0);
     await waitForFrames(page, 20, { timeout: 120_000 });
     expect(await goc(page)).toBeLessThan(1); // lúc mở trang camera đang ở góc của tranh
-    await dragCamera(page);
-    await expect.poll(() => goc(page), { timeout: 15_000 }).toBeGreaterThan(15);
+    await dragCamera(page, 220);
+    await expect.poll(() => goc(page), { timeout: 60_000 }).toBeGreaterThan(15);
     // Quán tính của OrbitControls tắt theo giây của cảnh (home.js), nên về tới nơi rồi camera không trôi đi nữa, kể cả khi máy vẽ chậm.
     await expect.poll(() => goc(page), { timeout: 90_000 }).toBeLessThan(1);
     await twoFrames(page);
@@ -196,8 +205,8 @@ test.describe('Đàn Gà Mẹ Con · tranh tự khép lại', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await open(page, testInfo, 0);
     await waitForFrames(page, 20, { timeout: 120_000 });
-    await dragCamera(page);
-    await expect.poll(() => goc(page), { timeout: 15_000 }).toBeGreaterThan(15);
+    await dragCamera(page, 220);
+    await expect.poll(() => goc(page), { timeout: 60_000 }).toBeGreaterThan(15);
     // Giảm chuyển động thì OrbitControls không có quán tính: vài khung sau, mọi cú dời của con trỏ đã áp xong và góc đứng yên ở chỗ
     // buông (không thì mẫu đầu chưa phải điểm đi). Năm khung của cảnh chỉ tốn tối đa 0,5 giây cảnh trong 3 giây chờ.
     const frames = await page.evaluate(() => window.__sma.frames);
