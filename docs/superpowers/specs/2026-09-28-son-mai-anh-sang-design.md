@@ -3994,7 +3994,33 @@ spec.
   của cú chạm.
 - **Thơ của cả bức** (`meta.poem`, in sẵn trong HTML): *"Khôn ngoan đối đáp người ngoài / Gà cùng một mẹ chớ hoài đá nhau"* (ca dao).
   - Câu thơ hợp đúng cảnh: mười gà con cùng một mẹ.
-  - Nguồn được đối chiếu ở cuối GĐ (§20.10). Như GĐ 6 và GĐ 7, Bao chốt câu chữ trước khi merge.
+  - Đây là hai câu lục bát, không có tiếng đệm. Truyện kể rằng hai gà trống con trong một ổ cứ đá nhau, gà bố bèn dặn câu này; Phạm Văn
+    Tình dẫn truyện "Gà ông Đồ và gà ông Nghè" của Ôn Như Nguyễn Văn Ngọc (*Truyện cổ nước Nam*, NXB Khoa học Xã hội, 1990) làm gốc tích
+    (qua bài báo, chưa mở được cuốn sách).
+  - Đối chiếu ngày 2026-10-07 (GĐ 8 Task 13, theo lệ §18.2: nhiều nguồn, ghi dị bản, Bao chốt):
+    - đúng từng chữ như trên trang ("đối đáp", "cùng một mẹ", "chớ hoài"), có nguồn xếp vào ca dao:
+      - Thi Viện, "Khôn ngoan đối đáp người ngoài" (Khuyết danh Việt Nam, Ca dao về gia đình, họ hàng):
+        https://www.thivien.net/Khuy%E1%BA%BFt-danh-Vi%E1%BB%87t-Nam/Kh%C3%B4n-ngoan-%C4%91%E1%BB%91i-%C4%91%C3%A1p-ng%C6%B0%E1%BB%9Di-ngo%C3%A0i/poem-EUvisw1izcoLF8u--ss-6A
+        (4 nguồn tham khảo của trang bị ẩn nên không biết sách nào);
+      - báo Người Đô Thị, PGS-TS Phạm Văn Tình, "Gà cùng một mẹ, chớ hoài đá nhau", 2019-03-30:
+        https://www.nguoidothi.net.vn/ga-cung-mot-me-cho-hoai-da-nhau-19567.html (cùng tác giả, đăng lại ở Phật giáo, 2021-07-05);
+      - VOH, Hồ Diễm Quỳnh, "Ý nghĩa câu Khôn ngoan đối đáp người ngoài; Gà cùng một mẹ chớ hoài đá nhau", 2022-06-20:
+        https://voh.com.vn/song-dep/khon-ngoan-doi-dap-nguoi-ngoai-ga-cung-mot-me-cho-hoai-da-nhau-438434.html;
+      - Wiktionary, mục "gà", ví dụ cho nghĩa danh từ: https://en.wiktionary.org/wiki/gà; cùng bản có ở VnDoc (Văn mẫu lớp 9) và
+        VietJack ("Ý nghĩa Khôn ngoan đối đáp người ngoài…"), đều ghi "ca dao".
+    - dị bản (đều lẻ tẻ, không nguồn nào in sách):
+      - "đá đáp người ngoài": Thi Viện ghi làm khảo dị của chính bài trên, và một câu hỏi người dùng đăng ở hoidap247. "Đối đáp" là chữ
+        của mọi nguồn có tên tác giả hay tòa soạn;
+      - "gà cùng một nhà": một chỗ ở reader.com.vn; "gà chung một mẹ": báo Pháp Luật Việt Nam, Lương Thiện Nhân, "Con gà trong ca dao
+        tục ngữ Việt Nam", 2017-01-29 (chỉ dẫn câu sau);
+      - bản nói ngược, trêu: "Khôn ngoan đá đáp người trong, / Gà cùng một mẹ chỉ tròng nhau chơi" (Thi Viện, một bài riêng): không dùng;
+      - không thấy nguồn nào in "đừng hoài", "chớ có" hay "đáp đối".
+    - chưa mở được bản số hóa của các bộ sách ca dao (Kho tàng ca dao người Việt; *Tục ngữ ca dao dân ca Việt Nam* của Vũ Ngọc Phan;
+      *Tục ngữ phong dao* của Nguyễn Văn Ngọc): các nguồn trên là web, nhiều bài chép lại nhau, nên số nguồn đếm được không phải số
+      bản độc lập.
+  - Kết luận: bản trên trang ("Khôn ngoan đối đáp người ngoài / Gà cùng một mẹ chớ hoài đá nhau") là bản có nhiều nguồn nhất và khớp
+    từng chữ; khuyến nghị giữ nguyên `meta.poem` và thơ in sẵn trong trang. Ghi "Ca dao" khớp với Thi Viện và các bài báo trên. Bao
+    chốt câu chữ trước khi merge, như GĐ 5 và GĐ 6; đổi thì sửa `meta.poem` rồi chạy `npm run pages`.
 - **Lật tranh và Phòng tranh**, đều do `npm run pages` sinh (§19.7):
   - dải link của Bức 4 có "← Bức 3 · Cung Quế" và "Phòng tranh";
   - Bức 3 có thêm "Bức 4 · Đàn Gà Mẹ Con →";
