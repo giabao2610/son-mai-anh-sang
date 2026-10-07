@@ -998,13 +998,14 @@ son-mai-anh-sang/
       contracts/runtime.js           [0→8] JSDoc hợp đồng NẶNG; GĐ 4: update(0, t), Gesture 'hover'/pointer, ToolInstance.activate, Studio, Snapshot.dials; GĐ 5: Gesture 'double-tap', EngineCtx.captions, ToolApi.draws; GĐ 8: CameraSpec.kind, height, minWidth, zoom, home
       gpu/                           PHẦN NẶNG: chỉ tải ở tầng A/B
         run.js                       [0→5] vòng đời: dựng → compileAsync → khung ẩn → hòa dần → chạy → gỡ; GĐ 2: mất GPU lần đầu → dựng lại; GĐ 4: bộ điều chỉnh đo từ lúc live; GĐ 5: bringUp kiểm gone() trước việc đầu tiên và sau mỗi lần chờ ("Dựng lại cảnh" quá hạn không đụng trang đã về tĩnh), sự kiện GPU đến khi trang đã tĩnh thì bỏ qua (không có code nào của quầng trăng)
-        scene.js                     [2→8] dựng MỘT cảnh trên một sân khấu (ctx → setup → lớp → pipeline → input → bàn thợ) + một khung; GĐ 4: đồ nghề, Dial, đo GPU, vẽ lại bằng update(0, t); GĐ 5: chữ đi theo vật, móc lần vẽ; GĐ 8: stage.returnHome(dt) mỗi khung, sau breathe, trước controls.update() (đã chạm ngưỡng mềm 250 dòng)
+        scene.js                     [2→8] dựng MỘT cảnh trên một sân khấu (ctx → setup → lớp → pipeline → input → bàn thợ) + một khung; GĐ 4: đồ nghề, Dial, đo GPU, vẽ lại bằng update(0, t); GĐ 5: chữ đi theo vật, móc lần vẽ; GĐ 8: stage.returnHome(dt) mỗi khung, sau breathe, trước controls.update(); bức đã nhận 'hold-start' thì luôn nhận 'hold-end' (công cụ bật giữa chừng không giữ mất nó); bộ điều chỉnh tách ra scene-quality.js
+        scene-quality.js             [8] bộ điều chỉnh của một cảnh (tách từ scene.js): nối tuner, thang nấc và bộ đo GPU; scene.quality
         ladder.js                    [3] thang nấc cụ thể: 'dpr' nở thành nhiều nấc −0,25; '<lớp>.<nấc>' lấy từ layer.degrade
         stage.js                     [0→8] renderer, nền đặc, camera + OrbitControls theo CameraSpec, đồng hồ, resize, DPR, lỗi GPU; GĐ 4: trackTimestamp; GĐ 8: camera trực giao (CameraSpec.kind), stage.camera là getter
         disposer.js                  [0] đăng ký mọi thứ đã tạo, gỡ theo thứ tự ngược
         guards.js                    [0] bộ đếm lỗi thuần của vòng lặp (3 khung lỗi liên tiếp, 3 lỗi GPU trong 1 giây), chốt báo bù sự kiện một lần (mất thiết bị)
         pipeline.js                  [0→8] scene pass + MRT; build → renderOutput → display; alpha 1; views(); overlay; GĐ 8: độ sâu tuyến tính chọn theo loại camera
-        views.js                     [4→8] danh sách view (kênh, tap, Normal lười), ghép overlay của công cụ, requireView; GĐ 5: scene pass đứng đầu lượt cuối (móc lần vẽ thấy lượt vẽ cảnh); GĐ 8: view Độ sâu dùng độ sâu của pipeline (linearDepth)
+        views.js                     [4→8] danh sách view (kênh, tap, Normal lười), ghép overlay của công cụ, requireView; GĐ 5: scene pass đứng đầu lượt cuối (móc lần vẽ thấy lượt vẽ cảnh); GĐ 8: view Độ sâu dùng độ sâu của pipeline (linearDepth, bắt buộc)
         gpu-timer.js                 [4] ms GPU mỗi khung: resolveTimestampsAsync (render + compute), không chờ, không gọi chồng
         meter.js                     [4] số đo của bàn thợ: draw call, tam giác, ms, ms CPU, ms GPU; hai bên "Tắt / Bật" của compare
         toolbox.js                   [4→5] hộp đồ nghề: gắn công cụ, cử chỉ tới công cụ trước bức, mỗi lúc một công cụ, body[data-tool]; GĐ 5: ToolApi.draws (năm hàm của móc), thanh công cụ ngay sau thanh lớp (thứ tự Tab)
@@ -4362,9 +4363,11 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
     3 (tầm tay) khi rắc, 1 khi gà mẹ bới (chân cào hất thóc lên thấp; nhúm gọn hơn).
   - Chỉ rắc ở khung có `dt > 0`: `update(0, t)` của `?freeze` không rắc, không compute. Trọng số về 0 thì nắm tới lúc văng bị bỏ (nhúm gà
     mẹ bới, vì gà mẹ vẫn bới theo đồng hồ) và nắm đang chờ trong bể bị `clear()`: phủ lại lớp không có nắm cũ nào bung ra cùng lúc.
-  - Trọng số về 0 thì `shared.js` cũng không đưa chạm và giữ tới đàn gà (GĐ 8 Task 8, sửa sau review): không thì đàn gà vẫn chạy, mổ nền
-    trống mà không ai thấy, phủ lại là thấy gà mổ đất, và `dangAn`, `quanhMe` báo việc không ai thấy. Thả thì luôn tới đàn gà: thả mà chưa
-    giữ thì đàn gà bỏ qua, còn cái giữ bắt đầu lúc lớp còn phủ phải được thả, không thì gà mẹ xòe cánh mãi. `drift(t)` vẫn chạy mỗi khung.
+  - Trọng số về 0 thì `shared.js` cũng không đưa chạm và giữ tới đàn gà (GĐ 8 Task 8, sửa sau review): chạm lên bầy tượng không gọi con
+    nào chạy, núp hay mổ mà không ai thấy, và `dangAn`, `quanhMe` không đếm theo cú chạm ấy. Thả thì luôn tới đàn gà: thả mà chưa giữ thì
+    đàn gà bỏ qua, còn cái giữ bắt đầu lúc lớp còn phủ phải được thả, không thì gà mẹ xòe cánh mãi. `drift(t)` vẫn chạy mỗi khung: gà mẹ
+    vẫn bới theo đồng hồ mà nhúm của mẹ bị bỏ, nên hai ba con vẫn tới mổ nền trống (số đo đếm chúng), và phủ lại lớp giữa lúc đó thì thấy
+    chúng mổ đất tới hết lượt mổ. Chấp nhận: gà mẹ bới theo đồng hồ là điều §20.2 đòi.
   - **Vẽ:**
     - `positionNode` đọc bộ đệm;
     - `scaleNode` cho hạt hình dẹt (0,08 × 0,04), với sàn theo điểm ảnh (§20.11); `rotationNode` theo hạt giống;
@@ -4545,8 +4548,9 @@ dùng được.
 **4. Sổ tay hiện code của hộp màu**
 - `LayerMeta.files` kê được file `lib/tsl/*.js` mà lớp dùng (§8.3), và glob của `ui/code-view.js` thêm `../lib/tsl/*.js`.
 - Kê là tùy chọn. Kê thì phải dùng thật: test hợp đồng kiểm file `lib` được kê nằm trong `lib/tsl/` và trong bao đóng import tĩnh của file
-  lớp (thẳng hay qua part). Như mọi file trong `files`, mỗi file thuộc tối đa một lớp của bức: ở Bức 1, `noise.js` mà Sương và Vàng lá
-  cùng dùng thì không lớp nào kê; ở Bức 4 chỉ Giấy điệp dùng nó, nên lớp ấy kê. Hộp màu không biết núm, nên không có marker `// @knob` ở đó.
+  lớp (thẳng hay qua part). Như mọi file trong `files`, mỗi file thuộc tối đa một lớp của bức (test hợp đồng giữ). Theo quy ước, file mà
+  nhiều lớp cùng dùng thì không lớp nào kê: ở Bức 1, `noise.js` mà ba lớp cùng dùng (Sương, Vàng lá, và Ánh trăng qua
+  `parts/anh-trang-moon.js`) không lớp nào kê; ở Bức 4 chỉ Giấy điệp dùng nó, nên lớp ấy kê. Hộp màu không biết núm, nên không có marker `// @knob` ở đó.
 - Lý do: rút code của đom đóm lên `lib/tsl/particles.js` mà không kê thì Sổ tay của lớp Vàng lá mất đoạn code đó.
 
 **Sửa một lỗi của xưởng, tìm ra khi làm Bức 4** (không phải trường mới; GĐ 8 Task 1): `tools/pick.js` bọc view của mỗi nhánh `If` trong

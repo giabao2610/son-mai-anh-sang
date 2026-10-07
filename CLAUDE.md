@@ -265,7 +265,9 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - Quán tính của OrbitControls tắt theo số lần `update()`, không theo giây (A.98): bức có `CameraSpec.home` thì `home.js` đặt
   `dampingFactor = 1 − (1 − mặc định)^(60·dt)` mỗi khung, trước `update()`; không thì máy vẽ chậm (dt kẹp 0,1 s) còn phần xoay dở, kéo
   camera khỏi góc vừa về.
-- `scene.js` đã quá ngưỡng mềm 250 dòng (251): thêm việc vào `step()` thì tách một phần ra file khác trước.
+- `scene.js#route`: bức đã nhận `'hold-start'` thì luôn nhận `'hold-end'` của cái giữ đó, kể cả khi công cụ bật giữa chừng (ngón khác,
+  bàn phím, `__sma`) và giữ nó (Kính mài hình tròn giữ mọi cử chỉ chạm và giữ của ngón tay); không thì bức kẹt ở "đang giữ" mà không báo gì.
+  Bộ điều chỉnh của cảnh (`createQuality`) ở `engine/gpu/scene-quality.js`, tách khỏi `scene.js` cho file này dưới 250 dòng.
 - Bể hạt `lib/tsl/particles.js` (`createPool`) lo cấp phát một lần, khởi tạo, bước, `count` và vòng đệm; luật chuyển động viết trong bức.
   Hộp màu không đặt tên uniform: một bức có thể dựng hai bể.
 - Mọi nhánh của `init`, `law`, `spawn` gán CẢ `a` lẫn `b`, để mỗi nhánh nói đủ trạng thái mới của phần tử. Đó là quy ước, không phải để
@@ -275,22 +277,25 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - `step(dt, w)` không làm gì khi `dt = 0` (`update(0, t)`) hay `w ≤ 0`, mà nắm đang chờ vẫn chờ: lớp tắt hẳn thì gọi `clear()` mỗi khung,
   không thì phủ lại là các nắm cũ bung ra cùng lúc.
 - `meta.layers[].files` kê được file `lib/tsl/*.js` mà lớp import, thẳng hay qua part (glob của `ui/code-view.js` có `lib/tsl`): tùy chọn,
-  kê thì phải import thật, và như mọi file trong `files`, mỗi file thuộc tối đa một lớp của bức (`noise.js`, mà hai lớp của Bức 1 cùng
-  dùng, thì không lớp nào kê). Test hợp đồng giữ.
+  kê thì phải import thật, và như mọi file trong `files`, mỗi file thuộc tối đa một lớp của bức (test hợp đồng giữ hai điều này). Quy ước:
+  file mà nhiều lớp cùng dùng thì không lớp nào kê, như `noise.js` mà ba lớp của Bức 1 cùng dùng (Sương, Vàng lá, và Ánh trăng qua
+  `parts/anh-trang-moon.js`).
 - Bản ghi mã shader (`toMatchFileSnapshot`, số id thay bằng `tests/helpers/nodes.js#normalizeIds`): bản ghi đom đóm của Bức 1
   (`tests/paintings/ao-sen-dem/__fixtures__/vang-la/`) không bao giờ ghi lại, vì nó chứng minh việc rút bể hạt không đổi gì. Bản ghi thóc
   của Bức 4 (`tests/paintings/dan-ga-me-con/__fixtures__/thoc/`) khóa bản JS của luật trong `dan-ga-thoc.test.js`: đỏ thì sửa bản JS
   cho khớp trước, chạy lại các test đo phần bị ăn, rồi mới ghi lại bằng `-u`.
 - Vẽ phi hiện thực (Bức 4): không đèn của three, không `shadowMap`; material là `NodeMaterial` gốc (`lights = false`, màu ra là
-  `colorNode`); các lớp bọc hàm của công thức tô `shared.cot.recipe` (`base`, `fill`, `ink`, `paper`, `glint`) trước lần biên dịch đầu.
+  `colorNode` cộng `emissiveNode`); các lớp bọc hàm của công thức tô `shared.cot.recipe` (`base`, `fill`, `ink`, `paper`, `glint`)
+  trước lần biên dịch đầu.
 - Dò cạnh trên độ sâu đo độ lệch khỏi mặt phẳng `D(+) + D(−) − 2·D(giữa)` (bằng 0 trên mọi mặt phẳng), không dùng Sobel: Sobel biến mặt
   nhìn chếch thành nét. Nếp gấp đo bằng góc gãy của mặt, không bằng hiệu độ dốc: gần mép khối, mặt đa diện kề nhau cũng vượt ngưỡng.
 - Texture độ sâu đọc kiểu nearest (A.96): mẫu lân cận đặt ở TÂM điểm ảnh (`textureSize`), cách nhau số NGUYÊN điểm ảnh, nên núm dời mẫu
   (`lineWidth`, `misregister` của Bản nét) chỉ có số nguyên điểm ảnh thiết bị; lệch nửa điểm ảnh thì mặt sàn nghiêng thành sọc mực.
 - Mẫu ngoài khung của texture đọc điểm ảnh ở mép, ở cả hai backend (A.99): cặp mẫu có một điểm ngoài khung thì bỏ cả cặp (nhân 0), không
   thì sát khung có vệt mực giả.
-- Chuỗi `If` chọn view của Kính mài, Lột lớp (`tools/pick.js`) bọc view của mỗi nhánh trong `isolate(…).setParent(false)` (A.95): three
-  r186 dùng chung biến texture giữa các nhánh anh em, nên nhánh sau đọc biến chưa gán và ra đen.
+- Các nhánh anh em của một chuỗi `If`/`ElseIf` cùng đọc một texture (hay dùng chung node đã dựng ở nhánh khác) thì bọc node của mỗi nhánh
+  trong `isolate(…).setParent(false)` (A.95), như `tools/pick.js` làm với view của Kính mài, Lột lớp. Luật cho mọi chuỗi `If`, không riêng
+  `pick.js`: three r186 dùng chung biến texture giữa các nhánh anh em, nên nhánh sau đọc biến chưa gán và ra đen.
 - Bức đổi mặc định của lớp dùng chung bằng spread trong `painting.js`, chỉ thay `value` (hay `min`, `max`), không đổi `id`, như Phủ bóng
   của Bức 4 (ACES, lộ sáng 1,2, bloom 0,5; `tests/paintings/dan-ga-me-con/phu-bong.test.js` giữ). Không sửa module dùng chung: các bức
   khác lắp chính nó.

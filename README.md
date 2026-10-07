@@ -219,7 +219,8 @@ Không phải sửa xưởng, trừ khi bức cần một khả năng mới.
      `content.layers[id].objects[name]`: Từng sợi hiện nhãn này. Test tên vật kiểm cả vật mà thí nghiệm thêm vào.
    - `meta.layers[].files` kê mọi file trong `parts/` mà lớp import (thẳng hay qua part khác); lớp khác cần gì thì nhận qua
      `shared`, không import part của lớp khác. Kê thêm được file `lib/tsl/*.js` mà lớp import (giai đoạn 8), để Sổ tay hiện cả code
-     của hộp màu; file mà hai lớp cùng dùng thì không lớp nào kê.
+     của hộp màu. Mỗi file thuộc tối đa một lớp (test hợp đồng giữ); theo quy ước, file mà nhiều lớp cùng dùng thì không lớp nào kê,
+     như `lib/tsl/noise.js` mà ba lớp của Bức 1 cùng dùng (Sương, Vàng lá, Ánh trăng).
    - Tùy chọn: muốn một dòng chữ (thơ, chú thích) hiện cạnh một vật và đi theo nó thì ghi chữ vào `content.captions`
      (`{ lines, source, author? }`, 1–2 dòng) rồi gọi `ctx.captions.show(khóa, anchor)`; code của bức chỉ cầm khóa.
    - Tùy chọn (giai đoạn 8): tranh in hay sa bàn thì nhìn bằng camera trực giao: `camera` có `kind: 'ortho'` cùng `height` (bề cao khung
