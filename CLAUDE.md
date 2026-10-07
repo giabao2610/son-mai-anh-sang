@@ -237,18 +237,25 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
 - E2e của một bức nằm trong `describe` bắt đầu bằng `"{tên bức} · "` (`tests/rules/e2e.test.js` giữ): CI gom test theo đó. Nhóm e2e
   sinh từ registry (`scripts/e2e-groups.js`): mỗi bức một job, cộng nhóm `chung`; thêm bức không sửa workflow. Không dùng
   `--pass-with-no-tests`: nhóm không khớp test nào thì job đỏ.
-- Bức vẽ quá chậm trên SwiftShader WebGPU của runner (Bức 3: chừng 0,2 khung/giây) thì đặt `ciWebgpuSmoke: true` ở dòng registry: job
-  e2e WebGPU (không chặn) chỉ chạy các test mang tag `@khoi` (`{ tag: '@khoi' }`, `scripts/e2e-groups.js#SMOKE_TAG`) của bức đó; test
-  luật đòi spec của bức có ít nhất một test như thế. Job chặn (WebGL2) vẫn chạy đủ. Spec e2e của bức nặng đặt trần chung bằng
-  `test.describe.configure({ timeout })`.
+- Bức vẽ quá chậm trên SwiftShader WebGPU của runner (Bức 3: chừng 0,2 khung/giây; Bức 4: cả bộ mất 28 phút) thì đặt
+  `ciWebgpuSmoke: true` ở dòng registry: job e2e WebGPU (không chặn) chỉ chạy các test mang tag `@khoi` (`{ tag: '@khoi' }`,
+  `scripts/e2e-groups.js#SMOKE_TAG`) của bức đó; test luật đòi spec của bức có ít nhất một test như thế. Job chặn (WebGL2) vẫn chạy đủ.
+  Spec e2e của bức nặng đặt trần chung bằng `test.describe.configure({ timeout })`; một test không lặp qua nhiều khung nhìn: mỗi khung một
+  test, và trang đứng yên lúc chụp (mở với `?freeze`, đổi cỡ, đợi bộ đệm vẽ đổi theo, rồi `__sma.restore({})` vẽ lại khung đứng yên).
 - E2e chờ một trạng thái của cảnh (cây bay đủ cao, lá chạm đất) thì poll theo số đo (`expect.poll`), không chờ một quãng thời gian thật
   cố định: đồng hồ của cảnh theo khung vẽ, mỗi khung tối đa 0,1 s, nên máy vẽ chậm (SwiftShader trên runner CI) cần lâu hơn. Giữ tới
-  khi đạt thì dùng `e2e/helpers.js#pressAt` (nhấn, trả hàm nhấc).
+  khi đạt thì dùng `e2e/helpers.js#pressAt` (nhấn, trả hàm nhấc). Kéo camera cũng phát sự kiện con trỏ ngay trong trang
+  (`e2e/dan-ga-me-con.helpers.js#dragCamera`): với chuột của Playwright, lần dời đầu tới sau lần xuống một nhịp khung, nên runner vẽ một
+  khung lâu hơn `GESTURE.holdMs` (350 ms) thì cú kéo thành cú giữ và camera bị khóa (GĐ 8, WebGPU trên CI: `goc` đứng ở 0).
 
 ### Camera trực giao, tự khép lại, bể hạt dùng chung, vẽ phi hiện thực (GĐ 8)
 - Camera trực giao: `CameraSpec.kind: 'ortho'` cùng `height` (bắt buộc: bề cao khung nhìn ở zoom 1, thay cho `fov`), `minWidth` (khung
-  hẹp thì nới `height`, trần 4 lần: `fov.js#fitOrtho`) và `zoom` ([min, max] của OrbitControls; thiếu thì không zoom); `fov`, `distance`
-  không dùng. Phần tính ở `engine/gpu/camera.js` (`createCamera`, `fitCamera`, `limitControls`), tách khỏi `stage.js` để unit test được.
+  hẹp thì nới `height`, trần 4 lần: `fov.js#fitOrtho`), `shortFrame: { below, maxGrow }` (canvas thấp hơn `below` điểm ảnh CSS thì nới
+  `height` theo below / bề cao canvas, trần `maxGrow`: `fov.js#shortGrow`; lấy max với phần nới theo `minWidth`, không nhân dồn) và `zoom`
+  ([min, max] của OrbitControls; thiếu thì không zoom); `fov`, `distance` không dùng. Phần tính ở `engine/gpu/camera.js` (`createCamera`,
+  `fitCamera`, `limitControls`), tách khỏi `stage.js` để unit test được. Canvas mặc định của e2e (640 × 400) thấp hơn `shortFrame.below`
+  của Bức 4 (800): vùng trên tờ giấy, điểm chạm và điểm kéo chốt ở khung chưa nới rồi đi qua `at640` của `e2e/dan-ga-me-con.helpers.js`
+  (vùng ván thì không), không thì vùng trượt ra ván tối và kiểm trôi qua mà không kiểm gì.
 - `stage.camera` là getter: `useCamera()` dựng camera mới đúng loại, nên mọi chỗ đọc `stage.camera` SAU `useCamera` và không giữ tham
   chiếu từ trước đó.
 - Độ sâu tuyến tính lấy qua `channel('depth')`; chỉ `pipeline.js#linearDepth` chọn công thức theo loại camera (lúc dựng). Ngoài chỗ đó

@@ -2444,7 +2444,9 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
       `env`. Không có `--pass-with-no-tests` (sau GĐ 7): nhóm không khớp test nào thì Playwright báo "No tests found" và job đỏ;
     - `deploy` cần `build` và mọi job của `e2e`;
     - thêm bức thì thêm job, tự động; test luật giữ quy ước tên `describe`;
-    - (sau GĐ 7) thời gian thật của lượt CI đầu, và vì sao job WebGPU chỉ chạy test khói của Bức 3: §19.9.
+    - (sau GĐ 7) thời gian thật của lượt CI đầu, và vì sao job WebGPU chỉ chạy test khói của Bức 3: §19.9;
+    - (sau GĐ 8) thời gian thật của lượt CI đầu có Bức 4 (PR #9), vì sao hai loại test của Bức 4 hỏng trên runner, và vì sao job WebGPU
+      của Bức 4 cũng chỉ chạy test khói: §20.9.
 - **URL:** `https://giabao2610.github.io/son-mai-anh-sang/`.
 - **Luật trong `CLAUDE.md`:**
   - **Nguồn tham chiếu:**
@@ -3930,13 +3932,15 @@ spec.
   - Lý do không dùng một tờ phẳng nằm ngang: nhìn chếch 20° thì tờ phẳng thu thành một dải dẹt; nhìn cao hơn thì gà bị nhìn từ trên
     xuống, mất dáng nghiêng của tranh. Còn tờ phẳng dựng đứng thì gà không có chỗ đứng, thóc không có chỗ rơi.
 - **Tấm ván sơn** là nền `denThen` (màu xóa của canvas), không có mesh nào.
-  - Tờ giấy chiếm chừng 58% bề cao của khung máy tính (đo: 57,5% ở 1280 × 800, 57,7% ở 1440 × 900, 57,8% ở 1920 × 1080), nằm cao hơn
-    tâm khung một chút. Ở điện thoại dọc 390 × 844, khung nới theo `minWidth`: tờ giấy rộng gần hết bề ngang và chỉ cao chừng 22%
-    (350 × 190 điểm ảnh CSS).
+  - Tờ giấy chiếm chừng 58% bề cao của khung máy tính (đo: 58,0% ở 1280 × 800, 58,1% ở 1440 × 900 và 1920 × 1080), nằm cao hơn tâm
+    khung một chút. Ở điện thoại dọc 390 × 844, khung nới theo `minWidth`: tờ giấy rộng gần hết bề ngang và chỉ cao chừng 23%
+    (352 × 193 điểm ảnh CSS).
   - Phần ván tối ở trên và dưới là chỗ của tên, thơ, gợi ý và con dấu, vì chữ màu ngà đặt trên giấy sáng không đọc được.
-    - Đo ở 1280 × 800: tờ giấy từ y 150 tới 610 (điểm ảnh CSS); tên tranh và dải link hết ở y 132, gợi ý bắt đầu ở y 628. Cách 18 điểm
-      ảnh mỗi phía; ở 1440 × 900 và 1920 × 1080 còn rộng hơn (32–83). E2e "chữ trên ván tối" giữ điều này ở năm khung máy tính (cả hai
-      khung laptop thấp 1366 × 650, 1280 × 720) và ở 390 × 844.
+    - Đo ở 1280 × 800: tờ giấy từ y 148 tới 612 (điểm ảnh CSS); tên tranh và dải link hết ở y 132, gợi ý bắt đầu ở y 628. Cách 16 điểm
+      ảnh mỗi phía, như bảng ở §20.2; ở 1440 × 900 và 1920 × 1080 còn rộng hơn (30–81). Đo lại sau lượt CI đầu (e2e WebGL2 trên
+      SwiftShader, khung 10): ở ba khung có trong bảng §20.2 (GPU thật), lệch dưới một điểm ảnh. Số của Task 4 (cách 18, 57,5%) đo
+      trước các vòng sau, không còn đúng. E2e "chữ trên ván tối" giữ điều này ở năm khung máy tính (cả hai khung laptop thấp 1366 × 650,
+      1280 × 720) và ở 390 × 844.
     - Chữ của trang có cỡ cố định theo điểm ảnh, còn tờ giấy co theo bề cao khung: trước vòng sau điểm duyệt ảnh, khung máy tính thấp hơn
       chừng 740 điểm ảnh CSS thì gợi ý chạm mép dưới tờ giấy (1280 × 720: chạm 3 điểm ảnh; trang của laptop 1366 × 768, chừng
       1366 × 650: tên và dải link đè 14, gợi ý đè 19). `CameraSpec.shortFrame` sửa điều đó (§20.2): canvas thấp hơn 800 thì tờ giấy chiếm
@@ -3949,9 +3953,10 @@ spec.
   - một con nấp dưới bụng mẹ, một con trèo trên lưng mẹ. Bụng mẹ chỉ cách sàn 0,5 mà gà con cao chừng 1,2, nên con nấp bụng đứng sát
     bụng mẹ phía người xem, dưới cánh trái; con trèo lưng đứng trên lưng, chân chạm lưng (y 2,6). Cả hai không lún vào mẹ (test giữ).
   - Ở góc nhìn của tranh, không con nào bị che hẳn: test bắn tia qua đầu và mình từng con (§20.9).
-  - Hướng lúc nghỉ chọn để con nào cũng lộ mắt ra người xem. Vòng sau điểm duyệt ảnh (Task 11, Bao đồng ý) xoay hai gà con xanh: con sau
-    lưng mẹ (chỉ số 2) từ −1,9 sang −1,4 rad (trước chỉ lộ một mép mắt), con ở gần (chỉ số 6) từ 2,6 sang 1,6 (trước quay lưng, không
-    thấy mắt). Mọi test của đàn gà (không chồng nhau, tia thấy được, chỗ núp, nhúm thóc lúc mở trang) vẫn qua, không sửa test nào.
+  - Hướng lúc nghỉ của từng con là dữ liệu, như chỗ đứng. Vòng sau điểm duyệt ảnh (Task 11, Bao đồng ý) xoay hai gà con xanh cho lộ mắt
+    ra người xem: con sau lưng mẹ (chỉ số 2) từ −1,9 sang −1,4 rad (trước chỉ lộ một mép mắt), con ở gần (chỉ số 6) từ 2,6 sang 1,6 (trước
+    quay lưng, không thấy mắt); các con khác giữ hướng cũ. Mọi test của đàn gà (không chồng nhau, tia thấy được, chỗ núp, nhúm thóc lúc mở
+    trang) vẫn qua, không sửa test nào.
 - **Ánh sáng:** một hướng nắng cố định, từ trên, bên trái, phía trước.
   - Không có đèn nào của three, và không có bóng đổ (tranh Đông Hồ không vẽ bóng).
   - Không bật `renderer.shadowMap` (test giữ).
@@ -4845,7 +4850,7 @@ chuyển động ở lại trong bức.
 - Phủ bóng ghi đè (`phu-bong.test.js`, GĐ 8 Task 12): đúng ba núm chốt ở lượt màu mang số mới (chỉ đổi `value`), id có thật trong lớp
   dùng chung, giá trị hợp lệ với núm; các núm khác là chính núm của lớp dùng chung; module dùng chung không bị sửa (ba bức kia vẫn AgX).
 
-**E2e riêng** (21 test trong bốn file `e2e/dan-ga-me-con*.spec.js`; WebGL2 trên SwiftShader là cổng chặn, WebGPU không chặn). Spec chính
+**E2e riêng** (26 test trong bốn file `e2e/dan-ga-me-con*.spec.js`; WebGL2 trên SwiftShader là cổng chặn, WebGPU không chặn). Spec chính
 tới gần 300 dòng nên tách: `dan-ga-me-con-giay.spec.js` (Giấy điệp), `-dan-ga.spec.js` (Đàn gà), `-chat-luong.spec.js` (chất lượng); tiện ích,
 các vùng của canvas và tag khói (`SMOKE`) dùng chung ở `e2e/dan-ga-me-con.helpers.js`. `tests/rules/e2e.test.js` gom file theo slug dài nhất
 (slug `dan-ga` không nhận nhầm `dan-ga-me-con*.spec.js`), kiểm mọi `describe` của các file ấy bắt đầu bằng tên bức, và (bức có
@@ -4857,16 +4862,18 @@ chiếu tuyến tính quanh điểm nhìn); vùng ván giữ nguyên.
 - Góc nhìn của tranh (`?freeze=30`): hai dải ván trên và dưới tối (độ sáng < 0,08); vách giấy sáng hơn ván trên ít nhất 0,15; mình gà mẹ
   in màu vàng hòe (sắc độ > 0,15; đỏ hơn lam 40, lục hơn lam 20); không lỗi console. Vòng mặt đa diện thành nét (§20.4 lớp 3) chỉ thấy rõ ở
   DPR 2, nên kiểm bằng ảnh ở điểm duyệt ảnh, không bằng e2e.
-- Chữ trên ván tối (live): ở 1366 × 650, 1280 × 720 (laptop màn thấp, `shortFrame`), 1280 × 800, 1440 × 900, 1920 × 1080 và 390 × 844,
-  khung tờ giấy đo trên điểm ảnh của canvas (hàng có hơn 15%
+- Chữ trên ván tối (sau lượt CI đầu: mỗi khung một test; mở ở 640 × 400 với `?freeze=10`, đổi cỡ, đợi bộ đệm vẽ đổi theo, rồi
+  `__sma.restore({})` vẽ lại khung đứng yên ở cỡ mới): ở 1366 × 650, 1280 × 720 (laptop màn thấp, `shortFrame`), 1280 × 800, 1440 × 900,
+  1920 × 1080 và 390 × 844, canvas phủ cả khung, và khung tờ giấy đo trên điểm ảnh của canvas (hàng có hơn 15%
   điểm ảnh sáng hơn 0,25; cột sáng ở hơn 30% số hàng ấy) nằm dưới tên tranh và dải link, trên gợi ý và thơ, mỗi phía cách hơn 2 điểm ảnh;
   cả tờ giấy trong khung.
 - Bản nét:
   - viền: mép trái tờ giấy tối hơn ít nhất 0,01 khi có Bản nét; mặt sàn nghiêng lệch dưới 0,01 giữa có và không có Bản nét (mẫu độ sâu
-    đối xứng, không sọc mực); draw call như nhau khi tắt Bản nét, và ≤ 30;
+    đối xứng, không sọc mực), và vùng sàn phải là giấy (độ sáng > 0,2, như phép phóng to dưới đây); draw call như nhau khi tắt Bản nét,
+    và ≤ 30;
   - Bản nét về 0 thì giữa tờ giấy sáng lên hơn 0,02; riêng vùng mình gà mẹ phía trên cánh (không viền, không nếp gấp) sáng lên hơn 0,005:
     nét trong có thật, không chỉ viền (GĐ 8 Task 9: chừng 0,014 trên GPU thật, 0,015 trên SwiftShader; bỏ nét trong thì 0,001 và kiểm này
-    đỏ);
+    đỏ; đo lại sau lượt CI đầu, ở khung 640 × 400 đã nới theo `shortFrame`: 0,036 trên WebGL2, 0,040 trên WebGPU, cả hai SwiftShader);
   - `misregister` bằng 6 thì ảnh ở mép trái khác lúc bằng 0;
   - phóng to 2,5 lần ở 1280 × 800 (tờ giấy chạm khung, không lệch bản; ở 640 × 400 khung đã nới, mép trước tờ giấy chỉ cách mép dưới khung
     chừng 4 điểm ảnh, sát vùng đo): hàng sát mép dưới lệch sàn ngay trên dưới 0,02, tức không có vệt mực giả (chưa
@@ -4880,8 +4887,8 @@ chiếu tuyến tính quanh điểm nhìn); vùng ván giữ nguyên.
     0,047), và có Giấy điệp thì kênh đỏ hơn kênh lam;
   - view "Chỉ emissive": ở góc của tranh đã có hạt lóe (độ sáng > 0); `sparkle` 0 hay Giấy điệp về 0 thì đen tuyền (đúng 0), vì gà không
     phát sáng; `sparkle` về mặc định thì về đúng ảnh cũ;
-  - camera đứng yên thì hạt đứng yên (vùng vách, hai lần đọc cách nhau bốn nhịp rAF, giống hệt); kéo chuột 30 px (`goc` > 5) thì hạt khác
-    lóe lên;
+  - camera đứng yên thì hạt đứng yên (vùng vách, hai lần đọc cách nhau bốn nhịp rAF, giống hệt); kéo chuột 30 px (`goc` > 5, poll tới 60
+    giây; kéo bằng `dragCamera`, xem **CI** dưới) thì hạt khác lóe lên;
   - Giấy dó trơn bật thì ảnh đổi, tắt thì về đúng ảnh cũ;
   - trọng số lệch nhau: Bản màu về 0 thì vùng vách y nguyên (giấy không đọc bảng màu); Phủ bóng về 0 thì giấy sáng hơn, dưới 0,97 (không
     cháy trắng) và vẫn ngà (đỏ hơn lam 10).
@@ -4890,9 +4897,9 @@ chiếu tuyến tính quanh điểm nhìn); vùng ván giữ nguyên.
     chưa con nào mổ, chờ số 0 ngay lúc ấy là chờ suông), chạm giữa sàn (xa mép, xa mẹ) thì `rac` tăng, rồi `dangAn` > 0;
   - trước khi giữ, `quanhMe` ≤ 4; giữ trên vách thì `quanhMe` ≥ 8; thả thì về ≤ 4;
   - mài Đàn gà về 0 khi thóc đang rơi rồi chạm: không lỗi console, phủ lại thì `rac` không đổi (không có nắm cũ bung ra).
-- Tranh tự khép lại: lúc mở trang `goc` < 1; kéo camera thì `goc` > 15; buông tay rồi chờ (poll tới 90 giây) thì `goc` < 1, và hai nhịp
-  sau vẫn < 1. Giảm chuyển động: camera về MỘT bước khi đủ 3 giây cảnh; `goc` ghi ở mỗi khung rAF, mọi mẫu hoặc còn ở chỗ buông (≥ mẫu đầu
-  − 1°) hoặc đã ở nhà (≤ 1°), không mẫu nào lượn ở giữa.
+- Tranh tự khép lại: lúc mở trang `goc` < 1; kéo camera (`dragCamera`) thì `goc` > 15 (poll tới 60 giây); buông tay rồi chờ (poll tới 90
+  giây) thì `goc` < 1, và hai nhịp sau vẫn < 1. Giảm chuyển động: camera về MỘT bước khi đủ 3 giây cảnh; `goc` ghi ở mỗi khung rAF, mọi
+  mẫu hoặc còn ở chỗ buông (≥ mẫu đầu − 1°) hoặc đã ở nhà (≤ 1°), không mẫu nào lượn ở giữa.
 - Chất lượng (`e2e/dan-ga-me-con-chat-luong.spec.js`): `?level=cao` đúng mức và draw call ≤ 30; `?level=thap` chạy được, đúng mức và đúng
   ngân sách (24 vòng, 1024 hạt), vách giấy sáng hơn ván trên ít nhất 0,15; bật rồi tắt sáu thí nghiệm của năm lớp riêng không có lỗi console.
 - E2e chạy live và chờ rộng tay như Bức 3, vì đồng hồ của cảnh theo khung vẽ: trần 180 giây mỗi test (Đàn gà 240 giây; nhóm "khung" giữ
@@ -4901,6 +4908,36 @@ chiếu tuyến tính quanh điểm nhìn); vùng ván giữ nguyên.
 
 **CI:** nhóm e2e theo bức tự có job của Bức 4 (§19.9). Đo thời gian thật ở lượt CI đầu. Job WebGPU quá trần thì bật `ciWebgpuSmoke` cho
 Bức 4, như Bức 3.
+- (Sau GĐ 8) **Thời gian thật**, lượt CI đầu của PR #9 (run 37586738134, tính cả bước cài đặt):
+
+  | Nhóm | `e2e` (chặn) | `e2e-webgpu` (không chặn) |
+  |---|---|---|
+  | Ao Sen Đêm | 19,2 phút | 27,0 phút |
+  | Đèn Kéo Quân | 8,7 phút | 9,5 phút |
+  | Cung Quế | 26,3 phút | 5,0 phút (chỉ test khói) |
+  | Đàn Gà Mẹ Con | 21,5 phút; 41 qua, 1 hỏng (chữ trên ván tối, cả hai lần chạy) | 28,1 phút; 37 qua, 4 hỏng |
+  | `chung` | 0,7 phút | 0,6 phút |
+
+  - `build` 0,9 phút. Ba bức đầu xanh ở cả hai job.
+  - **Chữ trên ván tối** (hỏng ở cả hai job): sáu khung nằm trong MỘT test, đổi cỡ trên trang đang chạy live, nên quá trần 180 giây (lần
+    chạy lại cũng vậy). Ở khung lớn (1920 × 1080) SwiftShader vẽ mỗi khung lâu, và ảnh chụp canvas, `page.evaluate` đọc ảnh phải chen giữa
+    các khung ấy. Sửa: mỗi khung một test (mỗi test một trần 180 giây), và trang đứng yên lúc chụp, đọc ảnh: mở ở 640 × 400 với
+    `?freeze=10` như mọi test khác (khởi động, khung ẩn và mười khung đều ở cỡ nhỏ), đổi cỡ, rồi `__sma.restore({})` vẽ lại khung đứng
+    yên ở cỡ mới, một lần vẽ ở cỡ lớn. Giữ đủ sáu khung và mọi ngưỡng. Ở máy local (Mac M2, SwiftShader) mỗi test mất 5–8 giây với
+    WebGL2, 6–26 giây với WebGPU.
+  - **Kéo camera** (chỉ job WebGPU: hạt điệp theo góc nhìn, hai test tranh tự khép lại): `goc` đứng ở 0 suốt 15 giây chờ. Không phải chờ
+    chưa đủ: camera không xoay. Chuột của Playwright đợi một nhịp khung mỗi sự kiện (Phụ lục A.51), nên lần dời đầu tới sau lần xuống
+    một khung. Khung của Bức 4 trên runner WebGPU lâu hơn `GESTURE.holdMs` (350 ms; suy từ `goc` 0 và từ lần tái hiện dưới đây), nên hẹn
+    giờ "giữ" của `input.js` nổ trước, cú kéo thành cú giữ, và camera bị khóa (`controls.enabled = false`). Tái hiện ở máy local (WebGL2
+    SwiftShader) bằng cách kẹt mỗi khung rAF 500 ms: lần dời đầu tới sau lần xuống 2 giây, `goc` lớn nhất 0; không kẹt thì 70 ms, `goc`
+    69,7°. Sửa: `dragCamera` của `e2e/dan-ga-me-con.helpers.js` phát PointerEvent ngay trong trang (các lần dời đi ngay sau lần xuống,
+    nhấc sau `swipeMs`), như `tapAt`, `swipeAt`; khung kẹt 500 ms thì `goc` vẫn tới 69,7°. Poll `goc` (> 15, > 5) chờ tới 60 giây thay cho
+    15. Ngưỡng giữ nguyên.
+  - **`ciWebgpuSmoke: true` cho Bức 4** (plan Task 13): job WebGPU mất 28 phút, gần trần 40, mỗi test chậm hơn ở job chặn tới 1,8 lần,
+    mà gần như cả bộ trùng với job chặn. Từ đây job WebGPU của Bức 4 chỉ chạy bảy test khói: góc nhìn của tranh, độ sâu của camera trực
+    giao, Bản nét về 0 (nét trong), Giấy điệp về 0, chạm rắc thóc, mức cao (draw call), tranh tự khép lại. Ở lượt đầu, sáu test đầu qua
+    trên WebGPU trong chừng 3,7 phút (21–66 giây mỗi test); test thứ bảy là test kéo camera vừa sửa. Ở máy local (WebGPU SwiftShader) cả
+    bảy qua, 10–21 giây mỗi test. Job chặn (WebGL2) vẫn chạy đủ.
 
 **Kiểm tay** (thêm vào §12):
 - Bức 4 trên điện thoại thật: tờ tranh vừa bề ngang; dùng ngón tay để chạm rắc thóc, giữ, kéo rồi xem tranh tự khép lại;

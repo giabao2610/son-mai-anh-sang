@@ -154,7 +154,7 @@ npx playwright install chromium    # chỉ cần lần đầu, trước khi ch�
 npm run e2e                        # build rồi chạy e2e (tranh tĩnh, WebGL2, WebGPU)
 ```
 
-Số test (giai đoạn 8): `npm test` chạy 118 file, 1436 test. E2e liệt kê 180 test cho mỗi project; test nào không thuộc project đó
+Số test (giai đoạn 8): `npm test` chạy 118 file, 1451 test. E2e liệt kê 185 test cho mỗi project; test nào không thuộc project đó
 thì tự bỏ qua (Playwright ghi "skipped").
 
 **WebGPU e2e trên CI (ubuntu):** với headless shell của Playwright, mọi test WebGPU rơi về tranh tĩnh vì
