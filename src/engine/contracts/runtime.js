@@ -9,7 +9,8 @@
 /** @typedef {Object} PaintingSetup
  * @property {object} [shared]          object dùng chung trong bức (thiếu thì xưởng tạo {}) → tham số thứ 2 của createLayer
  * @property {Dial[]} [dials]           [4] núm của CẢ BỨC (Bức 1: 'gio'); xưởng vẽ thanh trượt
- * @property {(g: Gesture) => void} [onGesture]   cử chỉ mà không công cụ nào dùng
+ * @property {(g: Gesture) => void} [onGesture]   cử chỉ mà không công cụ nào dùng. [8] Trừ một chỗ: bức đã nhận 'hold-start' thì luôn
+ *                                     nhận 'hold-end' của cái giữ đó, kể cả khi công cụ bật giữa chừng giữ nó (engine/gpu/scene.js#route)
  * @property {(dt: number, t: number) => void} [update]   mỗi khung, TRƯỚC các lớp. [4] update(0, t) như Layer.update
  * @property {() => void} [dispose]     gọi 2 lần vẫn an toàn
  */
@@ -165,7 +166,9 @@
 /** @typedef {Object} ToolInstance
  * @property {(final: any, view: (id: string) => any) => any} [overlay]  ghép sau display khi dựng pipeline; ghép LẠI khi
  *                                 requireView đổi MRT, nên chỉ dựng node, không giữ trạng thái; đổi chế độ = đổi uniform
- * @property {(g: Gesture) => boolean} [onGesture]  true = đã dùng, không chuyển cho bức. [5] Giữ 'tap' thì giữ cả 'double-tap'
+ * @property {(g: Gesture) => boolean} [onGesture]  true = đã dùng, không chuyển cho bức; [8] trừ 'hold-end' mà bức còn chờ (bức đã
+ *                                 nhận 'hold-start' của cái giữ đó trước khi công cụ bật): công cụ nhận trước, bức vẫn nhận sau
+ *                                 (engine/gpu/scene.js#route). [5] Giữ 'tap' thì giữ cả 'double-tap'
  *                                 (kính tròn của Kính mài giữ cả hai; hình gạt không giữ cử chỉ nào): không thì bức nhận
  *                                 'double-tap' mà không có hai 'tap' làm nên nó
  * @property {(on: boolean) => void} [activate]     bật/tắt: đổi uniform, hiện/giấu thanh điều khiển

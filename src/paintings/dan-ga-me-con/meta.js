@@ -10,7 +10,7 @@ export default {
   no: 4,
   title: 'Đàn Gà Mẹ Con',
   tagline: 'Một tờ tranh Đông Hồ bước vào được: gà mẹ ngậm con ong, mười gà con quây quần, sơn từ sáu lớp ánh sáng.',
-  // Ca dao: mười gà con cùng một mẹ (spec §20.2). Câu chữ đối chiếu lại trước khi merge.
+  // Ca dao: mười gà con cùng một mẹ (spec §20.2). Câu chữ đã đối chiếu ngày 2026-10-07 (nhiều nguồn, dị bản: spec §20.2); Bao giữ nguyên.
   poem: { lines: ['Khôn ngoan đối đáp người ngoài', 'Gà cùng một mẹ chớ hoài đá nhau'], source: 'Ca dao' },
   poster: {
     src: '/paintings/dan-ga-me-con/poster.webp',
