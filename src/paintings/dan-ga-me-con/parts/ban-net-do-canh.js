@@ -90,7 +90,8 @@ export function depthEdges({ depth, span, px, offset, threshold, crease, pixel }
  * Dò cạnh theo màu (thí nghiệm "Dò cạnh theo màu"): Sobel trên độ sáng của ảnh màu (scene pass), cùng lưới, cùng bước và cùng lệch bản như
  * dò trên độ sâu. Trên ảnh màu, Sobel là đúng: mảng màu phẳng cho độ dốc 0, ranh mảng là bậc. Nét mọc ở ranh của nấc sáng và quanh nét
  * trong, và mất ở chỗ hai mảng cùng màu chồng nhau: điều mà độ sâu thấy, còn màu thì không. Tám lần đọc (Sobel bỏ điểm giữa).
- * Độ sáng kẹp ở 1: ảnh của scene pass là HDR, hạt điệp lóe sáng chừng 15 lần giấy, nên không kẹp thì mỗi hạt lóe thành một vòng mực.
+ * Độ sáng kẹp ở 1: ảnh của scene pass là HDR, hạt điệp lóe sáng chừng 15 lần giấy, nên không kẹp thì mỗi hạt lóe thành một vòng mực đậm.
+ * Kẹp rồi vẫn còn một chấm mực nhỏ ở mỗi hạt đang lóe (sáng hơn giấy là một ranh màu thật): Sổ tay nói điều này.
  * @param {{ color: any, px: any, offset: any }} p   color: texture màu của scene pass (channel('output')); px, offset như depthEdges
  */
 export function colorEdges({ color, px, offset }) {

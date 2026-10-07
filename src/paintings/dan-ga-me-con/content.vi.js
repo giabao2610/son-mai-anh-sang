@@ -107,8 +107,9 @@ export default {
         },
         netTheoMau: {
           label: 'Dò cạnh theo màu',
-          explain: 'Dò cạnh trên độ sáng của ảnh màu (Sobel) thay cho ảnh độ sâu. Nét mọc ở ranh của nấc sáng và hai bên nét trong; còn '
-            + 'chỗ hai mảng cùng màu chồng nhau, như đầu gà mẹ trước mình cùng màu vàng hòe, thì mất nét: ảnh màu không biết vật nào ở trước.',
+          explain: 'Dò cạnh trên độ sáng của ảnh màu (Sobel) thay cho ảnh độ sâu. Nét mọc ở ranh của nấc sáng, hai bên nét trong, và thành '
+            + 'chấm mực ở mỗi hạt điệp đang lóe (đốm sáng nào cũng là một ranh màu); còn chỗ hai mảng cùng màu chồng nhau, như đầu gà mẹ '
+            + 'trước mình cùng màu vàng hòe, thì mất nét: ảnh màu không biết vật nào ở trước.',
         },
       },
       taps: { 'truoc-net': 'Trước khi in bản nét' },

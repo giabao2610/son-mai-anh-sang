@@ -4217,7 +4217,8 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   - "Dò cạnh theo màu" (`netTheoMau`): Sobel trên độ sáng của ảnh màu (scene pass) thay cho độ sâu, cùng lưới, bước và lệch bản. Nét mọc ở
     ranh của nấc sáng và hai bên nét trong, và mất ở chỗ hai mảng cùng màu chồng nhau (đầu gà mẹ trước mình, cùng vàng hòe). Tám mẫu màu
     nằm trong nhánh `If` theo uniform của thí nghiệm, nên lúc tắt không đọc thêm texture nào. Độ sáng của mỗi mẫu kẹp ở 1 (GĐ 8 Task 11):
-    ảnh của scene pass là HDR, hạt điệp lóe sáng chừng 15 lần giấy, nên không kẹp thì mỗi hạt lóe thành một vòng mực.
+    ảnh của scene pass là HDR, hạt điệp lóe sáng chừng 15 lần giấy, nên không kẹp thì mỗi hạt lóe thành một vòng mực đậm. Kẹp rồi vẫn còn
+    một chấm mực nhỏ ở mỗi hạt đang lóe, vì sáng hơn giấy là một ranh màu thật (thấy trên GPU thật); chữ của thí nghiệm nói điều này.
 - **Tap:** `truoc-net` (ảnh trước khi có viền).
 - Không có vật riêng.
 
