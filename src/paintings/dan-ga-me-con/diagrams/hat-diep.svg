@@ -10,7 +10,7 @@
   </defs>
   <!-- tờ giấy -->
   <rect x="0" y="140" width="360" height="21" fill="#EFE6D2"/>
-  <text x="354" y="157" fill="#221E1A" text-anchor="end">giấy dó quét điệp</text>
+  <text x="354" y="157" fill="#272C2C" text-anchor="end">giấy dó quét điệp</text>
   <!-- tia nắng: cùng một hướng tới mọi hạt -->
   <g stroke="#F2D48A" stroke-width="1.2" marker-end="url(#dg-dgmc-hd-nang)">
     <path d="M0 60.3 L43.4 132.7"/>

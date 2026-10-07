@@ -22,8 +22,10 @@ export default {
     capture: { at: '2026-10-05T21:00', freeze: 120 },
   },
   og: 'paintings/dan-ga-me-con/og.jpg',
-  // Năm màu tự nhiên của tranh Đông Hồ (spec §20.3): trắng điệp, vàng hoa hòe, đỏ sỏi son, xanh lá chàm, đen than lá tre.
-  palette: { diep: '#EFE6D2', hoe: '#E0AC3A', sonSoi: '#B9472E', xanhDong: '#41705F', muc: '#221E1A' },
+  // Năm màu tự nhiên của tranh Đông Hồ (spec §20.3): trắng điệp, vàng hoa hòe, đỏ sỏi son, xanh lá chàm, đen than lá tre. Số chốt ở lượt
+  // màu (GĐ 8 Task 11): Phủ bóng của bức dùng ACES, làm màu đậm và sáng lên, nên bốn màu in là màu VÀO để màu hiện ra đúng màu thiết kế
+  // (#E0AC3A, #B9472E, #41705F, #221E1A); mực lạnh hơn để LUT nhuộm nâu xong vẫn là đen than. Giấy giữ hex thiết kế.
+  palette: { diep: '#EFE6D2', hoe: '#D08E2A', sonSoi: '#994533', xanhDong: '#3F6358', muc: '#272C2C' },
   // THỨ TỰ PHỦ: lớp đầu là Cốt; lớp cuối là Phủ bóng dùng chung của xưởng. Thứ tự in của làng: màu trước (Bản màu), nét đen sau cùng
   // (Bản nét); giấy điệp là việc của tờ giấy, độc lập với gà; Đàn gà là chuyển động (gà, thóc) phủ lên tờ tranh in sẵn.
   layers: [

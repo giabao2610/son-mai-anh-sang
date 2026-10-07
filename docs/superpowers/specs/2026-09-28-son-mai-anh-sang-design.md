@@ -2494,7 +2494,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 1. `cp -r src/paintings/_mau src/paintings/den-keo-quan`, rồi sửa `slug`, `no`, `title`, `tagline`, `poem`, `poster`, `og` và **`fence`** (từ vựng riêng của bức mới) trong `meta.js`.
 2. Viết `layers/lN-*.js` (mỗi file có `id`, `knobs`, `createLayer`), `shared.js` nếu cần, rồi `painting.js` (layers, camera, quality, setup) và `content.vi.js`.
    - Lớp cuối thường là Phủ bóng dùng chung: import `meta` của nó trong meta, `layer` trong painting, `content` trong content.
-   - Muốn đổi mặc định của lớp dùng chung thì ghi đè trong `painting.js`: `{ ...phuBong, knobs: phuBong.knobs.map((k) => k.id === 'bloomStrength' ? { ...k, value: 0.3 } : k) }`. Chỉ đổi `value`, `min`, `max`, không đổi `id`.
+   - Muốn đổi mặc định của lớp dùng chung thì ghi đè trong `painting.js`: `{ ...phuBong, knobs: phuBong.knobs.map((k) => k.id === 'bloomStrength' ? { ...k, value: 0.3 } : k) }`. Chỉ đổi `value`, `min`, `max`, không đổi `id`. (GĐ 8) Bức 4 làm vậy cho tone, lộ sáng và bloom của Phủ bóng (§20.4 lớp 6).
    - (GĐ 5) Đặt `name` cho mọi vật trong `objects` của từng lớp, và nhãn ở `content.layers[id].objects`. Muốn chữ hiện cạnh một vật
      (thơ, chú thích) thì ghi vào `content.captions` rồi gọi `ctx.captions.show(khóa, anchor)` (§4.1 mục 10).
 3. Thêm một dòng vào `paintings/registry.js`: `{ meta, page: 'tranh/den-keo-quan/index.html', lang: 'vi' }`. (GĐ 6) Registry xếp
@@ -3974,13 +3974,19 @@ spec.
 - **Không gắn với lễ hội** (giữ giả định ở §1): tranh Đông Hồ thường treo dịp Tết, nhưng bức không có câu đối, pháo hay chữ chúc Tết.
 - **Năm màu tự nhiên của Đông Hồ**, thêm vào bảng qua `meta.palette` (hex chốt ở lượt màu):
 
-  | Token | Màu | Làm từ | Hex thiết kế |
-  |---|---|---|---|
-  | `diep` | trắng điệp | bột vỏ sò điệp trộn hồ, quét lên giấy dó | `#EFE6D2` |
-  | `hoe` | vàng | hoa hòe | `#E0AC3A` |
-  | `sonSoi` | đỏ son | sỏi son | `#B9472E` |
-  | `xanhDong` | xanh | lá chàm, gỉ đồng | `#41705F` |
-  | `muc` | đen | than lá tre | `#221E1A` |
+  | Token | Màu | Làm từ | Hex thiết kế | Hex chốt (lượt màu, GĐ 8 Task 11) |
+  |---|---|---|---|---|
+  | `diep` | trắng điệp | bột vỏ sò điệp trộn hồ, quét lên giấy dó | `#EFE6D2` | `#EFE6D2` |
+  | `hoe` | vàng | hoa hòe | `#E0AC3A` | `#D08E2A` |
+  | `sonSoi` | đỏ son | sỏi son | `#B9472E` | `#994533` |
+  | `xanhDong` | xanh | lá chàm, gỉ đồng | `#41705F` | `#3F6358` |
+  | `muc` | đen | than lá tre | `#221E1A` | `#272C2C` |
+
+  - Hex thiết kế là màu người xem phải thấy. Hex chốt là màu VÀO: Phủ bóng của Bức 4 dùng ACES (§20.4 lớp 6), làm màu in đậm và sáng hơn
+    (hex thiết kế hiện ra vàng chanh, đỏ cam), nên bốn màu in chốt ở số mà qua ACES, lộ sáng 1,2 và LUT 0,45, nấc sáng hiện ra đúng hex
+    thiết kế (tính ngược bằng mô hình JS của chuỗi Phủ bóng, đo lại trên GPU thật). Mực lạnh hơn vì LUT nhuộm vùng tối sắc nâu cánh gián:
+    ra đen than (34, 30, 26), không đen kịt (23, 15, 9 nếu giữ `#221E1A`). Giấy giữ hex thiết kế.
+  - Sơ đồ của Sổ tay chỉ dùng màu của bảng đã ghép (test hợp đồng), nên dùng hex chốt.
 
   - Gà mẹ: mình `hoe`; cánh `sonSoi`; đuôi `xanhDong`; mào và mảng cổ `sonSoi`; mỏ và chân `hoe`; con ong `hoe` (thân và cánh).
     - Mắt (gà mẹ và mọi gà con) `diep`, như mắt khắc trên ván: vòng mắt và con ngươi là nét trong của Bản nét (GĐ 8 Task 5), nên mắt đọc
@@ -4006,6 +4012,30 @@ spec.
 
   AgX của Phủ bóng nén vùng sáng, nên giấy có thể ngả xám. Chỉnh `exposure`, hay chọn tone khác của Phủ bóng, trong lượt màu. Bao duyệt
   ảnh.
+  - (GĐ 8 Task 11. Đo 2026-10-07, Mac M2, WebGPU, `?freeze=120&poster&level=cao`, DPR 1. Độ sáng là luma Rec. 709, 0–255; độ bão hòa
+    HSV; điểm tối là kênh lớn nhất < 30. Giấy: vách bên trái gà mẹ, không có gà. Mảng in: mình gà mẹ trên cánh, cánh gà mẹ, gà con xanh
+    ở gần, trung bình cả vảy lông và hai nấc. Mực: điểm có luma < 60 quanh bốn gà con bên trái. Ván sát: dải ván 3–20 điểm ảnh quanh tờ
+    giấy, độ sáng lớn nhất.)
+
+    | Đo | 1280×800 trước | 1280×800 sau | 390×844 trước | 390×844 sau |
+    |---|---|---|---|---|
+    | Cả khung: sáng · bão hòa · tối | 68,7 · 0,50 · 61,4% | 78,3 · 0,39 · 61,5% | 37,9 · 0,59 · 79,1% | 42,3 · 0,44 · 79,2% |
+    | Giấy: RGB · luma > 200 · ngà (R − B) | 196, 187, 168 · 0,1% · 28 | 229, 219, 198 · 100% · 31 | 196, 187, 168 · 0% · 28 | 229, 219, 198 · 100% · 31 |
+    | Mình gà mẹ: RGB · bão hòa | 189, 156, 93 · 0,51 | 214, 162, 56 · 0,74 | 189, 155, 92 · 0,51 | 214, 160, 56 · 0,74 |
+    | Cánh gà mẹ | 180, 90, 65 · 0,64 | 178, 66, 44 · 0,75 | 180, 91, 66 · 0,63 | 179, 67, 44 · 0,75 |
+    | Gà con xanh | 79, 108, 92 · 0,28 | 60, 97, 82 · 0,38 | 75, 98, 83 · 0,28 | 57, 89, 74 · 0,34 |
+    | Mực (RGB) | 57, 39, 28 | 53, 41, 34 | 58, 41, 30 | 51, 42, 34 |
+    | Ván sát (độ sáng lớn nhất; ván xa chừng 2–3) | 18 | 8 | 27 | 11 |
+
+    "Trước" là khi đã có lề không lóe quanh mép và mảng cổ (hai commit trước lượt màu). Trước hai việc ấy (7bf91a1) các số y như vậy, trừ
+    ván sát: 80 ở 1280×800, 47 ở 390×844.
+  - Trước: giấy xám be, năm màu in nhạt như phấn (AgX nén vùng sáng và kéo màu về xám), mực nâu. Bão hòa của cả khung giảm sau lượt màu
+    vì ván (hơn 60% khung) từ nâu đen thành đen dưới ACES; bão hòa của mảng in tăng (mình gà mẹ 0,51 → 0,74).
+  - Đổi: Phủ bóng ACES, lộ sáng 1,2, bloom 0,5 (§20.4 lớp 6); bốn màu in theo bảng trên. Đã thử: AgX lộ sáng 1,6 (giấy 214, 205, 184,
+    màu in vẫn nhạt); không tone mapping (màu in đúng hex, nhưng hạt điệp nào cũng cháy trắng, giấy lấm tấm khắp nơi, vệt chổi gắt); ACES
+    với hex thiết kế (vàng chanh, đỏ cam). Lộ sáng 1,0 và 1,1 cho giấy 222 và 226: chọn 1,2 cho giấy sáng mà chưa cháy trắng.
+  - Giữ: `ban-mau.shade` 0,18 (hai nấc phân biệt mà vẫn phẳng); `giay-diep` `sparkle` 1,2, `density` 14, `fiber` 0,5, `brush` 0,6 (hạt lóe
+    nhẹ, vệt chổi và sợi dó vừa thấy); LUT, grain, vignette của Phủ bóng.
 
 ### 20.4 Sáu lớp
 **Một công thức tô cho mọi vật**, như `recipe` của Bức 3 (§19.4). Cốt công bố `shared.cot.recipe`: các hàm JS dựng node từ "điểm tô"
@@ -4305,6 +4335,9 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
 - Bloom chọn lọc làm hạt điệp tỏa; ngoài hạt điệp, không vật nào có emissive.
 - LUT, grain, vignette, FXAA như ba bức trước. Mặc định của núm ghi đè trong `painting.js` nếu lượt màu cần (§15 a): `bloomStrength`
   thấp hơn, `exposure` để giấy không xám.
+  - Chốt ở lượt màu (GĐ 8 Task 11; bức đầu tiên ghi đè mặc định của lớp dùng chung): `toneMapping` `'aces'`, `exposure` 1,2,
+    `bloomStrength` 0,5; các núm khác giữ mặc định. `painting.js` chép module của Phủ bóng, chỉ thay `value` của ba núm ấy (`PHU_BONG`).
+  - Mài Phủ bóng về 0 vẫn là bài học cũ: không tone mapping, không bloom; giấy sáng hơn (lộ sáng 1,2 nhân thẳng) mà chưa cháy trắng.
 
 ### 20.5 Chuyển động tất định (`parts/dan-ga-song.js`, và `dan-ga-pha.js`, `dan-ga-duong.js`, `dan-ga-cho.js`, `dan-ga-ke.js`)
 - **Mốc:**
@@ -4798,7 +4831,7 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
   - Cách tránh: `home.js` đặt `dampingFactor` theo dt của khung (§20.6 mục 3), nên `after` luôn dài hơn thời gian damping tắt ở mọi nhịp khung;
     khi quay về thì đặt thẳng góc và zoom, rồi gọi `controls.update()`.
   - Test: unit với OrbitControls thật ở 10, 30 và 60 khung/giây (camera không trôi sau khi về); e2e `goc` < 1 là bằng chứng tích hợp.
-- **AgX làm giấy xám:** chỉnh ở lượt màu (`exposure`, tone của Phủ bóng).
+- **AgX làm giấy xám:** chỉnh ở lượt màu (`exposure`, tone của Phủ bóng). Đã chỉnh (GĐ 8 Task 11): ACES, lộ sáng 1,2 (§20.3).
 - **Hàng rào từ vựng bắt nhầm:** `hen` là chuỗi con của `denThen`, nên đã bỏ khỏi fence (§20.6).
 
 ## Phụ lục A: sự thật API đã kiểm trên three@0.186.1

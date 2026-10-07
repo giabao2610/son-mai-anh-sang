@@ -15,7 +15,7 @@
     <text x="52" y="44" fill="#EDE3CF" text-anchor="middle" font-weight="600">mặt nghiêng</text>
     <path d="M6 70 L98 126" fill="none" stroke="#C9C6BD" stroke-width="2"/>
     <path d="M34 87 L70 109" stroke="#8A8580" stroke-dasharray="3 3"/>
-    <g fill="#E0AC3A">
+    <g fill="#D08E2A">
       <circle cx="34" cy="87" r="3.4"/>
       <circle cx="52" cy="98" r="3.4"/>
       <circle cx="70" cy="109" r="3.4"/>
@@ -28,12 +28,12 @@
     <text x="52" y="44" fill="#EDE3CF" text-anchor="middle" font-weight="600">bậc</text>
     <path d="M6 120 H43 V76 H98" fill="none" stroke="#C9C6BD" stroke-width="2"/>
     <path d="M34 120 L70 76" stroke="#8A8580" stroke-dasharray="3 3"/>
-    <path d="M52 76 V98" stroke="#B9472E" stroke-width="2.4"/>
+    <path d="M52 76 V98" stroke="#994533" stroke-width="2.4"/>
     <text x="56" y="110" fill="#EDE3CF">e/2</text>
     <path d="M35 76 V120" stroke="#EDE3CF" stroke-width="1"/>
     <path d="M32 76 H38 M32 120 H38" stroke="#EDE3CF"/>
     <text x="29" y="102" fill="#EDE3CF" text-anchor="end">H</text>
-    <g fill="#E0AC3A">
+    <g fill="#D08E2A">
       <circle cx="34" cy="120" r="3.4"/>
       <circle cx="52" cy="76" r="3.4"/>
       <circle cx="70" cy="76" r="3.4"/>
@@ -46,12 +46,12 @@
     <text x="52" y="44" fill="#EDE3CF" text-anchor="middle" font-weight="600">nếp gấp</text>
     <path d="M6 102.4 L52 84 L98 97.8" fill="none" stroke="#C9C6BD" stroke-width="2"/>
     <path d="M34 91.2 L70 89.4" stroke="#8A8580" stroke-dasharray="3 3"/>
-    <path d="M52 84 V90.3" stroke="#B9472E" stroke-width="2.4"/>
+    <path d="M52 84 V90.3" stroke="#994533" stroke-width="2.4"/>
     <text x="56" y="106.3" fill="#EDE3CF">e/2</text>
     <path d="M52 84 L92 68" stroke="#8A8580" stroke-dasharray="2 2"/>
     <path d="M79.9 72.9 A30 30 0 0 1 80.7 92.6" fill="none" stroke="#F2D48A" stroke-width="1.4"/>
     <text x="80" y="62" fill="#F2D48A" text-anchor="middle">góc gãy</text>
-    <g fill="#E0AC3A">
+    <g fill="#D08E2A">
       <circle cx="34" cy="91.2" r="3.4"/>
       <circle cx="52" cy="84" r="3.4"/>
       <circle cx="70" cy="89.4" r="3.4"/>
