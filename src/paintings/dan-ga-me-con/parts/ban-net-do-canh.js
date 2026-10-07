@@ -7,9 +7,10 @@ const DIRS = [[1, 0], [0, 1], [1, 1], [1, -1]];
 const SOBEL = [[-1, -1, -1, -1], [0, -1, 0, -2], [1, -1, 1, -1], [-1, 0, -2, 0], [1, 0, 2, 0], [-1, 1, -1, 1], [0, 1, 0, 2], [1, 1, 1, 1]];
 /**
  * Góc gãy của mặt (radian, chừng 34°) từ đó nếp gấp thành nét đậm hẳn; bắt đầu hiện từ 0,6 lần góc này (chừng 21°). Khối của gà là đa
- * diện: ở mặc định, hai mặt kề nhau của mọi khối gãy dưới 20° (khối dẹt có nhiều vòng hơn: spec §20.4 lớp 1; riêng cánh ong mỏng gãy
- * 95°, nên vành của nó là nét viền), nên dưới ngưỡng. Chỗ nối thật gãy nhiều hơn (đầu vào mình 92–123°, mỏ 42–60°, đuôi 34–69°), trừ đoạn
- * cánh gà mẹ áp sát sườn (13–20°): ở đó nét trong vẽ viền cánh (parts/ban-net-net-trong.js).
+ * diện: ở 32 vòng (mức cao), hai mặt kề nhau của mọi khối gãy dưới 20° (khối dẹt có nhiều vòng hơn: spec §20.4 lớp 1; riêng cánh ong
+ * mỏng gãy 95°, nên vành của nó là nét viền), nên dưới ngưỡng; 28 vòng (mức vừa) tới ngay ngưỡng, 24 (mức thấp) vượt một chút: vệt rất
+ * nhạt khi phóng to. Chỗ nối thật gãy nhiều hơn (đầu vào mình 92–123°, mỏ 42–60°, đuôi 34–69°), trừ đoạn cánh gà mẹ áp sát sườn
+ * (13–20°): ở đó nét trong vẽ viền cánh (parts/ban-net-net-trong.js).
  */
 const KINK = 0.6;
 

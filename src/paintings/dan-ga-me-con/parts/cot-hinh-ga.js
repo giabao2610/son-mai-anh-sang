@@ -18,7 +18,7 @@ const AHEAD = [0, 0, 1];
 // đuôi gà mẹ.
 // `detail`: số vòng của khối = núm `segments` × detail. Bản nét in nếp gấp khi hai mặt kề nhau gãy từ chừng 21° (spec §20.4 lớp 3), mà
 // khối càng dẹt thì vành càng gãy gắt: cầu dẹt 0,3 lần (cánh gà mẹ) gãy gấp chừng ba lần cầu tròn cùng số vòng. Mỗi khối có số vòng vừa
-// đủ cho mặt kề nhau gãy dưới 20° ở mặc định 32 vòng (vành không thành sọc mực): cánh, bàn chân nhiều vòng hơn; mắt, chân ít hơn.
+// đủ cho mặt kề nhau gãy dưới 20° ở 32 vòng (mức cao; vành không thành sọc mực): cánh, bàn chân nhiều vòng hơn; mắt, chân ít hơn.
 const ball = (part, r, scale, at, { detail = 1, tilt = [0, 0, 0] } = {}) => ({ part, kind: 'ball', r, scale, at, detail, tilt });
 const cone = (part, r, h, dir, at, { flat = 1, detail = 1 } = {}) => ({ part, kind: 'cone', r, h, dir, at, detail, flat });
 const rod = (part, r, h, at) => ({ part, kind: 'rod', r, h, at, detail: 0.75 });

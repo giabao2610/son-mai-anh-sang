@@ -18,8 +18,8 @@ const SHINE = 80;
 export const TILT = 1.4;
 /**
  * Độ sáng của hạt (HDR, tuyến tính) khi sparkle = 1 và tia phản xạ trúng mắt. Lớn hơn nhiều so với màu giấy (chừng 0,8), như nắng phản xạ
- * gương: tone mapping AgX nén vùng sáng, nên một hạt chỉ sáng gấp đôi giấy thì gần như không thấy; từ chừng 10 mới ra điểm trắng, và bloom
- * của Phủ bóng mới có gì để tỏa.
+ * gương: tone mapping nén vùng sáng, nên một hạt chỉ sáng gấp đôi giấy thì gần như không thấy; từ chừng 10 mới ra điểm trắng, và bloom
+ * của Phủ bóng mới có gì để tỏa. Đo dưới AgX (GĐ 8 Task 6, Phụ lục A.100); ACES mà Bức 4 chọn ở lượt màu cũng nén vùng sáng như vậy.
  */
 const GAIN = 16;
 /** Bán trục của chấm điệp, tính bằng ô: chấm là một vệt sáng mềm e^(−4·(d/r)²), lõi trắng chừng r. */

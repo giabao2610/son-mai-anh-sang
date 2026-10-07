@@ -13,7 +13,12 @@ import { CAMERA } from './parts/cot-bo-cuc.js';
  * nhạt đi. ACES giữ màu đậm; lộ sáng 1,2 cho giấy ngà sáng (229, 219, 198) mà chưa cháy trắng. Bloom 0,5: hạt điệp lóe nhẹ, quầng nhỏ.
  */
 const PHU_BONG = { toneMapping: 'aces', exposure: 1.2, bloomStrength: 0.5 };
-const phuBong = { ...phuBongStock, knobs: phuBongStock.knobs.map((k) => (k.id in PHU_BONG ? { ...k, value: PHU_BONG[k.id] } : k)) };
+// Khóa RIÊNG của PHU_BONG (Object.hasOwn), không `in`: `in` đi cả chuỗi prototype (núm tên `toString` sẽ khớp). Ba số và id của chúng có
+// test giữ (tests/paintings/dan-ga-me-con/phu-bong.test.js).
+const phuBong = {
+  ...phuBongStock,
+  knobs: phuBongStock.knobs.map((k) => (Object.hasOwn(PHU_BONG, k.id) ? { ...k, value: PHU_BONG[k.id] } : k)),
+};
 
 /**
  * Mỗi lớp là một module { id, knobs, createLayer }; import namespace (`* as`) cho ra đúng object đó. Phủ bóng là bản sao của module dùng

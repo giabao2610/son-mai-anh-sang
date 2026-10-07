@@ -154,7 +154,7 @@ export default {
         + '(rơi, nảy, lăn rồi nằm yên); luồng ấy chỉ đọc, ghi hạt của mình. Hạt nằm trong vòng đệm cấp sẵn một lần: mỗi nắm rắc ra '
         + 'khởi tạo lại một đoạn liền của vòng. "Tô theo luồng" tô mỗi hạt theo luồng của nó: hết vòng, nắm mới lấy lại luồng của hạt cũ '
         + 'nhất. Mỏ của mười gà con đến với hạt qua uniform: mỏ đang mổ cách hạt dưới 2 cm thì hạt biến mất. Gà thì không mô phỏng: '
-        + 'chỗ đứng, hướng, độ cúi đầu tính thẳng từ thời gian và các mốc, nên dừng hình ở khung nào cũng ra đúng khung ấy. Mài lớp này thì '
+        + 'chỗ đứng, hướng, độ cúi đầu tính thẳng từ thời gian và các lần chạm, nên dừng hình ở khung nào cũng ra đúng khung ấy. Mài lớp này thì '
         + 'thóc biến mất, gà đứng như tượng, chạm và giữ không làm gì.',
       diagram: vongDemDiagram,
       learned: [
@@ -162,7 +162,7 @@ export default {
         'Vòng đệm: bể hạt cấp phát một lần theo trần; rắc thêm chỉ khởi tạo lại một đoạn liền rồi con trỏ đi tiếp, nên nắm mới đè lên hạt '
           + 'cũ nhất; đổi số lượng chỉ đổi count.',
         'Hạt không đọc được hạt khác, nhưng đọc được uniform: mảng mười mỏ mà JS ghi mỗi khung là đường đi từ đàn gà tới thóc.',
-        'Dạng đóng: vị trí là một hàm của thời gian và các mốc, không cộng dồn từng khung, nên dừng hình ở khung nào cũng ra đúng khung ấy.',
+        'Dạng đóng: vị trí là một hàm của thời gian và các lần chạm, không cộng dồn từng khung, nên dừng hình ở khung nào cũng ra đúng khung ấy.',
       ],
       readMore: [
         { title: 'Ví dụ three.js: hạt tính bằng compute (WebGPU)', url: 'https://threejs.org/examples/#webgpu_compute_particles' },

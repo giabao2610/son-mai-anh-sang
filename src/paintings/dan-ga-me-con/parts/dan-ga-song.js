@@ -16,8 +16,8 @@ export { FLOCK };
  */
 /**
  * Giữ tối đa chừng này mốc: mỗi mốc mang sẵn kế hoạch của từng con lúc đó, nên mốc cũ bỏ được (như cây bay của Bức 3). Sau khi bỏ, state(t)
- * với t sớm hơn mốc cũ nhất (marks[0].t) đọc kế hoạch của chính mốc ấy ở thời điểm t: mỗi pha còn ở trạng thái đầu của nó, đàn đứng yên
- * như lúc mốc ấy bắt đầu. Chỉ gặp khi hỏi một thời điểm đã cách quá 32 mốc.
+ * với t sớm hơn mốc cũ nhất (marks[0].t) đọc kế hoạch của chính mốc ấy ở thời điểm t: pha đã bắt đầu trước t tính như thường, pha chưa bắt
+ * đầu thì đứng ở trạng thái đầu của nó (con mà mốc ấy gọi đi đứng ở chỗ của nó lúc mốc ấy). Chỉ gặp khi hỏi thời điểm đã cách quá 32 mốc.
  */
 const KEEP = 32;
 const TAU = Math.PI * 2;
