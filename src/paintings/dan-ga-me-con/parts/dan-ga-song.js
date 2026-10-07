@@ -22,7 +22,7 @@ export { FLOCK };
 const KEEP = 32;
 const TAU = Math.PI * 2;
 
-/** Ném lỗi (tiếng Việt, cho lập trình viên) nếu thời điểm hay điểm không hữu hạn: NaN lọt vào mốc thì hỏng mọi trạng thái sau đó. */
+/** Ném lỗi (tiếng Việt, cho lập trình viên) nếu thời điểm, điểm hay hạt giống không hữu hạn: NaN vào mốc thì hỏng mọi trạng thái sau đó. */
 function need(label, ...values) {
   if (!values.every(Number.isFinite)) throw new RangeError(`dan-ga-song: ${label} phải là số hữu hạn, nhận ${values.join(', ')}`);
 }
@@ -168,8 +168,9 @@ export function createFlock(layout, { reduced = false } = {}) {
      * takeScatters trả điểm đã dời). count null: lớp dùng núm handful.
      */
     scatter(t, at, seed) {
-      need('điểm rắc', at[0], at[1]);
+      need('điểm rắc', at?.[0], at?.[1]); // thiếu điểm thì cũng là lỗi tiếng Việt, không phải TypeError
       need('thời điểm rắc', t);
+      need('hạt giống', seed); // hạt giống đi theo nắm tới bể hạt và shader: NaN ở đó thì cả nắm thành NaN
       const since = clock;
       clock = Math.max(clock, t);
       push('scatter', Math.max(t, since), { at: dropAt(at), seed, count: null, still: false, auto: false });

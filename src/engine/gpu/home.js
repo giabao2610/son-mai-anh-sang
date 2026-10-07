@@ -91,9 +91,12 @@ export function createHome({ camera, controls, spec, reduced = false }) {
     return advance(0);
   }
   return {
-    /** Một khung, dt giây của cảnh. Đặt dampingFactor ở đây chứ không trong advance: advance gọi lại chính nó với dt = 0 lúc bắt đầu về, và khung ấy sẽ mất quán tính. */
+    /**
+     * Một khung, dt giây của cảnh. Đặt dampingFactor ở đây chứ không trong advance: advance gọi lại chính nó với dt = 0 lúc bắt đầu về, và
+     * khung ấy sẽ mất quán tính. dt không hữu hạn hay âm thì bỏ khung: NaN vào dampingFactor hay vị trí thì hỏng camera mãi.
+     */
     step(dt) {
-      if (disposed) return false;
+      if (disposed || !(Number.isFinite(dt) && dt >= 0)) return false;
       if (controls.enableDamping) controls.dampingFactor = 1 - Math.pow(1 - baseDamping, dt * DAMPING_FPS);
       return advance(dt);
     },

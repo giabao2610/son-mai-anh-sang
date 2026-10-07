@@ -7,6 +7,12 @@ export const COUNT_FLOOR = 100;
 /** Hàng đợi rắc giữ tối đa chừng này nắm (bỏ nắm cũ nhất): chạm dồn lúc khung đứng không làm hàng đợi phình mãi. */
 const QUEUE_MAX = 16;
 
+/** Số phần tử phải hữu hạn: NaN lọt vào thì count, vòng đệm và đầu nắm hỏng mãi (mọi lần rắc sau đó cũng NaN), mà không báo gì. */
+function finite(label, n) {
+  if (!Number.isFinite(n)) throw new RangeError(`Bể hạt: ${label} phải là số hữu hạn, nhận ${n}`);
+  return n;
+}
+
 /**
  * Một bể hạt trên GPU. Mỗi phần tử có hai ô vec4 `a`, `b` trong hai bộ đệm; bể không biết ý nghĩa của chúng (bức quyết).
  * - Mỗi kernel chỉ đụng hai bộ đệm: WebGL2 chạy compute bằng transform feedback, tối đa bốn bộ đệm mỗi kernel.
@@ -18,9 +24,10 @@ const QUEUE_MAX = 16;
  *   khởi tạo lại, phần tử khác gọi law. Nắm nối tiếp nhau trên vòng đệm của số phần tử đang tính, nên nắm mới đè lên hạt cũ nhất.
  *   clear() bỏ các nắm đang chờ (bức gọi khi tắt hẳn lớp, để bật lại không có nắm cũ bung ra).
  * - File này không đặt tên uniform: một bức có thể dựng hai bể.
+ * - Số phần tử không hữu hạn (count lúc dựng, setCount, count của nắm) thì ném RangeError; dispose() rồi thì step, emit không làm gì.
  *
  * @param {object} p
- * @param {number} p.capacity   số phần tử tối đa, cấp phát MỘT lần (trần của núm số lượng)
+ * @param {number} p.capacity   số phần tử tối đa, cấp phát MỘT lần (trần của núm số lượng); ít nhất COUNT_FLOOR
  * @param {number} [p.count]    số phần tử được tính và vẽ lúc đầu (mặc định capacity)
  * @param {(e: { a: any, b: any, index: any }) => void} p.init   TSL: gán giá trị đầu cho a, b
  * @param {(e: { a: any, b: any, index: any }) => void} p.law    TSL: một bước của một phần tử
@@ -30,10 +37,14 @@ const QUEUE_MAX = 16;
  * @param {{ compute: (node: any) => void }} p.renderer
  */
 export function createPool({ capacity, count = capacity, init, law, spawn = null, tier, renderer }) {
+  // Sàn của count là COUNT_FLOOR: bể nhỏ hơn thì số phần tử đang tính vượt bể.
+  if (!(Number.isFinite(capacity) && capacity >= COUNT_FLOOR)) {
+    throw new RangeError(`Bể hạt: capacity phải là số hữu hạn từ ${COUNT_FLOOR} trở lên (sàn của count), nhận ${capacity}`);
+  }
   const a = instancedArray(capacity, 'vec4');
   const b = instancedArray(capacity, 'vec4');
   const element = () => ({ a: a.element(instanceIndex), b: b.element(instanceIndex), index: instanceIndex });
-  const clampCount = (n) => Math.max(COUNT_FLOOR, Math.min(Math.round(n), capacity));
+  const clampCount = (n) => Math.max(COUNT_FLOOR, Math.min(Math.round(finite('count', n)), capacity));
   let active = clampCount(count);
   const ring = uniform(active, 'uint'); // vòng đệm của nắm quấn theo số phần tử đang tính
   const batch = {
@@ -71,6 +82,7 @@ export function createPool({ capacity, count = capacity, init, law, spawn = null
   const queue = [];
   let head = 0;
   let emitted = 0;
+  let disposed = false;
   return {
     a,
     b,
@@ -96,7 +108,8 @@ export function createPool({ capacity, count = capacity, init, law, spawn = null
      */
     emit({ origin, count: n, seed, still = false }) {
       if (!spawn) throw new Error('Bể hạt này không có spawn: không rắc được.');
-      const size = Math.min(Math.max(Math.round(n), 0), active);
+      if (disposed) return null; // lớp đã gỡ: không xếp nắm nào nữa
+      const size = Math.min(Math.max(Math.round(finite('số hạt của nắm', n)), 0), active);
       if (size === 0) return null;
       const start = head % active;
       head = (start + size) % active;
@@ -114,10 +127,10 @@ export function createPool({ capacity, count = capacity, init, law, spawn = null
     },
     /**
      * Một bước của cả bể. dt = 0 (xưởng vẽ lại khung đứng yên của ?freeze) hay trọng số ≤ 0: không làm gì, nắm đang chờ vẫn chờ.
-     * Mỗi bước tối đa một nắm; không có nắm thì batch.count = 0 và mọi phần tử theo law.
+     * Mỗi bước tối đa một nắm; không có nắm thì batch.count = 0 và mọi phần tử theo law. Đã dispose() thì không chạy lại node đã gỡ.
      */
     step(dt, w) {
-      if (dt === 0 || !(w > 0)) return false;
+      if (disposed || dt === 0 || !(w > 0)) return false;
       const next = queue.shift();
       batch.count.value = next ? next.size : 0;
       if (next) {
@@ -136,6 +149,7 @@ export function createPool({ capacity, count = capacity, init, law, spawn = null
      */
     emitted: () => Math.min(emitted, active),
     dispose() {
+      disposed = true;
       initNode.dispose(); // gỡ pipeline compute; bộ đệm storage được giải phóng cùng renderer. Gọi hai lần vẫn an toàn.
       stepNode.dispose();
       queue.length = 0;

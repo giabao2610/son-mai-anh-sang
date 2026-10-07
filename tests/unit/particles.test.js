@@ -136,6 +136,39 @@ describe('createPool', () => {
     expect(gone.slice(0, 2)).toEqual(['init', 'step']);
   });
 
+  it('số không hữu hạn (NaN, vô cực, thiếu) cho setCount, emit hay count lúc dựng: RangeError tiếng Việt, bể giữ nguyên trạng thái', () => {
+    const { pool } = make();
+    const sprite = { count: 300 };
+    for (const n of [NaN, Infinity, undefined]) {
+      expect(() => pool.setCount(n, sprite), `setCount(${n})`).toThrow(RangeError);
+      expect(() => pool.emit({ origin: ORIGIN, count: n, seed: 1 }), `emit count ${n}`).toThrow(/hữu hạn/);
+    }
+    expect([pool.count, pool.stepNode.count, sprite.count]).toEqual([300, 300, 300]);
+    expect(pool.emit({ origin: ORIGIN, count: 10, seed: 1 }), 'vòng đệm không bị NaN').toEqual({ start: 0, size: 10 });
+    pool.step(1 / 60, 1);
+    expect([pool.batch.start.value, pool.batch.count.value, pool.emitted()]).toEqual([0, 10, 10]);
+    expect(() => make({ count: NaN }), 'count lúc dựng').toThrow(RangeError);
+  });
+
+  it('capacity dưới COUNT_FLOOR (hay không phải số) thì không dựng: sàn 100 của count sẽ vượt bể', () => {
+    expect(() => make({ capacity: 50, count: 50 })).toThrow(RangeError);
+    expect(() => make({ capacity: 50, count: 50 })).toThrow(/100/);
+    expect(() => make({ capacity: NaN })).toThrow(RangeError);
+    expect(make({ capacity: COUNT_FLOOR, count: COUNT_FLOOR }).pool.count).toBe(COUNT_FLOOR);
+  });
+
+  it('sau dispose(): step và emit không làm gì (không compute lại node đã gỡ, không xếp nắm)', () => {
+    const { pool, renderer } = make();
+    pool.emit({ origin: ORIGIN, count: 10, seed: 1 });
+    pool.dispose();
+    renderer.compute.mockClear();
+    expect(pool.step(1 / 60, 1)).toBe(false);
+    expect(pool.emit({ origin: ORIGIN, count: 10, seed: 2 })).toBeNull();
+    expect(pool.step(1 / 60, 1)).toBe(false);
+    expect(renderer.compute).not.toHaveBeenCalled();
+    expect(pool.emitted()).toBe(0);
+  });
+
   it('bể không có spawn thì không rắc được (lỗi tiếng Việt); nắm 0 hạt không vào hàng đợi', () => {
     expect(() => make({ spawn: null }).pool.emit({ origin: ORIGIN, count: 10, seed: 1 })).toThrow(/spawn/);
     expect(make().pool.emit({ origin: ORIGIN, count: 0, seed: 1 })).toBeNull();

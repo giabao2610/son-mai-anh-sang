@@ -5,6 +5,7 @@ import { createGpuTimer } from './gpu-timer.js';
 import { createCtx, buildLayers, ensureEmissive } from './layers.js';
 import { createPipeline } from './pipeline.js';
 import { createLadder } from './ladder.js';
+import { createQuality } from './scene-quality.js';
 import { createStudio } from './studio.js';
 import { createInput } from './input.js';
 import { createToolbox } from './toolbox.js';
@@ -12,71 +13,6 @@ import { createDialSet } from './dial-set.js';
 import { createCaptionSet } from './caption-set.js';
 import { createDrawProbe } from './draws.js';
 import { mountCaptions } from '../../ui/captions.js';
-
-/**
- * Bộ điều chỉnh của một cảnh: bộ quyết định (tuner, hàm thuần) + thang nấc (ladder, chạm GPU) + bộ đo GPU (gpu-timer).
- * tuner = null khi ?freeze: ảnh phải tất định, chỉ hạ/nâng tay (__sma) được.
- */
-function createQuality({ level, ladder, tuner, timer }) {
-  const listeners = new Set();
-  let guarding = false;
-  let live = false; // chỉ đo từ lúc live: khung ẩn và 0,9 giây hòa dần không phải nhịp thật của cảnh
-  const state = () => {
-    const t = tuner?.state();
-    return {
-      level,
-      steps: ladder.ids(),
-      guarding,
-      capped: t?.capped ?? false,
-      gpu: timer.available, // máy đo được ms GPU: bộ điều chỉnh chẩn đoán theo tải
-      locked: (t?.locked ?? []).map((i) => ladder.idAt(i)), // nấc bị khóa chống dao động: giữ tới khi tải lại trang
-    };
-  };
-  const changed = () => {
-    for (const cb of listeners) cb(state());
-  };
-  const act = (action) => {
-    let done = true;
-    if (action === 'down') done = ladder.down();
-    else if (action === 'up') done = ladder.up();
-    else ladder.reset();
-    if (done) changed();
-    return done;
-  };
-  return {
-    state,
-    degrade: () => act('down'),
-    upgrade: () => act('up'),
-    /** run.js gọi khi cảnh vừa live (sau hòa dần): từ đây bộ điều chỉnh mới đo. */
-    start() {
-      live = true;
-    },
-    /** Mỗi khung, trước khi vẽ: bộ quyết định nói hạ / nâng / trả lại hết thì áp ngay. true = đang thử ngừng vẽ: bỏ khung này. */
-    sample(ms) {
-      if (!live) return false;
-      const action = tuner?.sample(ms, ladder);
-      if (action === 'skip') return true;
-      if (action) act(action);
-      return false;
-    },
-    /** ms CPU của khung vừa vẽ, và mỗi mẫu ms GPU: "tải" của máy (tuner.js, đường tải). */
-    cpu: (ms) => tuner?.cpu(ms),
-    gpu: (ms) => tuner?.gpu(ms),
-    /**
-     * Thanh lớp mở: người xem cố ý làm chậm để học (tắt instancing, nhiều đom đóm), nên bộ điều chỉnh chỉ CANH:
-     * chậm vừa phải thì để yên cho số đo trung thực, quá tải nặng thì vẫn hạ để máy không bị ép quá sức.
-     */
-    guard(on) {
-      guarding = on;
-      tuner?.guard(on);
-      changed();
-    },
-    onChange(cb) {
-      listeners.add(cb);
-      return () => listeners.delete(cb);
-    },
-  };
-}
 
 /**
  * run.js gọi hàm này một lần khi mở trang, và thêm một lần nữa nếu người xem bấm "Dựng lại cảnh" sau khi mất GPU.
@@ -195,10 +131,18 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     onQueue: (kind) => frozen && (kind !== 'hover' || toolbox.list().some((x) => x.on)) && redraw(),
   });
   disposer.add(() => input.dispose());
-  /** Cử chỉ tới công cụ đang bật trước; công cụ không dùng thì tới bức. 'hover' không bao giờ tới bức. */
+  /**
+   * Cử chỉ tới công cụ đang bật trước; công cụ không dùng thì tới bức. 'hover' không bao giờ tới bức.
+   * Bức đã nhận 'hold-start' thì luôn nhận 'hold-end' của cái giữ đó, kể cả khi công cụ bật giữa chừng (ngón khác, bàn phím, __sma) và
+   * giữ nó: không thì bức kẹt ở "đang giữ" mãi mà không báo gì. 'hold-move' sau khi công cụ bật thì là của công cụ.
+   */
+  let held = false; // bức đã nhận 'hold-start' của cái giữ đang diễn ra
   const route = () => {
     for (const g of input.drain()) {
-      if (toolbox.gesture(g) || g.kind === 'hover') continue;
+      const used = toolbox.gesture(g);
+      const owed = g.kind === 'hold-end' && held;
+      if (g.kind === 'hold-start' || g.kind === 'hold-end') held = g.kind === 'hold-start' && !used;
+      if ((used && !owed) || g.kind === 'hover') continue;
       setup?.onGesture?.(g);
     }
   };

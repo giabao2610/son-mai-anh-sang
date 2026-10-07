@@ -1,4 +1,4 @@
-// tests/unit/home.test.js — tranh tự khép lại (GĐ 8): đứng yên đủ after thì về trong duration; chạm giữa chừng thì thôi; đường ngắn nhất qua ±π; giảm chuyển động về một bước; camera trực giao về zoom, phối cảnh về khoảng cách; đổi cỡ khung giữa đường vẫn về đủ; quán tính của OrbitControls tắt theo giây của cảnh, không theo số khung.
+// tests/unit/home.test.js — tranh tự khép lại (GĐ 8): đứng yên đủ after thì về trong duration; chạm giữa chừng thì thôi; đường ngắn nhất qua ±π; giảm chuyển động về một bước; camera trực giao về zoom, phối cảnh về khoảng cách; đổi cỡ khung giữa đường vẫn về đủ; quán tính của OrbitControls tắt theo giây của cảnh, không theo số khung; dt hỏng (NaN, vô cực, âm) thì bỏ khung.
 import { describe, it, expect } from 'vitest';
 import { EventDispatcher, OrthographicCamera, PerspectiveCamera, Vector3 } from 'three/webgpu';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -190,6 +190,24 @@ describe('home và quán tính của OrbitControls (ruling I3)', () => {
     controls.dampingFactor = 0.3;
     home.step(0.1);
     expect(controls.dampingFactor).toBe(0.3);
+  });
+
+  it('dt không hữu hạn (NaN, vô cực, thiếu) hay âm: step không làm gì; camera, zoom và dampingFactor giữ nguyên, rồi về tiếp như thường', () => {
+    const camera = new OrthographicCamera();
+    const { controls, home } = rig(camera, { damping: true });
+    drag(controls, camera, 40, 2);
+    run(home, 3.5); // đang trên đường về
+    const pos = camera.position.clone();
+    const { zoom } = camera;
+    const damping = controls.dampingFactor;
+    for (const dt of [NaN, Infinity, -Infinity, undefined, -0.1]) {
+      expect(home.step(dt), `dt ${dt}`).toBe(false);
+      expect([controls.dampingFactor, camera.zoom], `dt ${dt}`).toEqual([damping, zoom]);
+      expect(camera.position.equals(pos), `dt ${dt}`).toBe(true);
+    }
+    run(home, 1);
+    expect(off(camera)).toBeLessThan(1e-6);
+    expect([camera.zoom, controls.dampingFactor]).toEqual([1, expect.closeTo(0.05, 9)]);
   });
 
   it('khung đầu tiên của đường về cũng đặt dampingFactor theo dt của khung, không về 0 vì lời gọi nội bộ step(0)', () => {

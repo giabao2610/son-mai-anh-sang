@@ -24,9 +24,11 @@ const DEPTH_CURVE = 8;
  * @param {any} p.final   ảnh cuối (không gian hiển thị), chưa có overlay; KHÔNG bao giờ dựng lại
  * @param {{ layerId: string, tapId: string, node: any, linear: boolean }[]} p.taps   theo thứ tự trong pipeline
  * @param {() => Promise<void>} p.compile   biên dịch trước (scenePass.compileAsync)
- * @param {any} [p.depth]   (GĐ 8) độ sâu tuyến tính của pipeline (pipeline.js#linearDepth); thiếu thì như camera phối cảnh
+ * @param {any} p.depth   (GĐ 8) độ sâu tuyến tính của pipeline (pipeline.js#linearDepth), bắt buộc: chỉ ở đó công thức theo loại camera
  */
-export function createViews({ scenePass, renderPipeline, mrtFor, final, taps, compile, depth = scenePass.getLinearDepthNode() }) {
+export function createViews({ scenePass, renderPipeline, mrtFor, final, taps, compile, depth }) {
+  // Không tự lấy getLinearDepthNode(): nó luôn theo công thức phối cảnh, camera trực giao ra một bóng trắng (Phụ lục A.89).
+  if (!depth) throw new Error('createViews cần depth: độ sâu tuyến tính từ pipeline.js#linearDepth (đúng cho loại camera)');
   let normal = false; // MRT đã có kênh normal chưa
   let normalReady = false; // đã biên dịch xong biến thể có normal: list() chỉ báo Normal sẵn sàng từ lúc này
   let compiling = null; // lần biên dịch đang chạy: mọi lần require('normal') trong lúc đó cùng chờ nó

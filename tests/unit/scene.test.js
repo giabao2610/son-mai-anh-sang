@@ -1,4 +1,4 @@
-// tests/unit/scene.test.js — dựng một cảnh trên sân khấu giả (không GPU): mức theo backend thật, vòng một khung, vẽ lại khi ?freeze, chữ đi theo vật, móc lần vẽ.
+// tests/unit/scene.test.js — dựng một cảnh trên sân khấu giả (không GPU): mức theo backend thật, vòng một khung, vẽ lại khi ?freeze, cử chỉ (công cụ trước bức; bức đã nhận 'hold-start' thì nhận 'hold-end'), chữ đi theo vật, móc lần vẽ.
 import { describe, it, expect, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { BoxGeometry, Mesh, MeshStandardNodeMaterial, NoToneMapping, PerspectiveCamera, SRGBColorSpace, Scene, Vector2 } from 'three/webgpu';
@@ -336,6 +336,37 @@ describe('buildScene', () => {
     scene.step(1016);
     expect(seen).toEqual(['hover', 'tap']);
     expect(onGesture).toHaveBeenCalledTimes(1);
+  });
+
+  it("cái giữ mà bức đã nhận 'hold-start': công cụ bật giữa chừng và giữ 'hold-end' thì bức vẫn nhận 'hold-end' (không kẹt ở đang giữ)", async () => {
+    const onGesture = vi.fn();
+    const seen = [];
+    // Như Kính mài hình tròn với ngón tay: giữ mọi cử chỉ chạm và giữ.
+    const lens = { id: 'kinh', mount: () => ({ onGesture: (g) => { seen.push(g.kind); return g.kind !== 'hover'; }, dispose() {} }) };
+    const { stage, scene, win } = build({ setup: () => ({ onGesture }), tools: [lens] });
+    const canvas = stage.renderer.domElement;
+    const event = (type, extra) => Object.assign(new Event(type), { clientX: 320, clientY: 200, pointerId: 1, button: 0, pointerType: 'touch', ...extra });
+    const kinds = () => onGesture.mock.calls.map(([g]) => g.kind);
+    canvas.dispatchEvent(event('pointerdown'));
+    win.performance.now = () => 400; // ngón A giữ yên quá 350 ms
+    canvas.dispatchEvent(event('pointermove', { buttons: 1 }));
+    scene.step(1000);
+    expect(kinds()).toEqual(['hold-start', 'hold-move']);
+    await scene.studio.setTool('kinh'); // ngón B, bàn phím hay __sma bật Kính mài khi ngón A còn giữ
+    canvas.dispatchEvent(event('pointermove', { clientX: 330, buttons: 1 }));
+    canvas.dispatchEvent(event('pointerup'));
+    scene.step(1016);
+    expect(seen).toEqual(['hold-move', 'hold-end']);
+    expect(kinds(), "'hold-move' là của công cụ; 'hold-end' tới cả bức").toEqual(['hold-start', 'hold-move', 'hold-end']);
+    // Cái giữ sau bắt đầu khi công cụ đã bật: công cụ giữ cả hai đầu, bức không nhận gì.
+    win.performance.now = () => 5000;
+    canvas.dispatchEvent(event('pointerdown'));
+    win.performance.now = () => 5400;
+    canvas.dispatchEvent(event('pointermove', { buttons: 1 }));
+    canvas.dispatchEvent(event('pointerup'));
+    scene.step(1032);
+    expect(seen.slice(2)).toEqual(['hold-start', 'hold-move', 'hold-end']);
+    expect(kinds()).toHaveLength(3);
   });
 
   it('đứng yên ở ?freeze, chưa bật công cụ nào: rê chuột không vẽ lại (chỉ công cụ nhận hover); chạm thì vẽ lại cho bức', async () => {

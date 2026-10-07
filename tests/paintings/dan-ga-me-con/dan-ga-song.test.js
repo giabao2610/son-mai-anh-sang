@@ -538,11 +538,14 @@ describe('dan-ga-song', () => {
     for (let t = 1; t < 7.5; t += 0.1) expect(closestEaters(flock.state(t)), `lúc ${t.toFixed(1)}`).toBeGreaterThanOrEqual(2 * FLOCK.spread * Math.sin(Math.PI / FLOCK.henResponders[1]) - 2 * FLOCK.hopRadius[1] - 1e-6);
   });
 
-  it('đầu vào hỏng (thời điểm hay điểm rắc không hữu hạn, bố cục thiếu chỗ núp hay thiếu trường) thì ném lỗi tiếng Việt và không làm hỏng các mốc', () => {
+  it('đầu vào hỏng (thời điểm, điểm rắc hay hạt giống không hữu hạn hay thiếu, bố cục thiếu chỗ núp hay thiếu trường) thì ném lỗi tiếng Việt và không làm hỏng các mốc', () => {
     const flock = createFlock(NO_PILE);
     expect(() => flock.scatter(NaN, [0, 0], 1)).toThrow(/hữu hạn/);
     expect(() => flock.scatter(1, [Infinity, 0], 1)).toThrow(/hữu hạn/);
     expect(() => flock.scatter(1, [0], 1)).toThrow(/hữu hạn/);
+    expect(() => flock.scatter(1, undefined, 1), 'thiếu điểm rắc: lỗi tiếng Việt, không phải TypeError').toThrow(/điểm rắc.*hữu hạn/);
+    expect(() => flock.scatter(1, [0, 0], NaN), 'hạt giống NaN').toThrow(/hạt giống.*hữu hạn/);
+    expect(() => flock.scatter(1, [0, 0]), 'thiếu hạt giống').toThrow(/hạt giống.*hữu hạn/);
     expect(() => flock.grip(Infinity)).toThrow(/hữu hạn/);
     expect(() => flock.release(NaN)).toThrow(/hữu hạn/);
     expect(() => flock.drift(NaN)).toThrow(/hữu hạn/);
