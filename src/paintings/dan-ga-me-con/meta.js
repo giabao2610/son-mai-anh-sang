@@ -17,9 +17,9 @@ export default {
     width: 1600,
     height: 1000,
     alt: 'Tranh Đông Hồ đàn gà mẹ con trên giấy điệp, đặt trên ván sơn đen: gà mẹ ngậm con ong, mười gà con quây quần.',
-    // scripts/poster.js chụp từ chính cảnh, ở góc nhìn của tranh. Poster tạm của bản khung; lượt màu (Task 11) chốt khung có gà con
-    // đang mổ nhúm thóc.
-    capture: { at: '2026-10-05T21:00', freeze: 120 },
+    // scripts/poster.js chụp từ chính cảnh, ở góc nhìn của tranh. Khung 240 (4 giây, chốt ở lượt màu GĐ 8 Task 11): gà con đỏ và vàng cúi
+    // mổ nhúm thóc lúc mở trang, gà con đen bên phải quay nghiêng thấy mắt (khung 120 thì nó quay lưng: một khối đen).
+    capture: { at: '2026-10-05T21:00', freeze: 240 },
   },
   og: 'paintings/dan-ga-me-con/og.jpg',
   // Năm màu tự nhiên của tranh Đông Hồ (spec §20.3): trắng điệp, vàng hoa hòe, đỏ sỏi son, xanh lá chàm, đen than lá tre. Số chốt ở lượt

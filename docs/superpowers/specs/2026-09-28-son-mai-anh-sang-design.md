@@ -4005,6 +4005,9 @@ spec.
 - **Poster:**
   - chụp từ cảnh bằng `scripts/poster.js dan-ga-me-con`, ở góc nhìn của tranh;
   - `poster.capture` chốt ở lượt màu: một khung có gà con đang mổ nhúm thóc;
+    - (GĐ 8 Task 11) Chốt `{ at: '2026-10-05T21:00', freeze: 240 }` (4 giây): gà con đỏ và vàng cúi mổ nhúm thóc lúc mở trang, gà con đen bên
+      phải quay nghiêng thấy mắt. Đã thử khung 120, 240, 360: khung 120 gà con đen quay lưng thành một khối đen; khung 360 gần như khung 240.
+      Poster 87 KB (WebP, chất lượng 0,88), og 58 KB;
   - `poster.alt`: "Tranh Đông Hồ đàn gà mẹ con trên giấy điệp, đặt trên ván sơn đen: gà mẹ ngậm con ong, mười gà con quây quần.".
 - **Lượt màu:** đo như §5 (độ sáng trung bình, độ bão hòa, tỉ lệ điểm tối; 1280×800 và 390×844; GPU thật). Đo thêm:
   - tỉ lệ điểm ảnh của giấy (sáng hơn 200);
