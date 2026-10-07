@@ -26,6 +26,8 @@ describe('l2-ban-mau (Bức 4)', () => {
     for (const home of HOMES) expect(CHICK_TOKENS[home.pigment], `pigment ${home.pigment}`).toBeTruthy();
     expect(new Set(HOMES.map((h) => CHICK_TOKENS[h.pigment])), 'đủ năm màu, có cả con "trắng" (màu giấy)').toEqual(new Set(CHICK_TOKENS));
     expect([...PLUMAGE].sort()).toEqual(['BODY', 'HEAD', 'TAIL', 'WING']);
+    // Gà mẹ (spec §20.3): mào, cánh và mảng cổ (Task 11, Bao chọn ở điểm duyệt ảnh) đỏ son.
+    expect([HEN_TOKENS.COMB, HEN_TOKENS.WING, HEN_TOKENS.NECK]).toEqual(['sonSoi', 'sonSoi', 'sonSoi']);
   });
 
   it.each(['webgpu', 'webgl2'])('%s: đồ thị màu của mọi mesh gà đọc w_ban_mau và ba núm (recipe.fill được bọc trước lần biên dịch đầu)', (backend) => {

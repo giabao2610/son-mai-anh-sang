@@ -49,7 +49,7 @@ export default {
     },
     'ban-mau': {
       understand: 'Tranh Đông Hồ in bằng nhiều ván khắc, mỗi ván một màu tự nhiên: trắng từ vỏ điệp, vàng từ hoa hòe, đỏ từ sỏi son, '
-        + 'xanh từ lá chàm, đen từ than lá tre. Ở đây mỗi phần của con gà (mình, cánh, đuôi, mào, mỏ, chân) lấy màu trong bảng năm màu '
+        + 'xanh từ lá chàm, đen từ than lá tre. Ở đây mỗi phần của con gà (mình, cổ, cánh, đuôi, mào, mỏ, chân) lấy màu trong bảng năm màu '
         + 'ấy; mỗi gà con một màu lông, có con để trắng màu giấy. Ánh sáng thì chia nấc: vẫn phép tính Lambert như trên đất sét (pháp '
         + 'tuyến nhân hướng nắng), chỉ làm tròn xuống thành vài nấc phẳng. Mặc định có hai nấc, nấc tối chỉ đậm hơn 18%, nên nhìn thẳng '
         + 'thì gà phẳng như bản in, xoay đi mới thấy khối. Bật "Tô mịn" để so: chia nấc gần như không tốn thêm gì.',

@@ -12,7 +12,7 @@ const TABLE = {
 };
 const LEVELS = ['cao', 'vua', 'thap'];
 /** Ngân sách tam giác của các vật có hình (tờ giấy, gà mẹ, mười gà con; §20.8): ở segments mặc định của mức, và khi kéo núm hết cỡ. */
-const TRIANGLES = { cao: [150_000, 335_000], vua: [115_000, 150_000], thap: [85_000, 150_000] };
+const TRIANGLES = { cao: [150_000, 340_000], vua: [115_000, 150_000], thap: [85_000, 150_000] };
 
 /** Số tam giác của các vật trong Cốt, đếm như renderer.info của three: mỗi bản của InstancedMesh một lần. */
 function triangles(cot) {

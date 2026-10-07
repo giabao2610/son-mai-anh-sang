@@ -3982,11 +3982,14 @@ spec.
   | `xanhDong` | xanh | lá chàm, gỉ đồng | `#41705F` |
   | `muc` | đen | than lá tre | `#221E1A` |
 
-  - Gà mẹ: mình `hoe`; cánh `sonSoi`; đuôi `xanhDong`; mào `sonSoi`; mỏ và chân `hoe`; con ong `hoe` (thân và cánh).
+  - Gà mẹ: mình `hoe`; cánh `sonSoi`; đuôi `xanhDong`; mào và mảng cổ `sonSoi`; mỏ và chân `hoe`; con ong `hoe` (thân và cánh).
     - Mắt (gà mẹ và mọi gà con) `diep`, như mắt khắc trên ván: vòng mắt và con ngươi là nét trong của Bản nét (GĐ 8 Task 5), nên mắt đọc
       được trên mọi màu lông, cả gà con đen lẫn gà con trắng.
-    - Không có mảng cổ riêng: Bản màu tô theo phần (`part`), mà cổ là chỗ đầu nối mình, không phải một phần. Muốn có mảng cổ đỏ thì thêm
-      một phần NECK vào hình (điểm duyệt ảnh, GĐ 8 Task 4, hỏi Bao).
+    - Mảng cổ (`NECK`, GĐ 8 Task 11; Bao chọn ở điểm duyệt ảnh của Task 4): Bản màu tô theo phần (`part`), mà cổ là chỗ đầu nối mình,
+      nên mảng cổ là một phần riêng của hình: một cầu bán kính 0,55 đặt ở vòng giao của đầu và mình (vòng tâm (0; 2,38; 1,29) trong khung
+      của mẹ, bán kính chừng 0,39). Cầu to hơn vòng ấy nên ló ra khỏi cả đầu lẫn mình thành một dải đỏ son quanh chỗ đầu nối mình, rộng
+      nhất ở gáy, hẹp dần về cổ họng; Bản nét có sẵn nét gấp ở hai mép dải (chỗ cầu cổ gặp đầu và mình). Mảng cổ đi theo đầu (như mọi
+      phần từ HEAD trở lên), mà tâm cầu gần khớp cổ nên đầu gật thì nó gần như đứng yên. Trước đó (GĐ 8 Task 4) không có mảng cổ.
     - Nét `muc` trên đuôi và vằn của con ong là nét trong của Bản nét (GĐ 8 Task 5), không phải màu in.
   - Gà con: mỗi con một màu như tranh gốc (`hoe`, `sonSoi`, `xanhDong`, `muc`); có con "trắng", tức để màu giấy và chỉ có nét.
   - Con ong: `hoe` có vằn `muc` ở thân; cánh ong là phần riêng (`BEE_WING`), không có vằn. Thóc: `hoe`. Nét: `muc`. Giấy: `diep`.
@@ -4027,7 +4030,8 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   - Đèn xưởng viết trong shader: một hướng sáng cộng một phần sáng đều, như `HemisphereLight` của hai bức đầu.
 - **Kỹ thuật:**
   - **Hình gà** ghép từ khối cơ bản (cầu kéo dãn, nón, trụ) thành một `BufferGeometry` (`parts/cot-hinh-ga.js`). Mỗi đỉnh mang thuộc tính
-    `part` (mình, đầu, mỏ, mào, cánh, đuôi, chân, mắt, thân ong, cánh ong), để Bản nét vẽ nét trong và để đầu cúi được.
+    `part` (mình, đầu, mỏ, mào, cánh, đuôi, chân, mắt, thân ong, cánh ong, và mảng cổ của gà mẹ từ GĐ 8 Task 11), để Bản nét vẽ nét
+    trong và để đầu cúi được.
     Bảng khối của gà con (`CHICK_SHAPE`) và gà mẹ (`HEN_SHAPE`) nằm ở đó; số chốt ở điểm duyệt ảnh (GĐ 8 Task 4).
     - Mắt là cầu lún vào đầu, chỉ ló ra một chỏm (chừng 55° quanh hướng từ tâm đầu ra tâm mắt ở gà con, 60° ở gà mẹ). Cầu mắt xoay cho
       cực trên (uv.y = 1) nằm giữa chỏm, nên Bản nét vẽ vòng mắt và con ngươi theo góc tính từ cực ấy (GĐ 8 Task 5).
@@ -4065,8 +4069,8 @@ Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = 
   - Khối dẹt gãy gắt ở vành: cùng 32 vòng thì cánh gà mẹ 39,7°, cánh gà con 31,4°, mào 36,3° (16 vòng), bàn chân 69,8° (16 vòng), và vành
     của chúng thành sọc mực khi phóng to. Vì vậy chúng có nhiều vòng hơn: cánh mẹ 2,25 lần, cánh con 1,75, bàn chân 2,25, mào và ong 1.
   - Riêng cánh ong mỏng 0,09 lần: vành luôn gãy gắt (95° ở 32 vòng), và thành nét viền của cánh.
-  - Lưới giữ index, nên mỗi đỉnh chạy `positionNode` một lần. Ở 32, cả cảnh có chừng 86 nghìn đỉnh, 148 nghìn tam giác (28: 113
-    nghìn, 24: 82 nghìn, 48: 334 nghìn; §20.8).
+  - Lưới giữ index, nên mỗi đỉnh chạy `positionNode` một lần. Ở 32, cả cảnh có chừng 86 nghìn đỉnh, 149 nghìn tam giác (28: 114
+    nghìn, 24: 83 nghìn, 48: 337 nghìn; §20.8; tính cả mảng cổ của GĐ 8 Task 11).
 - **Thí nghiệm "Tấm bìa phẳng"** (`biaPhang`):
   - dẹt từng con gà quanh tâm của nó, theo hướng nhìn của tranh, còn 5%;
   - ở góc nhìn của tranh, ảnh gần như không đổi; kéo xoay mới thấy gà chỉ là tấm bìa;
@@ -4530,11 +4534,13 @@ chuyển động ở lại trong bức.
 
   | Mức | Mặc định | `segments` hết cỡ | `renderer.info` lúc mặc định (đo, GĐ 8 Task 9) |
   |---|---|---|---|
-  | **cao** | 148 112 | 334 248 (48) | 156 318 |
-  | **vừa** | 113 278 | 148 112 (32) | 117 388 |
-  | **thấp** | 82 236 | 148 112 (32) | 84 298 |
+  | **cao** | 149 264 | 336 936 (48) | 156 318 |
+  | **vừa** | 114 174 | 149 264 (32) | 117 388 |
+  | **thấp** | 82 860 | 149 264 (32) | 84 298 |
 
-  `quality.test.js` giữ ngân sách: 150, 115, 85 nghìn ở mặc định; 335, 150, 150 nghìn khi kéo hết cỡ.
+  Mảng cổ của gà mẹ (GĐ 8 Task 11) thêm 1 152 tam giác ở 32 vòng (896 ở 28, 624 ở 24, 2 688 ở 48); cột đo `renderer.info` là của
+  Task 9, trước mảng cổ. `quality.test.js` giữ ngân sách: 150, 115, 85 nghìn ở mặc định; 340, 150, 150 nghìn khi kéo hết cỡ (trước mảng
+  cổ: 335 nghìn ở mức cao).
 - **Draw call:** giấy, mình gà mẹ, hai cánh, gà con (instanced), thóc (sprite) là 6 lần vẽ. Mức cao có `6 + 12 (bloom) + 1 (FXAA) + 1
   (quad) = 20`. Bản nét không thêm lượt vẽ nào, vì nó đọc thẳng texture độ sâu. E2e giữ ≤ 30. Đo được 20 ở cả ba mức (GĐ 8 Task 9).
 - **Chi phí:** thấp.

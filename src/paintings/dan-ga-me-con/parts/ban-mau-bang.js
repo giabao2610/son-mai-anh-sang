@@ -2,13 +2,13 @@
 import { float, floor, fract, fwidth, max, min, mix, smoothstep, step } from 'three/tsl';
 
 /**
- * Gà mẹ (spec §20.3): mình vàng hòe; cánh đỏ son; đuôi xanh; mào đỏ son; mỏ, chân vàng hòe; con ong vàng hòe, cả thân (vằn mực ở nét trong)
- * lẫn cánh. Mắt trắng điệp, như mắt khắc trên ván: vòng mắt và con ngươi là nét trong của Bản nét, nên mắt đọc được trên mọi màu lông, cả
- * gà con đen.
+ * Gà mẹ (spec §20.3): mình vàng hòe; cánh đỏ son; đuôi xanh; mào và mảng cổ đỏ son; mỏ, chân vàng hòe; con ong vàng hòe, cả thân (vằn mực
+ * ở nét trong) lẫn cánh. Mắt trắng điệp, như mắt khắc trên ván: vòng mắt và con ngươi là nét trong của Bản nét, nên mắt đọc được trên mọi
+ * màu lông, cả gà con đen.
  */
 export const HEN_TOKENS = Object.freeze({
   BODY: 'hoe', TAIL: 'xanhDong', LEG: 'hoe', WING: 'sonSoi', HEAD: 'hoe', BEAK: 'hoe', COMB: 'sonSoi', EYE: 'diep', BEE: 'hoe',
-  BEE_WING: 'hoe',
+  BEE_WING: 'hoe', NECK: 'sonSoi',
 });
 /** Gà con: mỗi con một màu theo chỉ số trong HOMES; 'diep' là gà "trắng": để màu giấy, chỉ có nét. */
 export const CHICK_TOKENS = Object.freeze(['hoe', 'sonSoi', 'xanhDong', 'muc', 'diep']);

@@ -5,7 +5,7 @@ import { Fn, abs, attribute, cos, cross, dot, float, normalLocal, positionLocal,
 import { CHICK, HEN } from './cot-bo-cuc.js';
 
 /** Phần của hình gà (thuộc tính `part`, số thực). Mọi phần từ HEAD trở lên đi theo đầu. Cánh ong tách khỏi thân ong: vằn chỉ ở thân. */
-export const PART = Object.freeze({ BODY: 0, TAIL: 1, LEG: 2, WING: 3, HEAD: 4, BEAK: 5, COMB: 6, EYE: 7, BEE: 8, BEE_WING: 9 });
+export const PART = Object.freeze({ BODY: 0, TAIL: 1, LEG: 2, WING: 3, HEAD: 4, BEAK: 5, COMB: 6, EYE: 7, BEE: 8, BEE_WING: 9, NECK: 10 });
 
 const RAD = Math.PI / 180;
 /** Hướng của đỉnh nón: đuôi gà con chĩa ra sau (−z), ngóc lên 35°; đuôi gà mẹ ngóc lên 55°; mỏ chĩa ra trước (+z). */
@@ -27,10 +27,7 @@ const pair = (shape) => [
   shape,
   { ...shape, at: [-shape.at[0], shape.at[1], shape.at[2]], tilt: shape.tilt && [shape.tilt[0], -shape.tilt[1], -shape.tilt[2]] },
 ];
-/**
- * Mắt: cầu lún vào đầu, chỉ ló ra một chỏm quanh hướng từ tâm đầu ra tâm mắt. Xoay (x rồi y) cho cực trên của cầu (uv.y = 1) nằm giữa chỏm:
- * Bản nét vẽ vòng mắt và con ngươi theo góc tính từ cực ấy.
- */
+/** Mắt: cầu lún vào đầu, chỉ ló ra một chỏm. Xoay (x rồi y) cho cực trên (uv.y = 1) nằm giữa chỏm: Bản nét vẽ vòng mắt theo góc từ cực ấy. */
 const eye = (r, head, at) => {
   const [x, y, z] = new Vector3(...at).sub(new Vector3(...head)).normalize().toArray();
   return ball('EYE', r, [1, 1, 1], at, { detail: 0.75, tilt: [Math.acos(y), Math.atan2(x, z), 0] });
@@ -57,7 +54,9 @@ const [wingL, wingR] = pair(ball('WING', 1, [0.3, 0.55, 1.1], [0.95, 1.55, -0.25
 /**
  * Gà mẹ trong khung của nó (như gà con): mình và đầu như bản khung; phần nhỏ (chân, mỏ, mắt) lấy số của gà con nhân chừng 2,7; đuôi là cái
  * quạt (nón dẹt) mọc từ phía trên lưng sau, cánh to hơn để thành mảng màu. Mào là ba cầu nhỏ trên đỉnh đầu; con ong ngậm ở đầu mỏ, có hai
- * cánh mỏng (thân BEE, cánh BEE_WING: đều sau HEAD, nên đi theo đầu). Hai cánh là hai geometry riêng: cánh trái (+x, phía người xem khi mẹ
+ * cánh mỏng (thân BEE, cánh BEE_WING). Mảng cổ (NECK, GĐ 8 Task 11) là một cầu đặt ở vòng giao của đầu và mình (vòng tâm (0; 2,38; 1,29),
+ * bán kính chừng 0,39): to hơn vòng ấy nên ló ra khỏi cả đầu lẫn mình thành một dải quanh cổ, rộng nhất ở gáy. Ong và mảng cổ đi theo đầu
+ * (sau HEAD); mảng cổ ôm khớp cổ, nên đầu gật thì nó gần như đứng yên. Hai cánh là hai geometry riêng: cánh trái (+x, phía người xem khi mẹ
  * quay sang −x) và cánh phải.
  */
 export const HEN_SHAPE = Object.freeze({
@@ -67,6 +66,7 @@ export const HEN_SHAPE = Object.freeze({
     ...pair(rod('LEG', 0.11, 0.6, [0.38, 0.3, 0])),
     ...pair(ball('LEG', 0.2, [0.8, 0.3, 1.4], [0.38, 0.06, 0.12], { detail: 2.25 })), // bàn chân: cầu dẹt chĩa ra trước, đáy chạm sàn
     ball('HEAD', 0.6, [1, 1, 1], HEN_HEAD),
+    ball('NECK', 0.55, [1, 1, 1], [0, 2.34, 1.28]),
     cone('BEAK', 0.19, 0.43, AHEAD, [0, 2.62, 2.36]),
     ...[[3.25, 1.3], [3.32, 1.58], [3.24, 1.86]].map(([y, z]) => ball('COMB', 0.16, [0.6, 1, 1], [0, y, z])),
     ...pair(eye(0.1, HEN_HEAD, [0.4, 2.84, 1.94])),
@@ -105,9 +105,8 @@ export const HEN_JOINTS = Object.freeze({
 });
 
 /**
- * Một khối đã đặt chỗ, mọi đỉnh mang `part`. Giữ index: cầu, nón, trụ của three đều có index, nên mergeGeometries ghép được (nó chỉ cần
- * mọi khối cùng có hay cùng không có index); mỗi đỉnh chung cho chừng sáu tam giác, nên positionNode chạy ít hơn chừng sáu lần so với lưới
- * bỏ index.
+ * Một khối đã đặt chỗ, mọi đỉnh mang `part`. Giữ index (mergeGeometries chỉ cần mọi khối cùng có hay cùng không có index): mỗi đỉnh chung
+ * cho chừng sáu tam giác, nên positionNode chạy ít hơn chừng sáu lần so với lưới bỏ index.
  */
 export function piece(geometry, part) {
   geometry.setAttribute('part', new BufferAttribute(new Float32Array(geometry.attributes.position.count).fill(part), 1));

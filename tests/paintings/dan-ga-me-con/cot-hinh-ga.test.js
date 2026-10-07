@@ -92,12 +92,12 @@ function lowestOfOpenWing(shape, sign, angle) {
 }
 
 describe('cot-hinh-ga', () => {
-  it('gà con đủ phần: mình, đuôi, chân, cánh, đầu, mỏ, mắt; gà mẹ: mình có cả mào và con ong (thân, cánh ong), hai cánh là hai geometry riêng', () => {
+  it('gà con đủ phần: mình, đuôi, chân, cánh, đầu, mỏ, mắt; gà mẹ: mình có cả mào, mảng cổ và con ong (thân, cánh ong), hai cánh là hai geometry riêng', () => {
     expect(named(partsOf(chickGeometry({ segments: SEGMENTS })))).toEqual(['BEAK', 'BODY', 'EYE', 'HEAD', 'LEG', 'TAIL', 'WING']);
     const hen = henGeometry({ segments: SEGMENTS });
-    expect(named(partsOf(hen.body))).toEqual(['BEAK', 'BEE', 'BEE_WING', 'BODY', 'COMB', 'EYE', 'HEAD', 'LEG', 'TAIL']);
-    // Cánh ong là phần riêng: vằn của Bản nét chỉ ở thân ong. Mọi phần của ong đi theo đầu (từ HEAD trở lên).
-    expect(Math.min(PART.BEE, PART.BEE_WING)).toBeGreaterThan(PART.HEAD);
+    expect(named(partsOf(hen.body))).toEqual(['BEAK', 'BEE', 'BEE_WING', 'BODY', 'COMB', 'EYE', 'HEAD', 'LEG', 'NECK', 'TAIL']);
+    // Cánh ong là phần riêng: vằn của Bản nét chỉ ở thân ong. Mọi phần của ong, và mảng cổ, đi theo đầu (từ HEAD trở lên).
+    expect(Math.min(PART.BEE, PART.BEE_WING, PART.NECK)).toBeGreaterThan(PART.HEAD);
     expect(named(partsOf(hen.wingL))).toEqual(['WING']);
     expect(named(partsOf(hen.wingR))).toEqual(['WING']);
     // Mỗi geometry có đủ thuộc tính cho các lớp sau: pháp tuyến (nấc sáng), UV (nét trong của Task 5), part.
@@ -131,6 +131,21 @@ describe('cot-hinh-ga', () => {
     expect(HEN_JOINTS.shoulderR[2]).toBeLessThan(0);
     expect(HEN_JOINTS.center).toEqual([HEN.at[0], HEN.height / 2, HEN.at[1]]);
     expect(HEN_JOINTS.neck[0], 'cổ ở phía trước tâm mình').toBeLessThan(HEN.at[0] - 0.5);
+  });
+
+  it('mảng cổ của gà mẹ (Task 11): cầu ôm khớp cổ, ló ra khỏi cả đầu lẫn mình thành một dải quanh chỗ đầu nối mình, rộng nhất ở gáy', () => {
+    const neck = HEN_SHAPE.body.find((s) => s.part === 'NECK');
+    const [head, body] = ['HEAD', 'BODY'].map((part) => HEN_SHAPE.body.find((s) => s.part === part));
+    // Tâm cầu cổ gần khớp cổ (đầu gật quanh đó), nên đầu gật thì mảng cổ, đi theo đầu, gần như đứng yên.
+    expect(new Vector3(...toHen(HEN_JOINTS.neck)).distanceTo(new Vector3(...neck.at)), 'tâm mảng cổ gần khớp cổ').toBeLessThan(0.1);
+    const out = vertices(henGeometry({ segments: SEGMENTS }).body, (p) => p === PART.NECK).map(toHen)
+      .filter((p) => !inside(head, p) && !inside(body, p));
+    // Phần ló ra: có ở cả hai bên (người xem thấy bên trái mẹ, +x), ở gáy (phía sau đầu, −z so với tâm cầu) và ở cổ họng (phía trước).
+    expect(out.length, 'đỉnh của mảng cổ ló ra khỏi đầu và mình').toBeGreaterThan(20);
+    expect(out.some((p) => p[0] > 0.3) && out.some((p) => p[0] < -0.3), 'ló ra ở cả hai bên cổ').toBe(true);
+    const nape = out.filter((p) => p[2] < neck.at[2] - 0.2).length;
+    const throat = out.filter((p) => p[2] > neck.at[2] + 0.2).length;
+    expect([nape > 0, throat > 0, nape > throat], `gáy ${nape}, cổ họng ${throat}`).toEqual([true, true, true]);
   });
 
   it('mắt (gà con, gà mẹ, cả hai bên): đỉnh có uv.y = 1 (cực trên của cầu mắt) nằm đúng hướng từ tâm đầu ra tâm mắt; Bản nét vẽ vòng mắt và con ngươi quanh cực ấy', () => {

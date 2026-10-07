@@ -5,7 +5,7 @@
  * segments, segmentsMax: số vòng quanh mỗi khối gà (núm cot.segments) mặc định và tối đa. Mức cao 32 là hình đã duyệt ảnh: hai mặt kề nhau
  * gãy dưới góc mà Bản nét coi là nếp gấp. Mức vừa 28 tới ngay góc ấy, không thấy vệt nào, và bớt một phần tư số tam giác; mức thấp 24 bớt
  * gần nửa, mặt đa diện chỉ để lại vệt mực rất nhạt khi phóng to, mà ở cỡ điện thoại thì không thấy. Trần ở mức vừa và thấp là 32, hình đã
- * duyệt: 48 vòng có 334 nghìn tam giác, gấp 2,3 lần. grains: trần số hạt thóc (lớp Đàn gà). paper: số tầng noise của giấy (lớp Giấy
+ * duyệt: 48 vòng có 337 nghìn tam giác, gấp 2,3 lần. grains: trần số hạt thóc (lớp Đàn gà). paper: số tầng noise của giấy (lớp Giấy
  * điệp). bloom: resolutionScale của bloom (Phủ bóng).
  * @type {import('../../engine/contracts/runtime.js').QualitySpec}
  */
