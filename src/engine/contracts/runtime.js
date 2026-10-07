@@ -9,21 +9,33 @@
 /** @typedef {Object} PaintingSetup
  * @property {object} [shared]          object dùng chung trong bức (thiếu thì xưởng tạo {}) → tham số thứ 2 của createLayer
  * @property {Dial[]} [dials]           [4] núm của CẢ BỨC (Bức 1: 'gio'); xưởng vẽ thanh trượt
- * @property {(g: Gesture) => void} [onGesture]   cử chỉ mà không công cụ nào dùng
+ * @property {(g: Gesture) => void} [onGesture]   cử chỉ mà không công cụ nào dùng. [8] Trừ một chỗ: bức đã nhận 'hold-start' thì luôn
+ *                                     nhận 'hold-end' của cái giữ đó, kể cả khi công cụ bật giữa chừng giữ nó (engine/gpu/scene.js#route)
  * @property {(dt: number, t: number) => void} [update]   mỗi khung, TRƯỚC các lớp. [4] update(0, t) như Layer.update
  * @property {() => void} [dispose]     gọi 2 lần vẫn an toàn
  */
-/** Dữ liệu thuần; xưởng dựng PerspectiveCamera + OrbitControls có giới hạn.
+/** Dữ liệu thuần; xưởng dựng camera phối cảnh ([8] hay trực giao) + OrbitControls có giới hạn.
  * @typedef {Object} CameraSpec
+ * @property {'perspective'|'ortho'} [kind] [8] mặc định 'perspective'
  * @property {[number, number, number]} position
  * @property {[number, number, number]} target
- * @property {number} fov
+ * @property {number} [fov]                 bắt buộc với camera phối cảnh; [8] camera trực giao không dùng
+ * @property {number} [height]              [8] camera trực giao (bắt buộc): bề cao khung nhìn ở zoom 1, đơn vị cảnh
+ * @property {number} [minWidth]            [8] camera trực giao: khung hẹp thì xưởng nới height để bề ngang thấy đủ chừng này
+ *                                          (engine/gpu/fov.js#fitOrtho)
+ * @property {{ below: number, maxGrow: number }} [shortFrame]   [8] camera trực giao: canvas thấp hơn `below` điểm ảnh CSS thì xưởng
+ *                                          nhân bề cao khung nhìn với below / bề cao canvas, tới `maxGrow` lần (≥ 1), để chữ của trang (cỡ
+ *                                          CSS cố định) còn chỗ trên ván ở laptop màn thấp; gộp với minWidth bằng max; camera phối cảnh bỏ
+ *                                          qua (engine/gpu/fov.js#shortGrow)
+ * @property {[number, number]} [zoom]      [8] camera trực giao: minZoom, maxZoom của OrbitControls; thiếu thì không zoom
  * @property {[number, number]} azimuth     giới hạn xoay ngang (rad); [-Infinity, Infinity] là xoay trọn vòng (GĐ 7)
  * @property {[number, number]} polar       giới hạn xoay dọc (rad)
- * @property {[number, number]} distance
+ * @property {[number, number]} [distance]  bắt buộc với camera phối cảnh; [8] camera trực giao không dùng (khoảng cách đứng yên)
  * @property {number} [breathe]             [1] biên độ "thở"; xưởng ép về 0 khi prefers-reduced-motion
  * @property {number} [minHorizontalFov]    [7] góc nhìn ngang tối thiểu (độ): khung hẹp (điện thoại dọc) thì xưởng nới fov dọc để
  *                                          bề ngang vẫn thấy đủ góc này; khung đủ rộng giữ nguyên fov (engine/gpu/fov.js)
+ * @property {{ after: number, duration: number }} [home]   [8] tranh tự khép lại: đứng yên `after` giây thì quay về góc của bức
+ *                                          trong `duration` giây (engine/gpu/home.js); giảm chuyển động thì về một bước
  */
 /** @typedef {Object} QualitySpec
  * @property {Record<'cao'|'vua'|'thap', Record<string, number>>} levels   ghép lên mức mặc định của xưởng; lớp đọc qua ctx.budget
@@ -95,6 +107,8 @@
 /** @typedef {Object} PostInput
  * @property {any} color                                   màu hiện tại (từ scene pass hoặc stage trước)
  * @property {(name: 'output'|'emissive'|'normal'|'depth') => any} channel   'normal' chỉ có sau requireView [4]
+ *                                                         [8] 'depth' với camera trực giao là chính texture độ sâu (tuyến tính
+ *                                                         sẵn): lấy mẫu ở điểm lân cận được mà không thêm lượt vẽ
  * @property {any} weight                                  uniform trọng số của chính lớp này
  * @property {(tapId: string, node: any) => void} [tap]    [4] chụp một bước giữa chừng → view '<layerId>:<tapId>'
  */
@@ -152,7 +166,9 @@
 /** @typedef {Object} ToolInstance
  * @property {(final: any, view: (id: string) => any) => any} [overlay]  ghép sau display khi dựng pipeline; ghép LẠI khi
  *                                 requireView đổi MRT, nên chỉ dựng node, không giữ trạng thái; đổi chế độ = đổi uniform
- * @property {(g: Gesture) => boolean} [onGesture]  true = đã dùng, không chuyển cho bức. [5] Giữ 'tap' thì giữ cả 'double-tap'
+ * @property {(g: Gesture) => boolean} [onGesture]  true = đã dùng, không chuyển cho bức; [8] trừ 'hold-end' mà bức còn chờ (bức đã
+ *                                 nhận 'hold-start' của cái giữ đó trước khi công cụ bật): công cụ nhận trước, bức vẫn nhận sau
+ *                                 (engine/gpu/scene.js#route). [5] Giữ 'tap' thì giữ cả 'double-tap'
  *                                 (kính tròn của Kính mài giữ cả hai; hình gạt không giữ cử chỉ nào): không thì bức nhận
  *                                 'double-tap' mà không có hai 'tap' làm nên nó
  * @property {(on: boolean) => void} [activate]     bật/tắt: đổi uniform, hiện/giấu thanh điều khiển

@@ -1,11 +1,15 @@
-// engine/gpu/stage.js — Sân khấu 3D: renderer nền đặc, camera + OrbitControls, đồng hồ, resize + DPR, lỗi GPU.
-import { WebGPURenderer, Scene, PerspectiveCamera, Vector2, Vector3 } from 'three/webgpu';
+// engine/gpu/stage.js — Sân khấu 3D: renderer nền đặc, camera (phối cảnh hay trực giao, GĐ 8) + OrbitControls, đồng hồ, resize + DPR, lỗi GPU.
+import { WebGPURenderer, Scene, Vector2, Vector3 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createClock } from './clock.js';
 import { createLatch } from './guards.js';
 import { breathAmplitude, breathOffset } from './breath.js';
-import { fitFov } from './fov.js';
+import { createCamera, fitCamera, limitControls } from './camera.js';
+import { createHome } from './home.js';
+
+/** CameraSpec giữ chỗ của sân khấu trước khi bức khai báo camera của nó. */
+const PLACEHOLDER = Object.freeze({ position: [0, 0, 5], target: [0, 0, 0], fov: 45 });
 
 /**
  * Dựng sân khấu cho một bức. Chỉ chạy trong trình duyệt có GPU (e2e kiểm, không có unit test).
@@ -14,7 +18,7 @@ import { fitFov } from './fov.js';
  * @param {{ freeze: boolean|number }} opts.flags   cờ URL (engine/flags.js)
  * @param {HTMLElement} opts.parent        phần tử [data-stage]; canvas được gắn vào đây
  * @param {string} opts.clearColor         màu nền đặc, ví dụ palette.denThen
- * @param {boolean} [opts.reducedMotion]   prefers-reduced-motion: tắt quán tính của camera
+ * @param {boolean} [opts.reducedMotion]   prefers-reduced-motion: tắt quán tính của camera; tranh tự khép lại thì về một bước
  * @param {Window} [opts.win]
  */
 export async function createStage({ tier, flags, parent, clearColor, reducedMotion = false, win = window }) {
@@ -30,7 +34,9 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
   // renderer.toneMapping giữ NoToneMapping (mặc định): tone mapping nằm trong pipeline (Phủ bóng + renderOutput).
 
   const scene = new Scene();
-  const camera = new PerspectiveCamera(45, 1, 0.1, 500);
+  // Camera giữ chỗ tới khi bức khai báo CameraSpec: useCamera() dựng camera ĐÚNG LOẠI (phối cảnh hay trực giao) thay cho nó. Mọi chỗ
+  // dùng (scene, pipeline, input, chữ đi theo vật, móc lần vẽ) đọc stage.camera SAU useCamera.
+  let camera = createCamera(PLACEHOLDER, 1);
   // Uniform dùng chung cho mọi lớp. Tên đặt bằng setName phải là định danh hợp lệ (không có '-').
   const u = {
     time: uniform(0).setName('u_time'),
@@ -49,7 +55,10 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
   renderer.onError = (info) => errorCallbacks.forEach((cb) => cb(info));
 
   let controls = null;
-  let cameraSpec = null; // CameraSpec của bức: fov tính lại theo tỉ lệ khung mỗi lần resize (minHorizontalFov)
+  let home = null; // tranh tự khép lại (CameraSpec.home): bộ đếm giờ trên controls; null khi bức không khai báo
+  let cameraSpec = null; // CameraSpec của bức: khung nhìn tính lại theo khung mỗi lần resize (minHorizontalFov, minWidth, shortFrame)
+  let aspect = 1; // tỉ lệ khung hiện tại: camera mới của useCamera() dựng theo số này
+  let cssHeight = 0; // bề cao canvas (điểm ảnh CSS): khung nhìn trực giao nới ở canvas thấp (CameraSpec.shortFrame)
   let breathAmp = 0; // biên độ "thở" của camera (CameraSpec.breathe; 0 khi giảm chuyển động)
   const base = new Vector3(); // điểm nhìn gốc của bức; thở = lệch quanh điểm này
   let dprMax = 1;
@@ -65,9 +74,9 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
     lastSize = size;
     renderer.setPixelRatio(ratio);
     renderer.setSize(width, height);
-    camera.aspect = width / height;
-    if (cameraSpec) camera.fov = fitFov(cameraSpec, camera.aspect);
-    camera.updateProjectionMatrix();
+    aspect = width / height;
+    cssHeight = height;
+    fitCamera(camera, cameraSpec ?? PLACEHOLDER, aspect, cssHeight);
     renderer.getDrawingBufferSize(u.resolution.value);
   };
   const observer = new win.ResizeObserver(resize);
@@ -80,33 +89,27 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
   return {
     renderer,
     scene,
-    camera,
+    /** Camera của bức (getter): useCamera() thay camera, nên đừng giữ tham chiếu từ trước lúc đó. */
+    get camera() {
+      return camera;
+    },
     backend,
     u,
     get controls() {
       return controls;
     },
 
-    /** Áp CameraSpec của bức: vị trí, điểm nhìn, fov (nới theo khung, fov.js), rồi OrbitControls bị chặn trong giới hạn bức khai báo. */
+    /** Áp CameraSpec của bức: dựng camera đúng loại ở vị trí của bức, khớp khung, rồi OrbitControls bị chặn trong giới hạn bức khai báo. */
     useCamera(spec) {
+      home?.dispose();
       controls?.dispose();
       cameraSpec = spec;
-      camera.fov = fitFov(spec, camera.aspect);
-      camera.position.set(...spec.position);
-      camera.updateProjectionMatrix();
+      camera = createCamera(spec, aspect, cssHeight);
       controls = new OrbitControls(camera, renderer.domElement);
-      controls.target.set(...spec.target);
+      limitControls(controls, spec, reducedMotion);
       base.set(...spec.target);
       breathAmp = breathAmplitude(spec, reducedMotion);
-      controls.minAzimuthAngle = spec.azimuth[0];
-      controls.maxAzimuthAngle = spec.azimuth[1];
-      controls.minPolarAngle = spec.polar[0];
-      controls.maxPolarAngle = spec.polar[1];
-      controls.minDistance = spec.distance[0];
-      controls.maxDistance = spec.distance[1];
-      controls.enablePan = false;
-      // Damping = quán tính khi thả tay; cần gọi controls.update() mỗi khung (run.js làm).
-      controls.enableDamping = !reducedMotion;
+      home = spec.home ? createHome({ camera, controls, spec, reduced: reducedMotion }) : null;
       controls.update();
       return controls;
     },
@@ -121,6 +124,14 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
       if (!controls || !breathAmp) return;
       const [x, y, z] = breathOffset(t, breathAmp);
       controls.target.set(base.x + x, base.y + y, base.z + z);
+    },
+
+    /**
+     * Tranh tự khép lại (CameraSpec.home): một khung của bộ đếm giờ, dt giây của cảnh. Buông tay đủ `after` giây thì đặt camera trên đường
+     * về góc của bức. Gọi SAU breathe() và TRƯỚC controls.update() mỗi khung; bức không khai báo home thì không làm gì.
+     */
+    returnHome(dt) {
+      home?.step(dt);
     },
 
     /** Đặt trần DPR theo mức chất lượng (budget.dpr), hay theo nấc hạ của bộ điều chỉnh, rồi tính lại kích thước. */
@@ -157,6 +168,8 @@ export async function createStage({ tier, flags, parent, clearColor, reducedMoti
       lost.clear();
       errorCallbacks.length = 0;
       observer.disconnect();
+      home?.dispose();
+      home = null;
       controls?.dispose();
       renderer.setAnimationLoop(null);
       renderer.dispose().catch((err) => console.error('Gỡ renderer lỗi:', err));

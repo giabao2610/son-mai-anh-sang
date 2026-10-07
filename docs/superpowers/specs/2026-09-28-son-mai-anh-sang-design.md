@@ -5,6 +5,10 @@
 > **Bức 1 · Ao Sen Đêm:** một ao sen đêm, sơn từ sáu lớp ánh sáng.
 >
 > **Bức 2 · Đèn Kéo Quân** (GĐ 6, §18): một ngọn đèn kéo quân trong gian nhà tối, sơn từ sáu lớp ánh sáng.
+>
+> **Bức 3 · Cung Quế** (GĐ 7, §19): chú Cuội ngồi gốc cây đa trên một mặt trăng nhỏ, sơn từ sáu lớp ánh sáng.
+>
+> **Bức 4 · Đàn Gà Mẹ Con** (GĐ 8, §20): một tờ tranh Đông Hồ bước vào được, sơn từ sáu lớp ánh sáng.
 
 - **Ngày:** 2026-09-28
 - **Chủ dự án:** Bao Nguyen (GitHub `giabao2610`)
@@ -39,7 +43,7 @@ Dự án dùng lại đúng ý đó. **Sơn Mài Ánh Sáng là cách dựng tra
 - Mỗi lớp là một kỹ thuật dựng hình, có trọng số từ 0 đến 1.
 - "Mài" là gỡ dần từng lớp để thấy bức tranh được làm ra thế nào, xuống tận **cốt đất sét**.
 
-Ao Sen Đêm là **Bức 1**. (GĐ 6) Đèn Kéo Quân là **Bức 2** (§18). (GĐ 7) Cung Quế là **Bức 3** (§19). Đông Hồ về sau có thể là Bức 4, làm bằng cùng kỹ thuật và dùng chung một xưởng.
+Ao Sen Đêm là **Bức 1**. (GĐ 6) Đèn Kéo Quân là **Bức 2** (§18). (GĐ 7) Cung Quế là **Bức 3** (§19). (GĐ 8) Đàn Gà Mẹ Con, một tranh Đông Hồ, là **Bức 4** (§20). Bức nào cũng làm bằng cùng kỹ thuật và dùng chung một xưởng.
 
 ### Từ vựng (dùng giống nhau trong tài liệu và trong code)
 
@@ -136,6 +140,19 @@ Ao Sen Đêm là **Bức 1**. (GĐ 6) Đèn Kéo Quân là **Bức 2** (§18). (
 
   Sau phần thiết kế đầu tiên (cảnh, sáu lớp, cử chỉ), Bạn nói "làm luôn đến spec": Claude tự quyết phần còn lại của §19 (kỹ thuật,
   Phòng tranh và trình sinh trang, CI, kiểm thử, cách làm), rồi Bạn duyệt một lượt trong spec.
+- **(GĐ 8)** Bạn chọn làm **Bức 4 · Đàn Gà Mẹ Con** (§20), trả lời từng câu ngày 2026-10-05:
+  - ý tưởng **Bước vào tranh**: nhìn thẳng là một tờ tranh Đông Hồ (mảng màu phẳng, nét đen, giấy điệp); kéo xoay thì tranh hóa ra
+    một sa bàn 3D, đàn gà là tượng đất; mài là gỡ từng bản in, về lại tượng đất;
+  - tranh **Đàn gà mẹ con**: gà mẹ và mười gà con; hạt compute là thóc;
+  - camera **tranh tự khép lại**: buông tay vài giây thì camera quay về góc nhìn của tranh;
+  - cử chỉ **rắc thóc, gà mẹ gọi**: chạm thì rắc thóc, gà con chạy tới mổ; giữ thì gà mẹ xòe cánh gọi, đàn con chạy về núp;
+  - ba cách làm Claude đề xuất:
+    - **camera trực giao thật** (`CameraSpec.kind: 'ortho'`);
+    - **nét mực dò cạnh trên ảnh độ sâu**, cộng nét trong vẽ bằng shader và núm lệch bản;
+    - **rút hạt compute lên `lib/tsl/particles.js`**: Bức 1 giữ nguyên từng ký tự shader, Sổ tay hiện cả code trong `lib`.
+
+  Sau phần thiết kế đầu tiên (cảnh, sáu lớp, cử chỉ), Bạn nói "làm luôn đến spec": Claude tự quyết phần còn lại của §20 (xưởng, bể
+  hạt, chất lượng, kiểm thử, cách làm), rồi Bạn duyệt một lượt trong spec.
 
 ### Giả định (bạn đã xem và không phản đối)
 - Project nằm ở `~/Documents/Projects/son-mai-anh-sang`.
@@ -353,7 +370,7 @@ Bảng nằm ở `src/engine/palette.js`, dùng chung cho CSS và TSL. `src/styl
 | `xanhLuc` | xanh lục (màu lá) | `#2E4A3A` |
 | `datSet` | đất sét, màu của cốt khi mài hết | `#8A8580` |
 
-- Một bức có thể **thêm hoặc ghi đè** token qua `meta.palette`. Ví dụ, Đông Hồ sau này có thể thêm `diep`. Lớp đọc bảng đã ghép qua `ctx.palette`.
+- Một bức có thể **thêm hoặc ghi đè** token qua `meta.palette`. Ví dụ, (GĐ 8) Bức 4 thêm năm màu tự nhiên của tranh Đông Hồ, trong đó có `diep` (§20.3). Lớp đọc bảng đã ghép qua `ctx.palette`.
 - LUT "sơn mài" sinh từ bảng đã ghép (GĐ 4), nên bức đổi màu thì LUT tự đổi theo.
 - Không dùng neon hồng tím. Màu sen của Bức 1 lấy **đúng từ câu ca dao**: *lá xanh, bông trắng, nhị vàng*.
 
@@ -944,10 +961,13 @@ cho thấy các bước SAU lượt vẽ cảnh (bloom, tone); Từng sợi cho 
 son-mai-anh-sang/
   index.html                         [0→6] trang Bức 1: poster, tên, thơ, [data-seal], [data-badge], [data-static]; [1]: [data-moon]; [4]: poster.webp, thẻ og; [6]: link lật tranh
   tranh/den-keo-quan/index.html      [6] trang Bức 2 (§18), cùng khung với Bức 1; link lật tranh về Bức 1
+  tranh/cung-que/index.html          [7] trang Bức 3 (§19); từ GĐ 7, mọi trang do scripts/pages.js sinh từ một khuôn
+  tranh/dan-ga-me-con/index.html     [8] trang Bức 4 (§20)
+  tranh/index.html                   [7] Phòng tranh: trang tĩnh sinh từ registry, không có script
   vite.config.js                     [0] base '/son-mai-anh-sang/'; input = các trang trong registry; tách chunk 'three'
   vitest.config.js playwright.config.js   [0]
   package.json .nvmrc .gitignore CLAUDE.md LICENSE   [0]
-  README.md                          [0→5] GĐ 4 thêm mục "Thêm một bức tranh mới"; GĐ 5: tên vật + nhãn, chữ đi theo vật
+  README.md                          [0→8] GĐ 4 thêm mục "Thêm một bức tranh mới"; GĐ 5: tên vật + nhãn, chữ đi theo vật; GĐ 8: Bức 4, camera trực giao, bể hạt dùng chung, bảng bundle bốn bức
   .github/workflows/deploy.yml       [0] test → build → e2e → deploy Pages
   public/
     favicon.svg                      [0]
@@ -955,10 +975,14 @@ son-mai-anh-sang/
     paintings/ao-sen-dem/poster.webp [4] poster thật ≤ 150 KB, chụp từ cảnh
     paintings/ao-sen-dem/og.jpg      [4] 1200×630, JPEG (bản đầu định PNG: grain làm PNG nặng gấp nhiều lần)
     paintings/den-keo-quan/          [6] poster.webp + og.jpg của Bức 2, chụp từ cảnh bằng scripts/poster.js
+    paintings/cung-que/              [7] poster.webp + og.jpg của Bức 3
+    paintings/dan-ga-me-con/         [8] poster.webp + og.jpg của Bức 4 (khung 240 của meta.poster.capture)
   plugins/
     vite-plugin-code-view.js         [2] import '?code' → HTML Shiki có data-line + bảng knobId → dòng
   scripts/
     poster.js                        [4] Playwright chụp ?at&freeze=N&poster cho một slug (GPU thật); mã hóa WebP/JPEG ngay trong trang
+    pages.js                         [7] npm run pages: viết trang của mọi bức và Phòng tranh từ registry
+    e2e-groups.js                    [7] nhóm e2e theo bức cho CI (ma trận job)
   src/
     engine/                          XƯỞNG: không biết bức nào tồn tại
       boot.js                        [0→5] khởi động một bức: cờ URL → tầng → tĩnh | import('./gpu/run.js'); GĐ 5: báo mốc 'chunk' cho quầng trăng; export BOOT_DEADLINE_MS (chặng đầu của quầng bò đúng bằng nó)
@@ -970,16 +994,18 @@ son-mai-anh-sang/
       deadline.js                    [0] withDeadline(): hạn 10 s cho khởi động (hàm thuần)
       sma.js                         [0→5] window.__sma: state, tier, backend, level, frames, reason; GĐ 2: expose() (GĐ 4 chỉ thêm hàm qua expose); GĐ 5: readouts(layerId)
       static.js                      [0→2] tầng C theo lý do; GĐ 2: Sổ tay chỉ đọc (import() động ui/workshop.js)
-      contracts/painting.js          [0→5] JSDoc hợp đồng NHẸ; GĐ 4: Poster.capture; GĐ 5: PaintingContent.captions, LayerContent.objects
-      contracts/runtime.js           [0→5] JSDoc hợp đồng NẶNG; GĐ 4: update(0, t), Gesture 'hover'/pointer, ToolInstance.activate, Studio, Snapshot.dials; GĐ 5: Gesture 'double-tap', EngineCtx.captions, ToolApi.draws
+      contracts/painting.js          [0→8] JSDoc hợp đồng NHẸ; GĐ 4: Poster.capture; GĐ 5: PaintingContent.captions, LayerContent.objects; GĐ 8: LayerMeta.files kê được lib/tsl
+      contracts/runtime.js           [0→8] JSDoc hợp đồng NẶNG; GĐ 4: update(0, t), Gesture 'hover'/pointer, ToolInstance.activate, Studio, Snapshot.dials; GĐ 5: Gesture 'double-tap', EngineCtx.captions, ToolApi.draws; GĐ 8: CameraSpec.kind, height, minWidth, shortFrame, zoom, home
       gpu/                           PHẦN NẶNG: chỉ tải ở tầng A/B
         run.js                       [0→5] vòng đời: dựng → compileAsync → khung ẩn → hòa dần → chạy → gỡ; GĐ 2: mất GPU lần đầu → dựng lại; GĐ 4: bộ điều chỉnh đo từ lúc live; GĐ 5: bringUp kiểm gone() trước việc đầu tiên và sau mỗi lần chờ ("Dựng lại cảnh" quá hạn không đụng trang đã về tĩnh), sự kiện GPU đến khi trang đã tĩnh thì bỏ qua (không có code nào của quầng trăng)
-        scene.js                     [2→5] dựng MỘT cảnh trên một sân khấu (ctx → setup → lớp → pipeline → input → bàn thợ) + một khung; GĐ 4: đồ nghề, Dial, đo GPU, vẽ lại bằng update(0, t); GĐ 5: chữ đi theo vật, móc lần vẽ
+        scene.js                     [2→8] dựng MỘT cảnh trên một sân khấu (ctx → setup → lớp → pipeline → input → bàn thợ) + một khung; GĐ 4: đồ nghề, Dial, đo GPU, vẽ lại bằng update(0, t); GĐ 5: chữ đi theo vật, móc lần vẽ; GĐ 8: stage.returnHome(dt) mỗi khung, sau breathe, trước controls.update(); bức đã nhận 'hold-start' thì luôn nhận 'hold-end' (công cụ bật giữa chừng không giữ mất nó); bộ điều chỉnh tách ra scene-quality.js
+        scene-quality.js             [8] bộ điều chỉnh của một cảnh (tách từ scene.js): nối tuner, thang nấc và bộ đo GPU; scene.quality
         ladder.js                    [3] thang nấc cụ thể: 'dpr' nở thành nhiều nấc −0,25; '<lớp>.<nấc>' lấy từ layer.degrade
-        stage.js                     [0→4] renderer, nền đặc, camera + OrbitControls theo CameraSpec, đồng hồ, resize, DPR, lỗi GPU; GĐ 4: trackTimestamp
+        stage.js                     [0→8] renderer, nền đặc, camera + OrbitControls theo CameraSpec, đồng hồ, resize, DPR, lỗi GPU; GĐ 4: trackTimestamp; GĐ 8: camera trực giao (CameraSpec.kind), stage.camera là getter
         disposer.js                  [0] đăng ký mọi thứ đã tạo, gỡ theo thứ tự ngược
-        pipeline.js                  [0→4] scene pass + MRT; build → renderOutput → display; alpha 1; views(); overlay
-        views.js                     [4→5] danh sách view (kênh, tap, Normal lười), ghép overlay của công cụ, requireView; GĐ 5: scene pass đứng đầu lượt cuối (móc lần vẽ thấy lượt vẽ cảnh)
+        guards.js                    [0] bộ đếm lỗi thuần của vòng lặp (3 khung lỗi liên tiếp, 3 lỗi GPU trong 1 giây), chốt báo bù sự kiện một lần (mất thiết bị)
+        pipeline.js                  [0→8] scene pass + MRT; build → renderOutput → display; alpha 1; views(); overlay; GĐ 8: độ sâu tuyến tính chọn theo loại camera
+        views.js                     [4→8] danh sách view (kênh, tap, Normal lười), ghép overlay của công cụ, requireView; GĐ 5: scene pass đứng đầu lượt cuối (móc lần vẽ thấy lượt vẽ cảnh); GĐ 8: view Độ sâu dùng độ sâu của pipeline (linearDepth, bắt buộc)
         gpu-timer.js                 [4] ms GPU mỗi khung: resolveTimestampsAsync (render + compute), không chờ, không gọi chồng
         meter.js                     [4] số đo của bàn thợ: draw call, tam giác, ms, ms CPU, ms GPU; hai bên "Tắt / Bật" của compare
         toolbox.js                   [4→5] hộp đồ nghề: gắn công cụ, cử chỉ tới công cụ trước bức, mỗi lúc một công cụ, body[data-tool]; GĐ 5: ToolApi.draws (năm hàm của móc), thanh công cụ ngay sau thanh lớp (thứ tự Tab)
@@ -994,6 +1020,9 @@ son-mai-anh-sang/
         debug.js                     [1→2] ?debug → Inspector; ?debug=stats → stats-gl (import động); GĐ 2: openDebug không bao giờ ném
         gesture.js                   [1→5] phân loại cử chỉ (hàm thuần): tap / hold-* / swipe; kéo là của camera; GĐ 5: double-tap
         breath.js                    [1] camera "thở": breathAmplitude, breathOffset (hàm thuần)
+        camera.js                    [8] dựng camera theo CameraSpec (phối cảnh hay trực giao), khớp khung, giới hạn OrbitControls; phần tính của stage.js tách ra để unit test
+        fov.js                       [7→8] fitFov: nới fov dọc ở khung hẹp (minHorizontalFov); GĐ 8: fitOrtho cho camera trực giao (minWidth, shortFrame)
+        home.js                      [8] tranh tự khép lại (CameraSpec.home): đếm giờ đứng yên, quay về góc của bức; phần tính là hàm thuần; đặt dampingFactor theo giây của cảnh (Phụ lục A.98)
       stock/phu-bong/                LỚP DÙNG CHUNG "Phủ bóng"
         meta.js                      [0] { id: 'phu-bong', name: 'Phủ bóng', files } (dữ liệu thuần)
         layer.js                     [0→4] build: bloom chọn lọc + tone (GĐ 2: chọn bằng If, đủ núm); GĐ 4: display (LUT, grain, vignette, FXAA) + tap
@@ -1004,13 +1033,14 @@ son-mai-anh-sang/
         index.js                     [4→5] [kinhMai, lotLop, tungSoi]; thêm công cụ = thêm 1 dòng
         kinh-mai.js                  [4→5] overlay (If trong Fn) + thanh điều khiển (ui/dom.js) + cử chỉ; GĐ 5: kính tròn giữ cả double-tap của ngón tay, bút
         lot-lop.js                   [4] overlay (If trong Fn) + thanh điều khiển (ui/dom.js) + cử chỉ
-        pick.js                      [4] chọn một view theo chỉ số bằng If/ElseIf (hai công cụ dùng chung)
+        pick.js                      [4→8] chọn một view theo chỉ số bằng If/ElseIf (hai công cụ dùng chung); GĐ 8: mỗi view bọc isolate() không cache cha (Phụ lục A.95)
         tung-soi.js                  [5] Từng sợi: thanh trượt 0 → N lần vẽ, nút "Dệt lại", dòng mô tả sợi và tóm tắt khung; chỉ nhìn ToolApi.draws
-    lib/                             HỘP MÀU: hàm "lá", chỉ trả SỐ
+    lib/                             HỘP MÀU: hàm "lá", trả số (astro, random) hay node TSL (tsl/); không import xưởng hay bức
       random.js                      [0] PRNG có hạt giống (mulberry32)
       astro/lunar.js                 [0] âm lịch Hồ Ngọc Đức (tz tham số, mặc định +7); canChiIndex
       astro/moon.js                  [0] tuổi trăng, độ sáng, tonight(), hourOfNight(), sunDirection()
       tsl/noise.js                   [1] fbm; [3] thêm curl, và fbm nhận số octave là node (vòng lặp thật trong shader)
+      tsl/particles.js               [8] bể hạt compute (Bức 1 và Bức 4): cấp phát một lần, khởi tạo, bước, đổi số lượng, rắc theo vòng đệm
     ui/                              DOM thuần: không three, không import engine/; nhận t qua tham số
       strings.vi.js                  [0→5] export default t: chữ của xưởng, bảng tên tháng/can/chi, formatSeal(); GĐ 4: t.tools, t.views, ms GPU, nấc khóa; GĐ 5: t.tools['tung-soi']
       shell.js                       [0→5] poster ↔ canvas, data-state, con dấu, hòa dần; [1]: gợi ý, lời mời "{n} lớp"; [4]: ?poster (body[data-poster]); [5]: progress(mốc) → quầng trăng
@@ -1019,16 +1049,16 @@ son-mai-anh-sang/
       moon-progress.js               [5] quầng trăng tiến độ trong [data-moon]: HALO_STEPS (mốc → đích, số giây bò), CSS transition, tan khi hòa dần (CROSSFADE_MS); vòng vẽ ở tọa độ gấp 100 (r 105, rotate(-90) scale(0.01), pathLength 1)
       captions.js                    [5] DOM của chữ đi theo vật: một vùng aria-live phủ lên canvas, mỗi lúc một dòng (câu + nguồn); giữ chữ trong màn hình và trên chân khung; CAPTION_SECONDS, CAPTION_FADE
       workshop.js                    [2→5] thanh lớp + Sổ tay + chế độ mài; nhận studio() (null ở tầng tĩnh: chỉ đọc); GĐ 4: Đồ nghề + Dial, đóng thì tắt công cụ; GĐ 5: thanh lớp ngay trước, Sổ tay ngay sau thanh công cụ (thứ tự Tab)
-      layer-rail.js notebook.js notebook-pages.js code-view.js dom.js   [2]; GĐ 3: notebook-pages.js vẽ hai cột "Tắt / Bật" của compare; GĐ 4: ms GPU
+      layer-rail.js notebook.js notebook-pages.js code-view.js dom.js   [2]; GĐ 3: notebook-pages.js vẽ hai cột "Tắt / Bật" của compare; GĐ 4: ms GPU; GĐ 8: code-view.js hiện cả lib/tsl
       knobs.js                       [2] Tweakpane; chỉ được import() động khi tab Chỉnh mở lần đầu
       dials.js                       [4] thanh trượt cho các Dial của bức
       rail-tools.js                  [4] mục "Đồ nghề" (nút aria-pressed của từng công cụ) + Dial, trong thanh lớp
-    styles/ tokens.css shell.css     [0→5] (GĐ 5: khung chữ một cột; quầng trăng cạnh trăng)   notebook.css [2→5] (shell.css @import; GĐ 5: --rail-w, --notebook-w)   tools.css [4→5] thanh công cụ, kính, tay nắm gạt, Đồ nghề; GĐ 5: bảng công cụ không nằm dưới thanh lớp hay Sổ tay, Sổ tay thu lại dưới 1240px   captions.css [5] chữ đi theo vật
+    styles/ tokens.css shell.css     [0→5] (GĐ 5: khung chữ một cột; quầng trăng cạnh trăng)   notebook.css [2→5] (shell.css @import; GĐ 5: --rail-w, --notebook-w)   tools.css [4→5] thanh công cụ, kính, tay nắm gạt, Đồ nghề; GĐ 5: bảng công cụ không nằm dưới thanh lớp hay Sổ tay, Sổ tay thu lại dưới 1240px   captions.css [5] chữ đi theo vật   gallery.css [7] Phòng tranh
     paintings/
       registry.js                    [0] SITE + [{ meta, page, lang }]. Node đọc được; trình duyệt KHÔNG import
       _mau/                          [2→5] tranh mẫu 2 lớp (Cốt + Tô màu), KHÔNG deploy: fixture cho test + khuôn để copy; GĐ 5: tên vật + nhãn
       ao-sen-dem/                    BỨC 1
-        meta.js                      [0→5] căn cước + fence (từ vựng của bức); GĐ 4: poster.webp, poster.capture, og; GĐ 5: files của lớp Ánh trăng có thêm hai parts
+        meta.js                      [0→8] căn cước + fence (từ vựng của bức); GĐ 4: poster.webp, poster.capture, og; GĐ 5: files của lớp Ánh trăng có thêm hai parts; GĐ 8: files của Vàng lá kê lib/tsl/particles.js
         index.js                     [0] cửa vào nhẹ: export default { meta, load, content }
         painting.js                  [0→4] layers[], camera, quality, setup()
         shared.js                    [1→5] giờ (Dial 'gio'), ripples[8], rippleHeight(), moonDir, wind, onGesture; GĐ 3: swirl (vuốt → sương xoáy); GĐ 4: dials; GĐ 5: chạm hai lần → thả hoa đăng (vòng đệm) + chữ
@@ -1039,12 +1069,14 @@ son-mai-anh-sang/
         layers/l2-anh-trang.js       [1→5] GĐ 5: hoa đăng (parts/anh-trang-lantern.js dựng và vẽ, parts/anh-trang-drift.js hàm thuần)
         layers/l3-suong.js           [3→5] vòm trời + sương là là; GĐ 5: hoa đăng mờ trong sương. parts/suong-troi.js [3→5] (GĐ 5: tên vật), parts/suong-mu.js [3]
         layers/l4-mat-nuoc.js        [0→5] GĐ 0: đĩa nước + reflector thô; GĐ 3: phản chiếu giả ở mức thấp; GĐ 5: hoa đăng nhấp nhô, vũng sáng quanh đèn
-        layers/l5-vang-la.js         [0→5] GĐ 0: sprite compute thô; GĐ 3: curl, biến thể CPU (parts/vang-la-cpu.js); GĐ 5: tên vật
+        layers/l5-vang-la.js         [0→8] GĐ 0: sprite compute thô; GĐ 3: curl, biến thể CPU (parts/vang-la-cpu.js), luật chung của đàn và Sprite (parts/vang-la-dan.js); GĐ 5: tên vật; GĐ 8: bể hạt của lib/tsl/particles.js, mã shader giống bản ghi
         parts/cot-leaf.js            [1→2] của lớp Cốt (lá); GĐ 2: cấp phát theo trần, ghi lại
         parts/cot-{flower,reeds}.js  [1→5] của lớp Cốt (hoa nở bằng uniform, cuống + lau); GĐ 2: cấp phát theo trần, ghi lại; GĐ 5: tên vật
         parts/cot-lab.js             [2→5] của lớp Cốt: thí nghiệm "Tắt instancing", đếm đỉnh; GĐ 5: tên vật (Group của các Mesh rời)
         parts/anh-trang-moon.js      [1→5] của lớp Ánh trăng (trăng); GĐ 5: tên vật
         parts/anh-trang-paint.js     [1] của lớp Ánh trăng (chất liệu)
+        parts/anh-trang-shadow.js    [3] của lớp Ánh trăng: khung chiếu bóng ôm sát ao theo hướng trăng; shadow map chỉ vẽ lại khi cần
+        parts/mat-nuoc-gia.js        [3] của lớp Mặt nước: phản chiếu giả ở mức thấp (màu trời theo hướng phản xạ + đĩa trăng)
         parts/anh-trang-lantern.js   [5] của lớp Ánh trăng: một InstancedMesh cho đèn ở bờ và mọi hoa đăng; mỗi khung ghi ma trận, tâm, độ sáng; pool cho lớp Mặt nước
         parts/anh-trang-drift.js     [5] của lớp Ánh trăng, hàm thuần (chỉ import lib/random.js): vòng đệm N + 1 ô, lanternAt theo thời gian, driftDirection, verseOrder
         diagrams/*.svg               [2] sơ đồ của tab Hiểu (content.vi.js import '?raw')
@@ -1056,33 +1088,56 @@ son-mai-anh-sang/
         layers/l4-giay.js            [6] ánh sáng xuyên giấy, lọc màu vào node bóng
         layers/l5-keo-quan.js        [6] gobo (parts/keo-quan-gobo.js), "Shadow map thật" (parts/keo-quan-that.js), trống quay (parts/keo-quan-quay.js, hàm thuần)
         diagrams/*.svg               [6] sơ đồ của tab Hiểu
+      cung-que/                      BỨC 3 (GĐ 7, §19): khối bao dò tia SDF; lớp cot, mat-troi, bong-mem, anh-dat, la-da, phu-bong
+      dan-ga-me-con/                 BỨC 4 (GĐ 8, §20): cùng khuôn với các bức trước
+        meta.js index.js painting.js quality.js shared.js content.vi.js   [8] căn cước (+ fence, palette: năm màu Đông Hồ, hex in là màu vào ACES); painting: Phủ bóng ghi đè mặc định (ACES, lộ sáng 1,2, bloom 0,5); setup: đàn gà, cử chỉ
+        layers/l1-cot.js             [8] tờ giấy cong, gà mẹ, gà con; parts/cot-giay.js, cot-hinh-ga.js, cot-bo-cuc.js (bố cục và góc nhìn của tranh, dữ liệu thuần)
+        layers/l2-ban-mau.js         [8] màu in, chia nấc; parts/ban-mau-bang.js
+        layers/l3-ban-net.js         [8] dò cạnh trên độ sâu (post), nét trong, lệch bản; parts/ban-net-do-canh.js, ban-net-net-trong.js
+        layers/l4-giay-diep.js       [8] sợi dó, vệt chổi, hạt điệp; parts/giay-diep-mat.js
+        layers/l5-dan-ga.js          [8] thóc (bể hạt của lib/tsl/particles.js), đàn gà; parts/dan-ga-thoc.js (luật thóc, TSL); dan-ga-song.js, dan-ga-pha.js, dan-ga-duong.js, dan-ga-cho.js, dan-ga-ke.js (đàn gà dạng đóng, hàm thuần, shared.js dựng)
+        diagrams/*.svg               [8] năm sơ đồ của tab Hiểu: truc-giao, chia-nac, lech-mat-phang, hat-diep, vong-dem
   tests/
     unit/                            [0] flags tier quality palette tokens-css random lunar moon strings deadline disposer layers source
                                      [4] tuner gpu-timer lut views toolbox kinh-mai lot-lop dial-set dials rail-tools poster
                                      [5] gesture (double-tap) captions caption-set draws tung-soi moon-progress shell-halo run (vòng đời của run(), jsdom)
-    paintings/ao-sen-dem/            [1→5] test của từng lớp Bức 1 (dựng cả bức bằng buildPainting); GĐ 5: anh-trang-drift (hàm thuần), tha-hoa-dang (chạm hai lần)
+                                     [8] camera (createCamera, fitCamera, limitControls), home, particles (bể hạt), fov (fitOrtho); thêm vào pipeline (linearDepth, isolate của pick.js), input và caption-set (camera trực giao), scene (returnHome)
+    paintings/ao-sen-dem/            [1→8] test của từng lớp Bức 1 (dựng cả bức bằng buildPainting); GĐ 5: anh-trang-drift (hàm thuần), tha-hoa-dang (chạm hai lần); GĐ 8: vang-la-ma (mã shader của đom đóm so với __fixtures__/vang-la/, không bao giờ ghi lại)
     paintings/den-keo-quan/          [6] test của từng lớp Bức 2 (khung, ngon-nen, gian-nha, giay, keo-quan); cot-hinh-nhan, keo-quan-quay, ngon-nen-thoi (hàm thuần); cử chỉ; chữ; quality
-    rules/imports.test.js            [0→5] luật ranh giới, đường nhẹ, hàng rào từ vựng; GĐ 5: phần nhẹ không gọi built-in ES2022 trở lên (Safari 14)
+    paintings/cung-que/              [7] test của từng lớp Bức 3 (cot, mat-troi, bong-mem, anh-dat, la-da); the-gioi, cot-cay-bay; chữ; quality
+    paintings/dan-ga-me-con/         [8] test của từng lớp Bức 4 (cot, ban-mau, ban-net, giay-diep, dan-ga, phu-bong); cot-bo-cuc, cot-hinh-ga; đàn gà dạng đóng (dan-ga-song, dan-ga-duong, dan-ga-tranh-me, dan-ga-muot); dan-ga-thoc (bản JS của luật, khóa bằng __fixtures__/thoc/); cử chỉ (cu-chi); chữ; quality
+    rules/imports.test.js            [0→8] luật ranh giới, đường nhẹ, hàng rào từ vựng; GĐ 5: phần nhẹ không gọi built-in ES2022 trở lên (Safari 14); GĐ 8: tự kiểm hàng rào bắt từ của Bức 4, không bắt denThen hay grain
     rules/files.test.js              [0→5] dòng 1 là chú thích, số dòng, API cấm; GĐ 5: chỉ draws.js đặt móc lần vẽ
-    paintings/contract.test.js       [0→5] lặp qua registry (+ _mau từ GĐ 2); GĐ 4: mức cùng bộ khóa, Dial, nhãn tap, poster/og; GĐ 5: captions, files của lớp kê đủ parts/ mà lớp import
+    rules/e2e.test.js                [7→8] describe của spec riêng bắt đầu bằng "{tên bức} · "; nhóm e2e của CI; GĐ 8: gom cả spec tách file theo slug dài nhất, đếm test mang tag khói trên mọi file của bức
+    scripts/pages.test.js main-guard.test.js   [7] trang sinh ra khớp từng byte trang trên đĩa; script chạy trực tiếp nhận ra mình là module chính
+    paintings/html.test.js           [0] trang HTML của mỗi dòng registry khớp meta (JSDOM, không chạy script)
+    paintings/contract.test.js       [0→8] lặp qua registry (+ _mau từ GĐ 2); GĐ 4: mức cùng bộ khóa, Dial, nhãn tap, poster/og; GĐ 5: captions, files của lớp kê đủ parts/ mà lớp import; GĐ 8: CameraSpec theo loại (trực giao cần height > 0), file lib/tsl được kê thì lớp phải import
     paintings/objects.test.js        [5] tên vật: mọi vật trong layer.objects có name kebab-case, không trùng trong lớp, có nhãn; không nhãn thừa (mức cao, thấp, lúc bật từng thí nghiệm)
     paintings/captions-rule.test.js  [5] luật của content.captions tự kiểm (bắt được mục sai, nhận mục đúng)
     helpers/source.js                [0] phân tích mã bằng parseSync của vite
-    helpers/fake-ctx.js              [1→5] Scene/Camera/uniform thật, renderer giả (Proxy ghi lời gọi); dựng ctx bằng createCtx của xưởng; GĐ 5: captions giả (ghi lời gọi)
+    helpers/fake-ctx.js              [1→8] Scene/Camera/uniform thật, renderer giả (Proxy ghi lời gọi); dựng ctx bằng createCtx của xưởng; GĐ 5: captions giả (ghi lời gọi); GĐ 8: buildPainting dựng camera theo painting.camera (engine/gpu/camera.js)
     helpers/svg.js                   [2] đọc mã màu trong SVG (poster, sơ đồ)
     helpers/image.js                 [4] đọc cỡ ảnh WebP, JPEG từ phần đầu file (poster, og)
     helpers/final-pass.js            [5] dựng ảnh cuối như three dựng lượt cuối (WGSLNodeBuilder thật, chặng setup): thứ tự updateBefore, thân Fn của views.js
     helpers/paintings.js             [5] ALL: mọi dòng registry và _mau, kèm cửa vào đã nạp (contract, objects lặp qua đây)
     helpers/caption-rules.js         [5] captionErrors: luật của content.captions (test hợp đồng dùng, captions-rule.test.js tự kiểm)
     helpers/kebab.js                 [5] KEBAB: kebab-case không dấu (slug, id lớp, id Dial, khóa chữ, tên vật)
-    helpers/nodes.js                 [5→6] nodesOf, compileMaterial: soi đồ thị node; dịch material ra WGSL/GLSL bằng builder thật, có render target + MRT như scene pass; GĐ 6: nạp đèn, bật shadow map, trả tên uniform shader đọc
+    helpers/nodes.js                 [5→8] nodesOf, compileMaterial: soi đồ thị node; dịch material ra WGSL/GLSL bằng builder thật, có render target + MRT như scene pass; GĐ 6: nạp đèn, bật shadow map, trả tên uniform shader đọc; GĐ 8: compileCompute (dịch compute node), normalizeIds (số id của node trong bản ghi mã shader), compileMaterial trả cả uniformNodes
     helpers/rays.js                  [5] tia thẳng đứng xuống mặt nước cho test cử chỉ của bức
+    helpers/page.js                  [0] khung trang tối thiểu (đủ các ô mà xưởng điền vào) trong document của jsdom
   e2e/
     helpers.js                       [0→6] chờ trạng thái, đọc pixel canvas (screenshot), báo GPU; GĐ 5: doubleTapAt (chạm hai lần phát ngay trong trang), điểm sáng ấm (warm); GĐ 6: tapAt, swipeAt, màu trung bình (rgb) của vùng
-    painting.spec.js                 [0→5] lặp qua registry: tĩnh, WebGL2, WebGPU; GĐ 3: hạ hết nấc rồi nâng lại; GĐ 4: mài về cốt, Kính mài, Lột lớp, ?poster; GĐ 5: Từng sợi, quầng trăng, chỗ của bảng công cụ (1280/1240/1440, 1024)
+    painting.spec.js                 [0→8] lặp qua registry: tĩnh, WebGL2, WebGPU; GĐ 3: hạ hết nấc rồi nâng lại; GĐ 4: mài về cốt, Kính mài, Lột lớp, ?poster; GĐ 5: Từng sợi, quầng trăng, chỗ của bảng công cụ (1280/1240/1440, 1024); GĐ 8: Lột lớp cho "Trước tone" trùng "Trước bloom" khi và chỉ khi không có gì phát sáng
     ao-sen-dem.spec.js               [1→5] chạm mặt nước thì ảnh đổi (so ở cùng ?freeze=N); GĐ 3: vuốt, draw call, ?level=thap, CPU vs GPU; GĐ 4: thanh giờ, vuốt → sương xoáy; GĐ 5: thả hoa đăng, draw call khi có đèn
     den-keo-quan.spec.js             [6] bóng chạy theo ?freeze, mài Kéo quân/Giấy, ngọn nến, gạch bát, giấy trong suốt, thổi/giữ/vuốt, draw call, ?level=thap, "Shadow map thật" (§18.8)
-    lat-tranh.spec.js                [6] tầng tĩnh: đi qua lại giữa hai bức bằng link lật tranh; ?poster ẩn link
+    cung-que.spec.js                 [7] Bức 3: khối bao dò tia ghi độ sâu và pháp tuyến của hình SDF, pha trăng, bóng, ánh đất, cử chỉ, lá đa, thí nghiệm, chất lượng (§19.9); tag khói @khoi
+    dan-ga-me-con.spec.js            [8] Bức 4: tờ tranh ở góc nhìn của tranh, độ sâu của camera trực giao, Bản nét (viền, nét trong, lệch bản, mép khung, hai thí nghiệm), chữ trên ván tối, tranh tự khép lại (§20.9)
+    dan-ga-me-con-giay.spec.js       [8] Giấy điệp: vách ngà, hạt điệp (view Chỉ emissive), Giấy dó trơn, trọng số lệch nhau
+    dan-ga-me-con-dan-ga.spec.js     [8] Đàn gà (live, poll theo số đo): chạm rắc thóc, giữ gọi con, mài về 0 khi thóc đang rơi
+    dan-ga-me-con-chat-luong.spec.js [8] chất lượng: draw call ở mức cao, ?level=thap, bật rồi tắt mọi thí nghiệm
+    dan-ga-me-con.helpers.js         [8] dùng chung cho bốn spec của Bức 4 (vùng của canvas, tag khói SMOKE, mở trang, Lột lớp về một view, số đo goc); không phải file test
+    lat-tranh.spec.js                [6→8] tầng tĩnh: đi qua lại giữa hai bức bằng link lật tranh; ?poster ẩn link; GĐ 7: link Phòng tranh, Bức 2 ⇄ Bức 3; GĐ 8: Bức 3 ⇄ Bức 4
+    phong-tranh.spec.js              [7] Phòng tranh: trang tĩnh liệt kê đủ các bức theo thứ tự, bấm thì tới đúng trang, không script, axe không có lỗi serious/critical
     a11y.spec.js                     [4→5] axe-core (@axe-core/playwright): tĩnh, 3D có thanh lớp + Sổ tay, công cụ đang bật; đi hết bằng bàn phím; GĐ 5: chữ đi theo vật, Từng sợi, đường Tab từ nút Từng sợi
 ```
 
@@ -1160,6 +1215,8 @@ son-mai-anh-sang/
  * @property {string} name        'Mặt nước': hiện trên thanh lớp, kể cả ở tầng tĩnh
  * @property {string[]} files     file mà lớp SỞ HỮU, tính từ src/; file đầu hiện trong Sổ tay.
  *                                Marker '// @knob' chỉ hợp lệ trong các file này; mỗi file thuộc tối đa MỘT lớp.
+ *                                [8] kê được cả file của hộp màu 'lib/tsl/*.js' mà lớp import (Sổ tay hiện chúng); không có
+ *                                marker ở đó
  * @property {Poem} [poem]        câu thơ riêng của lớp
  */
 /** Cửa vào NHẸ: src/paintings/<slug>/index.js. Trang HTML import thẳng file này: `export default { meta, load, content }`.
@@ -1208,21 +1265,33 @@ son-mai-anh-sang/
 /** @typedef {Object} PaintingSetup
  * @property {object} [shared]          object dùng chung trong bức (thiếu thì xưởng tạo {}) → tham số thứ 2 của createLayer
  * @property {Dial[]} [dials]           [4] núm của CẢ BỨC (Bức 1: 'gio'); xưởng vẽ thanh trượt
- * @property {(g: Gesture) => void} [onGesture]   cử chỉ mà không công cụ nào dùng
+ * @property {(g: Gesture) => void} [onGesture]   cử chỉ mà không công cụ nào dùng. [8] Trừ một chỗ: bức đã nhận 'hold-start' thì luôn
+ *                                     nhận 'hold-end' của cái giữ đó, kể cả khi công cụ bật giữa chừng giữ nó (engine/gpu/scene.js#route)
  * @property {(dt: number, t: number) => void} [update]   mỗi khung, TRƯỚC các lớp. [4] update(0, t) như Layer.update
  * @property {() => void} [dispose]     gọi 2 lần vẫn an toàn
  */
-/** Dữ liệu thuần; xưởng dựng PerspectiveCamera + OrbitControls có giới hạn.
+/** Dữ liệu thuần; xưởng dựng camera phối cảnh ([8] hay trực giao) + OrbitControls có giới hạn.
  * @typedef {Object} CameraSpec
+ * @property {'perspective'|'ortho'} [kind] [8] mặc định 'perspective'
  * @property {[number, number, number]} position
  * @property {[number, number, number]} target
- * @property {number} fov
+ * @property {number} [fov]                 bắt buộc với camera phối cảnh; [8] camera trực giao không dùng
+ * @property {number} [height]              [8] camera trực giao (bắt buộc): bề cao khung nhìn ở zoom 1, đơn vị cảnh
+ * @property {number} [minWidth]            [8] camera trực giao: khung hẹp thì xưởng nới height để bề ngang thấy đủ chừng này
+ *                                          (engine/gpu/fov.js#fitOrtho)
+ * @property {{ below: number, maxGrow: number }} [shortFrame]   [8] camera trực giao: canvas thấp hơn `below` điểm ảnh CSS thì xưởng
+ *                                          nhân bề cao khung nhìn với below / bề cao canvas, tới `maxGrow` lần (≥ 1), để chữ của trang (cỡ
+ *                                          CSS cố định) còn chỗ trên ván ở laptop màn thấp; gộp với minWidth bằng max; camera phối cảnh bỏ
+ *                                          qua (engine/gpu/fov.js#shortGrow)
+ * @property {[number, number]} [zoom]      [8] camera trực giao: minZoom, maxZoom của OrbitControls; thiếu thì không zoom
  * @property {[number, number]} azimuth     giới hạn xoay ngang (rad); [-Infinity, Infinity] là xoay trọn vòng (GĐ 7)
  * @property {[number, number]} polar       giới hạn xoay dọc (rad)
- * @property {[number, number]} distance
+ * @property {[number, number]} [distance]  bắt buộc với camera phối cảnh; [8] camera trực giao không dùng (khoảng cách đứng yên)
  * @property {number} [breathe]             [1] biên độ "thở"; xưởng ép về 0 khi prefers-reduced-motion
  * @property {number} [minHorizontalFov]    [7] góc nhìn ngang tối thiểu (độ): khung hẹp (điện thoại dọc) thì xưởng nới fov dọc để
  *                                          bề ngang vẫn thấy đủ góc này; khung đủ rộng giữ nguyên fov (engine/gpu/fov.js)
+ * @property {{ after: number, duration: number }} [home]   [8] tranh tự khép lại: đứng yên `after` giây thì quay về góc của bức
+ *                                          trong `duration` giây (engine/gpu/home.js); giảm chuyển động thì về một bước
  */
 /** @typedef {Object} QualitySpec
  * @property {Record<'cao'|'vua'|'thap', Record<string, number>>} levels   ghép lên mức mặc định của xưởng; lớp đọc qua ctx.budget
@@ -1287,6 +1356,8 @@ son-mai-anh-sang/
 /** @typedef {Object} PostInput
  * @property {any} color                                   màu hiện tại (từ scene pass hoặc stage trước)
  * @property {(name: 'output'|'emissive'|'normal'|'depth') => any} channel   'normal' chỉ có sau requireView [4]
+ *                                                         [8] 'depth' với camera trực giao là chính texture độ sâu (tuyến tính
+ *                                                         sẵn): lấy mẫu ở điểm lân cận được mà không thêm lượt vẽ
  * @property {any} weight                                  uniform trọng số của chính lớp này
  * @property {(tapId: string, node: any) => void} [tap]    [4] chụp một bước giữa chừng → view '<layerId>:<tapId>'.
  *                                 node là biểu thức THUẦN (texture, uniform), không phải biến .toVar() trong Fn: overlay tính lại
@@ -1346,7 +1417,9 @@ son-mai-anh-sang/
 /** @typedef {Object} ToolInstance
  * @property {(final: any, view: (id: string) => any) => any} [overlay]  ghép sau display khi dựng pipeline; [4] ghép LẠI khi
  *                                 requireView đổi MRT, nên chỉ dựng node, không giữ trạng thái; đổi chế độ = đổi uniform
- * @property {(g: Gesture) => boolean} [onGesture]  true = đã dùng, không chuyển cho bức. [5] Giữ 'tap' thì giữ cả 'double-tap'
+ * @property {(g: Gesture) => boolean} [onGesture]  true = đã dùng, không chuyển cho bức; [8] trừ 'hold-end' mà bức còn chờ (bức đã
+ *                                 nhận 'hold-start' của cái giữ đó trước khi công cụ bật): công cụ nhận trước, bức vẫn nhận sau
+ *                                 (engine/gpu/scene.js#route). [5] Giữ 'tap' thì giữ cả 'double-tap'
  *                                 (kính tròn của Kính mài giữ cả hai; hình gạt không giữ cử chỉ nào): không thì bức nhận
  *                                 'double-tap' mà không có hai 'tap' làm nên nó
  * @property {(on: boolean) => void} [activate]     [4] bật/tắt: đổi uniform, hiện/giấu thanh điều khiển
@@ -1575,7 +1648,7 @@ Mỗi mốc đặt một ĐÍCH (phần vòng) và một thời gian bò (`HALO_
   - `scripts/pages.js` (`npm run pages`) viết trang của mọi bức và Phòng tranh từ registry, `meta` và `ui/strings.vi.js`;
   - trang vẫn là file HTML commit trong repo; test báo lỗi khi file trên đĩa lệch với trang sinh ra;
   - dải link có thêm "Phòng tranh" ở giữa (trước, Phòng tranh, sau);
-  - trình sinh luôn in `<svg data-moon>`, vì cả ba bức đều giữ trăng SVG.
+  - trình sinh luôn in `<svg data-moon>`, vì mọi bức đều giữ trăng SVG (cả ba bức của GĐ 7, và Bức 4).
 - **(GĐ 7) Phòng tranh** `tranh/index.html`: trang tĩnh không có script, liệt kê các bức theo `meta.no`; nằm trong `input` của Vite.
   URL gốc vẫn là Bức 1.
 
@@ -2213,7 +2286,9 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
     - bật kính tròn ở giữa khung và chọn một view: ảnh trong vùng kính khác, ngoài vùng kính như cũ;
     - hình gạt ở 50%: nửa trái khác, nửa phải như cũ;
     - tắt công cụ thì về đúng ảnh cũ.
-  - **Mọi bức · Lột lớp:** mỗi nấc cho ảnh khác nấc kề bên; về nấc cuối thì đúng ảnh cũ.
+  - **Mọi bức · Lột lớp:** mỗi nấc cho ảnh khác nấc kề bên; về nấc cuối thì đúng ảnh cũ. (GĐ 8) Trừ một cặp: "Trước tone" là "Trước bloom"
+    cộng ánh bloom, nên bức không có gì phát sáng (ảnh "Chỉ emissive" đen tuyền, như Bức 4 khi chưa có giấy điệp) thì hai nấc ấy phải
+    TRÙNG nhau; có thì phải khác.
   - **Mọi bức · Normal:** chọn Normal thì thấy "đang mài…", rồi ảnh đổi, không có lỗi console.
   - **Mọi bức · `?poster`:** ngoài canvas không có phần tử UI nào hiện.
   - **A11y** (`e2e/a11y.spec.js`, `@axe-core/playwright`, luật WCAG 2 A/AA):
@@ -2309,6 +2384,10 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
 - (GĐ 7) VoiceOver đọc Dial "Ngày âm lịch" (nhãn ngày) và dải link có "Phòng tranh" ở cả ba trang; Phòng tranh trên Safari của
   điện thoại.
 - (GĐ 7) Bao đọc lại thơ của Bức 3 trên trang (§19.2) và duyệt ảnh poster (§19.3).
+- (GĐ 8) Bức 4 trên điện thoại thật: tờ tranh vừa bề ngang; dùng ngón tay để chạm rắc thóc, giữ cho gà mẹ gọi con, kéo rồi xem
+  tranh tự khép lại.
+- (GĐ 8) VoiceOver đọc dải link Bức 3 ⇄ Bức 4; Phòng tranh có bốn mục.
+- (GĐ 8) Bao đọc lại thơ của Bức 4 trên trang (§20.2), duyệt hình gà và ảnh poster (§20.3).
 
 ## 13. Repo, CI, deploy
 
@@ -2365,7 +2444,9 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
       `env`. Không có `--pass-with-no-tests` (sau GĐ 7): nhóm không khớp test nào thì Playwright báo "No tests found" và job đỏ;
     - `deploy` cần `build` và mọi job của `e2e`;
     - thêm bức thì thêm job, tự động; test luật giữ quy ước tên `describe`;
-    - (sau GĐ 7) thời gian thật của lượt CI đầu, và vì sao job WebGPU chỉ chạy test khói của Bức 3: §19.9.
+    - (sau GĐ 7) thời gian thật của lượt CI đầu, và vì sao job WebGPU chỉ chạy test khói của Bức 3: §19.9;
+    - (sau GĐ 8) thời gian thật của lượt CI đầu có Bức 4 (PR #9), vì sao hai loại test của Bức 4 hỏng trên runner, và vì sao job WebGPU
+      của Bức 4 cũng chỉ chạy test khói: §20.9.
 - **URL:** `https://giabao2610.github.io/son-mai-anh-sang/`.
 - **Luật trong `CLAUDE.md`:**
   - **Nguồn tham chiếu:**
@@ -2406,7 +2487,8 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | **5 · Hoa đăng + Từng sợi** *(tùy chọn)* | Trong sáu mục dự kiến, Bao chọn ba: **trăng tiến độ** (quầng trong `[data-moon]`, mốc từ `boot`/`run`), **Từng sợi** (`engine/gpu/draws.js` + `tools/tung-soi.js`, `ToolApi.draws`, tên vật + nhãn), **thả hoa đăng** (cử chỉ `double-tap`, `ctx.captions` + `ui/captions.js`, đèn gộp InstancedMesh của lớp Ánh trăng, vũng sáng trên nước, 12 cặp câu thơ). Kèm theo: `__sma.readouts`, luật móc lần vẽ, gợi ý mới. Chốt khi dựng thử: bảng công cụ không còn nằm dưới Sổ tay và Tab từ nút công cụ không còn vòng qua cả trang mới tới bảng (lỗi GĐ 4), "Dựng lại cảnh" quá hạn không đụng trang đã về tĩnh cùng bộ test đầu tiên cho `run()` (lỗi GĐ 2), khung chữ một cột (lỗi GĐ 1), luật đường nhẹ không dùng built-in ES2022, luật `files` của lớp kê đủ `parts/`. Ba mục còn lại (link công thức, Xem bản dịch, đàn bầu) để sau (§16) | Mọi test và e2e qua; mức cao vẫn ≤ 45 draw call (đèn không thêm draw call); Bao duyệt chữ của thơ; đã deploy |
 | **6 · Bức 2 · Đèn Kéo Quân** | Bức mới theo luật 7 (§18): gian nhà tối, đèn lục giác, đoàn quân rước cờ; sáu lớp Cốt, Ngọn nến, Gian nhà, Giấy, Kéo quân, Phủ bóng; gobo `atan(y, x)` làm node bóng tự viết của ngọn nến, shadow map thật là thí nghiệm "so"; ba cử chỉ thổi nến, giữ trống, gạt trống (tính thẳng theo thời gian); link lật tranh giữa các trang; e2e chia hai phần trên CI. Làm thẳng, task rủi ro nhất trước (§18.9) | Mọi test và e2e qua (cả Bức 1); mức cao ≤ 45 draw call; hợp đồng không đổi; Bao duyệt thơ, hình nhân và poster; đã deploy |
 | **7 · Bức 3 · Cung Quế** | Bức mới theo luật 7 (§19): tiểu hành tinh SDF, dò tia trong một khối bao; sáu lớp Cốt, Mặt trời, Bóng mềm, Ánh đất, Lá đa, Phủ bóng; pha trăng thật với Dial "Ngày âm lịch"; chạm cho lá rơi, giữ cho cây bay. Kèm theo: Phòng tranh và trình sinh trang (§19.7); CI chia e2e theo bức (§19.9) | Bức 3 chạy trên cả hai backend, 60 khung/giây trên Mac M2 ở mức cao; e2e chặn qua trong CI; Bao duyệt ảnh và thơ; đã deploy |
-| 8 · *(mở rộng)* | Bức mới theo luật 7: Đông Hồ (hạt compute) | tùy |
+| **8 · Bức 4 · Đàn Gà Mẹ Con** | Bức mới theo luật 7 (§20): một tờ tranh Đông Hồ bước vào được; sáu lớp Cốt, Bản màu, Bản nét, Giấy điệp, Đàn gà, Phủ bóng; vẽ phi hiện thực (chia nấc, dò cạnh trên ảnh độ sâu, hạt điệp); chạm để rắc thóc, giữ để gà mẹ gọi con. Kèm theo: camera trực giao và tranh tự khép lại (trường tùy chọn của `CameraSpec`), độ sâu đúng cho camera trực giao, bể hạt `lib/tsl/particles.js` (Bức 1 chuyển sang mà giữ nguyên shader), Sổ tay hiện code của hộp màu | Bức 4 chạy trên cả hai backend, 60 khung/giây trên Mac M2 ở mức cao; mã shader của đom đóm (Bức 1) không đổi; e2e chặn qua trong CI; Bao duyệt ảnh và thơ; đã deploy |
+| 9+ · *(tùy chọn)* | Chọn từ §16 khi muốn: công cụ học (Xem bản dịch, Link công thức, tô sáng sợi vừa vẽ); thêm cho các bức đã có (Bức 3 quay hành tinh, Hằng Nga; Bức 2 Dial gió, hơi nóng; Bức 1 cánh sen sáng xuyên; Bức 4 camera phối cảnh để so); âm thanh (đàn bầu); bản tiếng Anh (§15 d); dọn nợ (tách `tuner.js`); bức mới, như một tranh Đông Hồ khác (lúc đó rút Bản nét, Giấy điệp lên lớp dùng chung theo luật hai lần) | tùy |
 
 **GĐ 0 · Nền móng gồm:**
 - **Máy và công cụ:** Node 24 (hướng dẫn fnm), Vite 8, Vitest 5, Playwright; `.gitignore`; `CLAUDE.md`; README khung.
@@ -2438,19 +2520,30 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 1. `cp -r src/paintings/_mau src/paintings/den-keo-quan`, rồi sửa `slug`, `no`, `title`, `tagline`, `poem`, `poster`, `og` và **`fence`** (từ vựng riêng của bức mới) trong `meta.js`.
 2. Viết `layers/lN-*.js` (mỗi file có `id`, `knobs`, `createLayer`), `shared.js` nếu cần, rồi `painting.js` (layers, camera, quality, setup) và `content.vi.js`.
    - Lớp cuối thường là Phủ bóng dùng chung: import `meta` của nó trong meta, `layer` trong painting, `content` trong content.
-   - Muốn đổi mặc định của lớp dùng chung thì ghi đè trong `painting.js`: `{ ...phuBong, knobs: phuBong.knobs.map((k) => k.id === 'bloomStrength' ? { ...k, value: 0.3 } : k) }`. Chỉ đổi `value`, `min`, `max`, không đổi `id`.
+   - Muốn đổi mặc định của lớp dùng chung thì ghi đè trong `painting.js`: `{ ...phuBong, knobs: phuBong.knobs.map((k) => k.id === 'bloomStrength' ? { ...k, value: 0.3 } : k) }`. Chỉ đổi `value`, `min`, `max`, không đổi `id`, và không sửa module dùng chung (các bức khác lắp chính nó).
+     - (GĐ 8) Bức 4 làm vậy cho tone, lộ sáng và bloom của Phủ bóng (§20.4 lớp 6); `tests/paintings/dan-ga-me-con/phu-bong.test.js` giữ
+       ba số ấy (id có thật trong lớp dùng chung, giá trị hợp lệ với núm, module dùng chung không đổi).
+     - (GĐ 8) Đổi tone hay lộ sáng thì hex in của `meta.palette` là màu VÀO tone mapping, chốt sao cho màu hiện ra đúng màu thiết kế
+       (§20.3).
    - (GĐ 5) Đặt `name` cho mọi vật trong `objects` của từng lớp, và nhãn ở `content.layers[id].objects`. Muốn chữ hiện cạnh một vật
      (thơ, chú thích) thì ghi vào `content.captions` rồi gọi `ctx.captions.show(khóa, anchor)` (§4.1 mục 10).
+   - (GĐ 7) Bố cục hẹp bề ngang (vật tròn ở giữa khung) thì khai báo `CameraSpec.minHorizontalFov`, để điện thoại dọc không cắt hai bên.
+   - (GĐ 8) Bức nhìn bằng camera trực giao (tranh in, sa bàn) thì khai báo `CameraSpec.kind: 'ortho'` cùng `height`, `minWidth`,
+     `zoom` (§20.6). Muốn camera tự về góc của bức khi người xem buông tay thì thêm `home: { after, duration }`.
+   - (GĐ 8) Hạt tính trên GPU thì dùng bể hạt `lib/tsl/particles.js` (§20.7), luật chuyển động viết trong bức; lớp kê file đó trong
+     `files` để Sổ tay hiện cả code của bể (§20.6 mục 4).
 3. Thêm một dòng vào `paintings/registry.js`: `{ meta, page: 'tranh/den-keo-quan/index.html', lang: 'vi' }`. (GĐ 6) Registry xếp
    theo `meta.no`.
 4. (GĐ 7) Chạy `npm run pages`: trình sinh viết trang của bức mới từ `meta` (§19.7), thêm link "bức sau" vào trang của bức kề trước,
    và thêm bức vào Phòng tranh. Không viết tay trang nữa; test HTML báo khi file trên đĩa lệch với trang sinh ra. (Trước GĐ 7: copy
    `index.html` rồi sửa tay `data-painting`, title, thơ, poster, og, dòng import và link lật tranh.)
-5. Đặt poster vào `public/paintings/den-keo-quan/`, hoặc chạy `node scripts/poster.js den-keo-quan`.
+5. Chụp poster và ảnh og từ chính cảnh: `npm run build && node scripts/poster.js den-keo-quan` (máy có GPU thật; thời điểm và khung theo
+   `meta.poster.capture`). Ảnh ghi vào `public/paintings/den-keo-quan/`; commit cả hai.
 6. Chạy `npm test` rồi sửa theo từng lỗi tiếng Việt. Chạy `npm run e2e`: e2e chung tự chạy trên bức mới. Tương tác riêng của bức viết vào `e2e/den-keo-quan.spec.js`.
    - (GĐ 7) Mọi `describe` trong spec riêng bắt đầu bằng `"{tên bức} · "`: CI gom e2e theo bức (`scripts/e2e-groups.js`), nên bức mới
      tự có job riêng mà không sửa workflow. `tests/rules/e2e.test.js` giữ quy ước này.
-   - (GĐ 7) Bố cục hẹp bề ngang (vật tròn ở giữa khung) thì khai báo `CameraSpec.minHorizontalFov`, để điện thoại dọc không cắt hai bên.
+   - (GĐ 8) Spec riêng dài quá thì tách thêm `e2e/den-keo-quan-<phần>.spec.js` (Bức 4: `-giay`, `-dan-ga`, `-chat-luong`); tiện ích,
+     vùng của canvas và tag khói dùng chung ở `e2e/den-keo-quan.helpers.js` (§20.9). Test luật đọc mọi file của bức.
 7. Cần thứ gì của Ao Sen Đêm thì **không import chéo**; rút nó lên trước theo công thức (e). Cần khả năng mới của xưởng thì thêm **trường tùy chọn** vào hợp đồng (luật 7).
 
 **(b) Thêm một lớp**
@@ -2490,8 +2583,17 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 
 **(e) Rút một kỹ thuật TSL ra dùng lại**
 1. Theo luật hai lần: chỉ rút khi bức thứ hai thật sự cần.
-2. `git mv` phần chung sang `src/lib/tsl/<ten>.js`. Đổi đầu vào thành tham số và bỏ từ vựng của bức; hàng rào từ vựng sẽ bắt nếu còn sót.
-3. Nếu dùng lại cả một lớp thì tạo `engine/stock/<id>/` gồm `meta.js`, `layer.js`, `content.vi.js` (viết trung tính).
+2. (GĐ 8) TRƯỚC khi rút, ghi mã WGSL và GLSL của bức cũ thành bản ghi: test dịch material hay compute bằng builder thật
+   (`tests/helpers/nodes.js#compileMaterial`, `compileCompute`), thay số id của node bằng `normalizeIds` rồi so bằng `toMatchFileSnapshot`
+   (mẫu: `tests/paintings/ao-sen-dem/vang-la-ma.test.js`). Lần chạy đầu (`npx vitest run <file test>`) ghi bản ghi; commit nó trước khi rút.
+3. Chuyển phần chung sang `src/lib/tsl/<ten>.js` (`git mv` nếu đi cả file). Đổi đầu vào thành tham số và bỏ từ vựng của bức; hàng rào
+   từ vựng sẽ bắt nếu còn sót. Hộp màu không đặt tên uniform: một bức có thể dùng nó hai lần.
+4. Chạy lại test bản ghi, KHÔNG có `-u`: mã phải giống từng ký tự. Lệch thì sửa code, không ghi lại bản ghi. Rồi chạy lại e2e của bức cũ:
+   `npm run build && npx playwright test --project=webgl2-swiftshader --grep "<tên bức> · "`.
+5. Lớp của bức cũ kê `lib/tsl/<ten>.js` trong `meta.layers[].files` (§20.6 mục 4), để Sổ tay vẫn hiện code của phần đã rút.
+6. Nếu dùng lại cả một lớp thì tạo `engine/stock/<id>/` gồm `meta.js`, `layer.js`, `content.vi.js` (viết trung tính).
+7. (GĐ 8) Ví dụ đã làm: bể hạt compute của đom đóm thành `lib/tsl/particles.js` khi thóc của Bức 4 cần (§20.7). Sáu bản ghi (khởi tạo,
+   bước, Sprite; WGSL và GLSL) giống từng ký tự sau khi rút; luật chuyển động ở lại trong bức.
 
 ## 16. Để sau (đã có đường đi) và không làm
 
@@ -2503,7 +2605,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | Xem bản dịch | Khi Bao chọn (GĐ 5 không chọn) | `renderer.debug.getShaderAsync(scene, camera, obj)` cho từng `layer.objects`. Tên đặt bằng `setName` giúp đọc được mã sinh ra |
 | ~~Công cụ soi ("Từng sợi")~~ | Làm ở GĐ 5 | §7 Từng sợi: `ToolApi.draws` thay cho `layers()`/`stats()` dự định trước đây |
 | Đàn bầu | Khi Bao chọn (GĐ 5 không chọn) | Trường tùy chọn `Painting.sound` cùng `lib/audio/`, chỉ phát khi người xem bật |
-| Đông Hồ | GĐ 8 hay sau | `CameraSpec.kind: 'ortho'` (trường tùy chọn); rút hạt compute lên `lib/tsl/particles.js`; `meta.palette` |
+| ~~Đông Hồ~~ | Làm ở GĐ 8 | §20: Bức 4 · Đàn Gà Mẹ Con. `CameraSpec.kind: 'ortho'`, thêm `home`; bể hạt `lib/tsl/particles.js`; `meta.palette` đã có từ GĐ 0 |
 | ~~Cung Quế~~ | Làm ở GĐ 7 | §19. Khác dự định cũ: dò tia trong một khối cầu bao thay cho mesh phủ màn hình (chỉ tốn ở phần khối chiếm); `depthNode` và `normalNode` trên `NodeMaterial` gốc; không cần `meta.requires`, vì WebGL2 chạy được; nấc đầu là `dpr`, rồi bóng, rồi số bước |
 | (GĐ 7) SDF, dò tia, bóng mềm dùng chung | Luật hai lần: khi bức thứ hai cần | `git mv` phần chung của `parts/cot-sdf.js`, `parts/cot-do-tia.js`, `parts/bong-mem-tia.js` sang `lib/tsl/sdf.js`; đầu vào thành tham số |
 | (GĐ 7) Dò bóng ở độ phân giải thấp hơn | Khi đo thấy bóng mềm quá đắt trên điện thoại | Một lượt vẽ riêng ghi độ che của nắng ở nửa độ phân giải, rồi lớp Bóng mềm đọc lại; thêm một nấc |
@@ -2531,6 +2633,11 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | (GĐ 6) Shadow map thật có màu giấy | Khi thí nghiệm "Shadow map thật" cần giống hơn | `castShadowNode` của giấy (bóng có màu) cùng `renderer.shadowMap.transmitted = true` (Phụ lục A.80); đổi cờ đó lúc chạy chưa kiểm |
 | (GĐ 6) Đèn kéo quân đung đưa khi thổi | Khi thấy cần | Con lắc tính thẳng theo thời gian như trống (§18.5); trục đèn thành uniform của gobo |
 | (GĐ 6) Dial cho Bức 2 (gió, độ cao bấc nến) | Khi Bao chọn | `setup().dials`; gió đổi tốc độ thường của trống và độ ngả của lửa |
+| (GĐ 8) Thí nghiệm "Camera phối cảnh" cho Bức 4 | Khi Bao chọn | Sân khấu giữ hai camera cùng khung (fov chọn để ở điểm nhìn, bề cao khung bằng `height`); đổi `stage.camera`, `controls.object` và camera của scene pass. Độ sâu chọn bằng uniform trong `If` thay cho chọn lúc dựng. Lần bật đầu biên dịch lại, vì hướng nhìn khác theo loại camera (Phụ lục A.91) |
+| (GĐ 8) Nét từ pháp tuyến | Khi dò cạnh trên độ sâu thiếu nét | Trường tùy chọn để bức xin kênh normal trong MRT ngay lúc dựng (biên dịch một lần, không đổi MRT giữa chừng); Bản nét cộng độ dốc của pháp tuyến |
+| (GĐ 8) Rút Bản nét, Bản màu, Giấy điệp lên lớp dùng chung | Luật hai lần: khi bức thứ hai cần (một tranh Đông Hồ khác, như Đàn lợn âm dương) | `engine/stock/<id>/` như Phủ bóng, chữ viết trung tính; fence của Bức 4 đã không rào tên kỹ thuật (§20.6) |
+| (GĐ 8) Chữ Hán Nôm in trên tranh | Khi Bao chọn | Chữ vẽ sẵn thành texture, dán ở góc tờ giấy, màu mực của bản nét |
+| (GĐ 8) Bóng in dưới chân gà | Khi thấy gà "lơ lửng" lúc xoay | Một hình bầu dục tối mềm trên giấy dưới mỗi con, tính từ mảng vị trí (uniform); không dùng shadow map |
 
 **Không làm**, và lý do:
 - **npm workspaces:** một repo, một người đọc; thư mục cộng test ranh giới là đủ.
@@ -3786,6 +3893,1127 @@ Như GĐ 6 (§18.9): làm thẳng trên nhánh `gd7-cung-que`, vừa làm vừa 
 - **Trình sinh trang làm lệch trang cũ.** Cách tránh: test từng byte với hai trang hiện có trước khi đổi khuôn.
 - **CI:** chia theo bức như §19.9; đo ở task CI.
 
+## 20. Bức 4 · Đàn Gà Mẹ Con (GĐ 8)
+
+> Một tờ tranh Đông Hồ nằm trên tấm ván sơn đen: gà mẹ ngậm con ong, mười gà con quây quần. Nhìn thẳng thì là tranh in; kéo xoay thì
+> bước vào được, và đàn gà là tượng nặn đứng trên tờ giấy điệp.
+
+**Nơi ở:** `src/paintings/dan-ga-me-con/`, trang `tranh/dan-ga-me-con/index.html` (trình sinh trang viết), poster ở
+`public/paintings/dan-ga-me-con/`. Lớp 6 là Phủ bóng dùng chung. Mọi luật của kỹ thuật (§0) và của xưởng (§8–§10, `CLAUDE.md`) áp như ba
+bức trước. Chương này chỉ ghi phần riêng của Bức 4, cùng những việc đi kèm: camera trực giao, độ sâu đúng cho camera trực giao, tranh tự
+khép lại (§20.6) và bể hạt dùng chung (§20.7). Những gì Bao đã chọn nằm ở §1 (GĐ 8); phần còn lại do Claude quyết, Bao duyệt khi đọc
+spec.
+
+**Số trong chương này** là số thiết kế, theo đơn vị của cảnh: một đơn vị là 10 cm (gà mẹ dài chừng 40 cm). Số cuối cùng chốt ở điểm duyệt
+ảnh và lượt màu (§20.10); số nào đổi thì sửa lại ở đây, trong cùng task.
+
+**Điều mới so với ba bức trước:**
+- Bức đầu tiên **không dựng ánh sáng thật**. Nó vẽ phi hiện thực (NPR), để cảnh 3D trông như tranh in khắc gỗ: mảng màu phẳng, nét mực,
+  giấy điệp.
+- **Camera trực giao** (`CameraSpec.kind: 'ortho'`) và **tranh tự khép lại** (`CameraSpec.home`): hai trường tùy chọn mới của hợp đồng.
+- **Lần đầu rút code của một bức lên hộp màu theo luật hai lần:** phần chung của hạt compute đom đóm (Bức 1) thành
+  `lib/tsl/particles.js`; Bức 4 dùng nó cho thóc.
+- Bức đầu tiên có ảnh **sáng** (giấy điệp). Chữ của trang nằm trên phần ván tối quanh tờ giấy.
+
+### 20.1 Cảnh
+- **Theo tranh gốc** "Đàn gà mẹ con" của làng Đông Hồ:
+  - một gà mái mẹ đứng giữa, mỏ ngậm một con ong mớm cho con (ý dân gian: mẹ bắt cái nguy hiểm để che chở con);
+  - quanh mẹ là mười gà con, mỗi con một dáng: rỉa lông, trèo lên lưng mẹ, nấp dưới bụng mẹ, chạy chơi, ngước nhìn mồi;
+  - tranh gốc không có gà trống và không có cảnh nền.
+
+  Bố cục của Bức 4 theo tinh thần đó, không chép nét của bản khắc.
+- **Tờ giấy cong.** Tờ giấy điệp nằm phẳng ở phía trước (sân của đàn gà) rồi uốn lên thành vách ở phía sau, như phông chụp ảnh:
+  - mặt sàn rộng 14, sâu 10; chỗ uốn có bán kính 2; vách cao 4,5 (mép trên ở y 4,5). Vách cao 6 lúc đầu để trống gần nửa tờ giấy phía
+    trên đàn gà; điểm duyệt ảnh (GĐ 8 Task 4) hạ xuống 4,5;
+  - từ camera mặc định, phần sàn (bị thu ngắn theo góc nhìn) và phần vách ghép thành một hình chữ nhật 14 × 7,6 đơn vị trên màn, tức chừng
+    11 : 6 (1,83 : 1), như một tờ tranh khổ ngang. Đo trên GPU thật sau điểm duyệt ảnh: 844 × 460 điểm ảnh CSS ở khung 1280 × 800. Số cũ
+    "chừng 4 : 3" là ước lượng trước khi có camera; 14 × 9,1 (3 : 2) là của vách cao 6. Nền tranh Đông Hồ trơn, nên chỗ uốn không lộ;
+  - kéo xoay mới thấy tờ giấy cong, và gà đứng trên phần sàn.
+  - Lý do không dùng một tờ phẳng nằm ngang: nhìn chếch 20° thì tờ phẳng thu thành một dải dẹt; nhìn cao hơn thì gà bị nhìn từ trên
+    xuống, mất dáng nghiêng của tranh. Còn tờ phẳng dựng đứng thì gà không có chỗ đứng, thóc không có chỗ rơi.
+- **Tấm ván sơn** là nền `denThen` (màu xóa của canvas), không có mesh nào.
+  - Tờ giấy chiếm chừng 58% bề cao của khung máy tính (đo: 58,0% ở 1280 × 800, 58,1% ở 1440 × 900 và 1920 × 1080), nằm cao hơn tâm
+    khung một chút. Ở điện thoại dọc 390 × 844, khung nới theo `minWidth`: tờ giấy rộng gần hết bề ngang và chỉ cao chừng 23%
+    (352 × 193 điểm ảnh CSS).
+  - Phần ván tối ở trên và dưới là chỗ của tên, thơ, gợi ý và con dấu, vì chữ màu ngà đặt trên giấy sáng không đọc được.
+    - Đo ở 1280 × 800: tờ giấy từ y 148 tới 612 (điểm ảnh CSS); tên tranh và dải link hết ở y 132, gợi ý bắt đầu ở y 628. Cách 16 điểm
+      ảnh mỗi phía, như bảng ở §20.2; ở 1440 × 900 và 1920 × 1080 còn rộng hơn (30–81). Đo lại sau lượt CI đầu (e2e WebGL2 trên
+      SwiftShader, khung 10): ở ba khung có trong bảng §20.2 (GPU thật), lệch dưới một điểm ảnh. Số của Task 4 (cách 18, 57,5%) đo
+      trước các vòng sau, không còn đúng. E2e "chữ trên ván tối" giữ điều này ở năm khung máy tính (cả hai khung laptop thấp 1366 × 650,
+      1280 × 720) và ở 390 × 844.
+    - Chữ của trang có cỡ cố định theo điểm ảnh, còn tờ giấy co theo bề cao khung: trước vòng sau điểm duyệt ảnh, khung máy tính thấp hơn
+      chừng 740 điểm ảnh CSS thì gợi ý chạm mép dưới tờ giấy (1280 × 720: chạm 3 điểm ảnh; trang của laptop 1366 × 768, chừng
+      1366 × 650: tên và dải link đè 14, gợi ý đè 19). `CameraSpec.shortFrame` sửa điều đó (§20.2): canvas thấp hơn 800 thì tờ giấy chiếm
+      phần nhỏ hơn của bề cao.
+- **Gà mẹ** dài chừng 4, cao chừng 3,2, đứng giữa sàn, quay nghiêng sang trái. Con ong là một phần hình của đầu gà mẹ.
+- **Mười gà con**, mỗi con dài chừng 1,3. Chỗ đứng ("nhà") và dáng của từng con là dữ liệu (`parts/cot-bo-cuc.js`), theo tranh gốc:
+  - hai con trước mặt mẹ, hai con phía sau mẹ;
+  - hai con ở xa (nằm cao hơn trong khung), hai con ở gần (nằm thấp hơn). Hai con ở xa đứng ra ngoài đầu và đuôi mẹ: camera nhìn chếch
+    20° nên mặt sàn chỉ cao chừng 2,7 đơn vị trên màn, và con ở xa đứng sau lưng mẹ thì bị mẹ (cao 3,2) che hẳn;
+  - một con nấp dưới bụng mẹ, một con trèo trên lưng mẹ. Bụng mẹ chỉ cách sàn 0,5 mà gà con cao chừng 1,2, nên con nấp bụng đứng sát
+    bụng mẹ phía người xem, dưới cánh trái; con trèo lưng đứng trên lưng, chân chạm lưng (y 2,6). Cả hai không lún vào mẹ (test giữ).
+  - Ở góc nhìn của tranh, không con nào bị che hẳn: test bắn tia qua đầu và mình từng con (§20.9).
+  - Hướng lúc nghỉ của từng con là dữ liệu, như chỗ đứng. Vòng sau điểm duyệt ảnh (Task 11, Bao đồng ý) xoay hai gà con xanh cho lộ mắt
+    ra người xem: con sau lưng mẹ (chỉ số 2) từ −1,9 sang −1,4 rad (trước chỉ lộ một mép mắt), con ở gần (chỉ số 6) từ 2,6 sang 1,6 (trước
+    quay lưng, không thấy mắt); các con khác giữ hướng cũ. Mọi test của đàn gà (không chồng nhau, tia thấy được, chỗ núp, nhúm thóc lúc mở
+    trang) vẫn qua, không sửa test nào.
+- **Ánh sáng:** một hướng nắng cố định, từ trên, bên trái, phía trước.
+  - Không có đèn nào của three, và không có bóng đổ (tranh Đông Hồ không vẽ bóng).
+  - Không bật `renderer.shadowMap` (test giữ).
+- **Trang có trăng SVG cạnh con dấu**, như ba bức trước.
+
+### 20.2 Trải nghiệm riêng của Bức 4
+- **Camera trực giao** (§20.6):
+  - số thiết kế:
+    - `position` [0; 6,26; 11,9], `target` [0; 1,86; −0,1]: nhìn chếch xuống chừng 20° (`position − target` = [0; 4,4; 12]); tờ giấy nằm
+      cao hơn tâm khung 0,33 đơn vị, để tên tranh, dải link ở trên và gợi ý, thơ ở dưới đều nằm trên ván tối (§20.1). Điểm nhìn gần tâm gà
+      mẹ, nên kéo xoay thì đàn gà quay quanh chính nó;
+    - `height` 13,2, `minWidth` 15,5, `zoom` [1; 2,5];
+    - số trước điểm duyệt ảnh (GĐ 8 Task 4): `position` [0; 7,2; 11,55], `target` [0; 2,8; −0,45], `height` 12, vách cao 6. Giấy chiếm 75%
+      bề cao, và dải link, gợi ý đè lên giấy. Số cũ hơn, `position` [0; 6; 12], `target` [0; 1,6; 0], để giấy lệch hẳn lên trên: mép trên
+      chỉ cách mép khung 0,15 đơn vị (sửa ở GĐ 8 Task 1);
+    - xoay ngang ±75°; xoay dọc từ 10° tới 70° trên mặt sàn;
+    - `breathe` 0: tờ tranh đứng yên;
+  - không có điểm tụ: vật ở xa không nhỏ đi, chỉ nằm cao hơn trong khung, đúng lối vẽ của tranh dân gian;
+  - ở khung hẹp (điện thoại dọc), xưởng nới bề cao của khung nhìn để bề ngang thấy đủ `minWidth`: tờ giấy rộng 14, cộng lề;
+  - chốt ở điểm duyệt ảnh (§20.10), cả ở khung máy tính 16 : 10 lẫn 390×844.
+  - **Canvas thấp** (`shortFrame: { below: 800, maxGrow: 1,3 }`, vòng sau điểm duyệt ảnh Task 11, Bao đồng ý):
+    - vấn đề: chữ của trang có cỡ CSS cố định, tờ giấy luôn chiếm 58% bề cao. Trang của laptop 1366 × 768 chỉ còn chừng 1366 × 650 (thanh
+      tab, thanh địa chỉ, thanh tác vụ): tên tranh và dải link đè mép trên tờ giấy 14 điểm ảnh, gợi ý đè mép dưới 19;
+    - cách sửa (§8.4, xưởng, bức nào cũng dùng được): canvas thấp hơn `below` điểm ảnh CSS thì bề cao khung nhìn nhân với below / bề cao
+      canvas, tới `maxGrow` lần (`fov.js#shortGrow`, `fitOrtho` lấy max với phần nới theo `minWidth`). Phần bề cao mà tờ giấy chiếm co lại
+      theo bề cao canvas (58% · bề cao / 800), nên dải ván trên và dưới còn gần bằng số điểm ảnh của chúng ở 1280 × 800, chỗ của chữ.
+      `stage.js` truyền bề cao canvas mỗi lần đổi cỡ; zoom (chụm ngón, tranh tự khép lại) không đổi; ba bức đầu không khai báo nên như cũ;
+    - đo trên GPU thật (khung 120, khe = điểm ảnh CSS giữa chữ và tờ giấy, âm là đè; trên: tên và dải link, dưới: gợi ý):
+
+      | Khung | Trước: trên / dưới | Sau: trên / dưới | Tờ giấy, phần bề cao |
+      |---|---|---|---|
+      | 1366 × 650 | −14 / −19 | 24 / 13 | 58% → 47% |
+      | 1280 × 720 | 1 / −3 | 24 / 16 | 58% → 52% |
+      | 1280 × 800 | 16 / 16 | 16 / 16 (không đổi) | 58% |
+      | 844 × 390 (điện thoại xoay ngang) | −18 / −52 | 10 / −28 | 58% → 45% |
+
+      Khung 1280 × 615, 1366 × 780, 1440 × 760, 1536 × 730 đo được khe 10–26; 1440 × 900, 1920 × 1080, 390 × 844 không đổi;
+    - `maxGrow` 1,3: nới đủ cho canvas cao từ 615 (800 / 1,3; trang của laptop 1280 × 720 có thanh tác vụ, chừng 1280 × 595, đo được gợi ý
+      còn cách 4). Không trần thì điện thoại xoay ngang nới 2,05 lần, tờ giấy còn 28% bề cao (tính), một dải nhỏ giữa ván; ở 1,3 còn 45%, tên
+      tranh không đè, gợi ý đè mép dưới 28 điểm ảnh (trước là 52), như ba bức đầu cũng để chữ đè ở điện thoại xoay ngang;
+    - `below` 800, không phải 760: dải ván dưới còn gần bằng ở `below`, nên `below` 760 để khe của gợi ý chỉ chừng 6 điểm ảnh từ 760
+      xuống 650; ở 800 nó bằng khe đã duyệt ở 1280 × 800 (16).
+- **Tranh tự khép lại** (`home: { after: 3, duration: 1,2 }`):
+  - buông tay 3 giây thì camera êm êm quay về góc nhìn của tranh trong 1,2 giây, cả góc xoay lẫn zoom;
+  - chạm hay kéo lại giữa chừng thì camera thôi quay về;
+  - giảm chuyển động: đủ 3 giây thì camera về ngay một bước, không lượn.
+- **Gợi ý** (`content.hint`): *"Chạm để rắc thóc · giữ để gà mẹ gọi con · kéo để bước vào tranh"*.
+- **Hai cử chỉ** (`setup().onGesture`). Công cụ học vẫn được ưu tiên như ở mọi bức.
+  1. **Chạm là rắc thóc** (`'tap'`):
+     - Tia của camera trực giao cắt mặt sàn (y = 0) ở chỗ chạm. Chạm ra ngoài sàn (lên vách, ra ván) thì lấy điểm gần nhất trên sàn,
+       nên chạm ở đâu cũng có phản hồi. Chạm sát mép sàn thì thóc rơi vào trong một chút (tới 1,25 theo mỗi trục: chạm đúng góc sàn thì
+       chừng 1,8 theo đường chéo), đúng tâm vòng gà con đứng quanh (§20.5), để mỏ chạm sàn ngay trên nắm thóc.
+     - Một nắm chừng 120 hạt (núm `handful`) văng ra từ cao chừng 3 (tầm tay), tỏa hình nón, rơi theo trọng lực, nảy một hai lần, lăn rồi
+       nằm yên, thành một nắm gọn (nửa số hạt trong chừng 0,4), để các con đứng quanh mổ trúng (§20.4 lớp 5).
+       - Trọng lực là của Trái Đất: 9,81 m/s², tức 98,1 đơn vị/s². Thóc chạm sàn chừng 0,25 giây sau khi văng, như rắc thật.
+       - Núm `gravity` cho chọn trọng lực của trăng, để so với lá rơi của Bức 3.
+     - Ba tới bốn gà con đang rảnh, ở gần chỗ rắc nhất, chạy tới. Tới nơi thì mổ quanh đó chừng 8 giây, rồi đi về chỗ của mình.
+     - Mỏ đang mổ chạm hạt nào thì hạt đó biến mất (§20.4 lớp 5): nắm vơi đi thấy rõ (nắm rắc giữa sàn hay sát mép bị ăn chừng 60–80%,
+       nhúm lúc mở trang chừng một nửa; sân đông, nhiều nắm cùng lúc thì chừng 45%). Hạt không con nào ăn thì nằm 30 giây rồi nhỏ dần.
+     - Lớp Đàn gà mài về 0 (gà đứng như tượng, không có thóc) thì chạm và giữ không làm gì, gà mẹ vẫn bới theo đồng hồ (§20.4 lớp 5).
+  2. **Giữ là gà mẹ gọi con** (`'hold-start'` → `'hold-end'`):
+     - Gà mẹ xòe hai cánh, cúi đầu gọi "cục cục" theo nhịp (gật sâu nhất 23°). Mọi gà con đang rảnh chạy về tám chỗ quanh và dưới cánh mẹ; con
+       trèo lưng và con nấp bụng vốn đã ở sát mẹ, nên ở yên.
+     - Buông tay thì mẹ khép cánh, các con tản ra: tới chỗ rắc mới nhất nếu nắm đó mới rắc chưa tới 20 giây, không thì về chỗ của mình.
+     - Camera không xoay trong lúc giữ: xưởng tắt OrbitControls khi giữ (§8.1).
+  - `'swipe'` và `'double-tap'` không làm gì riêng: một lần chạm đúp là hai `'tap'`, tức hai nắm thóc. Kéo là của camera.
+- **Gà mẹ bới:** không ai chạm thì cứ 25 giây gà mẹ cào chân một lần, một nhúm 24 hạt văng ra trước mặt mẹ (văng thấp, chừng 10 cm), và
+  hai ba con gần nhất xúm lại. Lúc mở trang đã có sẵn một nhúm 40 hạt nằm trước mặt mẹ, gà con đang mổ.
+  - Lý do: chưa ai chạm thì lớp Đàn gà vẫn có thứ để mài (test chung "mài từng lớp"), và sân gà không đứng im.
+  - Giảm chuyển động: không có gà mẹ bới. Nhúm thóc lúc mở trang vẫn có.
+- **Tất định:**
+  - gà mẹ và gà con tính thẳng từ thời gian theo các mốc chạm, giữ, bới (§20.5);
+  - thóc là mô phỏng chạy từng khung trên GPU, như đom đóm. Với `?freeze`, mô phỏng chạy lại từ khung 0, nên lần nào cũng ra như nhau.
+- **Giảm chuyển động:** tranh khép lại không lượn; gà đi và chạy chậm còn một nửa; không có gà mẹ bới. Thóc vẫn rơi, vì đó là phản hồi
+  của cú chạm.
+- **Thơ của cả bức** (`meta.poem`, in sẵn trong HTML): *"Khôn ngoan đối đáp người ngoài / Gà cùng một mẹ chớ hoài đá nhau"* (ca dao).
+  - Câu thơ hợp đúng cảnh: mười gà con cùng một mẹ.
+  - Đây là hai câu lục bát, không có tiếng đệm. Truyện kể rằng hai gà trống con trong một ổ cứ đá nhau, gà bố bèn dặn câu này; Phạm Văn
+    Tình dẫn truyện "Gà ông Đồ và gà ông Nghè" của Ôn Như Nguyễn Văn Ngọc (*Truyện cổ nước Nam*, NXB Khoa học Xã hội, 1990) làm gốc tích
+    (qua bài báo, chưa mở được cuốn sách).
+  - Đối chiếu ngày 2026-10-07 (GĐ 8 Task 13, theo lệ §18.2: nhiều nguồn, ghi dị bản, Bao chốt):
+    - đúng từng chữ như trên trang ("đối đáp", "cùng một mẹ", "chớ hoài"), có nguồn xếp vào ca dao:
+      - Thi Viện, "Khôn ngoan đối đáp người ngoài" (Khuyết danh Việt Nam, Ca dao về gia đình, họ hàng):
+        https://www.thivien.net/Khuy%E1%BA%BFt-danh-Vi%E1%BB%87t-Nam/Kh%C3%B4n-ngoan-%C4%91%E1%BB%91i-%C4%91%C3%A1p-ng%C6%B0%E1%BB%9Di-ngo%C3%A0i/poem-EUvisw1izcoLF8u--ss-6A
+        (4 nguồn tham khảo của trang bị ẩn nên không biết sách nào);
+      - báo Người Đô Thị, PGS-TS Phạm Văn Tình, "Gà cùng một mẹ, chớ hoài đá nhau", 2019-03-30:
+        https://www.nguoidothi.net.vn/ga-cung-mot-me-cho-hoai-da-nhau-19567.html (cùng tác giả, đăng lại ở Phật giáo, 2021-07-05);
+      - VOH, Hồ Diễm Quỳnh, "Ý nghĩa câu Khôn ngoan đối đáp người ngoài; Gà cùng một mẹ chớ hoài đá nhau", 2022-06-20:
+        https://voh.com.vn/song-dep/khon-ngoan-doi-dap-nguoi-ngoai-ga-cung-mot-me-cho-hoai-da-nhau-438434.html;
+      - Wiktionary, mục "gà", ví dụ cho nghĩa danh từ: https://en.wiktionary.org/wiki/gà; cùng bản có ở VnDoc (Văn mẫu lớp 9) và
+        VietJack ("Ý nghĩa Khôn ngoan đối đáp người ngoài…"), đều ghi "ca dao".
+    - dị bản (đều lẻ tẻ, không nguồn nào in sách):
+      - "đá đáp người ngoài": Thi Viện ghi làm khảo dị của chính bài trên, và một câu hỏi người dùng đăng ở hoidap247. "Đối đáp" là chữ
+        của mọi nguồn có tên tác giả hay tòa soạn;
+      - "gà cùng một nhà": một chỗ ở reader.com.vn; "gà chung một mẹ": báo Pháp Luật Việt Nam, Lương Thiện Nhân, "Con gà trong ca dao
+        tục ngữ Việt Nam", 2017-01-29 (chỉ dẫn câu sau);
+      - bản nói ngược, trêu: "Khôn ngoan đá đáp người trong, / Gà cùng một mẹ chỉ tròng nhau chơi" (Thi Viện, một bài riêng): không dùng;
+      - không thấy nguồn nào in "đừng hoài", "chớ có" hay "đáp đối".
+    - chưa mở được bản số hóa của các bộ sách ca dao (Kho tàng ca dao người Việt; *Tục ngữ ca dao dân ca Việt Nam* của Vũ Ngọc Phan;
+      *Tục ngữ phong dao* của Nguyễn Văn Ngọc): các nguồn trên là web, nhiều bài chép lại nhau, nên số nguồn đếm được không phải số
+      bản độc lập.
+  - Kết luận: bản trên trang ("Khôn ngoan đối đáp người ngoài / Gà cùng một mẹ chớ hoài đá nhau") là bản có nhiều nguồn nhất và khớp
+    từng chữ; khuyến nghị giữ nguyên `meta.poem` và thơ in sẵn trong trang. Ghi "Ca dao" khớp với Thi Viện và các bài báo trên. Bao
+    chốt giữ nguyên câu chữ (vòng sau điểm duyệt ảnh), như GĐ 5 và GĐ 6; sau này muốn đổi thì sửa `meta.poem` rồi chạy `npm run pages`.
+- **Lật tranh và Phòng tranh**, đều do `npm run pages` sinh (§19.7):
+  - dải link của Bức 4 có "← Bức 3 · Cung Quế" và "Phòng tranh";
+  - Bức 3 có thêm "Bức 4 · Đàn Gà Mẹ Con →";
+  - Phòng tranh có bốn mục.
+
+### 20.3 Chỉ đạo nghệ thuật
+- **Không khí:** tranh dân gian của làng Đông Hồ, mộc và vui: mảng màu phẳng, nét đen đậm, giấy điệp ánh lên khi nghiêng. Không neon,
+  không chuyển màu bóng bẩy.
+- **Không gắn với lễ hội** (giữ giả định ở §1): tranh Đông Hồ thường treo dịp Tết, nhưng bức không có câu đối, pháo hay chữ chúc Tết.
+- **Năm màu tự nhiên của Đông Hồ**, thêm vào bảng qua `meta.palette` (hex chốt ở lượt màu):
+
+  | Token | Màu | Làm từ | Hex thiết kế | Hex chốt (lượt màu, GĐ 8 Task 11) |
+  |---|---|---|---|---|
+  | `diep` | trắng điệp | bột vỏ sò điệp trộn hồ, quét lên giấy dó | `#EFE6D2` | `#EFE6D2` |
+  | `hoe` | vàng | hoa hòe | `#E0AC3A` | `#D08E2A` |
+  | `sonSoi` | đỏ son | sỏi son | `#B9472E` | `#994533` |
+  | `xanhDong` | xanh | lá chàm, gỉ đồng | `#41705F` | `#3F6358` |
+  | `muc` | đen | than lá tre | `#221E1A` | `#272C2C` |
+
+  - Hex thiết kế là màu người xem phải thấy. Hex chốt là màu VÀO: Phủ bóng của Bức 4 dùng ACES (§20.4 lớp 6), làm màu in đậm và sáng hơn
+    (hex thiết kế hiện ra vàng chanh, đỏ cam), nên bốn màu in chốt ở số mà qua ACES, lộ sáng 1,2 và LUT 0,45, nấc sáng hiện ra đúng hex
+    thiết kế (tính ngược bằng mô hình JS của chuỗi Phủ bóng, đo lại trên GPU thật). Mực lạnh hơn vì LUT nhuộm vùng tối sắc nâu cánh gián:
+    ra đen than (34, 30, 26), không đen kịt (23, 15, 9 nếu giữ `#221E1A`). Giấy giữ hex thiết kế.
+  - Sơ đồ của Sổ tay chỉ dùng màu của bảng đã ghép (test hợp đồng), nên dùng hex chốt.
+
+  - Gà mẹ: mình `hoe`; cánh `sonSoi`; đuôi `xanhDong`; mào và mảng cổ `sonSoi`; mỏ và chân `hoe`; con ong `hoe` (thân và cánh).
+    - Mắt (gà mẹ và mọi gà con) `diep`, như mắt khắc trên ván: vòng mắt và con ngươi là nét trong của Bản nét (GĐ 8 Task 5), nên mắt đọc
+      được trên mọi màu lông, cả gà con đen lẫn gà con trắng.
+    - Mảng cổ (`NECK`, GĐ 8 Task 11; Bao chọn ở điểm duyệt ảnh của Task 4): Bản màu tô theo phần (`part`), mà cổ là chỗ đầu nối mình,
+      nên mảng cổ là một phần riêng của hình: một cầu bán kính 0,55 đặt ở vòng giao của đầu và mình (vòng tâm (0; 2,38; 1,29) trong khung
+      của mẹ, bán kính chừng 0,39). Cầu to hơn vòng ấy nên ló ra khỏi cả đầu lẫn mình thành một dải đỏ son quanh chỗ đầu nối mình, rộng
+      nhất ở gáy, hẹp dần về cổ họng; Bản nét có sẵn nét gấp ở hai mép dải (chỗ cầu cổ gặp đầu và mình). Mảng cổ đi theo đầu (như mọi
+      phần từ HEAD trở lên), mà tâm cầu gần khớp cổ nên đầu gật thì nó gần như đứng yên. Trước đó (GĐ 8 Task 4) không có mảng cổ.
+    - Nét `muc` trên đuôi và vằn của con ong là nét trong của Bản nét (GĐ 8 Task 5), không phải màu in.
+  - Gà con: mỗi con một màu như tranh gốc (`hoe`, `sonSoi`, `xanhDong`, `muc`); có con "trắng", tức để màu giấy và chỉ có nét.
+  - Con ong: `hoe` có vằn `muc` ở thân; cánh ong là phần riêng (`BEE_WING`), không có vằn. Thóc: `hoe`. Nét: `muc`. Giấy: `diep`.
+  - LUT "sơn mài" sinh từ bảng đã ghép như mọi bức. Năm token mới không đổi LUT, vì LUT chỉ đọc `canhGian`, `vangLa`, `cham`.
+- **Thứ tự in của làng quyết thứ tự lớp:** màu in trước (đỏ, xanh, vàng, trắng), bản nét đen in sau cùng (§20.4).
+- **Dáng:** khối tròn, mập, như tượng đất rồi in màu. Mỏ, mào, đuôi là khối đơn giản. Không tả từng sợi lông: lông chỉ có ở nét trong.
+- **Poster:**
+  - chụp từ cảnh bằng `scripts/poster.js dan-ga-me-con`, ở góc nhìn của tranh;
+  - `poster.capture` chốt ở lượt màu: một khung có gà con đang mổ nhúm thóc;
+    - (GĐ 8 Task 11) Chốt `{ at: '2026-10-05T21:00', freeze: 240 }` (4 giây): gà con đỏ và vàng cúi mổ nhúm thóc lúc mở trang, gà con đen bên
+      phải quay nghiêng thấy mắt. Đã thử khung 120, 240, 360: khung 120 gà con đen quay lưng thành một khối đen; khung 360 gần như khung 240.
+      Poster 87 KB (WebP, chất lượng 0,88), og 58 KB;
+    - (vòng sau điểm duyệt ảnh) chụp lại ở cùng khung sau khi đổi hướng hai gà con xanh (§20.1): poster cũ cho thấy hai con quay đi, nên
+      lúc poster hòa sang cảnh hai con ấy quay đầu. Poster 87 KB (WebP 0,88), og 58 KB;
+  - `poster.alt`: "Tranh Đông Hồ đàn gà mẹ con trên giấy điệp, đặt trên ván sơn đen: gà mẹ ngậm con ong, mười gà con quây quần.".
+- **Lượt màu:** đo như §5 (độ sáng trung bình, độ bão hòa, tỉ lệ điểm tối; 1280×800 và 390×844; GPU thật). Đo thêm:
+  - tỉ lệ điểm ảnh của giấy (sáng hơn 200);
+  - độ ngà của giấy (kênh đỏ hơn kênh lam).
+
+  AgX của Phủ bóng nén vùng sáng, nên giấy có thể ngả xám. Chỉnh `exposure`, hay chọn tone khác của Phủ bóng, trong lượt màu. Bao duyệt
+  ảnh.
+  - (GĐ 8 Task 11. Đo 2026-10-07, Mac M2, WebGPU, `?freeze=120&poster&level=cao`, DPR 1. Độ sáng là luma Rec. 709, 0–255; độ bão hòa
+    HSV; điểm tối là kênh lớn nhất < 30. Giấy: vách bên trái gà mẹ, không có gà. Mảng in: mình gà mẹ trên cánh, cánh gà mẹ, gà con xanh
+    ở gần, trung bình cả vảy lông và hai nấc. Mực: điểm có luma < 60 quanh bốn gà con bên trái. Ván sát: dải ván 3–20 điểm ảnh quanh tờ
+    giấy, độ sáng lớn nhất.)
+
+    | Đo | 1280×800 trước | 1280×800 sau | 390×844 trước | 390×844 sau |
+    |---|---|---|---|---|
+    | Cả khung: sáng · bão hòa · tối | 68,7 · 0,50 · 61,4% | 78,3 · 0,39 · 61,5% | 37,9 · 0,59 · 79,1% | 42,3 · 0,44 · 79,2% |
+    | Giấy: RGB · luma > 200 · ngà (R − B) | 196, 187, 168 · 0,1% · 28 | 229, 219, 198 · 100% · 31 | 196, 187, 168 · 0% · 28 | 229, 219, 198 · 100% · 31 |
+    | Mình gà mẹ: RGB · bão hòa | 189, 156, 93 · 0,51 | 214, 162, 56 · 0,74 | 189, 155, 92 · 0,51 | 214, 160, 56 · 0,74 |
+    | Cánh gà mẹ | 180, 90, 65 · 0,64 | 178, 66, 44 · 0,75 | 180, 91, 66 · 0,63 | 179, 67, 44 · 0,75 |
+    | Gà con xanh | 79, 108, 92 · 0,28 | 60, 97, 82 · 0,38 | 75, 98, 83 · 0,28 | 57, 89, 74 · 0,34 |
+    | Mực (RGB) | 57, 39, 28 | 53, 41, 34 | 58, 41, 30 | 51, 42, 34 |
+    | Ván sát (độ sáng lớn nhất; ván xa chừng 2–3) | 18 | 8 | 27 | 11 |
+
+    "Trước" là khi đã có lề không lóe quanh mép và mảng cổ (hai commit trước lượt màu). Trước hai việc ấy (7bf91a1) các số gần như vậy
+    (lệch tới 3/255; cả khung 69,0 · 0,50 · 61,3% ở 1280×800), trừ ván sát: 80 ở 1280×800, 47 ở 390×844.
+  - Trước: giấy xám be, năm màu in nhạt như phấn (AgX nén vùng sáng và kéo màu về xám), mực nâu. Bão hòa của cả khung giảm sau lượt màu
+    vì ván (hơn 60% khung) từ nâu đen thành đen dưới ACES; bão hòa của mảng in tăng (mình gà mẹ 0,51 → 0,74).
+  - Đổi: Phủ bóng ACES, lộ sáng 1,2, bloom 0,5 (§20.4 lớp 6); bốn màu in theo bảng trên. Đã thử: AgX lộ sáng 1,6 (giấy 214, 205, 184,
+    màu in vẫn nhạt); không tone mapping (màu in đúng hex, nhưng hạt điệp nào cũng cháy trắng, giấy lấm tấm khắp nơi, vệt chổi gắt); ACES
+    với hex thiết kế (vàng chanh, đỏ cam). Lộ sáng 1,0 và 1,1 cho giấy 222 và 226: chọn 1,2 cho giấy sáng mà chưa cháy trắng.
+  - Giữ: `ban-mau.shade` 0,18 (hai nấc phân biệt mà vẫn phẳng); `giay-diep` `sparkle` 1,2, `density` 14, `fiber` 0,5, `brush` 0,6 (hạt lóe
+    nhẹ, vệt chổi và sợi dó vừa thấy); LUT, grain, vignette của Phủ bóng.
+
+### 20.4 Sáu lớp
+**Một công thức tô cho mọi vật**, như `recipe` của Bức 3 (§19.4). Cốt công bố `shared.cot.recipe`: các hàm JS dựng node từ "điểm tô"
+`s = { kind, part, n, uv, pos, pigment }` (loại vật, phần của vật, pháp tuyến, UV, vị trí, chỉ số màu). Lớp sau bọc hàm của lớp trước
+TRƯỚC khi biên dịch:
+- `base(s)`: đất sét dưới đèn xưởng (Cốt);
+- `fill(s)`: màu in và nấc sáng (Bản màu);
+- `ink(s)`: nét bên trong vật (Bản nét);
+- `paper(s)`: giấy dó, điệp (Giấy điệp); `glint(s)`: emissive của hạt điệp.
+
+Cách ghép:
+- màu cuối của một vật in màu là `mix(base, fill, w2)`, rồi `mix(…, muc, ink · w3)`;
+- màu của tờ giấy là `mix(base, paper, w4)`;
+- mọi trọng số bằng 0 thì về đất sét (luật 1 của §0).
+
+Material của các mesh là lớp gốc `NodeMaterial` như Bức 3: `lights = false`, nên màu ra là `colorNode` cộng `emissiveNode` (Phụ lục A.81;
+hạt điệp lóe đi ra qua `emissiveNode` của tờ giấy, lớp 4). Thóc dùng
+`SpriteNodeMaterial` (lớp 5). Mọi material gán `emissiveNode` tường minh.
+
+#### Lớp 1 · Cốt (`layers/l1-cot.js`)
+- **Thấy gì:** tờ giấy cong, gà mẹ (mình và hai cánh), mười gà con, trên nền ván đen. Camera trực giao.
+  - Tất cả là đất sét dưới đèn xưởng.
+  - Đèn xưởng viết trong shader: một hướng sáng cộng một phần sáng đều, như `HemisphereLight` của hai bức đầu.
+- **Kỹ thuật:**
+  - **Hình gà** ghép từ khối cơ bản (cầu kéo dãn, nón, trụ) thành một `BufferGeometry` (`parts/cot-hinh-ga.js`). Mỗi đỉnh mang thuộc tính
+    `part` (mình, đầu, mỏ, mào, cánh, đuôi, chân, mắt, thân ong, cánh ong, và mảng cổ của gà mẹ từ GĐ 8 Task 11), để Bản nét vẽ nét
+    trong và để đầu cúi được.
+    Bảng khối của gà con (`CHICK_SHAPE`) và gà mẹ (`HEN_SHAPE`) nằm ở đó; số chốt ở điểm duyệt ảnh (GĐ 8 Task 4).
+    - Mắt là cầu lún vào đầu, chỉ ló ra một chỏm (chừng 55° quanh hướng từ tâm đầu ra tâm mắt ở gà con, 60° ở gà mẹ). Cầu mắt xoay cho
+      cực trên (uv.y = 1) nằm giữa chỏm, nên Bản nét vẽ vòng mắt và con ngươi theo góc tính từ cực ấy (GĐ 8 Task 5).
+    - Cốt công bố `shared.cot.hen.bodyFrame`: ma trận đưa điểm thế giới về khung của khối mình gà mẹ (mặt khối là cầu đơn vị), ở dáng
+      nghỉ, và `shared.cot.hen.bodyRadius` (GĐ 8 Task 9): uniform `henBodyRadius` = cos(π/n), n là số vòng quanh của khối mình; núm
+      `segments` đổi số này, không biên dịch lại. Hai thứ này cho viền cánh của Bản nét (lớp 3).
+    - Cốt công bố `shared.cot.pose(state, k)` (GĐ 8 Task 8): lớp Đàn gà gọi mỗi khung với trạng thái của đàn gà và k là trọng số của nó.
+      Cốt hòa từ dáng nghỉ (nhà, hướng của bố cục, đầu ngẩng) tới dáng của đàn gà theo k (hướng đi đường ngắn nhất), ghi `pose`, `head` và
+      đặt `needsUpdate`, rồi đặt bốn uniform của gà mẹ bằng góc của đàn gà nhân k. Chưa có lớp Đàn gà thì gà đứng ở dáng nghỉ ghi lúc dựng.
+  - **Mười gà con** là MỘT `InstancedMesh`, ma trận instance giữ đơn vị, `frustumCulled = false` (vị trí thật chỉ có trong shader), như lá
+    của Bức 3. Mỗi con mang ba thuộc tính instance riêng:
+    - `pose` (x, y, z, hướng) và `head` (góc cúi, 0–1): lớp Đàn gà ghi mỗi khung, nên dùng `instancedDynamicBufferAttribute`;
+    - `pigment` (chỉ số màu): ghi một lần lúc dựng, usage mặc định.
+
+    `positionNode` xoay đầu (mọi phần từ HEAD trở lên) quanh trục ngang qua TÂM MÌNH (y 0,48), không qua cổ: quanh cổ thì mỏ không với
+    tới sàn. Cúi hẳn (`headDown` = 60°) thì đầu mỏ hạ từ y 0,86 xuống chừng 0. Rồi cả con quay theo hướng, dời tới chỗ trong `pose`, và
+    `normalLocal` xoay theo để nấc sáng đúng với đầu đã cúi. `beakTip(k)` (`parts/cot-bo-cuc.js`) tính đầu mỏ bằng cùng phép xoay.
+  - **Gà mẹ** là ba mesh trong một `Group` (vật `ga-me`): mình (kèm đuôi, chân, đầu, mỏ, mào, mắt, con ong) và hai cánh. Geometry đã
+    xoay, dời sẵn tới chỗ của mẹ, nên `positionNode` làm ở tọa độ thế giới, với bốn uniform dáng (radian) mà lớp Đàn gà ghi (§20.5):
+    - `henNod`: đầu gật quanh trục ngang qua cổ; `henLook`: ngoảnh quanh trục đứng qua cổ;
+    - `henScratch`: chân trái (phía người xem) đá ra sau quanh hông;
+    - `henWing`: mỗi cánh xoay ± góc này quanh trục vai (theo hướng trước của mẹ), nên góc dương xòe cả hai cánh.
+
+    Ba mesh đều dời đỉnh trong shader, nên `frustumCulled = false`.
+  - **Tờ giấy** (`parts/cot-giay.js`) là một lưới cong (sàn, chỗ uốn, vách). UV chạy theo chiều dài cung, nên thớ giấy không bị kéo dãn
+    ở chỗ uốn.
+  - Góc nhìn của tranh (`CAMERA`) nằm trong `parts/cot-bo-cuc.js`; `painting.js` và lớp này cùng đọc.
+- **Núm:** `segments` (độ mịn của khối, dựng lại), `wireframe` (bool, dựng lại).
+  - `segments` mặc định và tối đa theo mức (§20.8: cao 32 và 48, vừa 28 và 32, thấp 24 và 32): số vòng của mỗi khối là `segments` ×
+    `detail` của khối. Ở 32, hai mặt kề nhau của mọi khối gãy dưới 20°, dưới góc Bản nét bắt đầu in nếp gấp (chừng 21°, lớp 3): mình gà mẹ
+    (cầu kéo dãn) 18,6°, mình gà con 14°, đầu 11,3°.
+  - Ở 28 (mức vừa) mình gà mẹ và mào tới 21,3°, ngay ngưỡng: không thấy vệt nào, kể cả khi phóng to. Ở 24 (mức thấp) 24,3–24,6°: còn
+    vệt mực rất nhạt ở ngực và cuối mình gà mẹ khi phóng to trên máy tính; ở cỡ điện thoại (gà mẹ chừng 100 điểm ảnh, DPR 1,25) không
+    phân biệt được với 32. Từ 20 trở xuống vòng mặt đa diện thành nét rõ (GĐ 8 Task 9, chụp trên GPU thật).
+  - Khối dẹt gãy gắt ở vành: cùng 32 vòng thì cánh gà mẹ 39,7°, cánh gà con 31,4°, mào 36,3° (16 vòng), bàn chân 69,8° (16 vòng), và vành
+    của chúng thành sọc mực khi phóng to. Vì vậy chúng có nhiều vòng hơn: cánh mẹ 2,25 lần, cánh con 1,75, bàn chân 2,25, mào và ong 1.
+  - Riêng cánh ong mỏng 0,09 lần: vành luôn gãy gắt (95° ở 32 vòng), và thành nét viền của cánh.
+  - Lưới giữ index, nên mỗi đỉnh chạy `positionNode` một lần. Ở 32, cả cảnh có chừng 86 nghìn đỉnh, 149 nghìn tam giác (28: 114
+    nghìn, 24: 83 nghìn, 48: 337 nghìn; §20.8; tính cả mảng cổ của GĐ 8 Task 11).
+- **Thí nghiệm "Tấm bìa phẳng"** (`biaPhang`):
+  - dẹt từng con gà quanh tâm của nó, theo hướng nhìn của tranh, còn 5%;
+  - ở góc nhìn của tranh, ảnh gần như không đổi; kéo xoay mới thấy gà chỉ là tấm bìa;
+  - bài học: phép chiếu trực giao bỏ hẳn chiều theo hướng nhìn, nên ảnh nhìn thẳng không phân biệt được tượng tròn với tấm bìa phẳng;
+  - làm bằng uniform trong `positionNode`, không biên dịch lại. Pháp tuyến giữ nguyên, nên nấc sáng không đổi.
+- **Số đo:** `goc`, góc lệch của camera khỏi góc nhìn của tranh (độ, một số lẻ), đọc từ `ctx.camera` (`viewAngle` của `parts/cot-bo-cuc.js`).
+  Là góc 3D giữa hướng từ điểm nhìn tới camera và hướng của tranh, nên xoay ngang 30° ra chừng 28°, không phải 30° (camera nhìn chếch xuống
+  nên đi trên một vòng nhỏ hơn). E2e đọc nó để kiểm tranh tự khép lại.
+- **Vật:** `giay`, `ga-me`, `ga-con`.
+
+#### Lớp 2 · Bản màu (`layers/l2-ban-mau.js`)
+- **Thấy gì:** gà từ đất sét thành mảng màu in. Ánh sáng chỉ còn vài nấc phẳng.
+- **Kỹ thuật:**
+  - màu lấy theo `part` và chỉ số màu, từ bảng màu của bức (`parts/ban-mau-bang.js`, đọc `ctx.palette`):
+    - hai `uniformArray` màu, một theo phần (màu của gà mẹ, và phần không phải lông của gà con), một theo con (`pigment`); một mảng cờ
+      "lông" theo phần: mình, đuôi, cánh, đầu của gà con theo màu của con, còn chân, mỏ, mắt theo bảng của gà mẹ;
+    - chỉ số làm tròn rồi mới đổi sang số nguyên (`int(x + 0,5)`): `part`, `pigment` tới fragment shader qua nội suy, có thể lệch khỏi số
+      nguyên một chút;
+  - **chia nấc (cel shading):** `l = max(dot(n, nắng), 0)`, `x = l · bands`. Bậc `k = floor(x) + smoothstep(1 − soft, 1, fract(x))`, mép
+    mềm trong `soft = max(fwidth(x) + edge, 10⁻³)` (chống răng cưa, rồi mềm thêm theo núm). `q = min(k, bands − 1) / max(bands − 1, 1)`;
+    `bands` = 1 thì `q` = 1 (phẳng hẳn). Nấc sáng nhất là đúng màu in (`q` = 1); công thức cũ `floor(l · bands) / bands` không bao giờ tới
+    1. Màu ra là `màu in · mix(1 − shade, 1, q)`: nấc tối sáng bằng `1 − shade` lần nấc sáng;
+  - mặc định 2 nấc, nấc tối chỉ đậm hơn 18%: ở góc nhìn của tranh gần như phẳng như bản in, xoay đi mới thấy khối.
+- **Núm:** `bands` (1–4), `edge` (độ mềm của mép nấc), `shade` (độ đậm của nấc tối).
+- **Thí nghiệm "Tô mịn"** (`toMin`, kiểu so): ánh sáng liền (Lambert) thay cho chia nấc. Hai cột "Tắt / Bật" cho thấy chia nấc gần như
+  không tốn gì.
+- Không có vật riêng.
+
+#### Lớp 3 · Bản nét (`layers/l3-ban-net.js`)
+- **Thấy gì:** nét mực đen bao quanh mọi vật, khung tranh ở mép giấy, và nét lông, cánh, mắt bên trong.
+- **Viền** (`post.build`, `parts/ban-net-do-canh.js`): dò cạnh trên ảnh độ sâu.
+  - Với camera trực giao, `channel('depth')` là chính texture độ sâu, tuyến tính sẵn (§20.6, Phụ lục A.89–A.90). Vì vậy lấy mẫu ở điểm
+    lân cận được mà không tốn lượt vẽ nào.
+  - Độ sâu đổi ra đơn vị cảnh bằng near, far của `ctx.camera`, qua uniform đặt từ JS. Trong post, `cameraNear` của TSL là của camera vẽ
+    quad, không phải camera của cảnh (Phụ lục A.93).
+  - Lấy mẫu trên lưới 3×3 (chín lần đọc), mỗi bước `lineWidth` điểm ảnh. Mỗi hướng trong bốn hướng (ngang, dọc, hai chéo) tính **độ lệch
+    khỏi mặt phẳng** `e = D(+) + D(−) − 2·D(giữa)`, với D là độ sâu theo đơn vị cảnh:
+    - trên MỌI mặt phẳng, dù nghiêng tới đâu, `e = 0`;
+    - bậc độ sâu cao H (mép vật trước nền, vật trước vật) cho `|e| ≈ H`. `e > 0` nghĩa là điểm giữa nằm trên vật ở trước: nét chỉ vẽ phía
+      đó, như nét viền của vật; `e` từ `threshold` trở lên thì đậm hẳn;
+    - nếp gấp dù không có bậc (cổ nối mình, cánh áp thân): **góc gãy của mặt** `atan(s₊ − s₋, 1 + s₊·s₋)`, với s₋, s₊ là độ dốc của độ
+      sâu hai bên điểm giữa (hiệu độ sâu chia độ dài thật của bước; hướng chéo dài hơn √2 lần). Từ chừng 21° bắt đầu thành nét, từ 34°
+      đậm hẳn; độ đậm nhân `crease`. Bậc lớn đã là viền thì không tính lại, để phía sau của bậc không dày thêm.
+    - Vì sao đo góc chứ không đo hiệu độ dốc (`|e|` chia độ dài bước, cách của GĐ 8 Task 1): gần mép khối, mặt nghiêng gần 90° so với màn,
+      độ dốc rất lớn, nên hai mặt kề nhau của khối cầu đa diện, dù chỉ gãy 11–15°, cũng chênh độ dốc quá ngưỡng. Vòng mặt đa diện thành
+      nét bên trong viền (thấy trên GPU thật ở DPR 2, GĐ 8 Task 4). Góc thì không phụ thuộc mặt nghiêng bao nhiêu: mặt kề nhau của khối gãy
+      dưới 20° ở 32 vòng (mức cao; lớp 1, `segments`), còn chỗ nối thật gãy nhiều hơn.
+    - Góc ở chỗ nối, đo dọc đường giao của hai mặt (góc giữa hai pháp tuyến): đầu vào mình 92–123°, mào 87–90°, chân 68–102°, mỏ 42–60°,
+      mắt 48–51°, đuôi 34–69°, cánh gà con 52–90°. Riêng cánh gà mẹ áp sát sườn: có đoạn chỉ gãy 13–20° (giữa 32°), nên ảnh độ sâu không
+      có nét ở chỗ cánh nằm sát sườn. Nét trong vẽ viền cánh ở đó (ở dưới).
+
+    Vì sao không dùng Sobel trên độ sâu: ở góc nhìn của tranh, độ sâu của mặt sàn đổi chừng 0,02 đơn vị mỗi điểm ảnh (khung cao 13,2 trên
+    1600 điểm ảnh thiết bị, nhìn chếch 20°); kéo xuống góc thấp nhất và ở DPR 1 thì gấp bốn. Độ dốc của Sobel trên mặt sàn khi ấy vượt
+    ngưỡng của một bậc thật, và cả mặt sàn thành nét đen. Độ lệch khỏi mặt phẳng thì bằng 0 trên mọi mặt nghiêng, nên chỉ bậc thật thành
+    viền; nếp gấp đo riêng bằng góc gãy (ở trên), cũng không bị mặt nghiêng đánh lừa.
+  - Mọi mẫu nằm đúng **tâm một điểm ảnh**, cách điểm giữa một số NGUYÊN điểm ảnh: bước là `lineWidth` (núm chỉ có số nguyên; shader
+    vẫn làm tròn, tối thiểu 1), lệch bản cũng làm tròn. Texture độ sâu không lọc được, nên three đọc điểm ảnh gần nhất (Phụ lục
+    A.96): bước 1,5 điểm ảnh rơi đúng mép giữa hai điểm ảnh, hai mẫu không còn đối xứng, và mặt sàn nghiêng thành sọc mực (đã thấy
+    trên GPU thật, GĐ 8 Task 1).
+  - Mép tờ giấy cũng là một bậc độ sâu (giấy đứng trước khoảng trống), nên khung tranh tự có nét.
+  - Thóc không ghi độ sâu (lớp 5), nên không bao giờ thành chấm đen.
+  - **Mẫu ngoài khung bị bỏ:** cả hai backend đọc điểm ảnh ở mép cho mẫu ngoài khung (Phụ lục A.99). Mẫu ấy trùng điểm giữa thì mặt sàn
+    nghiêng ra góc gãy 70°, và hàng sát khung thành vệt mực giả khi phóng to tới mức tờ giấy chạm khung (hay khi xoay tranh). Cặp mẫu nào
+    có một mẫu, hay điểm giữa, nằm ngoài texture thì bỏ cả cặp: vẫn chín lần đọc, chỉ nhân 0.
+- **Nét trong** (`recipe.ink`, `parts/ban-net-net-trong.js`): hàm khoảng cách 2D trên UV của từng phần, chỉ trên gà (tờ giấy, thóc không
+  có). Nét dày theo đơn vị cảnh (chừng 0,025, tức 3 điểm ảnh ở DPR 2), nên to ra khi zoom.
+  - **Mép mềm của nét** (GĐ 8 Task 8): 0,3 nửa bề dày, nhưng không mỏng hơn một điểm ảnh (`fwidth` của khoảng cách tới nét), đặt quanh
+    0,85 nửa bề dày (chỗ mép mềm của bản đầu). Ở DPR 1 (máy tính thường, mức thấp, khung e2e) nét dài mảnh hơn một điểm ảnh: không có sàn
+    này thì nét đứt thành vạch nhấp nháy khi gà chạy (thấy trên GPU thật); có sàn thì thành nét mềm liền. Mép mềm đặt quanh 0,85 chứ không
+    lùi vào trong (plan: `smoothstep(half − soft, half, d)`) để ở DPR 2 nét vẫn dày như bản đầu đã duyệt ảnh. Chỗ khoảng cách nhảy (đường
+    nối hai hàng vảy) `fwidth` vọt lên, nhưng ở đó khoảng cách lớn ở cả hai phía nên không thành vệt.
+  - **Vảy lông** (mình): hàng cung võng xuống, như vảy cá, hàng trên lệch nửa ô; ở nửa trên của mình (uv.y 0,55–0,88). Gà mẹ 14 cột quanh
+    mình và 8 hàng từ chân lên đỉnh, gà con 8 và 6: ở giữa sườn mỗi hàng cao chừng nửa bề rộng một cột, nên mỗi cung là nửa vòng tròn và
+    đáy cung chạm chỗ hai cung của hàng dưới gặp nhau.
+  - **Mắt:** vòng có chấm trên chính cầu mắt, quanh cực của nó (lớp 1): con ngươi dưới 22° tính từ cực, lòng trắng tới 40°, vòng mực từ
+    40° ra tới mép chỏm. Không đặt theo hướng nhìn của tranh: mắt chỉ là chỏm ló ra khỏi đầu, mà ở góc của tranh, điểm của cầu mắt quay
+    về người xem nằm lệch mép chỏm ở gà mẹ và gà con nấp bụng (chỏm lệch 39°), và nằm hẳn trong đầu ở hai gà con quay đi (56°, 78°; một con
+    lông đen). Con ngươi theo hướng nhìn thì mất ở hai con ấy, vòng theo hướng nhìn thì bị đầu cắt. Vòng có chấm trên chính mắt thì con nào
+    cũng có, chỉ nghiêng đi như hình tròn vẽ trên mặt nghiêng. Mắt luôn đậm (không nhân mực không đều): mắt gà con chỉ chừng 9 điểm ảnh ở
+    DPR 2.
+  - **Cánh:** ba nét lông song song mép, ở nửa dưới phía sau (bầu dục ρ = 0,55, 0,72, 0,88 của cầu dẹt nhìn từ bên). Gà mẹ có thêm viền:
+    mép riêng của cánh (ρ = 1), và chỗ cánh lún vào sườn, đo bằng khoảng cách từ hình ở dáng nghỉ (`positionGeometry`) tới mặt khối mình
+    (`shared.cot.hen.bodyFrame`). Dọc lưng và phía sau, mép riêng của cánh nằm trong mình; mép thấy được là chỗ mặt cánh chui vào sườn
+    (ρ chừng 0,88–0,94), nên viền vẽ ở mép riêng của cánh không thấy được ở đó. Gà con không có viền: cánh con đứng ra khỏi mình, đã có viền
+    dò trên độ sâu.
+    - Khối mình là đa diện (GĐ 8 Task 9): đỉnh nằm trên mặt bầu dục thật, mặt phẳng giữa các đỉnh lõm vào trong, sâu nhất
+      1 − cos(π/n)·cos(π/2m) ở tâm mặt (n vòng quanh, m vòng từ chân lên đỉnh). Đo tới mặt thật thì nét nằm ngoài chỗ cánh chui vào mình đa
+      diện: một dải màu cánh giữa nét và sườn, 1–2 điểm ảnh ở 32 vòng, 3–5 ở 24, hơn chục ở 8 (phóng to 2,5 lần, DPR 2, GPU thật).
+    - Vì vậy nét đo tới mặt co lại `bodyRadius` = cos(π/n) lần (tâm cạnh của một vòng, lớp 1), và dày thêm đúng độ co (`sag`, cùng cách
+      xấp xỉ bậc một). Mép ngoài của nét vẫn ở chỗ cũ, mép trong với tới tâm các mặt: nét chạm sườn ở mọi số vòng, từ 8 tới 48.
+    - Chỉ co lại mà không dày thêm thì nét mảnh đi một nửa, và có chỗ gần đứt ở hàng đỉnh, nơi mặt đa diện chạm mặt thật.
+  - **Đuôi:** các nét dọc nón đuôi, chụm lại ở chóp (gà mẹ năm nét ở mặt quay ra người xem, gà con hai).
+  - **Con ong:** ba vằn quanh trục dài của thân ong; cánh ong (`BEE_WING`) không có vằn.
+- **Mực không đều:** độ đậm của nét nhân `1 − 0,3·smoothstep(0; 0,6; n)` với n là một noise thưa: phần lớn nét đậm hẳn, chỗ n cao mực mỏng
+  còn 70%, như chỗ ván ăn ít mực. Nét trong lấy noise theo hình gốc của gà (`positionGeometry`, cộng chỉ số màu), nên vết mực đi theo con gà
+  khi nó cúi, chạy; viền lấy noise 2D theo điểm ảnh của màn, vì hậu kỳ không biết điểm ảnh thuộc vật nào, và chỉ tính ở điểm ảnh có mực
+  (nhánh `If`): tính cho mọi điểm ảnh thì tốn chừng 3 ms mỗi khung ở 2560 × 1600, DPR 2 (Mac M2).
+- **Lệch bản** (`misregister`): bản nét in lệch xuống phải so với bản màu, như tờ giấy trượt khi in tay. Hướng trên màn (0,82; 0,57) (x
+  sang phải, y xuống, như `screenUV`) nhân với núm rồi làm tròn tới số nguyên điểm ảnh: 2 là (2, 1), 6 là (5, 3). Điểm ảnh đọc ảnh độ sâu
+  ở phía ngược lại, nên viền ở chỗ Q hiện ra ở Q + lệch. Nét trong nằm trong màu của vật nên không lệch theo; ở 1–2 điểm ảnh thì gần như
+  không thấy.
+- **Chỉ chạy với camera trực giao.** Bức dùng camera phối cảnh mà muốn nét như thế thì bọc độ sâu bằng `convertToTexture`, tốn thêm một
+  lượt vẽ.
+- **Núm:** `lineWidth` (1–3 điểm ảnh thiết bị, bước 1, mặc định 2: chỉ số nguyên, vì mẫu độ sâu phải cách nhau số nguyên điểm ảnh),
+  `threshold` (bậc độ sâu tối thiểu, đơn vị cảnh; mặc định 0,3, tức 3 cm), `crease` (độ đậm của nét nếp gấp, 0–1), `misregister`
+  (0–6 điểm ảnh thiết bị, bước 1, mặc định 2: số nguyên như `lineWidth`, vì độ sâu đọc ở tâm điểm ảnh; shader vẫn làm tròn).
+- **Thí nghiệm** (chỉ đổi uniform, không biên dịch lại):
+  - "Chỉ bản nét" (`chiNet`): màu in của mọi thứ in màu (gà, thóc) thành trắng giấy, chỉ còn nét đen, như bản nét in riêng trước khi in
+    màu. Bọc `recipe.fill`
+    bằng `mix(fill, diep, chiNet · w3)`: Bản nét về 0 thì màu in trở lại, nên mọi trọng số bằng 0 vẫn về đất sét;
+  - "Dò cạnh theo màu" (`netTheoMau`): Sobel trên độ sáng của ảnh màu (scene pass) thay cho độ sâu, cùng lưới, bước và lệch bản. Nét mọc ở
+    ranh của nấc sáng và hai bên nét trong, và mất ở chỗ hai mảng cùng màu chồng nhau (đầu gà mẹ trước mình, cùng vàng hòe). Tám mẫu màu
+    nằm trong nhánh `If` theo uniform của thí nghiệm, nên lúc tắt không đọc thêm texture nào. Độ sáng của mỗi mẫu kẹp ở 1 (GĐ 8 Task 11):
+    ảnh của scene pass là HDR, hạt điệp lóe sáng chừng 15 lần giấy, nên không kẹp thì mỗi hạt lóe thành một vòng mực đậm. Kẹp rồi vẫn còn
+    một chấm mực nhỏ ở mỗi hạt đang lóe, vì sáng hơn giấy là một ranh màu thật (thấy trên GPU thật); chữ của thí nghiệm nói điều này.
+- **Tap:** `truoc-net` (ảnh trước khi có viền).
+- Không có vật riêng.
+
+#### Lớp 4 · Giấy điệp (`layers/l4-giay-diep.js`)
+- **Thấy gì:** tờ giấy từ đất sét thành giấy dó quét điệp: màu ngà, sợi dó, vệt chổi lá thông chạy xiên. Hạt điệp lấp lánh khi xoay tranh.
+- **Màu giấy** (`parts/giay-diep-mat.js#paperColor`, theo UV của tờ giấy, đơn vị cảnh): `mix(nền dó, điệp, lớp điệp) · (1 − sợi)`. Không có
+  phần ánh sáng nào: tranh in phẳng, chỗ uốn chỉ hiện ra ở hình dạng và ở hạt điệp.
+  - nền dó là `diep` nhân 0,82; lớp điệp là đúng `diep`, nên điệp sáng và ngà hơn nền;
+  - **sợi dó:** `fbm` (`lib/tsl/noise.js`) kéo dài theo chiều dài cung (tần số 16 theo u, 1,2 theo v), nên sợi chạy dọc tờ giấy. Số tầng là
+    node (một uniform, theo mức), nên nấc `chi-tiet` đổi nó mà không biên dịch lại. Nhân với `0,3 · fiber`: biên độ 0,06 của bản đầu
+    chỉ lệch chừng ±2% độ sáng ngay ở `fiber` 1, không thấy, và núm thành vô dụng;
+  - **vệt chổi:** `fbm` 2 tầng kéo dài theo hướng xiên 0,5 rad (tần số 0,35 dọc vệt, 3 ngang vệt); `smoothstep(−0,2; 0,4; ·) · brush` là độ
+    dày của lớp điệp.
+- **Hạt điệp** (`parts/giay-diep-mat.js#glints`):
+  - mặt giấy chia thành ô (`density` ô mỗi đơn vị cảnh); mỗi ô có một hạt: một vệt sáng mềm `e^(−4·(d/r)²)` ở chỗ lệch ngẫu nhiên, bán trục
+    0,2 ô; vị trí và độ nghiêng băm theo số ô, nên cùng một khung luôn ra cùng một ảnh;
+  - **hạt nghiêng trong mặt phẳng tiếp tuyến của tờ giấy:** pháp tuyến hạt là pháp tuyến giấy cộng `dx·T + dy·B`, với T là trục x của tờ
+    giấy, B = n × T chạy theo chiều dài cung, dx và dy ngẫu nhiên trong ±1,4 (là tan của góc nghiêng, tới chừng 54°). Nghiêng theo trục
+    x và z của thế giới thì sai: vách có pháp tuyến (0, 0, 1), nghiêng theo z không đổi gì, mà vách cần nghiêng lên xuống mới bắt được nắng;
+  - hạt sáng khi tia nắng phản xạ trên nó đi vào mắt: `pow(saturate(dot(reflect(−nắng, n_hạt), hướng_nhìn)), 80)`. Hạt chỉ lóe khi pháp
+    tuyến của nó trùng nửa vector H của hướng nắng và hướng nhìn, nên tầm nghiêng phải với tới H:
+    - ở góc của tranh, H lệch khỏi pháp tuyến sàn tới 1,32 (53°), khỏi pháp tuyến vách 0,76 (37°), và gần như trùng pháp tuyến giữa chỗ uốn;
+    - tầm nghiêng ±0,6 theo x và z (bản đầu) cho 0 hạt lóe trên sàn và vách, ở góc của tranh và khi xoay ±30° (mô phỏng cùng phép tính
+      của shader), chỉ chỗ uốn có: một dải, không phải một lớp điệp phủ khắp tờ giấy. Với ±1,4, chừng 0,3–1% số ô lóe hơn nửa độ sáng ở mỗi
+      vùng, ở các góc nhìn trên;
+  - với camera trực giao, hướng nhìn như nhau ở mọi điểm ảnh (Phụ lục A.91), nên H cũng vậy: khắp tờ giấy, chỉ hạt có pháp tuyến quay
+    đúng về H mới lóe (với camera phối cảnh, hướng nhìn và H đổi theo chỗ trên giấy). Xoay camera là đổi H cho cả tờ giấy cùng lúc, nên hạt
+    này tắt, hạt khác lóe lên. Câu cũ "đứng yên thì hạt đứng yên" đúng với mọi camera đứng yên, không phải điều camera trực giao thêm vào
+    (sửa ở GĐ 8 Task 10);
+  - **cỡ chấm:** bán trục 0,2 ô, không nhỏ hơn 0,8 điểm ảnh MÀN HÌNH theo từng trục (bề rộng một điểm ảnh tính bằng ô: `|dFdx| + |dFdy|`
+    của lưới ô; đặt sàn theo đơn vị cảnh của một điểm ảnh, `shared.cot.pixel` như Bản nét, thì chỉ đúng theo chiều ngang, vì chiều sâu của
+    sàn bị co), và không quá 0,25 ô để chấm nằm gọn trong ô. Trần 0,25 ô thắng khi một ô nhỏ hơn chừng 3,2 điểm ảnh (sửa ở GĐ 8 Task 11:
+    bản trước viết "hạt nào cũng to ít nhất chừng hai điểm ảnh"):
+    - vách: ô rộng chừng 4,3 điểm ảnh ở DPR 1 (khung 1280 × 800), 8,7 ở DPR 2: chấm 0,2 ô, tức chừng 0,9 và 1,7 điểm ảnh;
+    - sàn: nhìn chếch 20° co chiều sâu còn 1/3, ô chỉ cao chừng 1,5 điểm ảnh ở DPR 1, 2,9 ở DPR 2, 1,8 ở điện thoại 390 × 844 (DPR 3), nên
+      chấm chỉ cao chừng 0,37, 0,74 và 0,46 điểm ảnh: hạt trên sàn là vạch ngang mảnh, nhạt hơn hạt trên vách (đúng với mặt giấy nhìn chếch).
+      Đo trên GPU thật (view "Chỉ emissive", khung 120): số điểm ảnh có hạt trên sàn và trên vách gần như nhau (chừng 0,4–0,6%), nhưng ở ảnh
+      cuối hạt trên sàn chỉ hiện rõ ở DPR 2; ở DPR 1 và trên điện thoại gần như không thấy. Giữ như vậy: hạt điệp lóe nhẹ, và hạt to hơn trên
+      sàn phải tràn sang ô kề hay thưa hạt đi (ảnh ở trang duyệt của Task 11);
+  - phần sáng của hạt là `emissiveNode` với độ sáng HDR `16 · sparkle`. Tone mapping nén vùng sáng: hạt chỉ sáng gấp đôi giấy thì gần
+    như không thấy (đo trên GPU thật dưới AgX, trước lượt màu, DPR 2, góc của tranh: đỉnh 1 và 3,4 gần như không thấy hạt trong ảnh cuối;
+    8 mờ; 16 thấy rõ), và bloom của Phủ bóng chỉ có gì để tỏa khi đỉnh từ chừng 10. ACES mà lượt màu chọn (lớp 6) cũng nén vùng sáng: giữ
+    `16`, và sau lượt màu hạt vẫn lóe nhẹ ở ảnh cuối (Phụ lục A.100);
+  - **lề không lóe** (GĐ 8 Task 11): hạt tắt dần từ 0,5 vào tới 0,25 đơn vị cách mép tờ giấy (khoảng cách UV tới mép gần nhất; Cốt công bố
+    khổ UV ở `shared.cot.sheet`). Quầng bloom của một hạt tỏa ra vài chục điểm ảnh, mà ngoài mép là ván sơn đen: chưa có lề thì hạt sát mép
+    để lại những đốm sáng mờ trên ván. Đo trên GPU thật (khung 120, 1280 × 800, DPR 1, dải ván 3–20 điểm ảnh quanh tờ giấy): độ sáng lớn
+    nhất của ván 80 khi chưa có lề, 18 khi có (0–255; ván xa chừng 3).
+- **Núm:** `sparkle` (0–4, mặc định 1,2), `density` (4–40 ô mỗi đơn vị, mặc định 14), `fiber` (0–1, mặc định 0,5), `brush` (0–1, mặc định
+  0,6). Số hạt không đổi chi phí: không có vòng lặp nào theo số ô.
+- **Thí nghiệm "Giấy dó trơn"** (`giayTron`): bỏ lớp điệp và hạt, chỉ còn nền dó và sợi.
+- **Nấc** `chi-tiet`: bớt một tầng noise của sợi dó. Chỉ có khi `paper` lớn hơn 1.
+- Không có vật riêng. Cốt: `recipe.paper` và `recipe.glint` là hai hàm duy nhất lớp này bọc, nên gà không đổi.
+
+#### Lớp 5 · Đàn gà (`layers/l5-dan-ga.js`)
+- **Thấy gì:** thóc rắc ra, nảy, lăn; gà con chạy, mổ, rỉa lông; gà mẹ gọi con, cào chân bới thóc.
+  - Mài lớp này thì thóc biến mất, và đàn gà đứng yên ở chỗ của mình như tượng: vị trí và dáng hòa về dáng nghỉ theo trọng số.
+- **Thóc** là một bể hạt của `lib/tsl/particles.js` (§20.7): hai bộ đệm vec4 cấp một lần theo trần (`budget.grains`), một compute bước
+  mỗi khung, vẽ bằng một `Sprite` có `count`.
+  - `a = (vị trí, lúc sinh)`, `b = (vận tốc, hạt giống)`. Lúc sinh âm nghĩa là ô trống, hay hạt đã bị ăn.
+  - **Luật** (`parts/dan-ga-thoc.js`, số ở `GRAIN`):
+    - văng ra trong một đĩa bán kính 0,15, tốc độ ngang tới 1,2 và hất lên tới 1,5; rơi theo trọng lực;
+    - đang bay mà chạm sàn là một lần rơi: nảy với hệ số `bounce`, và vận tốc ngang còn một nửa (giấy hãm hạt). Đang nằm trên sàn (lăn)
+      thì chạm sàn mỗi khung do trọng lực: chỉ kẹp lại, không nảy, không hãm thêm. Nảy lên chậm hơn 1 thì thôi nảy; nảy thấp hơn trọng lực
+      của một khung thì tự tắt, nên ở 10 khung/giây hạt vẫn nằm yên được (bản của plan thì nảy mãi, vì một khung 0,1 giây trọng lực đã
+      cộng 9,8 vào vận tốc);
+    - lăn chậm dần theo `e^(−6t)`, chậm hẳn thì nằm yên; ra tới mép sàn thì dội lại; nằm yên thì thôi tích phân, nhưng vẫn kiểm mỏ.
+    - Nắm gọn: nửa số hạt nằm trong chừng 0,4 quanh chỗ rơi, gần hết trong 0,55, nảy chừng hai lần, nằm yên sau chừng nửa giây, ở 60, 30
+      và 10 khung/giây như nhau (đo bằng bản JS của luật). Số của plan (tốc độ ngang 2,4, không hãm khi rơi, ma sát 3) tỏa nắm ra chừng 1,3
+      (gần hết trong 1,8): các con mổ trong chừng 0,5 quanh tâm nắm chỉ ăn được 3–7% mỗi nắm. Trọng lực của trăng rơi lâu hơn, nên tỏa
+      rộng gấp đôi.
+  - **Mổ:** một mảng uniform 10 điểm (`uniformArray`, vec4) giữ mỏ của mười gà con; thành phần w là "đang mổ". Gà mẹ ngậm con ong
+    nên không mổ. Mỗi hạt tự kiểm các mỏ đang mổ: đầu mỏ thấp hơn 0,3, hạt cũng thấp hơn 0,3 (hạt đang bay qua thì không), cách hạt dưới
+    0,2 đo trên mặt sàn, thì tự xóa. Mỗi hạt chỉ đọc và ghi chính nó, vì compute của WebGL2 chỉ cho như vậy (§20.7).
+    - Vì sao 0,2 chứ không 0,06 (số cũ của spec): mỗi nắm chỉ có chín tới mười hai chỗ mổ (ba bốn con, mỗi con ba chỗ nhảy), và mỏ đứng
+      yên suốt mỗi chỗ; ở 0,06 mỗi lần mổ trúng chừng một hạt, một nắm 120 hạt gần như không vơi. 0,15 (plan) đủ khi các con còn nhảy vào
+      giữa nắm; từ khi chỉ nhảy ra phía ngoài (§20.5, để đầu hai con không đâm vào nhau), 0,2 mới phủ được nắm.
+    - Đo bằng bản JS của luật cùng đàn gà thật (`tests/paintings/dan-ga-me-con/dan-ga-thoc.test.js`): một nắm rắc giữa sàn hay sát mép
+      bị ăn chừng 60–80% (60 khung/giây), nhúm lúc mở trang chừng một nửa; cảnh bận (chạm khắp sàn, giữ, thả), nắm có con tới bị ăn trung
+      bình chừng 45%, hiếm nắm nào dưới 10%. Ở 10 khung/giây ít hơn một chút: mỏ "đang mổ" chừng 0,1 giây mỗi nhịp cúi, nên mỗi nhịp chỉ
+      một khung, có nhịp không khung nào.
+  - **Rắc** đi qua `emit` của bể: các hạt của nắm mới tự khởi tạo lại ở bước kế tiếp (§20.7). Thóc rơi ở điểm `takeScatters` trả, là tâm
+    vòng các con đứng quanh (§20.5 luật 1): sát mép thì vào trong một chút, sát mẹ thì ra bên cạnh mẹ. `origin.y` của nắm là độ cao văng:
+    3 (tầm tay) khi rắc, 1 khi gà mẹ bới (chân cào hất thóc lên thấp; nhúm gọn hơn).
+  - Chỉ rắc ở khung có `dt > 0`: `update(0, t)` của `?freeze` không rắc, không compute. Trọng số về 0 thì nắm tới lúc văng bị bỏ (nhúm gà
+    mẹ bới, vì gà mẹ vẫn bới theo đồng hồ) và nắm đang chờ trong bể bị `clear()`: phủ lại lớp không có nắm cũ nào bung ra cùng lúc.
+  - Trọng số về 0 thì `shared.js` cũng không đưa chạm và giữ tới đàn gà (GĐ 8 Task 8, sửa sau review): chạm lên bầy tượng không gọi con
+    nào chạy, núp hay mổ mà không ai thấy, và `dangAn`, `quanhMe` không đếm theo cú chạm ấy. Thả thì luôn tới đàn gà: thả mà chưa giữ thì
+    đàn gà bỏ qua, còn cái giữ bắt đầu lúc lớp còn phủ phải được thả, không thì gà mẹ xòe cánh mãi. `drift(t)` vẫn chạy mỗi khung: gà mẹ
+    vẫn bới theo đồng hồ mà nhúm của mẹ bị bỏ, nên hai ba con vẫn tới mổ nền trống (số đo đếm chúng), và phủ lại lớp giữa lúc đó thì thấy
+    chúng mổ đất tới hết lượt mổ. Chấp nhận: gà mẹ bới theo đồng hồ là điều §20.2 đòi.
+  - **Vẽ:**
+    - `positionNode` đọc bộ đệm;
+    - `scaleNode` cho hạt hình dẹt (0,08 × 0,04), với sàn theo điểm ảnh (§20.11); `rotationNode` theo hạt giống;
+    - hạt đã bị ăn, hay đã nằm hết 30 giây, nhỏ về 0;
+    - `transparent` (vẽ sau mọi vật đục), không ghi độ sâu (`depthWrite = false`) nhưng vẫn bị gà che (`depthTest`), nên Bản nét không vẽ
+      viền quanh hạt;
+    - màu đi qua `recipe.fill`: thóc là `hoe` khi có Bản màu, đất sét khi không; "Chỉ bản nét" in nó thành trắng giấy như mọi thứ in màu.
+- **Đàn gà** (`parts/dan-ga-song.js`, hàm thuần, chỉ import `lib/random.js`):
+  - vị trí, hướng, góc cúi đầu của mười gà con, và cánh của gà mẹ, tính thẳng từ thời gian theo các mốc (§20.5);
+  - `shared.js` giữ các mốc (cử chỉ đến đó); lớp này đọc mốc mới để `emit` thóc. Hợp đồng của đàn gà: `drift(t)` chạy trước mọi cử chỉ
+    của khung (xưởng giao cử chỉ trước `setup.update`, nên `onGesture` gọi `drift(t)` trước, rồi `setup.update` gọi lại, cùng t không thêm
+    gì). Điểm chạm đi qua `floorPoint`, hàm toàn phần: tia hỏng (khung cỡ 0, NaN, thiếu tia) vẫn ra một điểm hữu hạn trong sàn;
+  - mỗi khung, `update` gọi `shared.cot.pose(state, k)`: Cốt ghi chỗ, hướng (`pose`) và góc cúi đầu (`head`) vào thuộc tính instance riêng
+    của gà con, và bốn uniform của gà mẹ (lớp 1); lớp này ghi mảng mỏ.
+  - Ma trận instance giữ đơn vị và `frustumCulled = false` (lớp 1), nên không ghi ma trận và không cần `computeBoundingSphere()`.
+  - `pose`, `head` ghi lại mỗi khung, nên là `instancedDynamicBufferAttribute` (`DynamicDrawUsage`).
+- **Núm:** `handful` (số hạt mỗi nắm), `bounce`, `gravity` (select: `traiDat`, `trang`), `count` (trần số hạt, `via: 'js'`, như đom đóm).
+- **Thí nghiệm "Tô theo luồng"** (`toTheoLuong`): mỗi hạt một màu theo chỉ số luồng GPU (`instanceIndex`). Sắc màu (hue) xoay một góc
+  vàng (2,4 rad, chừng 137,5°) mỗi luồng, nên hai hạt kề nhau trên vòng đệm khác màu hẳn: màu không cho thấy một nắm là đoạn liền.
+  - Thấy được mỗi hạt ở yên một luồng (nên một màu) suốt đời: hạt giữ nguyên màu khi rơi, nảy, lăn. Ngược lại thì không đúng: một luồng
+    tính nhiều hạt nối nhau, vì hết vòng đệm thì nắm mới lấy lại luồng (ý dưới).
+  - Hạ `count` rồi rắc liền tay thì thấy nắm mới lấy lại luồng của những hạt cũ nhất (mỗi nắm là một đoạn liền của vòng đệm): hạt ở nắm
+    cũ biến mất.
+  - Bản đầu của chữ trong Sổ tay viết "hạt cùng một nắm có màu liền nhau", sai với góc vàng (sửa ở GĐ 8 Task 10).
+- **Số đo:** `rac` (số hạt đã rắc thật còn trong vòng đệm: bể đếm lúc một nắm ra khỏi hàng đợi, §20.7), `dangAn` (số gà con đang mổ),
+  `quanhMe` (số gà con cách tâm gà mẹ dưới 2,2).
+- **Nấc** `thoc`: trần số hạt còn một nửa.
+- **Vật:** `thoc`.
+
+#### Lớp 6 · Phủ bóng (lớp dùng chung)
+- Bloom chọn lọc làm hạt điệp tỏa; ngoài hạt điệp, không vật nào có emissive.
+- LUT, grain, vignette, FXAA như ba bức trước. Mặc định của núm ghi đè trong `painting.js` nếu lượt màu cần (§15 a): `bloomStrength`
+  thấp hơn, `exposure` để giấy không xám.
+  - Chốt ở lượt màu (GĐ 8 Task 11; bức đầu tiên ghi đè mặc định của lớp dùng chung): `toneMapping` `'aces'`, `exposure` 1,2,
+    `bloomStrength` 0,5; các núm khác giữ mặc định. `painting.js` chép module của Phủ bóng, chỉ thay `value` của ba núm ấy (`PHU_BONG`).
+  - Mài Phủ bóng về 0 vẫn là bài học cũ: không tone mapping, không bloom; giấy sáng hơn (lộ sáng 1,2 nhân thẳng) mà chưa cháy trắng.
+
+### 20.5 Chuyển động tất định (`parts/dan-ga-song.js`, và `dan-ga-pha.js`, `dan-ga-duong.js`, `dan-ga-cho.js`, `dan-ga-ke.js`)
+- **Mốc:**
+  - `scatter(t, điểm, hạt giống)`: chạm, hay gà mẹ bới;
+  - `grip(t)` và `release(t)`: giữ, thả. Giữ hai lần liền, hay thả khi chưa giữ, thì bỏ qua;
+  - "đang giữ" kéo dài qua các mốc rắc: `grip`, `release` và bới hỏi mốc cuối có đang giữ không (`underGrip`), không hỏi loại của mốc cuối;
+  - giữ tối đa 32 mốc gần nhất, như Bức 3. Sau khi bỏ mốc cũ, `state(t)` với t sớm hơn mốc cũ nhất đọc kế hoạch của chính mốc ấy ở t: pha
+    đã bắt đầu trước t tính như thường, pha chưa bắt đầu thì đứng ở trạng thái đầu của nó (con mà mốc ấy gọi đi đứng ở chỗ của nó lúc mốc ấy);
+  - **"Bây giờ":** mỗi hàm ghi (`scatter`, `grip`, `release`, `drift`) nhớ thời điểm lớn nhất nó đã nhận. Mốc có thời điểm lùi xếp vào "bây
+    giờ" chứ không lùi hơn, nên không viết lại các khung đã vẽ và đàn không nhảy. Hợp đồng gọi: `drift(t)` chạy mỗi khung, một lần, trước cử
+    chỉ và trước `state(t)`, nên "bây giờ" là thời điểm khung đang vẽ; mốc bới của `drift` cũng không xếp vào khung đã vẽ trước lần gọi
+    hiện tại. `state(t)` vẫn là hàm thuần của các mốc: không ghi gì;
+  - thời điểm hay điểm rắc không hữu hạn thì ném lỗi: một số NaN lọt vào mốc làm hỏng mọi trạng thái sau đó.
+- **Gà mẹ là vật cản.** Thân mẹ trên sàn là hình viên thuốc: mọi điểm cách đoạn xương sống (dọc mẹ, dài 1,6) không quá 1,2 (`LAYOUT.body`).
+  Gà con đứng thẳng, hướng nào, không lún vào mẹ khi cách xương sống từ 1,85, gọi là **vòng cấm** (đo bằng chỗ thật của khối ở 48 hướng:
+  cách 1,75 còn lún, từ 1,78 hết; lấy 1,85). Ba luật:
+  1. **Nắm rơi bên cạnh mẹ.** Gà con xúm quanh nắm trên vòng bán kính 1 và nhảy tối đa 0,25, nên tâm vòng phải cách xương sống từ 3,1. Điểm
+     rắc mà tâm vòng của nó (kéo vào trong sàn) gần hơn thì dời tới điểm gần nhất trong sàn thỏa điều ấy. Nắm ném vào mẹ, sát mẹ, hay chạm
+     lên vách (điểm rắc kẹp về mép sau sàn, ngay sau lưng mẹ) thì rơi bên cạnh mẹ. Rồi điểm rắc kéo vào trong sàn thành chính tâm vòng (GĐ 8
+     Task 8): `takeScatters` trả tâm vòng ấy, lớp Đàn gà rắc thóc ở đó, nên thóc nằm đúng giữa các con. Trước đó thóc rơi ở điểm chạm, mà
+     chạm sát mép thì tâm vòng bị kéo vào tới 1,25 theo mỗi trục: các con mổ cách nắm thóc cả đơn vị, không trúng hạt nào.
+  2. **Đường chạy không cắt vòng cấm.** Đường thẳng cắt vòng cấm thì vòng qua đầu hay đuôi mẹ, bên nào gần: một đường gấp khúc, cả đường chung
+     MỘT lần tăng giảm tốc (không dừng ở góc), hướng quay dần trong 0,3 giây sau mỗi góc.
+  3. **Tới chỗ núp không quay mỏ vào mẹ.** Sáu trong tám chỗ núp nằm trong vòng cấm. Gà con chạy tới điểm dừng ngoài vòng cấm (cách vòng 0,35,
+     thẳng ra ngoài từ chỗ núp), đứng quay tại chỗ sang hướng ra ngoài trong 0,3 giây (mỏ quét ở xa mẹ), rồi lùi vào chỗ núp, mặt vẫn hướng
+     ra ngoài. Ra khỏi chỗ núp (thả) thì ngược lại: đi thẳng ra điểm dừng (mặt đã hướng ra) rồi chạy, cùng một chuyến êm. Hai chỗ giữa lưng
+     mẹ đã ngoài vòng cấm nên chạy thẳng tới.
+  - Đo bằng chỗ thật của khối, từng khung: 150 cảnh ngẫu nhiên (chạm khắp sàn kể cả trúng mẹ, giữ, thả; 2,9 triệu khung gà con) không khung
+    nào ở trong thân mẹ, và ở trong vòng cấm chỉ khi cách một chỗ núp dưới 1,1, mặt quay ra ngoài trong 50°; giữ sau bốn cú chạm (60 lần):
+    không khung nào lún (trước khi có ba luật: 713 khung, 59 lần có khung lún).
+- **Trạng thái của một gà con ở thời điểm t:** đi qua các mốc theo thứ tự. Trạng thái đầu của mỗi đoạn là trạng thái cuối của đoạn trước: vị
+  trí, hướng đang có (không phải hướng muốn tới: chuyến ngắn hơn 0,3 giây không làm hướng giật) và độ cúi đầu, tắt dần trong 0,25 giây (gà đang
+  mổ mà bị gọi đi thì đầu không rơi về 0 trong một khung). Mỗi đoạn có dạng đóng:
+  - **rảnh:** lượn quanh chỗ "nhà" theo hai sóng sin của thời gian, biên độ 0,3 mỗi trục (bán kính tối đa chừng 0,42), xen lẫn cúi đầu
+    rỉa lông theo chu kỳ có hạt giống;
+  - **chạy tới:** từ chỗ đang đứng tới điểm đích, là một chỗ trên vòng bán kính 1 quanh điểm rắc.
+    - Các con chạy tới cùng một nắm đứng cách đều nhau trên vòng ấy, mỗi con một chỗ (hạt giống xoay cả vòng), nên không chồng lên nhau: gà
+      con rộng chừng 1. Điểm rắc sát mép sàn thì tâm vòng được kéo vào trong sàn (chừa cả vòng và bước nhảy), nên gà con luôn đứng trên giấy.
+    - Mỗi chỗ đứng cách chỗ đứng của mọi con khác (đang mổ nắm khác, đang nghỉ ở nhà, con nấp bụng) từ 1,4: cộng hai bước nhảy thì hai con
+      cách nhau ≥ 0,9. Nhà của mọi con đang đi vắng hay đang về cũng là chỗ đã có người, vì xong việc nó về đứng ở đó (GĐ 8 Task 8: trước
+      đó con mổ đứng sát nhà một con đang vắng, rồi con kia về đứng chồng lên, 93 trong 200 cảnh bận).
+    - Vòng vướng thì xoay tới góc có nhiều chỗ hợp lệ nhất; chỗ nào không hợp lệ thì con ấy ở yên. Vòng không bao giờ nở: mỏ lúc mổ chỉ với
+      tới trước chân chừng 0,75, nên đứng trên vòng nở (×1,4; ×1,8, cách của GĐ 8 Task 7) là mổ cạnh nắm thóc. Đo bằng bản JS của luật
+      thóc (GĐ 8 Task 8, 40 cảnh bận, chạm khắp sàn): giữ vòng nở làm đường lùi khi vòng bán kính 1 không còn chỗ nào thì 51 trong 474 nắm
+      có con tới bị ăn dưới 10%; bỏ hẳn vòng nở thì 11 trong 420 (có thêm vài nắm không con nào tới).
+      Đông tới mức không còn chỗ nào thì không con nào tới nắm mới (các con khác đang vây rồi): spacing không bao giờ nới.
+    - Con nào vào chỗ nào gán sao cho tổng quãng đường (cả đoạn vòng qua mẹ) ngắn nhất, như chỗ núp.
+    - Tốc độ 9 đơn vị/s (0,9 m/s), có tăng giảm tốc (`smootherstep`) trên cả đường.
+    - Bắt đầu sau 0,1–0,4 giây (phản xạ, theo hạt giống).
+  - **mổ:** quanh điểm đích, nhảy giữa ba chỗ cách chỗ đứng 0,1–0,25 (mỗi chỗ 8/3 giây), luôn nhìn về tâm vòng (nắm thóc). Nhảy ngắn thì
+    hai con kề nhau trên vòng (bốn con thì cách 1,41) vẫn cách nhau ≥ 0,9. Đầu cúi theo nhịp 2,5 lần mỗi giây; mỏ "đang mổ" ở đáy nhịp,
+    trước chân chừng 0,75, nên chạm sàn trong 0,55 quanh tâm vòng: vòng luôn bán kính 1, và tâm vòng là chỗ thóc rơi (luật 1 ở trên).
+    - Chỗ nhảy ở phía ngoài vòng: lệch tối đa ±60° khỏi hướng từ tâm nắm ra chỗ đứng (GĐ 8 Task 8). Mỏ mọi con chụm về tâm nắm, nên nhảy
+      vào trong thì đầu hai con cạnh nhau (bán kính 0,3) đâm vào nhau: đo bằng tâm đầu thật, 8% số cặp-khung hai đầu lún vào nhau, sâu tới
+      0,4; nhảy ra ngoài ±60° thì dưới 0,5%, sâu không quá chừng 0,04.
+    - Cả nhóm cùng một nắm thôi mổ cùng lúc: con tới sau cùng mổ 8 giây, con tới trước mổ lâu hơn một chút (chỗ nhảy cuối dài ra, nhịp
+      cúi vẫn liền). Lý do: khi mỗi con thôi mổ 8 giây sau lúc chính nó tới, con tới trước về trước, rồi đứng nghỉ ở nhà ngay sát chỗ một
+      con cùng nhóm còn đang mổ (GĐ 8 Task 8, đo trước luật này: 15 trong 200 cảnh bận, sau khi đã tính nhà của con đi vắng; có luật: 0);
+  - **về:** đi bộ về chỗ "nhà", 5 đơn vị/s;
+  - **núp** (khi giữ): chạy về một trong tám chỗ quanh và dưới cánh mẹ (luật 3 ở trên), đứng sát, quay ra ngoài (lưng về phía mẹ), đầu ngó
+    nghiêng (hướng lắc ±0,5 rad). Chỗ gán sao cho tổng quãng đường của tám con (cả đoạn vòng qua mẹ) ngắn nhất, nên con nào cũng ưu tiên
+    chỗ phía mình; không hai con một chỗ.
+    - Tám chỗ là dữ liệu của bố cục (`SLOTS`), trên vòng bán kính 2,1 quanh tâm mẹ: dưới 2,2 để `quanhMe` đếm đủ mười; đủ xa để gà
+      con quay ra ngoài không lún vào thân, đuôi, đầu hay cánh mẹ (kể cả cánh mở 60°); đôi một cách nhau ≥ 1,35 và cách con nấp bụng
+      ≥ 1,5, nên không chồng lên nhau kể cả lúc ngó nghiêng (test đọc chỗ thật của khối).
+    - Hai chỗ giữa lưng mẹ bị mẹ che hẳn từ camera của tranh; kéo xoay mới thấy gà con núp ở đó.
+- **Ai chạy tới chỗ rắc:** ba tới bốn con gần nhất (số theo hạt giống) trong các con đang rảnh hay đang về.
+  - Đang núp thì không đi. Con đã chạy tới hay đang mổ một nắm thì không bị nắm khác gọi đi.
+  - Con trèo lưng và con nấp bụng luôn giữ chỗ của mình: không chạy tới chỗ rắc, và khi giữ thì ở yên (vốn đã ở sát mẹ).
+- **Thứ tự ưu tiên** khi các mốc chồng nhau: núp > chạy tới > về > rảnh. Rắc trong lúc giữ thì thóc vẫn rơi, nhưng các con ở lại với mẹ.
+- **Hướng:**
+  - đang đi thì quay theo đoạn đường đang đi (đường gấp khúc: quay dần 0,3 giây sau mỗi góc); mọi lần đổi hướng đều êm, không quá
+    π rad trong 0,3 giây;
+  - đứng yên ở nhà thì theo dáng của bố cục (lắc nhẹ); đứng mổ thì nhìn về nắm thóc; núp thì quay ra ngoài, lưng về phía mẹ.
+- **Gà mẹ:** đứng yên giữa sàn; đầu ngoảnh chậm theo thời gian.
+  - Giữ: hai cánh mở tới 60° theo lò xo tắt dần tới hạn (như cây bay của Bức 3); đầu gật "cục cục" 2 lần mỗi giây, sâu nhất 0,4 rad
+    (23°, `FLOCK.nod`). Mọi góc của gà mẹ trong trạng thái (cánh, gật, ngoảnh, cào) là radian, Cốt áp thẳng. Plan để gật 0–1 rồi áp như
+    radian (tới 57°): đầu và con ong của mẹ lún vào gà con núp trước ngực (test đọc chỗ thật của khối giữ điều này).
+  - Thả: cánh khép theo cùng lò xo.
+  - Bới: chân cào trong 0,6 giây; thóc văng ra ở giữa nhịp cào. Không ai chạm 25 giây (kể từ mốc cuối, và không đang giữ) thì bới một
+    lần: một nhúm 24 hạt ở `HEN_FRONT`, hai ba con gần nhất xúm lại.
+- **Nhúm lúc mở trang:** 40 hạt nằm yên ở `PILE`; hai ba con gần nhất đã đứng sẵn quanh đó, chờ 0,1–0,4 giây rồi mổ, lệch nhịp nhau
+  (poster chụp ở 2 giây có gà mổ).
+  - `PILE` và `HEN_FRONT` đặt ở x = −3,95, trước mỏ mẹ (mỏ ở −2,6) chừng 1,35: đúng chỗ gà con xúm quanh được (cách đầu xương sống (−0,8; 0)
+    từ 3,1), nên luật 1 không phải dời. Đặt ở x = −2,6 thì luật 1 dời tới đó: đo bằng chỗ thật của khối, đứng quanh nhúm ở x = −2,6 thì
+    chừng một khung mổ trong chín có con lún vào ngực mẹ.
+- **Đơn vị:** một đơn vị là 10 cm. Trọng lực của Trái Đất là 98,1 đơn vị/s², của trăng là 16,2.
+- **Giảm chuyển động:** tốc độ chạy và đi còn một nửa, cánh mở chậm gấp đôi; không có gà mẹ bới (nhúm lúc mở trang vẫn có).
+- Gọi `state(t)` bao nhiêu lần, theo thứ tự nào, cũng ra cùng một số; `update(0, t)` ra đúng khung N.
+
+### 20.6 Xưởng và hợp đồng
+Bức 4 cần bốn thay đổi của xưởng. Mỗi cái là một trường tùy chọn của hợp đồng, hay một thay đổi không đổi nghĩa cũ (luật 7). Bức nào cũng
+dùng được.
+
+**1. Camera trực giao** (`CameraSpec.kind: 'ortho'`)
+- Trường mới (§8.4): `kind`, mặc định `'perspective'`. Với `'ortho'`:
+  - `height`: bề cao của khung nhìn ở zoom 1, theo đơn vị cảnh. Nó thay cho `fov`.
+  - `minWidth` (tùy chọn): khung hẹp thì xưởng nới `height` để bề ngang thấy đủ chừng này, có trần 4 lần `height`. Hàm
+    `engine/gpu/fov.js#fitOrtho` tính lại mỗi lần resize, giống `minHorizontalFov` của camera phối cảnh.
+  - `shortFrame` (tùy chọn, vòng sau điểm duyệt ảnh): `{ below, maxGrow }`. Canvas thấp hơn `below` điểm ảnh CSS thì `height` nhân với
+    below / bề cao canvas, tới `maxGrow` lần (`fov.js#shortGrow`); `fitOrtho` lấy max với phần nới theo `minWidth`, không nhân dồn.
+    `stage.js` truyền bề cao canvas cho `createCamera`/`fitCamera` mỗi lần resize. Camera phối cảnh bỏ qua; test hợp đồng chỉ cho nó ở
+    camera trực giao (`below > 0`, `maxGrow ≥ 1`). Lý do và số đo ở §20.2.
+  - `zoom` (tùy chọn): `[min, max]`, thành `minZoom` và `maxZoom` của OrbitControls. Thiếu thì không zoom.
+  - `fov` và `distance` không dùng. Khoảng cách của camera chỉ để cắt near/far, và đứng yên: OrbitControls với camera trực giao đổi
+    `zoom`, không đổi khoảng cách (Phụ lục A.92).
+- `stage.js` dùng `engine/gpu/camera.js` (file mới: phần tính của camera tách ra để unit test, vì `stage.js` cần GPU):
+  - `useCamera(spec)` dựng đúng loại camera (`createCamera`). `stage.camera` thành getter: mọi chỗ dùng (scene, pipeline, input, chữ đi
+    theo vật, móc lần vẽ) đều đọc sau `useCamera`;
+  - khi resize, `fitCamera`: camera trực giao tính `left`, `right`, `top`, `bottom` từ tỉ lệ khung và `fitOrtho`; zoom người xem chọn giữ
+    nguyên;
+  - `limitControls`: với camera trực giao, zoom kẹp trong `spec.zoom`, khoảng cách không đụng tới; với camera phối cảnh như cũ;
+  - near 0,1 và far 500 giữ nguyên.
+- Những chỗ đã đúng sẵn, chỉ thêm test: tia của Raycaster (gốc nằm trên mặt phẳng của camera, hướng là hướng nhìn; Phụ lục A.92), chiếu
+  điểm neo của chữ đi theo vật. Camera "thở" không cần test riêng: `breath.js` là hàm thuần không biết loại camera, và Bức 4 có
+  `breathe` 0.
+- `contracts/runtime.js` (JSDoc) và test hợp đồng: `fov > 0` chỉ bắt buộc với camera phối cảnh; camera trực giao bắt buộc `height > 0`.
+  `tests/helpers/fake-ctx.js` dựng camera theo `painting.camera`.
+
+**2. Độ sâu đúng cho camera trực giao**
+- three luôn đổi texture độ sâu bằng công thức phối cảnh (`PassNode.getViewZNode`, `getLinearDepthNode`; Phụ lục A.89). Với camera trực
+  giao, view Độ sâu thành một bóng trắng trên nền đen.
+- Sửa ở MỘT chỗ (`pipeline.js`), chọn bằng JS lúc dựng pipeline. Phải chọn bằng JS vì camera cần biết là của sân khấu; trong post, camera
+  của TSL là camera vẽ quad.
+  - Camera trực giao: độ sâu tuyến tính chính là texture độ sâu (Phụ lục A.90).
+  - Camera phối cảnh: `getLinearDepthNode()` như cũ.
+- `channel('depth')` và view Độ sâu (`views.js`) cùng dùng chỗ đó. Với camera phối cảnh, node giữ nguyên như cũ (test giữ), nên ba bức cũ
+  không đổi.
+
+**3. Tranh tự khép lại** (`CameraSpec.home: { after, duration }`, tính bằng giây; file mới `engine/gpu/home.js`)
+- Nghe sự kiện `start` và `end` của OrbitControls. Từ `end`, đếm thời gian đứng yên, tính bằng giây của cảnh (`dt` của từng khung).
+- Đủ `after` giây thì quay về góc ngang, góc dọc và zoom (hay khoảng cách, với camera phối cảnh) của `CameraSpec` trong `duration` giây,
+  theo `smoothstep`, đi đường ngắn nhất. Có `start` mới thì dừng ngay.
+- Mỗi khung đang về, bộ đếm đặt THẲNG vị trí camera, quanh `controls.target` lúc chạy (không phải `spec.target`: camera "thở" dời nó), và
+  `zoom` (camera trực giao, rồi `updateProjectionMatrix()`); `controls.update()` chạy ngay sau như mọi khung, nhìn về điểm nhìn và kẹp trong
+  giới hạn. Đổi cỡ khung giữa đường thì vẫn về đủ: `fitCamera` đổi khung nhìn, không đổi zoom.
+- Giảm chuyển động: đủ `after` giây thì về một bước.
+- **Quán tính của OrbitControls** tắt theo số lần `update()`, không theo giây (Phụ lục A.98), mà dt của khung bị kẹp 0,1 s: ở máy vẽ chậm,
+  phần xoay dở sau khi buông tay còn lại nhiều và kéo camera ra khỏi nhà lần nữa. Nên `step(dt)` đặt `dampingFactor = 1 − (1 − mặc định)^(dt × 60)`
+  trước `controls.update()` (khi `enableDamping`): quán tính tắt theo giây của cảnh ở mọi nhịp khung, và đúng bằng mặc định (0,05) ở 60 khung/giây.
+  Chỉ bức có `CameraSpec.home` chịu thay đổi này; bộ đếm gỡ đi thì trả `dampingFactor` về như cũ.
+- Phần tính là hàm thuần (`homeAt(từ, tới, k)` và bước đếm giờ), test bằng chuỗi khung giả. `scene.step()` gọi `stage.returnHome(dt)` sau
+  `stage.breathe(t)` và trước `controls.update()`; khung bị bỏ (thử ngừng vẽ) thì không gọi.
+- Với `?freeze`, vòng lặp dừng, nên camera không tự về.
+
+**4. Sổ tay hiện code của hộp màu**
+- `LayerMeta.files` kê được file `lib/tsl/*.js` mà lớp dùng (§8.3), và glob của `ui/code-view.js` thêm `../lib/tsl/*.js`.
+- Kê là tùy chọn. Kê thì phải dùng thật: test hợp đồng kiểm file `lib` được kê nằm trong `lib/tsl/` và trong bao đóng import tĩnh của file
+  lớp (thẳng hay qua part). Như mọi file trong `files`, mỗi file thuộc tối đa một lớp của bức (test hợp đồng giữ). Theo quy ước, file mà
+  nhiều lớp cùng dùng thì không lớp nào kê: ở Bức 1, `noise.js` mà ba lớp cùng dùng (Sương, Vàng lá, và Ánh trăng qua
+  `parts/anh-trang-moon.js`) không lớp nào kê; ở Bức 4 chỉ Giấy điệp dùng nó, nên lớp ấy kê. Hộp màu không biết núm, nên không có marker `// @knob` ở đó.
+- Lý do: rút code của đom đóm lên `lib/tsl/particles.js` mà không kê thì Sổ tay của lớp Vàng lá mất đoạn code đó.
+
+**Sửa một lỗi của xưởng, tìm ra khi làm Bức 4** (không phải trường mới; GĐ 8 Task 1): `tools/pick.js` bọc view của mỗi nhánh `If` trong
+`isolate(…).setParent(false)` (Phụ lục A.95). Trước đó Lột lớp và Kính mài của ba bức đầu ra đen ở nấc "Trước bloom", từ GĐ 5.
+
+**Không đổi:** cử chỉ, Dial (Bức 4 không có Dial), thí nghiệm, số đo, nấc, `quality`, chữ đi theo vật (Bức 4 không dùng).
+
+**Hàng rào từ vựng** (`meta.fence`): `chick`, `poultry`, `rooster`, `gà mẹ`, `gà con`, `thóc`, `con ong`, `đông hồ`, `điệp`, `bản nét`,
+`bản màu`, `lá tre`.
+- Không rào `hen`: đó là chuỗi con của `denThen`, token của xưởng. Không rào `grain`: Phủ bóng có núm `grain`.
+- Không rào `ink`, `paper`, `outline`, `toon`, `cel`, `sobel`, `ortho`: đó là tên kỹ thuật, bức sau có thể cần rút chúng lên hộp màu hay
+  lớp dùng chung (§16).
+- Test tự kiểm phải bắt được ít nhất một từ của Bức 4 và không bắt nhầm.
+
+**Tên vật** (Từng sợi): `giay`, `ga-me`, `ga-con` (lớp 1), `thoc` (lớp 5). Cả cảnh có sáu lần vẽ, vì gà mẹ là một Group ba mesh.
+
+### 20.7 Hạt dùng chung: `lib/tsl/particles.js`
+**Luật hai lần, lần đầu tiên.** Đom đóm (Bức 1) là bức thứ nhất cần hạt compute; thóc là bức thứ hai. Phần chung rút lên hộp màu; luật
+chuyển động ở lại trong bức.
+
+- **Bể hạt** `createPool({ capacity, count, init, law, spawn, tier, renderer })` thuộc hộp màu: chỉ import three, không biết xưởng hay
+  bức.
+  - Cấp MỘT lần hai bộ đệm vec4 (`instancedArray`) theo `capacity`. `count` (mặc định `capacity`) là số phần tử được tính và vẽ lúc đầu.
+  - `init` và `law` là hàm TSL nhận `{ a, b, index }`, tức vec4 của CHÍNH phần tử đó. Compute khởi tạo và compute bước bọc chúng.
+  - Quy ước: mọi nhánh của `init`, `law`, `spawn` gán CẢ `a` lẫn `b`, để mỗi nhánh nói đủ trạng thái mới của phần tử. Nhánh không gán
+    thì ô đó giữ giá trị cũ, ở cả hai backend: WebGL2 chép bản đọc sang bản ghi trước khi chạy luật (Phụ lục A.97), nên không có rác.
+  - Bể nhận `renderer` và `tier` lúc dựng, vì compute khởi tạo chạy ngay lúc đó, trên cả bộ đệm (theo `capacity`). WebGL2 chạy nó hai lần,
+    để cả hai bản ping-pong có dữ liệu (Phụ lục A.29).
+  - `setCount(n, ...vật vẽ)` đổi `count` của compute bước, và của vật vẽ do bức truyền vào, rồi trả số đã kẹp. Sàn là 100, vì sprite có
+    `count` > 1 mới có cache key riêng; trần là `capacity`.
+  - `step(dt, w)` không làm gì khi `dt === 0` hay `w ≤ 0`: `update(0, t)` không tiến mô phỏng, nắm đang chờ vẫn chờ. Không thì chạy đúng
+    một compute bước. `step` không nhận `renderer`: bể đã giữ nó từ lúc dựng.
+  - `dispose()` gỡ hai compute node.
+  - Hộp màu không đặt tên uniform (`setName`): một bức có thể dựng hai bể.
+- **Rắc** (`spawn`, tùy chọn; chỉ Bức 4 dùng): `emit({ origin, count, seed, still })` xếp một nắm vào hàng đợi và trả chỗ của nắm trên
+  vòng đệm, `{ start, size }` (nắm 0 hạt thì `null`). Bể không có `spawn` thì `emit` ném lỗi.
+  - Mỗi bước lấy một nắm ra, ghi vào uniform `batch = { start, count, origin, seed, still }`: đầu nắm, số hạt, gốc, hạt giống, nằm yên.
+    Không có uniform "lúc rắc": `spawn` đọc đồng hồ của cảnh (`ctx.u.time`) ở bước đó.
+  - Ở compute bước, phần tử nào thuộc nắm (`(index − đầu + count) mod count < số hạt`, với `count` là số phần tử đang tính) thì gọi
+    `spawn` để tự khởi tạo lại; phần tử khác gọi `law`.
+  - Vòng đệm quấn theo số phần tử đang tính, không theo `capacity`: nắm rơi vào phần không được tính thì không ai thấy. Nắm lớn hơn số
+    đó thì bị cắt. Con trỏ vòng đệm đi tiếp sau mỗi nắm, nên nắm mới đè lên hạt cũ nhất.
+  - Mỗi bước tối đa một nắm; nắm sau chờ bước sau. Hàng đợi giữ tối đa 16 nắm, bỏ nắm cũ nhất: chạm dồn lúc khung đứng không làm nó
+    phình mãi.
+  - `emit` chép `origin` ngay lúc xếp hàng: người gọi dùng lại mảng của mình cũng không đổi nắm đang chờ.
+  - `clear()` bỏ mọi nắm đang chờ, không đụng tới shader; con trỏ vòng đệm lùi về đầu nắm chờ cũ nhất, nên nắm sau vẫn đè lên hạt cũ
+    nhất. Lý do: `step` không chạy khi `w ≤ 0` mà nắm chờ thì vẫn chờ, nên mài lớp về 0 rồi phủ lại là các nắm cũ bung ra cùng lúc. Bức
+    gọi `clear()` mỗi khung lớp tắt hẳn (Bức 4, lớp Đàn gà).
+  - `emitted()`: số phần tử đã rắc THẬT (nắm đã ra khỏi hàng đợi ở một bước) còn trong vòng đệm, không quá số đang tính. Đếm lúc rắc,
+    không lúc xếp hàng: nắm đang chờ, nắm bị trần hàng đợi hay `clear()` bỏ không tính.
+  - `still` cho nắm nằm yên ngay từ đầu (nhúm thóc lúc mở trang).
+  - Vì sao không cho mỗi hạt đọc hạt khác: compute của WebGL2 là transform feedback, mỗi luồng chỉ đọc và ghi phần tử của chính nó
+    (`element(i)` bỏ qua `i`, Phụ lục A.10). Thứ cần đi giữa các vật (mỏ gà) đi qua uniform.
+- **Bức 1 dùng bể chung, ảnh giữ nguyên:**
+  - `l5-vang-la.js` gọi `createPool` với luật của đom đóm: dòng xoáy curl, quán tính, hút về tay, kẹp trong ao. Marker `@knob` vẫn ở file
+    của lớp. Id lớp, núm, thí nghiệm, số đo, nấc không đổi.
+  - **Test so mã:**
+    - TRƯỚC khi rút, ghi mã WGSL và GLSL của compute khởi tạo, compute bước và material của đom đóm thành fixture;
+    - sau khi rút, mã phải giống từng ký tự, chỉ trừ số id của node trong tên (`NodeBuffer_<id>`, kiểu `NodeBuffer_<id>Struct` của
+      WGSL, `buffer<id>` của GLSL), được đổi thành chỗ giữ đánh số theo thứ tự xuất hiện (`#0`, `#1`): hai bộ đệm vẫn phân biệt được;
+    - helper mới `tests/helpers/nodes.js#compileCompute` dịch compute node bằng builder thật, như `compileMaterial`.
+  - Biến thể CPU (`parts/vang-la-cpu.js`) ở lại Bức 1, vì chỉ đom đóm cần.
+  - `meta.layers` của Vàng lá kê thêm `lib/tsl/particles.js`, nên Sổ tay vẫn hiện đủ code (§20.6 mục 4).
+- Hàng rào từ vựng: hộp màu không chứa từ vựng của bức nào (`firefl`, `thóc`…); test luật giữ như mọi file trong `lib/tsl`.
+
+### 20.8 Chất lượng và ngân sách
+**Bảng của Bức 4** (`paintings/dan-ga-me-con/quality.js`):
+
+| Mức | DPR tối đa | Vòng của khối gà (`segments`; tối đa `segmentsMax`) | Thóc tối đa (`grains`) | Tầng noise của giấy (`paper`) | Bloom (`resolutionScale`) |
+|---|---|---|---|---|---|
+| **cao** | 2 | 32; 48 | 4096 | 3 | 0.5 |
+| **vừa** | 1.5 | 28; 32 | 2048 | 2 | 0.25 |
+| **thấp** | 1.25 | 24; 32 | 1024 | 2 | 0.25 |
+
+- Khóa: `dpr`, `segments`, `segmentsMax`, `grains`, `paper`, `bloom`.
+- Thang: `['dpr', 'dan-ga.thoc', 'giay-diep.chi-tiet', 'phu-bong.bloom']`. Nấc `giay-diep.chi-tiet` chỉ có khi `paper` lớn hơn 1. Số vòng
+  của khối gà không có nấc: đổi hình lúc chạy là dựng lại geometry, và số tam giác đã theo mức.
+- Trần núm theo mức: `count` tối đa `budget.grains`; `segments` mặc định `budget.segments`, tối đa `budget.segmentsMax`; `handful` tối đa
+  300 ở mọi mức, vì số hạt đã có trần riêng.
+  - `segments` theo mức có từ GĐ 8 Task 9. Trước đó mọi mức 32, và núm kéo tới 48 (334 nghìn tam giác) ở mức nào cũng được.
+  - Mức vừa 28 tới ngay góc thành nét của Bản nét, không thấy vệt nào; mức thấp 24 có vệt rất nhạt khi phóng to, ở cỡ điện thoại không
+    phân biệt được với 32 (§20.4 lớp 1). Trần của hai mức ấy là 32, hình đã duyệt ảnh.
+- **Tam giác** của các vật có hình (tờ giấy 480, gà mẹ, mười gà con). `renderer.info` đếm thêm 2 mỗi hạt thóc đang vẽ và 1 mỗi lượt hậu kỳ:
+
+  | Mức | Mặc định | `segments` hết cỡ | `renderer.info` lúc mặc định (đo lại, GĐ 8 Task 12) |
+  |---|---|---|---|
+  | **cao** | 149 264 | 336 936 (48) | 157 470 |
+  | **vừa** | 114 174 | 149 264 (32) | 118 284 |
+  | **thấp** | 82 860 | 149 264 (32) | 84 922 |
+
+  Mảng cổ của gà mẹ (GĐ 8 Task 11) thêm 1 152 tam giác ở 32 vòng (896 ở 28, 624 ở 24, 2 688 ở 48), đã tính trong cả ba cột; Task 9
+  đo `renderer.info` trước mảng cổ được 156 318, 117 388, 84 298, đúng bằng số mới trừ phần ấy. `quality.test.js` giữ ngân sách: 150,
+  115, 85 nghìn ở mặc định; 340, 150, 150 nghìn khi kéo hết cỡ (trước mảng cổ: 335 nghìn ở mức cao).
+- **Draw call:** giấy, mình gà mẹ, hai cánh, gà con (instanced), thóc (sprite) là 6 lần vẽ. Mức cao có `6 + 12 (bloom) + 1 (FXAA) + 1
+  (quad) = 20`. Bản nét không thêm lượt vẽ nào, vì nó đọc thẳng texture độ sâu. E2e giữ ≤ 30. Đo được 20 ở cả ba mức (GĐ 8 Task 9).
+- **Chi phí:** thấp.
+  - Mỗi điểm ảnh: 9 mẫu độ sâu (Bản nét), noise và hạt điệp trên giấy.
+  - Thóc: 4096 phần tử, mỗi phần tử một vòng qua 10 mỏ.
+  - Mục tiêu như §2: 60 khung/giây trên Mac M2 (1280×800, DPR 2, mức cao), 45 trên điện thoại tầm trung. Đo ở task đầu, rồi đo lại khi đủ
+    sáu lớp.
+  - (GĐ 8, Task 1, bản khung: Cốt, Bản nét, Phủ bóng; Chrome headless, GPU thật) M2, 1280×800, DPR 2: 60 khung/giây ở cả ba mức (trần
+    60 của xưởng), 17 draw call, CPU 1,1–1,8 ms mỗi khung, bộ điều chỉnh không hạ nấc nào; Bản nét về 0 cũng vậy. Tải nặng 2560×1600,
+    DPR 2, mức cao: vẫn 60 khung/giây, không hạ nấc. Ms GPU ở mức vừa 8,2, thấp 5,9; ở mức cao GPU Apple báo các lượt chồng lên nhau nên
+    bị coi là không đo được (README).
+  - (GĐ 8, Task 6, thêm Giấy điệp: Cốt, Bản màu, Bản nét, Giấy điệp, Phủ bóng; cùng máy) 1280×800, DPR 2, mức cao: 60 khung/giây, 19 draw
+    call, CPU 1,4 ms, không hạ nấc. Tải nặng 2560×1600, DPR 2 (5120×3200 điểm ảnh): 50 khung/giây, bộ điều chỉnh hạ dpr một nấc (1,75).
+    Chưa tách riêng chi phí của giấy (năm lần lấy mẫu noise mỗi điểm ảnh ở mức cao); Task 9 đo lại đủ sáu lớp ở ba mức.
+  - (GĐ 8, Task 9, đủ sáu lớp; cùng máy, mỗi ô đo sau 12–15 giây live; hai lượt ở hai khung tham chiếu, một lượt ở tải nặng) Điện
+    thoại là Chrome giả lập (`isMobile`, `hasTouch`) trên GPU của Mac: chỉ để so, máy thật là việc kiểm tay (§20.9).
+
+    | Mức | 1280 × 800, DPR 2 | 390 × 844, DPR 3, giả lập điện thoại | 2560 × 1600, DPR 2 (tải nặng) |
+    |---|---|---|---|
+    | **cao** | 60 khung/giây, không hạ nấc, CPU 1,1–1,4 ms | 60, không hạ nấc, CPU 1,1–1,5 ms | 56,5, hạ dpr một nấc (1,75) |
+    | **vừa** | 60, không hạ nấc, CPU 1,4 ms | 60, không hạ nấc, CPU 1,3–1,7 ms; GPU 10,9–11,7 ms | 60, không hạ nấc |
+    | **thấp** | 60, không hạ nấc, CPU 1,0–1,4 ms | 60, không hạ nấc, CPU 1,5–1,6 ms; GPU 7,1–7,4 ms | 60, không hạ nấc |
+
+    - Mọi ô 20 draw call, số tam giác như bảng trên. Ms GPU chỉ đo được ở khung điện thoại, mức vừa và thấp; ở đó GPU Apple cộng các lượt
+      chồng lên nhau, nên số cao hơn thời gian thật và dao động nhiều (README). Cùng khung, ở 32 vòng (trước Task 9): mức thấp 9,1 ms,
+      mức vừa 12,1–15,4.
+    - Tải nền lúc đo: chính trình duyệt đo (40–45% CPU), WindowServer 15–20%; vài ô có dịch vụ hệ thống (ANECompilerService) tới 95%.
+    - Tải nặng, mức cao: chi phí theo điểm ảnh. Bớt một tầng noise của giấy (`paper` 2) vẫn hạ dpr một nấc rồi giữ 60 (thay vì 56,5):
+      một tầng noise không đủ giữ DPR 2 ở 16,4 triệu điểm ảnh. Thang hạ độ nét trước là đúng; ở hai khung tham chiếu mức cao giữ 60 mà
+      không hạ nấc nào, nên không cần đường rẻ hơn cho giấy.
+  - (GĐ 8 Task 12, đo lại trên code cuối: sau lượt màu (ACES, bloom 0,5), mảng cổ và lề không lóe của Task 11; cùng máy, một lượt, đếm khung
+    trong 5 giây sau 12 giây live) Hai khung tham chiếu, cả ba mức: 59,9–60,0 khung/giây, không hạ nấc, 20 draw call, không lỗi console.
+    `renderer.info` đếm 157 470, 118 284, 84 922 tam giác ở mức cao, vừa, thấp: đúng số của Task 9 cộng tam giác của mảng cổ (1 152, 896,
+    624). Ms GPU chỉ đo được ở điện thoại mức thấp (6,3 ms); các ô khác máy báo không đo được. Tải nặng 2560 × 1600 không đo lại.
+- **JS** (đo lại ở GĐ 8 Task 12 trên code cuối, `npm run build`, gzip): chunk của bức (`painting-*`) 36,3 kB (15,6 kB gzip), content
+  (`content.vi-*`) 36,5 kB (11,0 kB gzip; chữ của Phủ bóng ở chunk dùng chung của mọi bức). Content lớn lên từ 11,9 kB (4,7 kB gzip) ở
+  Task 9 vì năm sơ đồ SVG của Sổ tay (Task 10). `lib/tsl/particles.js` thành chunk riêng 1,5 kB (0,8 kB gzip), Bức 1 và Bức 4 cùng import;
+  `BufferGeometryUtils` của three cũng thành chunk riêng 3,8 kB (1,1 kB gzip), Bức 2 và Bức 4 cùng import. Mã của bể tô màu cho Sổ tay
+  (33 kB, 4,6 kB gzip) chỉ tải khi mở code. Cả đường 3D của Bức 4: 331,0 kB gzip, 362,0 kB kể cả Tweakpane (mục tiêu ≤ 450 KB, §10).
+  Bảng đủ ở README.
+
+### 20.9 Kiểm thử
+**Tự chạy cho Bức 4**, vì các test này lặp qua registry:
+- hợp đồng, tên vật, HTML;
+- e2e chung: tĩnh, WebGL2, WebGPU, mài về Cốt, công cụ học, `?poster`, quầng trăng;
+- a11y.
+
+**Unit của xưởng** (`tests/unit/`):
+- `fov`: `fitOrtho` giữ `height` ở khung rộng, nới ở khung hẹp, có trần; `shortFrame`: như cũ từ `below` trở lên (hay khi không biết
+  bề cao canvas), nới theo below / bề cao ở canvas thấp, có trần `maxGrow`, gộp với `minWidth` bằng max; `camera`: camera phối cảnh bỏ
+  qua nó.
+- `home` (mới):
+  - đứng yên đủ `after` thì về trong `duration`; có `start` giữa chừng thì dừng, buông lần nữa thì đếm lại từ đầu;
+  - đi đường ngắn nhất, kể cả khi qua ±π;
+  - giảm chuyển động thì về một bước;
+  - camera phối cảnh về khoảng cách, camera trực giao về zoom; đổi cỡ khung giữa đường vẫn về đủ;
+  - quán tính theo giây của cảnh (Phụ lục A.98): `dampingFactor` theo `dt`; OrbitControls thật ở 10, 30, 60 khung/giây không trôi khỏi nhà
+    sau khi về.
+- `scene`: mỗi khung gọi `stage.returnHome(dt)` sau `breathe` và trước `controls.update()`; khung thử ngừng vẽ thì không gọi.
+- `camera` (`createCamera`, `fitCamera`, `limitControls` của `engine/gpu/camera.js`; `stage.js` cần GPU nên không có unit test):
+  `kind: 'ortho'` cho `OrthographicCamera`, khung nhìn đúng tỉ lệ, giữ zoom khi khớp khung, `minZoom`/`maxZoom` của OrbitControls; không
+  có `kind` thì như cũ.
+- `pipeline` và `views`: với camera trực giao, `channel('depth')` và view Độ sâu là texture độ sâu, không có `perspectiveDepthToViewZ` trong
+  đồ thị; với camera phối cảnh, node giữ nguyên như cũ.
+- `input`: tia của camera trực giao (gốc trên mặt phẳng camera, hướng là hướng nhìn). `caption-set`: chiếu điểm neo với camera trực giao.
+- `particles` (`tests/unit/particles.test.js`):
+  - cấp phát một lần; `setCount` có sàn và trần;
+  - `step` không chạy khi `dt = 0` hay `w ≤ 0`; WebGL2 khởi tạo hai lần;
+  - vòng đệm của `emit`: quấn qua cuối theo số phần tử đang tính, nắm lớn hơn bể thì cắt, mỗi bước một nắm; hàng đợi giữ tối đa 16 nắm;
+  - nắm đang chờ thì chờ khi `dt = 0` hay `w ≤ 0`; `emitted()` đếm lúc rắc thật (nắm bị trần hàng đợi bỏ không tính); `emit` chép
+    `origin`; `clear()` bỏ nắm chờ (không bung ra, không tính, nắm sau đè hạt cũ nhất); `dispose()` hai lần vẫn an toàn;
+  - compute bước dịch được ở cả hai backend, và nhánh rắc đọc đầu và số hạt của nắm (`compileCompute(...).uniforms`).
+- Bức 1: **mã shader của đom đóm giống fixture** (§20.7).
+- Hợp đồng: camera trực giao đúng hình dạng; file `lib` được kê thì phải được import.
+
+**Unit của Bức 4** (`tests/paintings/dan-ga-me-con/`):
+- `cot-bo-cuc`: đủ mười gà con; mọi chỗ "nhà" nằm trên sàn, không chồng lên nhau hay lên gà mẹ (trừ con trèo lưng và con nấp bụng);
+  chỗ nhà của tám con còn lại cách tâm mẹ hơn 2,2, nên lúc nghỉ `quanhMe` chỉ đếm con trèo lưng và con nấp bụng. `beakTip`: lúc ngẩng
+  là `CHICK.beak`, cúi hẳn thì mỏ chạm sàn, cúi dần thì mỏ hạ dần. Khung máy tính 16 : 10 và 16 : 9: tờ giấy chiếm 55–61% bề cao, tâm
+  giấy cao hơn tâm khung một chút; điện thoại dọc 390 × 844: cả tờ giấy trong khung. Tám chỗ núp (`SLOTS`): trên sàn, cách tâm mẹ dưới 2,2,
+  ngoài bầu dục thân mẹ, đôi một cách nhau hơn 1,3, cách con nấp bụng hơn 1,4; nhúm thóc và chỗ gà mẹ bới nằm trên sàn, ngoài đầu mẹ.
+- `cot-hinh-ga`: gà mẹ, gà con đủ phần; đầu mỏ của hình khớp `CHICK`; khớp của gà mẹ ở tọa độ thế giới; con trèo lưng và con nấp bụng sát
+  mẹ mà không lún vào khối nào của mẹ (cầu xoay, nón, trụ: đọc chỗ thật qua `placement()`, chung với hình), đáy chân con trèo lưng chạm
+  lưng; ở góc nhìn của tranh (khung 16 : 10 và 390 × 844), tia qua tâm đầu và tâm mình (đọc từ `CHICK_SHAPE`) mỗi con trúng chính nó
+  trước (không con nào bị che hẳn). Tám chỗ núp, gà con quay ra ngoài và ngó nghiêng hết cỡ: không đỉnh gà con nào nằm trong khối của
+  mẹ và không đỉnh mẹ nào nằm trong khối gà con; cánh mở 60° nằm trên đầu gà con; hai gà con ở hai chỗ kề nhau, hay kề con nấp bụng,
+  không chồng nhau. Cả chuyến đi (giữ từ lúc nghỉ, giữ lúc chờ/chạy/mổ, chạm ngay vào mẹ và sau lưng mẹ, thả rồi giữ lại, mẹ bới), lấy
+  mẫu 30 Hz: không khung nào có đỉnh gà con nằm trong khối của mẹ. Gà mẹ gật hết cỡ (`FLOCK.nod`) và ngoảnh ±0,25: đầu, mỏ, mào, con ong
+  không lún vào gà con núp ở tám chỗ (gật 1 rad thì lún: test bắt được).
+- `dan-ga-song`:
+  - chạm thì 3–4 con rảnh ở gần nhất chạy tới, và tới nơi đúng lúc tính theo tốc độ; mổ 8 giây rồi về. Các con tới cùng một nắm đứng
+    cách nhau ≥ 0,9 và luôn trên sàn, kể cả chạm sát mép và góc; hai nắm cách 0,6, hay nắm cạnh con nấp bụng, cũng không dồn các con vào
+    nhau (≥ gap − hai bước nhảy); lúc mổ nhìn về nắm, mỏ chạm sàn trong 0,55 quanh điểm rắc; con đang bận nắm này không bị nắm khác gọi đi;
+  - chạm sát mép hay góc thì thóc rơi ở tâm vòng (trong sàn, chừa vòng và bước nhảy) và mỏ chạm sàn trong 0,55 quanh đó; cả nhóm thôi mổ
+    cùng lúc; 200 cảnh bận (bốn cú chạm khắp sàn): con mổ cách con đang đứng ở nhà ≥ gap − wander·√2 − bước nhảy;
+  - giữ thì mọi con rảnh về các chỗ quanh mẹ, quay ra ngoài, không hai con một chỗ; thả thì tản ra, tới nắm mới nhất nếu chưa quá 20 giây;
+  - vị trí liên tục ở mỗi mốc, kể cả giữ lúc một con đang chờ phản xạ, đang chạy hay đang mổ; "bão" chạm, giữ, thả (20 hạt giống PRNG × 100 bước,
+    mốc lùi, khoảng lặng cho gà mẹ bới) giữ vị trí và cánh liên tục KỂ CẢ MỐC LÙI, mọi số hữu hạn, luôn trên sàn, không con nào vào thân
+    mẹ, không hai con một chỗ núp; mốc lùi xếp vào "bây giờ" (đàn không nhảy, khung đã vẽ không bị viết lại); `drift` xếp mốc bới sau lần
+    gọi trước; hai mươi lần chạm trong một giây; giữ hai lần liền, thả khi chưa giữ;
+  - gọi theo thứ tự nào cũng ra cùng số; tối đa 32 mốc; `drift` gọi từng khung hay một lần đều ra cùng dãy mốc;
+  - giảm chuyển động thì chậm gấp đôi, cánh mở chậm hơn, không có gà mẹ bới; nhúm lúc mở trang có gà mổ lệch nhịp nhau;
+  - đầu vào hỏng (thời điểm hay điểm rắc không hữu hạn, bố cục thiếu chỗ núp) thì ném lỗi.
+- `dan-ga-duong`: hình học viên thuốc (đoạn gần nhất, khoảng cách hai đoạn); hành trình vòng qua đầu hay đuôi mẹ (mọi đoạn và đỉnh ngoài
+  vòng cấm, đối xứng, 300 cặp điểm ngẫu nhiên); điểm dừng và lùi vào chỗ núp; `assign` bằng vét cạn; điểm rắc dời tới điểm gần nhất đứng
+  quanh được; chỗ đứng quanh nắm (cách đều, chỉ trên vòng bán kính 1, tránh con khác, không bao giờ phạm sàn hay vòng cấm: 300 trường
+  hợp).
+- `dan-ga-tranh-me`: nắm ném vào mẹ, sau lưng mẹ, ở hai đầu rơi bên cạnh mẹ (nắm xa mẹ giữ nguyên, sát mép thì kéo vào tâm vòng); 24 cảnh
+  ngẫu nhiên × 24 giây, từng
+  khung: không con nào vào thân mẹ, vào vòng cấm chỉ khi ra vào chỗ núp và mặt quay ra ngoài (trong 60°); giữ gán tổng quãng đường ngắn
+  nhất (vét cạn 8!); chạy từ trước mặt ra sau lưng mẹ thì vòng qua đầu hay đuôi.
+- `dan-ga-muot`: từng khung 60 Hz qua rắc, giữ, thả, giữ lại ngay (0,05–0,8 giây), giữ lúc chờ/chạy/mổ, mở trang, mẹ bới, bão: hướng không
+  nhảy quá nửa vòng trong 0,3 giây, đầu không nhảy quá nhịp cúi, vị trí không nhảy quá tốc độ đỉnh; chuyến chạy ngắn hơn 0,3 giây;
+  đầu đang cúi tắt dần ở mốc.
+- `dan-ga-thoc` (bản JS của luật, cùng `GRAIN`, với đàn gà thật): nắm rơi, nảy, lăn rồi nằm yên trong chừng một giây, gọn (nửa số hạt trong
+  0,45, gần hết trong 0,65) ở 60, 30 và 10 khung/giây; trọng lực trăng tỏa rộng hơn, nhúm gà mẹ bới gọn hơn; gà con ăn được nhúm lúc mở
+  trang (≥ 40%), nhúm gà mẹ bới, nắm rắc giữa sàn hay sát mép (≥ 30%) ở 60 và 10 khung/giây; cảnh bận: nắm có con tới bị ăn trung bình
+  ≥ 30%, nắm có con mổ mà bị ăn dưới 10% ≤ 6%. Bản JS khóa với luật thật: mã WGSL và GLSL của bước compute (nhánh rắc và nhánh luật) so
+  từng ký tự với bản ghi `__fixtures__/thoc/` (bỏ số id như fixture của đom đóm); luật hay three đổi thì test đỏ, sửa bản JS rồi mới ghi lại.
+- `dan-ga` (lớp, dựng cả bức): compute khởi tạo và bước của bể thóc dịch được ở hai backend, bước đọc mảng mỏ 10 phần tử
+  (`array<vec4<f32>, 10>` ở WGSL, khối `NodeBuffer_` ở GLSL); Sprite `thoc` không ghi độ sâu, transparent, không cắt theo khung bao,
+  `count` = `budget.grains`, đọc `w_dan_ga`, `w_ban_mau`, Chỉ bản nét, Tô theo luồng, `cotPixel`; `update(0, t)` không compute, không rắc;
+  trọng số 0 thì không compute, nắm bị bỏ, phủ lại không có nắm cũ bung ra; số đo, thí nghiệm, nấc `thoc` (trần về nửa rồi gỡ); núm ở
+  hai đầu (`gravity` cả hai lựa chọn, `bounce` 0 và 0,8) dịch được, `handful` 300 khi `count` 100 thì Sprite vẽ 100 hạt và `rac` không vượt
+  100 (cắt nắm lớn hơn bể: test của bể); nhúm gà mẹ bới tới hạn lúc lớp tắt hẳn không bung ra khi phủ lại; Cốt áp dáng
+  (`pose` của trọng số 1 và 0, hướng đường ngắn nhất, bốn uniform của gà mẹ).
+- Từng lớp, dựng cả bức bằng `buildPainting`:
+  - material của các mesh là `NodeMaterial` gốc; mọi material có `emissiveNode`;
+  - cảnh không có đèn nào của three, `shadowMap` tắt;
+  - Bản nét có tap `truoc-net`; đồ thị màu của gà đọc `w_ban_net` (nét trong), tờ giấy thì không; núm ở hai đầu (`lineWidth` 1 và 3,
+    `threshold` 0,05 và 2, `crease` 0 và 1, `misregister` 0 và 6) dịch được cả lượt cuối lẫn gà; hai thí nghiệm chỉ đổi uniform; tám mẫu
+    Sobel nằm trong nhánh `If`; mỗi nét trong đọc `fwidth` của khoảng cách (mép mềm tối thiểu một điểm ảnh); mọi mesh gà đọc uniform
+    `henBodyRadius` (viền cánh chỗ áp sườn theo số vòng, không phải hằng);
+  - Cốt: gà mẹ ba mesh có `positionNode`, mỗi mesh đọc đúng uniform dáng của nó; `pose`, `head` là thuộc tính ghi mỗi khung; Tấm bìa
+    phẳng chỉ đổi uniform (`material.version` không đổi); dịch được ở `segments` 8 và 48; `bodyRadius` (uniform `henBodyRadius`) bằng
+    cos(π/n), nằm giữa đỉnh và tâm mặt lõm nhất của khối mình thật, đổi theo núm `segments`;
+  - Bản màu: đồ thị màu của gà đọc `w_ban_mau` và ba núm; núm ở hai đầu dịch được; `pigment` ghi một lần; Tô mịn là kiểu so;
+  - Giấy điệp:
+    - đồ thị màu của tờ giấy đọc `w_giay_diep`, bốn núm, số tầng noise và Giấy dó trơn; shader của tờ giấy có `reflect` (hạt điệp), shader của
+      gà thì không và không đọc `w_giay_diep`; cỡ chấm đọc đạo hàm màn hình;
+    - tầm nghiêng của hạt với tới nửa vector của nắng và hướng nhìn ở sàn, chỗ uốn và vách (góc của tranh, xoay ±30°);
+    - núm ở hai đầu (`density` 4 và 40, `sparkle` 0 và 4, `fiber` 0 và 1, `brush` 0 và 1) dịch được; nấc `chi-tiet` hạ số tầng một bậc rồi
+      gỡ về như cũ, chỉ có khi `paper` > 1; Giấy dó trơn chỉ đổi uniform;
+  - thí nghiệm và số đo đủ, có nhãn; nấc chỉ có khi có tác dụng.
+- Cử chỉ (`cu-chi`, dựng cả bức):
+  - chạm thì có mốc rắc ở đúng điểm trên sàn (tia của camera trực giao), kể cả khi chạm lên vách, ra ván, tia song song mặt sàn, khung cỡ 0
+    (NDC NaN hay vô cực), cử chỉ thiếu tia: không ném lỗi, nắm luôn hữu hạn và trong sàn;
+  - giữ, thả gọi đúng mốc (`quanhMe` ≥ 8 rồi về 2);
+  - `'swipe'`, `'double-tap'`, `'hold-move'` không làm gì riêng; hai mươi lần chạm trong một giây: tối đa 32 mốc, đàn gà hữu hạn;
+  - `drift` chạy trước cử chỉ: cú chạm đầu tiên sau 25 giây lặng không xóa lần gà mẹ bới đã tới hạn;
+  - lớp Đàn gà mài về 0: chạm và giữ không thêm mốc, không con nào chạy hay mổ; gà mẹ vẫn bới; cái giữ bắt đầu lúc lớp còn phủ vẫn được thả.
+- Chữ của Sổ tay: như Bức 2 và Bức 3.
+- Chất lượng (`quality.test.js`, như Bức 3):
+  - ba mức đúng bảng §20.8, cùng bộ khóa; thang đúng thứ tự; mọi nấc của thang có thật ở lớp ở cả ba mức;
+  - `count` và `segments` mặc định và tối đa theo mức (kéo quá thì kẹp lại); Sprite thóc vẽ đúng `grains`; `handful` tối đa 300;
+  - số tam giác của các vật trong ngân sách của mức, ở mặc định và khi kéo `segments` hết cỡ; ở mức cao, 48 vòng thì hơn gấp đôi;
+  - `paper` = 1 thì không có nấc `chi-tiet`.
+- Phủ bóng ghi đè (`phu-bong.test.js`, GĐ 8 Task 12): đúng ba núm chốt ở lượt màu mang số mới (chỉ đổi `value`), id có thật trong lớp
+  dùng chung, giá trị hợp lệ với núm; các núm khác là chính núm của lớp dùng chung; module dùng chung không bị sửa (ba bức kia vẫn AgX).
+
+**E2e riêng** (26 test trong bốn file `e2e/dan-ga-me-con*.spec.js`; WebGL2 trên SwiftShader là cổng chặn, WebGPU không chặn). Spec chính
+tới gần 300 dòng nên tách: `dan-ga-me-con-giay.spec.js` (Giấy điệp), `-dan-ga.spec.js` (Đàn gà), `-chat-luong.spec.js` (chất lượng); tiện ích,
+các vùng của canvas và tag khói (`SMOKE`) dùng chung ở `e2e/dan-ga-me-con.helpers.js`. `tests/rules/e2e.test.js` gom file theo slug dài nhất
+(slug `dan-ga` không nhận nhầm `dan-ga-me-con*.spec.js`), kiểm mọi `describe` của các file ấy bắt đầu bằng tên bức, và (bức có
+`ciWebgpuSmoke`) đếm test mang tag khói trên cả các file, tag khai báo trong file hay import từ `<slug>.helpers.js` (Bức 4 có 7 test như vậy).
+Ngưỡng dưới đây là ngưỡng thật của test, ở khung 640 × 400, DPR 1 (trừ khi ghi khác): độ sáng là luma 0–1, sắc độ là (kênh lớn nhất − kênh
+nhỏ nhất) / 255, kênh màu 0–255. Khung 640 × 400 thấp hơn `shortFrame.below` (§20.2), nên khung nhìn cao gấp 1,3: vùng trên tờ giấy (và
+điểm chạm, điểm kéo) chốt ở khung chưa nới rồi đổi bằng `at640` của helpers (co về tâm khung 1/1,3, cùng chỗ của cảnh, vì camera trực giao
+chiếu tuyến tính quanh điểm nhìn); vùng ván giữ nguyên.
+- Góc nhìn của tranh (`?freeze=30`): hai dải ván trên và dưới tối (độ sáng < 0,08); vách giấy sáng hơn ván trên ít nhất 0,15; mình gà mẹ
+  in màu vàng hòe (sắc độ > 0,15; đỏ hơn lam 40, lục hơn lam 20); không lỗi console. Vòng mặt đa diện thành nét (§20.4 lớp 3) chỉ thấy rõ ở
+  DPR 2, nên kiểm bằng ảnh ở điểm duyệt ảnh, không bằng e2e.
+- Chữ trên ván tối (sau lượt CI đầu: mỗi khung một test; mở ở 640 × 400 với `?freeze=10`, đổi cỡ, đợi bộ đệm vẽ đổi theo, rồi
+  `__sma.restore({})` vẽ lại khung đứng yên ở cỡ mới): ở 1366 × 650, 1280 × 720 (laptop màn thấp, `shortFrame`), 1280 × 800, 1440 × 900,
+  1920 × 1080 và 390 × 844, canvas phủ cả khung, và khung tờ giấy đo trên điểm ảnh của canvas (hàng có hơn 15%
+  điểm ảnh sáng hơn 0,25; cột sáng ở hơn 30% số hàng ấy) nằm dưới tên tranh và dải link, trên gợi ý và thơ, mỗi phía cách hơn 2 điểm ảnh;
+  cả tờ giấy trong khung.
+- Bản nét:
+  - viền: mép trái tờ giấy tối hơn ít nhất 0,01 khi có Bản nét; mặt sàn nghiêng lệch dưới 0,01 giữa có và không có Bản nét (mẫu độ sâu
+    đối xứng, không sọc mực), và vùng sàn phải là giấy (độ sáng > 0,2, như phép phóng to dưới đây); draw call như nhau khi tắt Bản nét,
+    và ≤ 30;
+  - Bản nét về 0 thì giữa tờ giấy sáng lên hơn 0,02; riêng vùng mình gà mẹ phía trên cánh (không viền, không nếp gấp) sáng lên hơn 0,005:
+    nét trong có thật, không chỉ viền (GĐ 8 Task 9: chừng 0,014 trên GPU thật, 0,015 trên SwiftShader; bỏ nét trong thì 0,001 và kiểm này
+    đỏ; đo lại sau lượt CI đầu, ở khung 640 × 400 đã nới theo `shortFrame`: 0,036 trên WebGL2, 0,040 trên WebGPU, cả hai SwiftShader);
+  - `misregister` bằng 6 thì ảnh ở mép trái khác lúc bằng 0;
+  - phóng to 2,5 lần ở 1280 × 800 (tờ giấy chạm khung, không lệch bản; ở 640 × 400 khung đã nới, mép trước tờ giấy chỉ cách mép dưới khung
+    chừng 4 điểm ảnh, sát vùng đo): hàng sát mép dưới lệch sàn ngay trên dưới 0,02, tức không có vệt mực giả (chưa
+    bỏ mẫu ngoài khung: chừng 0,07); vùng ngay trên phải là giấy (độ sáng > 0,2), không thì hai vùng cùng là ván tối và kiểm trôi qua mà
+    không kiểm gì;
+  - bật Chỉ bản nét, rồi Dò cạnh theo màu: ảnh giữa tờ giấy đổi, không lỗi console.
+- Độ sâu của camera trực giao (view Depth của Lột lớp): vùng gà sáng hơn vùng vách ít nhất 0,02, và vách dưới 0,97 (không phải một bóng
+  trắng như với công thức phối cảnh).
+- Giấy điệp (`e2e/dan-ga-me-con-giay.spec.js`):
+  - Giấy điệp về 0 thì vách giấy về xám đất sét: sắc độ giảm ít nhất 0,03 (đo trên GPU thật ở GĐ 8 Task 6, trước lượt màu: 0,110 so với
+    0,047), và có Giấy điệp thì kênh đỏ hơn kênh lam;
+  - view "Chỉ emissive": ở góc của tranh đã có hạt lóe (độ sáng > 0); `sparkle` 0 hay Giấy điệp về 0 thì đen tuyền (đúng 0), vì gà không
+    phát sáng; `sparkle` về mặc định thì về đúng ảnh cũ;
+  - camera đứng yên thì hạt đứng yên (vùng vách, hai lần đọc cách nhau bốn nhịp rAF, giống hệt); kéo chuột 30 px (`goc` > 5, poll tới 60
+    giây; kéo bằng `dragCamera`, xem **CI** dưới) thì hạt khác lóe lên;
+  - Giấy dó trơn bật thì ảnh đổi, tắt thì về đúng ảnh cũ;
+  - trọng số lệch nhau: Bản màu về 0 thì vùng vách y nguyên (giấy không đọc bảng màu); Phủ bóng về 0 thì giấy sáng hơn, dưới 0,97 (không
+    cháy trắng) và vẫn ngà (đỏ hơn lam 10).
+- Đàn gà (`e2e/dan-ga-me-con-dan-ga.spec.js`, live, chờ bằng poll theo số đo):
+  - giảm chuyển động (không có gà mẹ bới): chờ các con ở nhúm lúc mở trang bắt đầu rồi thôi mổ (`dangAn` > 0 rồi về 0: lúc mới mở trang
+    chưa con nào mổ, chờ số 0 ngay lúc ấy là chờ suông), chạm giữa sàn (xa mép, xa mẹ) thì `rac` tăng, rồi `dangAn` > 0;
+  - trước khi giữ, `quanhMe` ≤ 4; giữ trên vách thì `quanhMe` ≥ 8; thả thì về ≤ 4;
+  - mài Đàn gà về 0 khi thóc đang rơi rồi chạm: không lỗi console, phủ lại thì `rac` không đổi (không có nắm cũ bung ra).
+- Tranh tự khép lại: lúc mở trang `goc` < 1; kéo camera (`dragCamera`) thì `goc` > 15 (poll tới 60 giây); buông tay rồi chờ (poll tới 90
+  giây) thì `goc` < 1, và hai nhịp sau vẫn < 1. Giảm chuyển động: camera về MỘT bước khi đủ 3 giây cảnh; `goc` ghi ở mỗi khung rAF, mọi
+  mẫu hoặc còn ở chỗ buông (≥ mẫu đầu − 1°) hoặc đã ở nhà (≤ 1°), không mẫu nào lượn ở giữa.
+- Chất lượng (`e2e/dan-ga-me-con-chat-luong.spec.js`): `?level=cao` đúng mức và draw call ≤ 30; `?level=thap` chạy được, đúng mức và đúng
+  ngân sách (24 vòng, 1024 hạt), vách giấy sáng hơn ván trên ít nhất 0,15; bật rồi tắt sáu thí nghiệm của năm lớp riêng không có lỗi console.
+- E2e chạy live và chờ rộng tay như Bức 3, vì đồng hồ của cảnh theo khung vẽ: trần 180 giây mỗi test (Đàn gà 240 giây; nhóm "khung" giữ
+  trần mặc định 60 giây).
+- `e2e/lat-tranh.spec.js` thêm Bức 3 ⇄ Bức 4; `e2e/phong-tranh.spec.js` đếm bốn mục.
+
+**CI:** nhóm e2e theo bức tự có job của Bức 4 (§19.9). Đo thời gian thật ở lượt CI đầu. Job WebGPU quá trần thì bật `ciWebgpuSmoke` cho
+Bức 4, như Bức 3.
+- (Sau GĐ 8) **Thời gian thật**, lượt CI đầu của PR #9 (run 37586738134, tính cả bước cài đặt):
+
+  | Nhóm | `e2e` (chặn) | `e2e-webgpu` (không chặn) |
+  |---|---|---|
+  | Ao Sen Đêm | 19,2 phút | 27,0 phút |
+  | Đèn Kéo Quân | 8,7 phút | 9,5 phút |
+  | Cung Quế | 26,3 phút | 5,0 phút (chỉ test khói) |
+  | Đàn Gà Mẹ Con | 21,5 phút; 41 qua, 1 hỏng (chữ trên ván tối, cả hai lần chạy) | 28,1 phút; 37 qua, 4 hỏng |
+  | `chung` | 0,7 phút | 0,6 phút |
+
+  - `build` 0,9 phút. Ba bức đầu xanh ở cả hai job.
+  - **Chữ trên ván tối** (hỏng ở cả hai job): sáu khung nằm trong MỘT test, đổi cỡ trên trang đang chạy live, nên quá trần 180 giây (lần
+    chạy lại cũng vậy). Ở khung lớn (1920 × 1080) SwiftShader vẽ mỗi khung lâu, và ảnh chụp canvas, `page.evaluate` đọc ảnh phải chen giữa
+    các khung ấy. Sửa: mỗi khung một test (mỗi test một trần 180 giây), và trang đứng yên lúc chụp, đọc ảnh: mở ở 640 × 400 với
+    `?freeze=10` như mọi test khác (khởi động, khung ẩn và mười khung đều ở cỡ nhỏ), đổi cỡ, rồi `__sma.restore({})` vẽ lại khung đứng
+    yên ở cỡ mới, một lần vẽ ở cỡ lớn. Giữ đủ sáu khung và mọi ngưỡng. Ở máy local (Mac M2, SwiftShader) mỗi test mất 5–8 giây với
+    WebGL2, 6–26 giây với WebGPU.
+  - **Kéo camera** (chỉ job WebGPU: hạt điệp theo góc nhìn, hai test tranh tự khép lại): `goc` đứng ở 0 suốt 15 giây chờ. Không phải chờ
+    chưa đủ: camera không xoay. Chuột của Playwright đợi một nhịp khung mỗi sự kiện (Phụ lục A.51), nên lần dời đầu tới sau lần xuống
+    một khung. Khung của Bức 4 trên runner WebGPU lâu hơn `GESTURE.holdMs` (350 ms; suy từ `goc` 0 và từ lần tái hiện dưới đây), nên hẹn
+    giờ "giữ" của `input.js` nổ trước, cú kéo thành cú giữ, và camera bị khóa (`controls.enabled = false`). Tái hiện ở máy local (WebGL2
+    SwiftShader) bằng cách kẹt mỗi khung rAF 500 ms: lần dời đầu tới sau lần xuống 2 giây, `goc` lớn nhất 0; không kẹt thì 70 ms, `goc`
+    69,7°. Sửa: `dragCamera` của `e2e/dan-ga-me-con.helpers.js` phát PointerEvent ngay trong trang (các lần dời đi ngay sau lần xuống,
+    nhấc sau `swipeMs`), như `tapAt`, `swipeAt`; khung kẹt 500 ms thì `goc` vẫn tới 69,7°. Poll `goc` (> 15, > 5) chờ tới 60 giây thay cho
+    15. Ngưỡng giữ nguyên.
+  - **`ciWebgpuSmoke: true` cho Bức 4** (plan Task 13): job WebGPU mất 28 phút, gần trần 40, mỗi test chậm hơn ở job chặn tới 1,8 lần,
+    mà gần như cả bộ trùng với job chặn. Từ đây job WebGPU của Bức 4 chỉ chạy bảy test khói: góc nhìn của tranh, độ sâu của camera trực
+    giao, Bản nét về 0 (nét trong), Giấy điệp về 0, chạm rắc thóc, mức cao (draw call), tranh tự khép lại. Ở lượt đầu, sáu test đầu qua
+    trên WebGPU trong chừng 3,7 phút (21–66 giây mỗi test); test thứ bảy là test kéo camera vừa sửa. Ở máy local (WebGPU SwiftShader) cả
+    bảy qua, 10–21 giây mỗi test. Job chặn (WebGL2) vẫn chạy đủ.
+
+**Kiểm tay** (thêm vào §12):
+- Bức 4 trên điện thoại thật: tờ tranh vừa bề ngang; dùng ngón tay để chạm rắc thóc, giữ, kéo rồi xem tranh tự khép lại;
+- VoiceOver đọc dải link (Bức 3 ⇄ Bức 4), và Phòng tranh có bốn mục;
+- Bao duyệt thơ, hình gà và poster.
+
+### 20.10 Cách làm GĐ 8
+Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me-con`, vừa làm vừa sửa.
+1. **Plan gọn.** Mỗi task ghi mục tiêu, file, test viết trước, cách kiểm bằng chạy thật. Code đầy đủ chỉ có ở chỗ khó: camera trực giao, độ
+   sâu, tự khép lại, dò cạnh, bể hạt và việc chuyển Bức 1, luật của thóc, dạng đóng của đàn gà. Bao xem plan và chọn cách thực thi.
+2. **Task rủi ro nhất làm trước:** camera trực giao trong xưởng, độ sâu đúng, và Bản nét dò cạnh trên một Bức 4 khung (tờ giấy cong, vài
+   khối giữ chỗ), chạy thật trên WebGPU (GPU thật) và WebGL2 (SwiftShader).
+
+   **Luật dừng:** một trong bốn điều sau không đạt thì dừng, báo Bao, và chọn đường lùi (§20.11):
+   - camera trực giao vẽ đúng ở cả hai backend, và chạm trúng đúng điểm trên sàn;
+   - view Độ sâu có độ dốc (không phải bóng trắng), ở cả hai backend;
+   - Bản nét lấy mẫu lân cận của texture độ sâu ở cả hai backend, mà số draw call không tăng;
+   - trên Mac M2, 1280×800, DPR 2, mức cao: ≥ 60 khung/giây.
+3. **Task rủi ro thứ hai:** bể hạt và việc chuyển Bức 1.
+
+   **Luật dừng:** mã của đom đóm không giống fixture (sau khi thay id) thì dừng và báo Bao. Đường lùi là giữ nguyên Bức 1, chỉ Bức 4 dùng
+   bể chung (§20.11).
+4. Tranh tự khép lại; Sổ tay hiện code của hộp màu.
+5. Hình gà, bố cục, tờ giấy, Bản màu, camera.
+
+   **Điểm duyệt ảnh giữa chừng** (một trang ảnh riêng tư): góc nhìn của tranh trên máy tính và điện thoại dọc, ba góc xoay, từng lớp. Bao
+   duyệt trước khi làm các lớp còn lại. Hình là số trong `parts/cot-hinh-ga.js` và `parts/cot-bo-cuc.js`, nên sửa rẻ.
+6. Bản nét đủ (nét trong, lệch bản); Giấy điệp; Đàn gà (thóc, đàn gà, cử chỉ, gà mẹ bới); trang và Phòng tranh (`npm run pages`); chữ của
+   Sổ tay và sơ đồ; e2e; lượt màu; poster. Task nào cũng có test viết trước và chạy thật. Chỗ nào làm khác spec thì sửa spec trong cùng
+   task.
+7. Review cuối cả nhánh, đối chiếu thơ, rồi hỏi Bao trước khi push, và hỏi lại trước khi merge (merge là deploy).
+
+### 20.11 Rủi ro riêng
+- **Còn chỗ khác trong xưởng ngầm coi camera là phối cảnh**, ngoài độ sâu. Ví dụ, hướng nhìn tự tính trong shader
+  (`cameraPosition − positionWorld`) sai với camera trực giao.
+  - Cách tránh: Bức 4 dùng `positionViewDirection`, vì three tự xử lý camera trực giao (Phụ lục A.91). Task đầu soát lại cả xưởng bằng
+    một cảnh khung chạy thật.
+- **Dò cạnh chỉ trên độ sâu bỏ sót nét:** hai mặt chạm nhau mà cùng độ sâu thì không có bậc.
+  - Cách tránh: ngoài bậc (độ lệch khỏi mặt phẳng), Bản nét đo góc gãy của mặt, nên bắt cả nếp gấp (§20.4 lớp 3); nét trong vẽ trong
+    shader. Chỗ nối nông (cánh gà mẹ áp sát sườn, 13–20°) không có nét trên độ sâu: nét trong vẽ viền cánh ở đó, đo tới mặt khối mình co lại
+    theo số vòng (§20.4 lớp 3).
+  - Nếu vẫn thiếu: thêm kênh normal vào MRT từ đầu cho bức cần (một trường tùy chọn mới, biên dịch một lần lúc dựng). Việc này để ở §16.
+- **Dò nếp gấp vẽ cả mặt đa diện:** khối cầu của gà là đa diện; đo độ đổi độ dốc thì gần mép khối, nơi mặt nghiêng gần 90°, hai mặt kề
+  nhau cũng thành nét (GĐ 8 Task 4).
+  - Cách tránh: đo góc gãy của mặt (§20.4 lớp 3); `segments` theo mức (32, 28, 24: §20.8), khối dẹt (cánh, bàn chân) nhiều vòng hơn
+    (`detail`, §20.4 lớp 1).
+- **Lấy mẫu texture độ sâu ở WebGL2.** View Độ sâu đã đọc texture này ở cả hai backend từ GĐ 4, nên lấy mẫu ở điểm lân cận chỉ là cùng
+  phép đọc. Nếu hỏng: bọc `convertToTexture`, thêm một lượt vẽ như FXAA.
+- **Bức 1 đổi ảnh khi rút bể hạt.**
+  - Cách tránh: test so mã với fixture ghi TRƯỚC khi rút; chạy lại đủ e2e của Bức 1.
+  - Đường lùi: Bức 1 giữ code cũ, chỉ Bức 4 dùng `lib/tsl/particles.js`, và §16 ghi việc chuyển Bức 1 để sau.
+- **Ảnh sáng làm hỏng chữ và test chung:** chữ màu ngà trên giấy không đọc được; test chung đòi đủ điểm tối.
+  - Cách tránh: tờ giấy chỉ chiếm chừng 58% bề cao, chữ nằm trên ván tối (e2e "chữ trên ván tối", §20.1).
+  - Mài về Cốt thì giấy thành đất sét, nên độ sáng trung bình vẫn dưới 0,8.
+- **Dạng đóng của đàn gà phức tạp** khi các mốc chồng nhau (rắc trong lúc giữ, giữ trong lúc đang chạy tới). Cách tránh: một thứ tự ưu tiên
+  duy nhất (§20.5), test vị trí liên tục ở mỗi mốc, tối đa 32 mốc.
+- **Gà mẹ là vật cản của đàn gà dạng đóng** (§20.5): không có luật thì gà con lún vào mẹ (đo trước khi có: chạm đều khắp sàn thì 27%
+  số cú chạm có con lún lúc mổ, chạm lên vách sau lưng mẹ thì 87%), chạy xuyên thân mẹ, và tới chỗ núp thì mặt quay vào mẹ (59 trong 60
+  lần giữ sau bốn cú chạm có khung lún).
+  - Cách tránh: ba luật của §20.5 (nắm dời ra bên cạnh mẹ, đường vòng qua đầu hay đuôi mẹ, điểm dừng rồi lùi vào chỗ núp); test đo từng
+    khung bằng chỗ thật của khối (`cot-hinh-ga`, `dan-ga-tranh-me`).
+  - Còn lại: nắm người chạm lên mẹ hay vách rơi bên cạnh mẹ chứ không ở chỗ chạm (thóc rơi ở đầu hay đuôi mẹ, cách 2–4 đơn vị); gà con
+    tới chỗ núp lâu hơn chừng nửa giây (quay tại chỗ, lùi vào); sau lưng mẹ sàn hẹp nên ở đó không có vòng gà con nào. Chạm sát mép sàn thì
+    thóc rơi vào trong tới 1,25 theo mỗi trục (tâm vòng; chạm đúng góc thì chừng 1,8 theo đường chéo). Sân đông thì nắm mới có khi không
+    con nào tới: vòng không nở, spacing không nới.
+- **Thóc quá nhỏ trên điện thoại:** 0,08 đơn vị là chừng 2 điểm ảnh ở 390×844. Cách tránh: cỡ hạt có sàn theo điểm ảnh (chia theo
+  `u.resolution` và zoom).
+- **Tranh tự khép lại đánh nhau với quán tính của OrbitControls:** `end` đến khi buông tay, nhưng damping còn quay thêm một lúc, và phần
+  quay dở ấy tắt theo số lần `update()`, không theo giây (Phụ lục A.98). Ở 60 khung/giây, sau `after` (3 giây) chỉ còn chừng 1/10 000; ở máy
+  vẽ chậm (dt kẹp 0,1 s, chừng 10 khung/giây) còn hơn 10% sau 4,2 giây cảnh, và camera trôi ra khỏi nhà sau khi đã về.
+  - Cách tránh: `home.js` đặt `dampingFactor` theo dt của khung (§20.6 mục 3), nên `after` luôn dài hơn thời gian damping tắt ở mọi nhịp khung;
+    khi quay về thì đặt thẳng góc và zoom, rồi gọi `controls.update()`.
+  - Test: unit với OrbitControls thật ở 10, 30 và 60 khung/giây (camera không trôi sau khi về); e2e `goc` < 1 là bằng chứng tích hợp.
+- **AgX làm giấy xám:** chỉnh ở lượt màu (`exposure`, tone của Phủ bóng). Đã chỉnh (GĐ 8 Task 11): ACES, lộ sáng 1,2 (§20.3).
+- **Hàng rào từ vựng bắt nhầm:** `hen` là chuỗi con của `denThen`, nên đã bỏ khỏi fence (§20.6).
+
 ## Phụ lục A: sự thật API đã kiểm trên three@0.186.1
 
 Các mục dưới đây đã được kiểm bằng ba cách:
@@ -4203,3 +5431,120 @@ Các mục dưới đây đã được kiểm bằng ba cách:
       hơn. Chưa kiểm bằng số đo của GPU (Chrome headless không báo ms GPU trên máy này).
     - Luật: vòng lặp có cận động chỉ dùng khi cần thoát sớm (dò tia chính, dò bóng). Số mẫu cố định (AO, gradient) thì trải thẳng bằng
       JS; số đó cố định theo mức lúc dựng, không có nấc nào đổi nó. Test đếm `for (` trong mã sinh ra giữ luật này cho Bức 3.
+89. **`PassNode` đổi độ sâu theo công thức phối cảnh, bất kể camera** (`nodes/display/PassNode.js`; đọc mã; đã chạy thật ở GĐ 8):
+    - `getViewZNode()` luôn gọi `perspectiveDepthToViewZ(texture độ sâu, near, far)`. `getLinearDepthNode()` dựng trên nó, kèm chú thích
+      `// TODO: just if ( builder.camera.isPerspectiveCamera )`.
+    - Với camera trực giao, texture độ sâu đã tuyến tính. Đi qua công thức phối cảnh thì gần như mọi điểm dồn về sát 0 (near 0,1, far
+      500: 0,5 thành chừng 0,0002), nên view Độ sâu thành một bóng trắng trên nền đen.
+    - (GĐ 8, chạy thật) Đúng như vậy trên GPU thật, cả WebGPU lẫn WebGL2 (Task 1): với công thức cũ, tờ giấy và đàn gà trắng tinh một màu;
+      dùng `pipeline.js#linearDepth` thì có độ dốc. E2e "độ sâu của camera trực giao" giữ điều này (§20.9).
+90. **Texture độ sâu của camera trực giao là tuyến tính ở cả hai backend:**
+    - WebGL đưa z của NDC từ [−1, 1] về [0, 1]; WebGPU dùng thẳng [0, 1]. Với phép chiếu trực giao, cả hai cho
+      `d = (−viewZ − near) / (far − near)`.
+    - `orthographicDepthToViewZ` (`nodes/display/ViewportDepthNode.js`) có nhánh riêng cho `renderer.reversedDepthBuffer`. Xưởng không bật
+      cờ đó.
+    - (GĐ 8, chạy thật) View Độ sâu dùng thẳng texture có độ dốc ở WebGPU (GPU thật) và WebGL2 (SwiftShader): gà gần sáng hơn vách xa. Bản
+      nét đổi texture ra đơn vị cảnh chỉ bằng một phép nhân với `far − near`, và độ lệch khỏi mặt phẳng của mặt sàn nghiêng bằng 0 ở cả hai
+      backend (e2e: mặt sàn không đổi khi tắt Bản nét): texture đúng là tuyến tính, không chỉ đơn điệu.
+91. **`positionViewDirection` tự xử lý camera trực giao** (`nodes/accessors/Position.js`):
+    - Lúc dựng shader, `builder.camera.isOrthographicCamera` thì hướng nhìn là `vec3(0, 0, 1)` (view space); không thì là `−positionView`
+      chuẩn hóa. Vì vậy shader khác nhau theo loại camera.
+    - Mã tự tính `cameraPosition − positionWorld` (Bức 1, 2, 3 có vài chỗ) chỉ đúng với camera phối cảnh.
+    - (GĐ 8, chạy thật) Hạt điệp của Bức 4 tính tia phản xạ với `positionViewDirection`: camera đứng yên thì hạt đứng yên, kéo xoay 30 px
+      thì hạt khác lóe (e2e trên WebGL2 SwiftShader và GPU thật). Shader của tờ giấy dịch được ở cả hai backend.
+92. **OrbitControls và Raycaster với camera trực giao:**
+    - OrbitControls (`examples/jsm/controls/OrbitControls.js`):
+      - dolly (lăn chuột, chụm hai ngón) đổi `object.zoom`, kẹp trong `minZoom`/`maxZoom` (mặc định 0 và ∞), rồi gọi
+        `updateProjectionMatrix()`;
+      - bán kính chỉ bị kẹp trong `minDistance`/`maxDistance`, không đổi theo dolly;
+      - phát sự kiện `start` và `end` khi bắt đầu và kết thúc một lần tương tác.
+    - `Raycaster.setFromCamera` (`core/Raycaster.js`): gốc tia là điểm NDC trên mặt phẳng của camera (`unproject`); hướng là hướng nhìn của
+      camera, tức `(0, 0, −1)` biến đổi theo `matrixWorld`. Test cũ của `input.js` đòi gốc tia bằng vị trí camera: điều đó chỉ đúng với
+      camera phối cảnh.
+    - (GĐ 8, chạy thật) Lăn chuột phóng to và zoom kẹp ở 2,5 (`CameraSpec.zoom`): e2e "phóng to 2,5 lần" thấy tờ giấy phủ kín khung.
+      `start`, `end` điều khiển tranh tự khép lại (e2e: kéo thì `goc` > 15, buông thì về dưới 1). Tia chạm: unit test đưa tia của
+      `setFromCamera` với camera trực giao thật vào `floorPoint`, trúng (0; 0), (−4; 3), (5; −2), (6; 4,5) sai số dưới 10⁻⁶ ở khung 1,6 và
+      390/844; chạm giữa sàn trên trang thật thì thóc rắc ra (e2e Đàn gà).
+93. **Trong post, camera của TSL là camera vẽ quad:**
+    - `RenderPipeline` vẽ qua `QuadMesh`, và `QuadMesh` có một `OrthographicCamera` riêng (`renderers/common/QuadMesh.js`). Vì vậy
+      `cameraNear`, `cameraFar` hay `builder.camera` trong post không phải camera của cảnh.
+    - Cần near, far của camera cảnh thì đặt uniform từ JS. Chọn công thức theo loại camera thì chọn bằng JS lúc dựng.
+    - (GĐ 8, chạy thật) Bản nét của Bức 4 không đọc `cameraNear`, `cameraFar` của TSL: `far − near` của `ctx.camera` vào uniform
+      `banNetSpan` lúc dựng, và lớp ném lỗi nếu camera của sân khấu không phải trực giao; `pipeline.js#linearDepth` chọn theo
+      `camera.isOrthographicCamera` của sân khấu. Nét đúng ở cả hai backend.
+94. **`SpriteNodeMaterial` với camera trực giao** (`materials/nodes/SpriteNodeMaterial.js`):
+    - `scaleNode` được nhân như `vec2`, nên hạt dẹt được; `rotationNode` xoay hạt trong mặt phẳng màn hình;
+    - `sizeAttenuation` chỉ có nghĩa với camera phối cảnh.
+    - (GĐ 8, chạy thật) Thóc là Sprite dẹt (`scaleNode` 0,08 × 0,04, quay theo hạt giống) dưới camera trực giao, có sàn theo điểm ảnh
+      (2,5 × 1,5 điểm ảnh; `cotPixel` = bề cao khung nhìn / `zoom` / số điểm ảnh). Ảnh trên GPU thật ở WebGPU và WebGL2 (Task 8): cùng
+      một nắm, cùng số hạt còn lại sau khi gà con mổ.
+
+    Đom đóm của Bức 1 và thóc của Bức 4 vẽ theo cùng một cách.
+95. **Nhánh của `If` dùng chung biến texture với nhánh khác** (r186: `ConditionalNode`, `ContextNode`, `IsolateNode`, `TextureNode`; GĐ 8
+    Task 1, chạy thật trên GPU thật và SwiftShader):
+    - Mỗi nhánh dựng trong một cache cô lập CÓ cache cha (`isolate()`). Nhưng `ContextNode.setup` trả node vừa dựng trong cache cô lập, và
+      `Node.build` dựng nó THÊM một lần ở cache cha. Dữ liệu của mọi node trong nhánh vì vậy cũng nằm ở cache cha, nên nhánh anh em tìm
+      thấy nó qua cache cha.
+    - `TextureNode.generate` nhận hai tham số, nên three không gán lại biến của nó cho từng khối (`addFlowCodeHierarchy` chỉ chạy với
+      node "generate once"). Texture đọc lần đầu ở nhánh 1 thì nhánh 2 đọc lại biến chưa gán: ra 0, ảnh đen. Phép tính thường (TempNode)
+      thì được dựng lại trong nhánh.
+    - Gặp ở `tools/pick.js`: mọi tap chứa màu của scene pass, nên Lột lớp và Kính mài ra đen ở nấc "Trước bloom" (ba bức đầu, từ GĐ 5)
+      và "Trước khi in bản nét" (Bức 4). Cách tránh: bọc view của mỗi nhánh trong `isolate(node).setParent(false)`, cache KHÔNG có cha:
+      nhánh nào cũng tự đọc texture của nó; thuộc tính, varying, uniform và `VarNode` vẫn dùng chung vì nằm ở cache toàn cục. Test dịch
+      lượt cuối (WGSL, GLSL) và kiểm mỗi nhánh chỉ đọc biến nó tự gán hay biến gán ngoài mọi nhánh (`tests/unit/pipeline.test.js`).
+96. **Texture độ sâu đọc kiểu nearest** (`textures/DepthTexture.js`, `renderers/webgpu/nodes/WGSLNodeBuilder.js`; GĐ 8 Task 1):
+    - `DepthTexture` mặc định `NearestFilter`, và WGSL coi nó là không lọc được: `textureLoad` ở điểm ảnh `floor(uv · cỡ)`. WebGL2 đọc
+      điểm ảnh gần nhất như vậy.
+    - Lấy mẫu lân cận ở `tâm ± k` điểm ảnh với k lẻ nửa (1,5) rơi đúng mép giữa hai điểm ảnh: bên này làm tròn lên, bên kia xuống, hai
+      mẫu không còn đối xứng. Độ lệch khỏi mặt phẳng của mặt sàn nghiêng khi ấy khác 0, và Bản nét của Bức 4 vẽ cả sàn thành sọc mực.
+      Cách tránh: tính tâm điểm ảnh theo cỡ của chính texture độ sâu (`textureSize`) và dời một số NGUYÊN điểm ảnh.
+97. **Compute trên WebGL2: nhánh không gán một bộ đệm thì bộ đệm giữ giá trị cũ** (`nodes/accessors/StorageBufferNode.js`,
+    `renderers/webgl-fallback/nodes/GLSLNodeBuilder.js`; GĐ 8 Task 2, đọc ngược bằng `getArrayBufferAsync` trên GPU thật, cả hai backend):
+    - Không có storage buffer (WebGL2), mỗi bộ đệm mà kernel đọc hay ghi thành một thuộc tính (bản để đọc) và một varying (bản để ghi,
+      transform feedback bắt lại): `StorageBufferNode.generate` gọi `registerTransform`. three chép thuộc tính sang varying ở đầu `main()`
+      (khối `// transforms` của `getTransforms`), TRƯỚC phần luật. Nhánh không gán ô đó thì bản ghi nhận đúng giá trị cũ, không phải rác.
+      WebGPU ghi tại chỗ nên cũng giữ giá trị cũ.
+    - Kiểm: nhánh `index < 64` chỉ gán `a`, nhánh kia gán cả hai; sau ba bước, `b` của nhánh đầu vẫn là giá trị khởi tạo, ở cả WebGL2 lẫn
+      WebGPU.
+    - Bể hạt (§20.7) vẫn giữ quy ước mọi nhánh gán đủ `a` lẫn `b`, cho mỗi nhánh nói đủ trạng thái mới của phần tử; quy ước đó không phải
+      để tránh rác.
+98. **Quán tính của OrbitControls tắt theo số lần `update()`, không theo giây** (`examples/jsm/controls/OrbitControls.js`, `update()`;
+    GĐ 8 Task 3, OrbitControls thật trong unit test, không cần DOM):
+    - Mỗi lần `update()` khi `enableDamping`: camera xoay thêm `_sphericalDelta × dampingFactor`, rồi `_sphericalDelta` nhân với
+      `1 − dampingFactor` (dòng 717–718 và 799–802). Phần xoay dở của một lần kéo sau n lần là `(1 − dampingFactor)ⁿ`, mỗi khung dài
+      bao lâu cũng vậy.
+    - `scene.js` kẹp dt của khung ở 0,1 s (`clock.js`): ở 10 khung/giây (SwiftShader trên runner CI), 4,2 giây cảnh chỉ là 42 lần
+      `update()`, còn 0,95⁴² ≈ 12% phần xoay dở. Phần ấy tiếp tục xoay camera ra khỏi nhà sau khi tranh tự khép lại đã đặt nó về. Ở 60
+      khung/giây cùng quãng ấy còn 0,95²⁵² ≈ 2·10⁻⁶.
+    - Cách tránh: đặt `dampingFactor = 1 − (1 − 0,05)^(dt × 60)` mỗi khung, TRƯỚC `update()` (`home.js`, chỉ bức có `CameraSpec.home`).
+      Quán tính tắt theo giây của cảnh ở mọi nhịp khung và đúng bằng mặc định ở 60 khung/giây. Test: OrbitControls thật, `rotateLeft(1)`
+      rồi buông, 8 giây cảnh ở 10, 30, 60 khung/giây: sai lệch khỏi nhà dưới 0,01° (bỏ dòng đặt `dampingFactor` thì ở 10 khung/giây còn
+      chừng 5,5°, ở 30 khung/giây chừng 0,08°). E2e SwiftShader ở máy dựng thử chạy đủ nhanh nên chưa thấy lỗi này.
+99. **Mẫu ngoài khung của texture độ sâu đọc điểm ảnh ở mép, ở cả hai backend** (`renderers/webgpu/nodes/WGSLNodeBuilder.js`,
+    `generateTextureLod`; GĐ 8 Task 5, đọc mã WGSL sinh ra và chạy thật trên GPU thật lẫn SwiftShader):
+    - WebGPU: texture độ sâu lọc kiểu nearest là texture không lọc được, đọc bằng `textureLoad`. three kẹp uv theo cách quấn của texture
+      (`ClampToEdgeWrapping`: `tsl_coord_clampS_clampT_2d`), rồi kẹp chỉ số điểm ảnh vào [0, cỡ − 1]. Lần đọc ngoài khung vì vậy không bao
+      giờ tới GPU (không phải chuyện "tùy máy" của WGSL), mà ra điểm ảnh ở mép.
+    - WebGL2: `texture()` với `CLAMP_TO_EDGE` cũng ra điểm ảnh ở mép.
+    - Hệ quả cho dò cạnh lấy mẫu lân cận: ở hàng sát khung, mẫu ngoài khung có thể trùng chính điểm giữa, nên độ lệch khỏi mặt phẳng thành
+      hiệu bậc một và góc gãy của mặt sàn nghiêng 20° là 70°: một vệt mực giả dọc khung. Bản nét của Bức 4 bỏ cặp mẫu có điểm ngoài khung
+      (§20.4 lớp 3). E2e: phóng to 2,5 lần, không lệch bản: chưa bỏ thì hàng sát mép dưới tối hơn sàn ngay trên 0,07 (độ sáng 0–1), bỏ rồi
+      còn 0,004. Lệch bản mặc định (2, 1) dời điểm giữa lên một hàng, mẫu ngoài khung không trùng điểm giữa nữa, góc gãy chỉ còn chừng 16°,
+      nên ở góc của tranh vệt giả không hiện; kéo xoay chừng 65° (mặt sàn nghiêng theo chiều ngang) rồi phóng to thì nó hiện dọc mép trái
+      của khung (thấy trên GPU thật).
+100. **Tone mapping AgX nén vùng sáng: hạt emissive trên giấy sáng phải có độ sáng HDR cỡ chục** (`agxToneMapping` và bloom chọn lọc trên kênh
+     `emissive` của Phủ bóng; GĐ 8 Task 6, đo trên GPU thật, DPR 2, góc của tranh):
+    - giấy ngà (màu tuyến tính chừng 0,8) hiện ra RGB 196, 187, 168 ở vách, cùng LUT và vignette mặc định của Phủ bóng;
+    - hạt điệp là chấm hai điểm ảnh có đỉnh tuyến tính 1 (`sparkle` 1,2), 3,4 (`sparkle` 4), 8 và 16. Ảnh cuối gần như không thấy hạt ở 1
+      và 3,4, mờ ở 8, rõ ở 16 (điểm trắng, quầng nhỏ). View "Chỉ emissive" thì thấy hạt ở mọi mức, vì không qua tone mapping: đừng chỉnh
+      độ sáng của hạt theo view ấy;
+    - bloom (ngưỡng 0, cường độ 1) trên kênh emissive chỉ tỏa đáng kể từ đỉnh chừng 10: chấm hai điểm ảnh bị nhòe ở nửa độ phân giải;
+    - hệ quả: phần phát sáng của một vật trên nền sáng đặt theo HDR (hàng chục), không theo độ sáng của nền. Ở góc nhìn của Bức 4,
+      hạt ở mép giấy tỏa cả ra ván tối: Giấy điệp tắt hạt trong một lề quanh mép (GĐ 8 Task 11, §20.4 lớp 4).
+101. **Mảng uniform (`uniformArray`) mà compute đọc được tải lại ở mỗi lần `renderer.compute`** (`nodes/accessors/UniformArrayNode.js`,
+     `renderers/common/Renderer.js#compute`, `nodes/core/NodeFrame.js#updateNode`; GĐ 8 Task 8, chạy thật: thóc bị mỏ gà ăn ở cả hai backend):
+    - `UniformArrayNode.updateType` là `RENDER`. `compute()` đặt `nodeFrame.renderId = info.calls`, số tăng ở mỗi lần gọi, nên
+      `updateForCompute` gọi `update()` của mảng ở mọi lần compute, và `update()` chép `.array` vào bộ đệm uniform.
+    - Hệ quả: lớp chỉ cần ghi `array[i].set(…)` trước khi compute (mảng mỏ của Bức 4, mỗi khung), không `needsUpdate`, không dựng node mới.
+    - WGSL đặt mảng trong một struct uniform riêng, tên theo `setName` (`array< vec4<f32>, 10 >`, có dấu cách: test so bằng regex). GLSL
+      (transform feedback của WebGL2) đặt nó vào một khối `uniform NodeBuffer_<id>` và bỏ tên (như `CLAUDE.md` ghi từ GĐ 6 cho material).

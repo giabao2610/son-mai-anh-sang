@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" role="img" aria-labelledby="dg-dgmc-tg-title" font-family="'Be Vietnam Pro', system-ui, sans-serif" font-size="12">
+  <title id="dg-dgmc-tg-title">Hai cách chiếu, nhìn từ bên cạnh, cùng hai gà con giống hệt nhau, một con ở xa, một con ở gần. Bên trái, camera phối cảnh: tia từ gà hội tụ về mắt, nên trên màn ảnh của gà ở xa chỉ bằng nửa ảnh của gà ở gần. Bên phải, camera trực giao: mọi tia song song, chếch xuống 20°, nên hai ảnh dài bằng nhau; ảnh của gà ở xa chỉ nằm cao hơn trên màn.</title>
+  <!-- đường chia hai nửa -->
+  <path d="M180 8 V192" stroke="#8A8580" stroke-dasharray="2 4"/>
+  <!-- ── Bên trái: phối cảnh ── -->
+  <text x="88" y="18" fill="#EDE3CF" text-anchor="middle" font-weight="600">Phối cảnh</text>
+  <text x="6" y="44" fill="#C9C6BD">tia hội tụ</text>
+  <text x="6" y="58" fill="#C9C6BD">về mắt</text>
+  <path d="M4 152 H128" stroke="#8A8580"/>
+  <!-- hai gà con giống hệt nhau: một con ở xa, một con ở gần -->
+  <g fill="#D08E2A">
+    <ellipse cx="24" cy="143" rx="9.5" ry="7"/>
+    <circle cx="17" cy="132" r="5"/>
+    <path d="M12.5 130.4 L8 132.3 L12.5 134.2 Z"/>
+    <path d="M32 139.5 L36.5 136.5 L34 144 Z"/>
+    <path d="M21.5 149.5 V152 M26.5 149.5 V152" stroke="#D08E2A" stroke-width="1.4"/>
+  </g>
+  <g fill="#994533">
+    <ellipse cx="108" cy="143" rx="9.5" ry="7"/>
+    <circle cx="101" cy="132" r="5"/>
+    <path d="M96.5 130.4 L92 132.3 L96.5 134.2 Z"/>
+    <path d="M116 139.5 L120.5 136.5 L118 144 Z"/>
+    <path d="M105.5 149.5 V152 M110.5 149.5 V152" stroke="#994533" stroke-width="1.4"/>
+  </g>
+  <!-- tia từ đỉnh đầu và chân mỗi con về mắt -->
+  <g stroke-width="1" stroke-opacity="0.75">
+    <g stroke="#D08E2A">
+      <path d="M17 127 L166 100"/>
+      <path d="M24 152 L166 100"/>
+    </g>
+    <g stroke="#994533">
+      <path d="M101 127 L166 100"/>
+      <path d="M108 152 L166 100"/>
+    </g>
+  </g>
+  <!-- màn, và ảnh của hai con trên màn -->
+  <path d="M111.4 87.4 L130.7 135.7" stroke="#EDE3CF" stroke-width="1.4"/>
+  <path d="M119.8 108.4 L122.8 115.8" stroke="#D08E2A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M123.5 117.6 L129.5 132.7" stroke="#994533" stroke-width="4" stroke-linecap="round"/>
+  <text x="107.4" y="89.4" fill="#EDE3CF" text-anchor="end">màn</text>
+  <circle cx="166" cy="100" r="3" fill="#EDE3CF"/>
+  <text x="166" y="90" fill="#EDE3CF" text-anchor="middle">mắt</text>
+  <text x="24" y="168" fill="#8A8580" text-anchor="middle">gà xa</text>
+  <text x="108" y="168" fill="#8A8580" text-anchor="middle">gà gần</text>
+  <text x="88" y="190" fill="#EDE3CF" text-anchor="middle">gà xa nhỏ đi</text>
+  <!-- ── Bên phải: trực giao ── -->
+  <g transform="translate(184 0)">
+    <text x="88" y="18" fill="#EDE3CF" text-anchor="middle" font-weight="600">Trực giao</text>
+    <text x="6" y="44" fill="#C9C6BD">tia song song,</text>
+    <text x="6" y="58" fill="#C9C6BD">chếch xuống 20°</text>
+    <path d="M4 152 H128" stroke="#8A8580"/>
+    <g fill="#D08E2A">
+      <ellipse cx="24" cy="143" rx="9.5" ry="7"/>
+      <circle cx="17" cy="132" r="5"/>
+      <path d="M12.5 130.4 L8 132.3 L12.5 134.2 Z"/>
+      <path d="M32 139.5 L36.5 136.5 L34 144 Z"/>
+      <path d="M21.5 149.5 V152 M26.5 149.5 V152" stroke="#D08E2A" stroke-width="1.4"/>
+    </g>
+    <g fill="#994533">
+      <ellipse cx="108" cy="143" rx="9.5" ry="7"/>
+      <circle cx="101" cy="132" r="5"/>
+      <path d="M96.5 130.4 L92 132.3 L96.5 134.2 Z"/>
+      <path d="M116 139.5 L120.5 136.5 L118 144 Z"/>
+      <path d="M105.5 149.5 V152 M110.5 149.5 V152" stroke="#994533" stroke-width="1.4"/>
+    </g>
+    <!-- tia song song, chếch xuống 20°, tới màn -->
+    <g stroke-width="1" stroke-opacity="0.75">
+      <g stroke="#D08E2A">
+        <path d="M17 127 L147 79.7"/>
+        <path d="M24 152 L155.8 104"/>
+      </g>
+      <g stroke="#994533">
+        <path d="M101 127 L156.8 106.7"/>
+        <path d="M108 152 L165.7 131"/>
+      </g>
+    </g>
+    <!-- màn, và ảnh của hai con trên màn: dài bằng nhau -->
+    <path d="M144.5 73 L167.8 136.9" stroke="#EDE3CF" stroke-width="1.4"/>
+    <path d="M147 79.7 L155.8 104" stroke="#D08E2A" stroke-width="4" stroke-linecap="round"/>
+    <path d="M156.8 106.7 L165.7 131" stroke="#994533" stroke-width="4" stroke-linecap="round"/>
+    <text x="140.5" y="75" fill="#EDE3CF" text-anchor="end">màn</text>
+    <text x="24" y="168" fill="#8A8580" text-anchor="middle">gà xa</text>
+    <text x="108" y="168" fill="#8A8580" text-anchor="middle">gà gần</text>
+    <text x="88" y="190" fill="#EDE3CF" text-anchor="middle">gà xa cùng cỡ, nằm cao hơn</text>
+  </g>
+</svg>

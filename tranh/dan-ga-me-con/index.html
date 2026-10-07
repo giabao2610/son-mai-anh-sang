@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đàn Gà Mẹ Con · Sơn Mài Ánh Sáng</title>
+    <meta name="description" content="Một tờ tranh Đông Hồ bước vào được: gà mẹ ngậm con ong, mười gà con quây quần, sơn từ sáu lớp ánh sáng." />
+    <meta name="theme-color" content="#0E0A08" />
+    <meta property="og:title" content="Đàn Gà Mẹ Con · Sơn Mài Ánh Sáng" />
+    <meta property="og:description" content="Một tờ tranh Đông Hồ bước vào được: gà mẹ ngậm con ong, mười gà con quây quần, sơn từ sáu lớp ánh sáng." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://giabao2610.github.io/son-mai-anh-sang/tranh/dan-ga-me-con/" />
+    <meta property="og:image" content="https://giabao2610.github.io/son-mai-anh-sang/paintings/dan-ga-me-con/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styles/shell.css" />
+  </head>
+  <body data-painting="dan-ga-me-con" data-state="poster">
+    <img
+      class="poster"
+      data-poster
+      src="/paintings/dan-ga-me-con/poster.webp"
+      width="1600"
+      height="1000"
+      alt="Tranh Đông Hồ đàn gà mẹ con trên giấy điệp, đặt trên ván sơn đen: gà mẹ ngậm con ong, mười gà con quây quần."
+      fetchpriority="high"
+    />
+    <div class="stage" data-stage></div>
+    <main class="frame">
+      <div class="top">
+        <header>
+          <small>Sơn Mài Ánh Sáng · Bức 4</small>
+          <h1>Đàn Gà Mẹ Con</h1>
+          <nav class="series" aria-label="Các bức tranh"><a rel="prev" href="../cung-que/">← Bức 3 · Cung Quế</a><a href="../">Phòng tranh</a></nav>
+        </header>
+        <div class="badge-box">
+          <button data-badge hidden type="button" aria-expanded="false" aria-controls="badge-note"></button>
+          <p id="badge-note" data-badge-note aria-live="polite"></p>
+        </div>
+      </div>
+      <section data-static aria-live="polite"></section>
+      <p class="hint" data-hint aria-live="polite"></p>
+      <footer class="foot">
+        <figure class="poem">
+          <blockquote data-poem>
+            <p>Khôn ngoan đối đáp người ngoài</p>
+            <p>Gà cùng một mẹ chớ hoài đá nhau</p>
+          </blockquote>
+          <figcaption><cite>Ca dao</cite></figcaption>
+        </figure>
+        <div class="marks">
+          <svg data-moon viewBox="-1.1 -1.1 2.2 2.2" aria-hidden="true"></svg>
+          <span class="dau" data-seal></span>
+        </div>
+      </footer>
+    </main>
+    <script type="module">
+      import { boot } from '/src/engine/boot.js';
+      import entry from '/src/paintings/dan-ga-me-con/index.js';
+      import t from '/src/ui/strings.vi.js';
+      boot(entry, { lang: 'vi', t });
+    </script>
+  </body>
+</html>

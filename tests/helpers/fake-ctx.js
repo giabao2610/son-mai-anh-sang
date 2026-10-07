@@ -1,8 +1,9 @@
-// tests/helpers/fake-ctx.js — dựng một bức trong Node (không GPU) giống run.js: sân khấu giả, createCtx, setup(), rồi các lớp theo thứ tự.
+// tests/helpers/fake-ctx.js — dựng một bức trong Node (không GPU) giống run.js: sân khấu giả (camera dựng theo painting.camera, GĐ 8), createCtx, setup(), rồi các lớp theo thứ tự.
 import { vi } from 'vitest';
 import { PerspectiveCamera, Scene, Vector2 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
 import { buildLayers, createCtx } from '../../src/engine/gpu/layers.js';
+import { createCamera } from '../../src/engine/gpu/camera.js';
 import { budgetFor } from '../../src/engine/quality.js';
 
 /** "Bây giờ" mặc định của test: 21:00 giờ Việt Nam, ngày 18 tháng Tám năm Bính Ngọ. */
@@ -40,16 +41,18 @@ export function fakeCaptions(keys = []) {
  * (dựng được node graph trong Node); renderer là fakeRenderer(); captions là fakeCaptions() nếu test không đưa.
  * `ctx.weights` và `ctx.env` chỉ test dùng: chúng không liệt kê được (non-enumerable), nên ctx mà lớp nhận qua
  * `{ ...ctx }` không có hai thứ này.
+ * `camera` (GĐ 8): camera của sân khấu giả; thiếu thì một PerspectiveCamera chung chung (test không dựng bức nào).
  * @param {object} meta  PaintingMeta
  */
 export function makeEngineCtx(meta, {
   level = 'cao', budget = {}, now = NOW, reducedMotion = false, tier = 'webgpu', mobile = false, captions = fakeCaptions(),
+  camera = new PerspectiveCamera(40, 1.6, 0.1, 500),
 } = {}) {
   const stage = {
     backend: tier,
     renderer: fakeRenderer(),
     scene: new Scene(),
-    camera: new PerspectiveCamera(40, 1.6, 0.1, 500),
+    camera,
     u: { time: uniform(0), delta: uniform(1 / 60), resolution: uniform(new Vector2(640, 400)), pointer: uniform(new Vector2()) },
   };
   const { ctx, weights, env } = createCtx({ meta, stage, level, budget, mobile, reducedMotion, now, captions });
@@ -61,11 +64,15 @@ export function makeEngineCtx(meta, {
 /**
  * Dựng bức như run.js: ngân sách của mức (budgetFor, ghép bảng của bức), setup(ctx) rồi buildLayers (cùng hàm của xưởng).
  * `until` = id lớp cuối cần dựng; `budget` ghi đè vài số của mức; `captions` = ctx.captions giả (fakeCaptions(keys))
- * khi test cần xem bức gọi chữ đi theo vật. Các tùy chọn khác đi tiếp vào makeEngineCtx (level, now, tier…).
+ * khi test cần xem bức gọi chữ đi theo vật. `camera` (GĐ 8): mặc định là camera mà sân khấu dựng từ painting.camera (đúng loại,
+ * đúng chỗ, khung 640 × 400 của e2e); test đưa camera khác để xem lớp làm gì với loại camera đó. Các tùy chọn khác đi tiếp vào
+ * makeEngineCtx (level, now, tier…).
  * @returns {{ ctx: object, setup: object | undefined, shared: object, built: object[], layers: Record<string, object>, knobs: Record<string, object> }}
  */
-export function buildPainting(painting, meta, { until, budget = {}, ...options } = {}) {
-  const ctx = makeEngineCtx(meta, { ...options, budget: { ...budgetFor(options.level ?? 'cao', painting.quality), ...budget } });
+export function buildPainting(painting, meta, { until, budget = {}, camera = createCamera(painting.camera, 1.6), ...options } = {}) {
+  const ctx = makeEngineCtx(meta, {
+    ...options, camera, budget: { ...budgetFor(options.level ?? 'cao', painting.quality), ...budget },
+  });
   const setup = painting.setup?.(ctx);
   const shared = setup?.shared ?? {};
   const end = until ? painting.layers.findIndex((m) => m.id === until) + 1 : painting.layers.length;

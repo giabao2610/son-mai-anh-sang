@@ -95,7 +95,10 @@ export function createToolbox({ tools, views, doc, t = {}, content = null, redra
       } else delete doc.body.dataset.tool;
       bar.hidden = !next;
     },
-    /** Cử chỉ tới công cụ đang bật trước; true = công cụ đã dùng, không chuyển cho bức. */
+    /**
+     * Cử chỉ tới công cụ đang bật trước; true = công cụ đã dùng, không chuyển cho bức. Trừ 'hold-end' mà bức còn chờ (bức đã nhận
+     * 'hold-start' của cái giữ đó trước khi công cụ bật): scene.js#route vẫn chuyển nó cho bức, dù công cụ giữ nó.
+     */
     gesture(g) {
       return Boolean(find(active)?.instance.onGesture?.(g));
     },

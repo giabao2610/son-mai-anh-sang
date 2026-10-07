@@ -526,12 +526,22 @@ for (const { meta, page: htmlPage, lang } of paintings) {
         await twoFrames(page);
         return (await canvasRegions(page)).all.checksum;
       };
-      let previous = base.checksum;
+      // Tên hai tap của Phủ bóng (engine/stock/phu-bong/content.vi.js; file đó import '?raw' nên Node không nạp được). "Trước tone" là
+      // "Trước bloom" cộng ánh bloom: không có gì phát sáng (ảnh "Chỉ emissive" đen tuyền, như Bức 4 khi chưa có giấy điệp, GĐ 8) thì
+      // bloom cộng đúng 0 và hai nấc phải TRÙNG nhau; có thì phải khác. Mọi cặp nấc kề bên khác phải khác nhau.
+      const [TONE, BLOOM] = ['Trước tone', 'Trước bloom'];
+      const shots = new Map();
+      let previous = { name: t.views.final, shot: base.checksum };
       for (let v = last - 1; v >= 0; v -= 1) {
         const shot = await slide(v);
         const name = await range.getAttribute('aria-valuetext');
-        expect(shot, `nấc ${v} (${name}) giống nấc kề bên`).not.toBe(previous);
-        previous = shot;
+        shots.set(name, shot);
+        if (name !== BLOOM || previous.name !== TONE) expect(shot, `nấc ${v} (${name}) giống nấc kề bên`).not.toBe(previous.shot);
+        previous = { name, shot };
+      }
+      if (shots.has(BLOOM) && shots.has(TONE)) {
+        const glows = shots.get(t.views.emissive) !== 0;
+        expect(shots.get(BLOOM) === shots.get(TONE), `"${TONE}" trùng "${BLOOM}" khi và chỉ khi không có gì phát sáng`).toBe(!glows);
       }
       await page.screenshot({ path: testInfo.outputPath('lot-lop-cuoi.png') });
       expect(await slide(last), 'về nấc cuối thì phải đúng ảnh cũ').toBe(base.checksum);

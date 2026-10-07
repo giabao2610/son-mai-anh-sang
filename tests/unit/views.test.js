@@ -1,9 +1,9 @@
-// tests/unit/views.test.js — danh sách view (thứ tự, sẵn sàng), node ở không gian hiển thị, ghép overlay của công cụ.
+// tests/unit/views.test.js — danh sách view (thứ tự, sẵn sàng), node ở không gian hiển thị, ghép overlay của công cụ; depth bắt buộc (pipeline.js#linearDepth).
 import { describe, it, expect, vi } from 'vitest';
 import { NoToneMapping, PerspectiveCamera, Scene, Vector4 } from 'three/webgpu';
 import { pass, uniform } from 'three/tsl';
 import { BUILTIN_VIEWS, createViews } from '../../src/engine/gpu/views.js';
-import { makeMRT } from '../../src/engine/gpu/pipeline.js';
+import { linearDepth, makeMRT } from '../../src/engine/gpu/pipeline.js';
 import { buildFinalPass } from '../helpers/final-pass.js';
 
 const marker = () => uniform(new Vector4());
@@ -15,16 +15,27 @@ const composed = (outputNode) => {
 };
 
 function setup({ taps = [] } = {}) {
-  const scenePass = pass(new Scene(), new PerspectiveCamera());
+  const camera = new PerspectiveCamera();
+  const scenePass = pass(new Scene(), camera);
   scenePass.setMRT(makeMRT());
   const renderPipeline = { outputNode: null, needsUpdate: false };
   const final = marker();
   const compile = vi.fn(async () => {});
-  const views = createViews({ scenePass, renderPipeline, mrtFor: makeMRT, final, taps, compile });
+  // depth như pipeline.js truyền vào: công thức theo loại camera chọn ở MỘT chỗ (pipeline.js#linearDepth).
+  const depth = linearDepth(scenePass, camera);
+  const views = createViews({ scenePass, renderPipeline, mrtFor: makeMRT, final, taps, compile, depth });
   return { scenePass, renderPipeline, final, compile, views };
 }
 
 describe('createViews', () => {
+  it('depth là bắt buộc (GĐ 8): thiếu thì ném lỗi tiếng Việt, không tự lấy getLinearDepthNode() (sai với camera trực giao)', () => {
+    const scenePass = pass(new Scene(), new PerspectiveCamera());
+    const renderPipeline = { outputNode: null, needsUpdate: false };
+    const make = () => createViews({ scenePass, renderPipeline, mrtFor: makeMRT, final: marker(), taps: [], compile: async () => {} });
+    expect(make).toThrow(/depth/);
+    expect(make).toThrow(/linearDepth/);
+  });
+
   it('thứ tự như Lột lớp: ảnh cuối, tap theo thứ tự NGƯỢC pipeline, emissive, normal (chưa sẵn sàng), depth', () => {
     expect(BUILTIN_VIEWS).toEqual(['final', 'emissive', 'normal', 'depth']);
     const taps = [

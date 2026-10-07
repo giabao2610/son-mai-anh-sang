@@ -1,6 +1,6 @@
-// tests/unit/caption-set.test.js — chữ đi theo vật (GĐ 5): khóa của content.captions, chiếu điểm neo ra màn hình mỗi khung, giờ theo đồng hồ cảnh.
+// tests/unit/caption-set.test.js — chữ đi theo vật (GĐ 5): khóa của content.captions, chiếu điểm neo ra màn hình mỗi khung (GĐ 8: cả với camera trực giao), giờ theo đồng hồ cảnh.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { PerspectiveCamera, WebGLCoordinateSystem, WebGPUCoordinateSystem } from 'three/webgpu';
+import { OrthographicCamera, PerspectiveCamera, WebGLCoordinateSystem, WebGPUCoordinateSystem } from 'three/webgpu';
 import { createCaptionSet } from '../../src/engine/gpu/caption-set.js';
 import { CAPTION_FADE, CAPTION_SECONDS } from '../../src/ui/captions.js';
 import { fakeCaptions } from '../helpers/fake-ctx.js';
@@ -122,6 +122,25 @@ describe('createCaptionSet', () => {
       set.step();
       expect(lastPlace(ui)[3]).toBe(true);
     }
+  });
+
+  it('GĐ 8: camera trực giao: neo ở điểm nhìn hiện giữa khung; neo sau lưng camera thì ẩn', () => {
+    const ui = fakeUi();
+    const camera = new OrthographicCamera(-4, 4, 3, -3, 0.1, 100);
+    camera.position.set(0, 0, 10);
+    camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld();
+    const set = createCaptionSet({ captions: CAPTIONS, ui, camera, time: { value: 2 }, size: () => ({ width: 800, height: 600 }) });
+    const point = { x: 0, y: 0, z: 0 };
+    set.api.show('tram-nam', () => point);
+    set.step();
+    const [, x, y, visible] = lastPlace(ui);
+    expect(visible).toBe(true);
+    expect(x).toBeCloseTo(400, 6);
+    expect(y).toBeCloseTo(300, 6);
+    point.z = 20;
+    set.step();
+    expect(lastPlace(ui)[3]).toBe(false);
   });
 
   it('anchor() trả null thì ẩn ở khung đó và không cảnh báo (bức nói khung này không có điểm neo); vào lại khung thì hiện', () => {

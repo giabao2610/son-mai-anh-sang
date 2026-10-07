@@ -1,7 +1,7 @@
-// tests/unit/input.test.js — con trỏ → hàng đợi cử chỉ có NDC + tia; ctx.u.pointer; camera đứng yên khi giữ tay.
+// tests/unit/input.test.js — con trỏ → hàng đợi cử chỉ có NDC + tia (GĐ 8: cả tia của camera trực giao); ctx.u.pointer; camera đứng yên khi giữ tay.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JSDOM } from 'jsdom';
-import { PerspectiveCamera, Vector2 } from 'three/webgpu';
+import { OrthographicCamera, PerspectiveCamera, Vector2, Vector3 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
 import { GESTURE } from '../../src/engine/gpu/gesture.js';
 import { createInput } from '../../src/engine/gpu/input.js';
@@ -57,6 +57,26 @@ describe('createInput', () => {
     const dir = camera.getWorldDirection(g.ray.direction.clone());
     expect(g.ray.direction.dot(dir)).toBeCloseTo(1, 6);
     expect(input.drain()).toEqual([]); // hàng đợi rỗng sau khi lấy
+  });
+
+  it('GĐ 8: camera trực giao → mọi tia song song hướng nhìn; gốc tia dời trên mặt phẳng camera theo chỗ chạm (Phụ lục A.92)', () => {
+    const ortho = new OrthographicCamera(-10, 10, 5, -5, 0.1, 100);
+    ortho.position.set(0, 5, 10);
+    ortho.lookAt(0, 0, 0);
+    ortho.updateMatrixWorld();
+    const own = createInput({ canvas, camera: ortho, controls, pointer: u, win });
+    canvas.dispatchEvent(pointer('pointerdown', 150, 25)); // NDC (0,5; 0,5)
+    clock = 80;
+    canvas.dispatchEvent(pointer('pointerup', 150, 25));
+    const g = own.drain().find((x) => x.kind === 'tap');
+    own.dispose();
+    const forward = ortho.getWorldDirection(new Vector3());
+    expect(g.ray.direction.dot(forward)).toBeCloseTo(1, 6);
+    const right = new Vector3(1, 0, 0).applyQuaternion(ortho.quaternion);
+    const up = new Vector3(0, 1, 0).applyQuaternion(ortho.quaternion);
+    const local = g.ray.origin.clone().sub(ortho.position);
+    expect(local.dot(right)).toBeCloseTo(5, 6); // nửa bề ngang 10 × 0,5
+    expect(local.dot(up)).toBeCloseTo(2.5, 6); // nửa bề cao 5 × 0,5
   });
 
   it('pointermove cập nhật ctx.u.pointer (NDC), kể cả khi chỉ rê chuột', () => {
