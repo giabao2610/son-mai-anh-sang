@@ -5217,14 +5217,15 @@ cũng đi đường này (chưa có vòng lặp nên không khác gì).
 ```js
 /** [9] @typedef {{ language: 'wgsl' | 'glsl', backend: 'webgpu' | 'webgl2',
  *   uniforms: { weight: string | null, knobs: Record<string, string> },   // tên trong mã; Cốt: weight null (luật 1)
- *   places: { key: string, label: string, owner: string | null, own: boolean,
- *             vertex: string | null, fragment: string, hits: { vertex: number, fragment: number }, error?: string }[] }} Translation */
+ *   places: { key: string, label: string, owner: string | null, own: boolean, vertex: string | null, fragment: string,
+ *             hits: { vertex: number, fragment: number }, ms: number, error?: string }[],   // ms: giữ khung của lần đọc (0: đã nhớ)
+ *   jsOnly: boolean }} Translation   // jsOnly: không mã nào có uniform của lớp (places là vật của chính lớp) */
 ```
 `__sma.translate(layerId)` trả đúng object đó (DevTools, e2e).
 
 ### 21.4 Xưởng: công thức
 
-**`engine/recipe.js`** (đường nhẹ, hàm thuần, không three; luật ES2020 của đường nhẹ áp vì `boot.js` import nó):
+**`engine/recipe.js`** (đường nhẹ, hàm thuần, không three; `boot.js` import nó, nên luật của đường nhẹ áp: không built-in ES2022 trở lên):
 - `readRecipe(hash)` → `{ entries: { key, value }[], problems: string[] } | null`: `null` khi hash không bắt đầu bằng `#r=`. Giải mã
   phần trăm, dài quá 2.048 ký tự thì bỏ cả công thức (một problem), tách theo dấu phẩy và dấu hai chấm đầu tiên. Khóa phải khớp
   `^[a-z0-9-]+(\.[A-Za-z][A-Za-z0-9]*)?$`, giá trị `^[A-Za-z0-9.+-]+$`; mục không khớp vào `problems`. Khóa lặp thì mục sau thắng.
@@ -5238,7 +5239,8 @@ cũng đi đường này (chưa có vòng lặp nên không khác gì).
   núm: số, `1`/`0`, lựa chọn có trong `options`, `#` + hex); khóa không chấm là id lớp (trọng số 0–1; `cot` bỏ qua, luật 1) hay id Dial.
   Còn lại vào `problems`.
 - `diff(snapshot)` → entries: chỉ giá trị khác `defaults` (số so sau khi làm tròn theo `step`, nên 0.0200000004 bằng 0.02).
-- `counts(snapshot)` → `{ layers, knobs, dials }` cho dòng tóm tắt.
+- `countsOf(entries)` → `{ layers, knobs, dials }` cho dòng tóm tắt (`dials`: id các Dial đã khác mặc định).
+- `recipeMethods(recipes, …)`: ba hàm `recipe`, `applyRecipe`, `reset` mà bàn thợ trải vào API của nó.
 
 **Áp lúc dựng** (§16 đã ghi: "giải mã trước `createLayer`"):
 - `boot.js` đọc `readRecipe(location.hash)` cùng lúc với cờ, đưa vào `run()` như `flags`; tầng tĩnh thì đưa vào `showStatic` (câu thêm của
@@ -5254,7 +5256,7 @@ cũng đi đường này (chưa có vòng lặp nên không khác gì).
   đường `restore(snapshot)` như GĐ 2.
 
 **Bàn thợ** thêm:
-- `recipe()` → `{ text, counts }` (`text` không có `#r=`; rỗng là nguyên bản);
+- `recipe()` → `{ text, counts: { layers, knobs, dials } }` (`text` không có `#r=`; rỗng là nguyên bản; `dials` là id);
 - `applyRecipe(text)` → `Promise`: trạng thái đủ = `defaults` ghép công thức, đi qua `restore()` (trọng số đặt ngay; núm khác giá trị hiện tại
   thì set lần lượt; Dial); trả `{ counts, problems }`;
 - `reset()` → `Promise`: về `defaults`, trọng số tween;
@@ -5312,8 +5314,8 @@ Không có chữ mới trong `content` của các bức: nhãn vật đã có t�
   - id lựa chọn của núm `select` khớp `^[A-Za-z0-9-]+$` (không có dấu phẩy, hai chấm). Bốn bức hiện đều đạt.
 - **Test luật** (`tests/rules/files.test.js`): chỉ `engine/gpu/translate.js` được gọi `debug.getShaderAsync` và đọc `_quadMesh`, như luật
   `setRenderObjectFunction` của GĐ 5.
-- **Kích thước file:** `run.js` đã 248 dòng. Phần mở xưởng (lời mời, mở theo công thức) tách ra file riêng trong `engine/gpu/` trong task đầu
-  tiên chạm `run.js`. `studio.js` không quá 250: phần công thức ở `recipe-set.js`.
+- **Kích thước file:** `run.js` đã 248 dòng. Phần mở xưởng (lời mời, mở theo công thức) tách ra `engine/gpu/workshop-door.js` ở task thêm
+  phần mở theo công thức (Task 6 của plan). `studio.js` không quá 250: phần công thức ở `recipe-set.js`.
 - **`CLAUDE.md`** thêm mục GĐ 9: đọc mã và biên dịch giữa chừng trong lúc giữ khung (`hold.js`), `_quadMesh`, dạng `#r=`, `replaceState`
   có gộp.
 
@@ -5387,10 +5389,12 @@ trạng thái của Bản dịch và dòng "Đã chép link".
 
 Như GĐ 6–8: làm thẳng trên nhánh `gd9-ban-dich-cong-thuc`, vừa làm vừa sửa; plan gọn, code đầy đủ chỉ ở chỗ khó (giữ khung, đọc mã, lượt cuối,
 đọc/ghi công thức).
-1. **Task rủi ro nhất làm trước:** `hold.js`, `translate.js`, và sửa Normal lúc cảnh đang chạy (cùng bộ giữ), chạy thật trên Bức 1 (vật
-   thường) và Bức 4 (lượt cuối), WebGPU trên GPU thật và WebGL2 SwiftShader.
+Plan: `docs/superpowers/plans/2026-10-08-gd9-ban-dich-cong-thuc.md` (chín task).
+1. **Hai task rủi ro nhất làm trước**, chạy thật trên Bức 1 (vật thường) và Bức 4 (lượt cuối), WebGPU trên GPU thật và WebGL2 SwiftShader:
+   - Task 1: `hold.js` và sửa Normal lúc cảnh đang chạy (cùng bộ giữ), e2e đỏ trước trên code cũ;
+   - Task 2: `translate.js`, bàn thợ, `__sma.translate`.
 
-   **Luật dừng:** một trong bốn điều sau không đạt thì dừng, báo Bao, và chọn đường lùi:
+   **Luật dừng (Task 2):** một trong bốn điều sau không đạt thì dừng, báo Bao, và chọn đường lùi:
    - mã của vật trùng từng ký tự với mã của RenderObject mà lượt vẽ cảnh dùng, ở cả hai backend;
    - lần đọc đầu của một vật giữ khung tối đa 250 ms, cả bức dưới 3 giây (Bức 1 và Bức 4, Mac M2); mở lại không giữ khung;
    - dưới `?freeze`, ảnh sau khi dịch trùng ảnh trước; không lỗi console;
@@ -5398,14 +5402,15 @@ Như GĐ 6–8: làm thẳng trên nhánh `gd9-ban-dich-cong-thuc`, vừa làm v
 
    **Đường lùi:** "bắt lúc vẽ": `draws.js` (chỗ duy nhất đặt móc) đọc RenderObject của lần vẽ thật bằng trường riêng của three; test ghim
    trường đó với three 0.186.1.
-2. Bản dịch trong Sổ tay: `shader-text.js`, `translation-view.js`, nút ở `code-view.js`, những nơi lớp có mặt, sáng theo núm.
-3. Công thức: `recipe.js`, `recipe-set.js`, áp lúc dựng (`createKnobs` nhận giá trị ban đầu), bàn thợ, `__sma`.
-4. Thanh địa chỉ và `hashchange` (`recipe-url.js`); mục Công thức, dòng tóm tắt, Về nguyên bản; câu của tầng tĩnh.
+2. Task 3: Bản dịch trong Sổ tay: `shader-text.js`, `translation-view.js`, nút ở `code-view.js`, những nơi lớp có mặt, sáng theo núm.
+3. Task 4–5: công thức: `recipe.js`, `recipe-set.js`, áp lúc dựng (`createKnobs` nhận giá trị ban đầu), bàn thợ, `__sma`, câu của tầng tĩnh.
+4. Task 6: thanh địa chỉ và `hashchange` (`recipe-url.js`); mục Công thức, dòng tóm tắt, Về nguyên bản; tách `workshop-door.js` khỏi
+   `run.js`.
 
-   **Điểm duyệt ảnh giữa chừng** (một trang ảnh riêng tư): Bản dịch trong Sổ tay (máy tính và điện thoại dọc, cả hai backend), thanh lớp
-   có dòng tóm tắt và mục Công thức (máy tính và điện thoại). Bao duyệt trước khi viết e2e và chữ cuối.
-5. E2E bốn bức, a11y, test của bức; `CLAUDE.md`, README (mục "Link công thức" cho người xem), spec.
-6. Review cuối cả nhánh, rồi hỏi Bao trước khi push, và hỏi lại trước khi merge (merge là deploy).
+   **Điểm duyệt ảnh giữa chừng** (một trang ảnh riêng tư, cuối Task 6): Bản dịch trong Sổ tay (máy tính và điện thoại dọc, cả hai backend),
+   thanh lớp có dòng tóm tắt và mục Công thức (máy tính và điện thoại). Bao duyệt trước khi viết e2e và chữ cuối.
+5. Task 7: e2e bốn bức, a11y, test của bức. Task 8: `CLAUDE.md`, README (mục "Link công thức" cho người xem), spec.
+6. Task 9: review cuối cả nhánh, rồi hỏi Bao trước khi push, và hỏi lại trước khi merge (merge là deploy).
 
 ### 21.10 Rủi ro riêng
 
