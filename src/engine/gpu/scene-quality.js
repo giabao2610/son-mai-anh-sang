@@ -3,8 +3,9 @@
 /**
  * Bộ điều chỉnh của một cảnh: bộ quyết định (tuner, hàm thuần) + thang nấc (ladder, chạm GPU) + bộ đo GPU (gpu-timer).
  * tuner = null khi ?freeze: ảnh phải tất định, chỉ hạ/nâng tay (__sma) được.
+ * hold (GĐ 9, hold.js) = bộ giữ khung của cảnh; null thì không bao giờ giữ.
  */
-export function createQuality({ level, ladder, tuner, timer }) {
+export function createQuality({ level, ladder, tuner, timer, hold = null }) {
   const listeners = new Set();
   let guarding = false;
   let live = false; // chỉ đo từ lúc live: khung ẩn và 0,9 giây hòa dần không phải nhịp thật của cảnh
@@ -22,6 +23,8 @@ export function createQuality({ level, ladder, tuner, timer }) {
   const changed = () => {
     for (const cb of listeners) cb(state());
   };
+  // Thôi giữ khung (GĐ 9): đo lại từ đầu, đúng chế độ canh hiện tại; quãng giữ không thành một mẫu "khung chậm".
+  hold?.onRelease(() => tuner?.guard(guarding));
   const act = (action) => {
     let done = true;
     if (action === 'down') done = ladder.down();
@@ -38,8 +41,9 @@ export function createQuality({ level, ladder, tuner, timer }) {
     start() {
       live = true;
     },
-    /** Mỗi khung, trước khi vẽ: bộ quyết định nói hạ / nâng / trả lại hết thì áp ngay. true = đang thử ngừng vẽ: bỏ khung này. */
+    /** Mỗi khung, trước khi vẽ: bộ quyết định nói hạ / nâng / trả lại hết thì áp ngay. true = đang thử ngừng vẽ hay đang giữ khung: bỏ khung này. */
     sample(ms) {
+      if (hold?.active) return true; // giữ khung (GĐ 9, hold.js): như thử ngừng vẽ, không vẽ, không tiến đồng hồ
       if (!live) return false;
       const action = tuner?.sample(ms, ladder);
       if (action === 'skip') return true;

@@ -572,6 +572,29 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       expect(log.warnings).toEqual([]);
     });
 
+    test('Normal lúc cảnh đang chạy (GĐ 9, lỗi từ GĐ 4): biên dịch lại trong lúc giữ khung, không lỗi GPU, cảnh vẫn live', async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(120_000);
+      const { query } = testInfo.project.metadata;
+      // KHÔNG ?freeze: vòng lặp chạy trong lúc biên dịch lại cả cảnh với MRT mới (spec §21.3, Phụ lục A.105).
+      await page.goto(urlOf(htmlPage, query));
+      const settled = await waitForSettled(page);
+      expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+      await page.evaluate(() => window.__sma.setTool('kinh-mai'));
+      const normal = page.locator('[data-toolbar] [data-view="normal"]');
+      await normal.click();
+      await expect(normal).toHaveAttribute('aria-pressed', 'true', { timeout: 60_000 });
+      const after = (await readSma(page)).frames;
+      await expect.poll(async () => (await readSma(page)).frames, { timeout: 60_000 }).toBeGreaterThan(after + 10);
+      expect((await readSma(page)).state).toBe('live');
+      expect(log.errors).toEqual([]);
+      expect(log.warnings).toEqual([]);
+      // Chromium báo lỗi GL của WebGL2 ("GL_INVALID_OPERATION: … missing fragment shader outputs") ở mức console.warning và không
+      // khớp DEPRECATION, nên `log.errors` / `log.warnings` đều không thấy: quét thẳng toàn bộ console.
+      expect(log.all.filter((line) => /GL_INVALID_|Lỗi GPU|Render pipeline creation failed|Invalid (RenderPipeline|CommandBuffer)/.test(line))).toEqual([]);
+    });
+
     test('?poster (GĐ 4): ngoài canvas không có phần tử UI nào hiện (chữ, huy hiệu, thanh lớp, thanh công cụ)', async ({ page }, testInfo) => {
       await still(page, testInfo, 'poster');
       await expect(page.locator('[data-stage] canvas')).toBeVisible();

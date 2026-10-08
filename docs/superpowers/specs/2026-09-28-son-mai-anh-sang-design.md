@@ -5378,7 +5378,11 @@ bằng bảng snapshot. Thay đổi làm một lớp mất khỏi mọi mã thì
   - mục hỏng thì bỏ, cảnh vẫn live;
   - Bức 1 có Dial `gio`, Bức 3 có Dial `ngay`.
 - **Normal lúc cảnh đang chạy** (mọi bức, mở không `?freeze`): bật Kính mài, chọn Normal, chờ nút báo xong; không lỗi console, cảnh vẫn
-  live. Test này đỏ trên code cũ (lỗi của §21.3).
+  live. Test này đỏ trên code cũ (lỗi của §21.3). Chromium báo lỗi GL của WebGL2 ở mức `console.warning` (không phải `error`) và chữ
+  không khớp DEPRECATION, nên `collectConsole` không giữ riêng chúng: test quét thẳng `log.all` tìm `GL_INVALID_`, "Lỗi GPU" và
+  "Render pipeline creation failed" (không quét thì test xanh trên code cũ ở WebGL2). Đo trên code cũ, Bức 1: WebGL2 SwiftShader bảy lần
+  `GL_INVALID_OPERATION` (hai lượt chạy giống nhau); WebGPU GPU thật năm dòng lỗi, trang về tĩnh (`reason: gpu-error`), nút Normal không bao
+  giờ báo xong.
 - a11y (axe) với Bản dịch đang mở và với dòng tóm tắt.
 - Trên GPU thật ở máy local; khung nhìn điện thoại (390 × 844) cho chip công thức và Bản dịch trong tấm trượt.
 
@@ -6004,3 +6008,5 @@ Các mục dưới đây đã được kiểm bằng ba cách:
       "Render pipeline creation failed … Color target has no corresponding fragment stage output" kèm hai lỗi GPU (Bức 1; Bức 4 năm dòng lỗi);
       WebGL2 báo mười bảy lần "GL_INVALID_OPERATION: glDrawArrays: Active draw buffers with missing fragment shader outputs". Xưởng biên dịch
       và đọc mã trong lúc giữ khung (`engine/gpu/hold.js`, §21.3).
+    - Lỗi GL của WebGL2 đến console ở mức `warning`, không phải `error`: e2e chỉ thấy khi quét `log.all` (§21.8). Trên SwiftShader (Bức 1)
+      đo bảy lần (mười bảy trên GPU thật): số lần theo số khung vẽ lọt vào lúc chờ, nên khác nhau giữa các máy.

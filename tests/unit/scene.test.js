@@ -492,6 +492,79 @@ describe('buildScene', () => {
     expect(normal.studio.weight('to-mau')).toEqual({ value: 1, target: 0 });
   });
 
+  /** Việc async treo tới khi test thả. */
+  const hanging = () => {
+    let release;
+    const promise = new Promise((resolve) => {
+      release = resolve;
+    });
+    return { promise, release };
+  };
+
+  it('GĐ 9: lúc giữ khung, step() không vẽ, không tiến đồng hồ; thả thì vẽ', async () => {
+    const { scene, stage, renders } = build();
+    scene.quality.start();
+    const job = hanging();
+    const run = scene.hold.run(() => job.promise);
+    scene.step(16);
+    expect(renders()).toBe(0);
+    expect(stage.tick).not.toHaveBeenCalled();
+    job.release();
+    await run;
+    scene.step(32);
+    expect(renders()).toBe(1);
+    expect(stage.tick).toHaveBeenCalledTimes(1);
+  });
+
+  it('GĐ 9: pipeline.compile() chạy trong lúc giữ khung', async () => {
+    const { scene, stage } = build();
+    const job = hanging();
+    stage.renderer.compileAsync = vi.fn(() => job.promise);
+    const c = scene.compile();
+    expect(scene.hold.active).toBe(true);
+    job.release();
+    await c;
+    expect(scene.hold.active).toBe(false);
+  });
+
+  it('GĐ 9: vẽ lại khung đứng yên chờ thả', async () => {
+    const { scene, flush, renders } = build();
+    scene.freeze();
+    const job = hanging();
+    const run = scene.hold.run(() => job.promise);
+    const done = scene.studio.setWeight('to-mau', 0);
+    flush();
+    expect(renders()).toBe(0);
+    job.release();
+    await run;
+    await new Promise((resolve) => setTimeout(resolve, 0)); // hold.idle().then(drawStill) xin nhịp rAF sau vài microtask
+    flush();
+    await done;
+    expect(renders()).toBe(1);
+  });
+
+  it('GĐ 9: giữ lại bắt đầu đúng lúc nhịp vẽ lại tới: chờ thả tiếp, không vẽ giữa chừng', async () => {
+    const { scene, frames, flush, renders } = build();
+    scene.freeze();
+    const first = hanging();
+    const firstRun = scene.hold.run(() => first.promise);
+    const done = scene.studio.setWeight('to-mau', 0);
+    first.release();
+    await firstRun;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(frames).toHaveLength(1); // nhịp vẽ lại đã xin
+    const second = hanging();
+    const secondRun = scene.hold.run(() => second.promise); // việc giữ kế tiếp (đọc mã vật tiếp theo) bắt đầu trước nhịp
+    flush();
+    expect(renders()).toBe(0);
+    second.release();
+    await secondRun;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flush();
+    await done;
+    expect(renders()).toBe(1);
+  });
+
   it('disposer gỡ sạch: lớp rời scene; đã gỡ thì freeze + đổi trọng số không vẽ gì nữa', async () => {
     const { stage, disposer, scene, frames, renders } = build();
     expect(stage.scene.children.length).toBeGreaterThan(0);

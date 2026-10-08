@@ -4,6 +4,7 @@ import { FRAME_BUDGET_MS, createTuner } from '../tuner.js';
 import { createGpuTimer } from './gpu-timer.js';
 import { createCtx, buildLayers, ensureEmissive } from './layers.js';
 import { createPipeline } from './pipeline.js';
+import { createHold } from './hold.js';
 import { createLadder } from './ladder.js';
 import { createQuality } from './scene-quality.js';
 import { createStudio } from './studio.js';
@@ -67,7 +68,8 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
   ensureEmissive(stage.scene, {
     warn: (name) => ctx.debug && console.warn(`Material "${name}" thiếu emissiveNode; xưởng gán vec3(0).`),
   });
-  const pipeline = createPipeline({ renderer: stage.renderer, scene: stage.scene, camera: stage.camera, layers, weight: ctx.weight });
+  const hold = createHold(); // GĐ 9: giữ khung (biên dịch Normal, Bản dịch: spec §21.3)
+  const pipeline = createPipeline({ renderer: stage.renderer, scene: stage.scene, camera: stage.camera, layers, weight: ctx.weight, hold });
   disposer.add(() => pipeline.dispose());
   // Móc lần vẽ (GĐ 5): chỉ gắn khi Từng sợi bật (start/stop); lúc khác cảnh không tốn gì. Tên lớp ở meta, nhãn vật ở content.
   const draws = createDrawProbe({ renderer: stage.renderer, camera: stage.camera, layers, meta, content });
@@ -84,39 +86,46 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     onStop: () => studio.gpu(null), // đo hỏng giữa phiên: Sổ tay về "—", bộ điều chỉnh tự về đường nhịp
   });
   disposer.add(() => timer.dispose());
-  const quality = createQuality({ level, ladder, tuner, timer });
+  const quality = createQuality({ level, ladder, tuner, timer, hold });
 
   // Vòng lặp đã dừng ở khung N của ?freeze=N: thay đổi từ Sổ tay hay __sma thì vẽ lại đúng khung đó (không tiến đồng hồ).
   // Vẽ lại ở nhịp requestAnimationFrame KẾ TIẾP, gộp mọi thay đổi trong cùng nhịp làm một: scene pass và reflector
   // của three chỉ vẽ lại cảnh một lần mỗi frameId, mà frameId chỉ tăng ở mỗi nhịp rAF của renderer. Vẽ lại hai lần
   // trong cùng một nhịp thì lần sau dùng lại ảnh cảnh cũ. Vẽ hỏng thì Promise hỏng theo (không treo mãi):
   // Sổ tay báo lỗi và mở khóa nút, __sma.setWeight trả lỗi cho người gọi.
+  // GĐ 9: đang giữ khung (biên dịch, đọc mã với target của lượt khác) thì chờ thả; nhịp tới mà việc giữ khác vừa bắt đầu (đọc mã vật
+  // kế tiếp) thì chờ tiếp, không vẽ giữa chừng (spec §21.3).
   let frozen = false;
   let pending = null;
+  const drawStill = () => new Promise((resolve, reject) => {
+    win.requestAnimationFrame(() => {
+      if (hold.active) {
+        hold.idle().then(drawStill).then(resolve, reject);
+        return;
+      }
+      pending = null;
+      try {
+        if (!disposer.closed) {
+          route(); // cử chỉ tới lúc đứng yên (rê Kính mài) cũng có tác dụng
+          // update(0, t) (GĐ 4): lớp và bức đồng bộ theo uniform vừa đổi (thanh giờ → trăng, bóng) mà KHÔNG tiến mô phỏng
+          // (compute, hạt CPU): ảnh vẫn là khung N.
+          const t = stage.u.time.value;
+          setup?.update?.(0, t);
+          for (const { layer } of layers) layer.update?.(0, t);
+          captionSet.step(); // đồng hồ đứng nên chữ ở lại; camera có thể vừa bị kéo: chiếu lại
+          draws.begin(); // Từng sợi đổi sợi rồi vẽ lại: khung N đi qua móc như mọi khung
+          pipeline.render();
+          draws.end();
+        }
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
   const redraw = () => {
     if (!frozen || disposer.closed) return Promise.resolve();
-    pending ??= new Promise((resolve, reject) => {
-      win.requestAnimationFrame(() => {
-        pending = null;
-        try {
-          if (!disposer.closed) {
-            route(); // cử chỉ tới lúc đứng yên (rê Kính mài) cũng có tác dụng
-            // update(0, t) (GĐ 4): lớp và bức đồng bộ theo uniform vừa đổi (thanh giờ → trăng, bóng) mà KHÔNG tiến mô phỏng
-            // (compute, hạt CPU): ảnh vẫn là khung N.
-            const t = stage.u.time.value;
-            setup?.update?.(0, t);
-            for (const { layer } of layers) layer.update?.(0, t);
-            captionSet.step(); // đồng hồ đứng nên chữ ở lại; camera có thể vừa bị kéo: chiếu lại
-            draws.begin(); // Từng sợi đổi sợi rồi vẽ lại: khung N đi qua móc như mọi khung
-            pipeline.render();
-            draws.end();
-          }
-          resolve();
-        } catch (err) {
-          reject(err);
-        }
-      });
-    });
+    pending ??= hold.active ? hold.idle().then(drawStill) : drawStill();
     return pending;
   };
 
@@ -164,6 +173,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     studio,
     input,
     quality,
+    hold,
     /** Biên dịch trước với đúng render target + MRT của pass, trong lúc poster còn hiện. */
     compile: () => pipeline.compile(),
     /** Một khung: nấc → đồng hồ → cử chỉ → setup.update → layer.update → tween trọng số → camera (thở, tự khép lại) → chữ → render → ms GPU → số đo. */
