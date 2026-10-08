@@ -9,6 +9,9 @@
 > **Bức 3 · Cung Quế** (GĐ 7, §19): chú Cuội ngồi gốc cây đa trên một mặt trăng nhỏ, sơn từ sáu lớp ánh sáng.
 >
 > **Bức 4 · Đàn Gà Mẹ Con** (GĐ 8, §20): một tờ tranh Đông Hồ bước vào được, sơn từ sáu lớp ánh sáng.
+>
+> **GĐ 9** (§21): hai công cụ học cho cả bốn bức: **Bản dịch** (mã shader thật của từng lớp) và **Link công thức** (gửi bức đã mài
+> bằng một link).
 
 - **Ngày:** 2026-09-28
 - **Chủ dự án:** Bao Nguyen (GitHub `giabao2610`)
@@ -153,6 +156,17 @@ Ao Sen Đêm là **Bức 1**. (GĐ 6) Đèn Kéo Quân là **Bức 2** (§18). (
 
   Sau phần thiết kế đầu tiên (cảnh, sáu lớp, cử chỉ), Bạn nói "làm luôn đến spec": Claude tự quyết phần còn lại của §20 (xưởng, bể
   hạt, chất lượng, kiểm thử, cách làm), rồi Bạn duyệt một lượt trong spec.
+- **(GĐ 9)** Bạn chọn hai công cụ học trong dòng "9+" của §14: **Bản dịch** và **Link công thức** (§21), trả lời từng câu ngày
+  2026-10-07 và 2026-10-08:
+  - bản dịch nằm ở **Sổ tay › Chỉnh**, cạnh code JS của lớp: chọn vật mà lớp có mặt, dòng có uniform của lớp sáng lên, rê núm thì sáng
+    đúng dòng của núm;
+  - lấy link bằng **nút "Chép link công thức" cộng thanh địa chỉ** tự mang công thức (`#r=…`) mỗi khi mài hay chỉnh;
+  - mở một link có công thức thì cảnh hiện thẳng theo công thức, **thanh lớp mở sẵn** với một dòng tóm tắt và nút "Về nguyên bản";
+  - lấy mã shader bằng **API công khai** `renderer.debug.getShaderAsync`, đặt đúng render target và MRT của lượt vẽ cảnh; lúc đọc thì
+    cảnh giữ khung. Task đầu thử trước; hỏng thì đổi sang đọc RenderObject của lần vẽ thật.
+
+  Sau phần thiết kế đầu tiên (Bản dịch), Bạn nói "làm luôn đến spec": Claude tự quyết phần còn lại của §21 (dạng link, áp công
+  thức lúc dựng, thanh địa chỉ, xưởng, kiểm thử, cách làm), rồi Bạn duyệt một lượt trong spec.
 
 ### Giả định (bạn đã xem và không phản đối)
 - Project nằm ở `~/Documents/Projects/son-mai-anh-sang`.
@@ -942,6 +956,15 @@ cho thấy các bước SAU lượt vẽ cảnh (bloom, tone); Từng sợi cho 
   Marker chỉ hợp lệ trong các file mà lớp sở hữu (`LayerMeta.files`). Id núm có phạm vi trong lớp. Địa chỉ đầy đủ `layerId.knobId` là API công khai.
 - **Test (tĩnh):** trong các file của một lớp, tập marker phải bằng đúng tập `knobs.map(k => k.id)`.
 
+### Bản dịch (GĐ 9)
+- Sổ tay › Chỉnh có thêm nút "Bản dịch": mã shader thật (WGSL ở WebGPU, GLSL ở WebGL2) mà three dịch từ code TSL, ở mọi nơi lớp có
+  mặt (vật của mọi lớp, và lượt cuối của hậu kỳ). Dòng có uniform của lớp sáng lên; rê một núm thì sáng dòng của núm đó. Chi tiết:
+  §21.1, §21.3.
+
+### Link công thức (GĐ 9)
+- Mục "Công thức" của thanh lớp chép một link `#r=…` mang trọng số, núm và Dial khác mặc định; thanh địa chỉ tự mang công thức; mở
+  link thì cảnh hiện thẳng theo công thức. Chi tiết: §21.2, §21.4.
+
 ### Huy hiệu và chế độ thợ
 - **Huy hiệu:** hiện tầng thật và mức chất lượng, có `data-backend`. Chạm vào để xem giải thích bằng tiếng Việt.
 - **`?debug` (GĐ 1):** `engine/gpu/debug.js` gọi `import()` động `three/addons/inspector/Inspector.js`. Không import tĩnh được, vì Inspector dùng `localStorage`.
@@ -985,21 +1008,22 @@ son-mai-anh-sang/
     e2e-groups.js                    [7] nhóm e2e theo bức cho CI (ma trận job)
   src/
     engine/                          XƯỞNG: không biết bức nào tồn tại
-      boot.js                        [0→5] khởi động một bức: cờ URL → tầng → tĩnh | import('./gpu/run.js'); GĐ 5: báo mốc 'chunk' cho quầng trăng; export BOOT_DEADLINE_MS (chặng đầu của quầng bò đúng bằng nó)
+      boot.js                        [0→5] khởi động một bức: cờ URL → tầng → tĩnh | import('./gpu/run.js'); GĐ 5: báo mốc 'chunk' cho quầng trăng; export BOOT_DEADLINE_MS (chặng đầu của quầng bò đúng bằng nó); GĐ 9: đọc `#r=` (readRecipe), đưa vào run và showStatic
       flags.js                       [0→3] đọc cờ URL (§8.7), hàm thuần; GĐ 3: ?level
+      recipe.js                      [9] công thức `#r=`: đọc, ghi chuỗi (hàm thuần, đường nhẹ; §21.4)
       tier.js                        [0] dò tầng A/B/C, hàm thuần nhận env
       quality.js                     [0→4] GĐ 0: chọn mức, mức mặc định, isMobile; GĐ 3: bộ điều chỉnh có trễ; GĐ 4: bộ điều chỉnh tách ra tuner.js
       tuner.js                       [4] bộ điều chỉnh có trễ (hàm thuần, không three): nhịp rAF, và ms GPU/CPU khi đo được
       palette.js                     [0] 10 token; ghép phần ghi đè của bức (hàm thuần, không three)
       deadline.js                    [0] withDeadline(): hạn 10 s cho khởi động (hàm thuần)
-      sma.js                         [0→5] window.__sma: state, tier, backend, level, frames, reason; GĐ 2: expose() (GĐ 4 chỉ thêm hàm qua expose); GĐ 5: readouts(layerId)
-      static.js                      [0→2] tầng C theo lý do; GĐ 2: Sổ tay chỉ đọc (import() động ui/workshop.js)
+      sma.js                         [0→5] window.__sma: state, tier, backend, level, frames, reason; GĐ 2: expose() (GĐ 4 chỉ thêm hàm qua expose); GĐ 5: readouts(layerId); GĐ 9: recipe(), applyRecipe(text), translate(layerId)
+      static.js                      [0→2] tầng C theo lý do; GĐ 2: Sổ tay chỉ đọc (import() động ui/workshop.js); GĐ 9: câu thêm khi link có công thức
       contracts/painting.js          [0→8] JSDoc hợp đồng NHẸ; GĐ 4: Poster.capture; GĐ 5: PaintingContent.captions, LayerContent.objects; GĐ 8: LayerMeta.files kê được lib/tsl
       contracts/runtime.js           [0→8] JSDoc hợp đồng NẶNG; GĐ 4: update(0, t), Gesture 'hover'/pointer, ToolInstance.activate, Studio, Snapshot.dials; GĐ 5: Gesture 'double-tap', EngineCtx.captions, ToolApi.draws; GĐ 8: CameraSpec.kind, height, minWidth, shortFrame, zoom, home
       gpu/                           PHẦN NẶNG: chỉ tải ở tầng A/B
-        run.js                       [0→5] vòng đời: dựng → compileAsync → khung ẩn → hòa dần → chạy → gỡ; GĐ 2: mất GPU lần đầu → dựng lại; GĐ 4: bộ điều chỉnh đo từ lúc live; GĐ 5: bringUp kiểm gone() trước việc đầu tiên và sau mỗi lần chờ ("Dựng lại cảnh" quá hạn không đụng trang đã về tĩnh), sự kiện GPU đến khi trang đã tĩnh thì bỏ qua (không có code nào của quầng trăng)
+        run.js                       [0→5] vòng đời: dựng → compileAsync → khung ẩn → hòa dần → chạy → gỡ; GĐ 2: mất GPU lần đầu → dựng lại; GĐ 4: bộ điều chỉnh đo từ lúc live; GĐ 5: bringUp kiểm gone() trước việc đầu tiên và sau mỗi lần chờ ("Dựng lại cảnh" quá hạn không đụng trang đã về tĩnh), sự kiện GPU đến khi trang đã tĩnh thì bỏ qua (không có code nào của quầng trăng); GĐ 9: trang mở có công thức thì mở xưởng không mài, kèm dòng tóm tắt; gắn recipe-url lúc live
         scene.js                     [2→8] dựng MỘT cảnh trên một sân khấu (ctx → setup → lớp → pipeline → input → bàn thợ) + một khung; GĐ 4: đồ nghề, Dial, đo GPU, vẽ lại bằng update(0, t); GĐ 5: chữ đi theo vật, móc lần vẽ; GĐ 8: stage.returnHome(dt) mỗi khung, sau breathe, trước controls.update(); bức đã nhận 'hold-start' thì luôn nhận 'hold-end' (công cụ bật giữa chừng không giữ mất nó); bộ điều chỉnh tách ra scene-quality.js
-        scene-quality.js             [8] bộ điều chỉnh của một cảnh (tách từ scene.js): nối tuner, thang nấc và bộ đo GPU; scene.quality
+        scene-quality.js             [8] bộ điều chỉnh của một cảnh (tách từ scene.js): nối tuner, thang nấc và bộ đo GPU; scene.quality; GĐ 9: hold() giữ khung lúc đọc bản dịch
         ladder.js                    [3] thang nấc cụ thể: 'dpr' nở thành nhiều nấc −0,25; '<lớp>.<nấc>' lấy từ layer.degrade
         stage.js                     [0→8] renderer, nền đặc, camera + OrbitControls theo CameraSpec, đồng hồ, resize, DPR, lỗi GPU; GĐ 4: trackTimestamp; GĐ 8: camera trực giao (CameraSpec.kind), stage.camera là getter
         disposer.js                  [0] đăng ký mọi thứ đã tạo, gỡ theo thứ tự ngược
@@ -1012,10 +1036,13 @@ son-mai-anh-sang/
         draws.js                     [5] móc lần vẽ cho Từng sợi (setRenderObjectFunction): ghi danh sách lần vẽ của lượt vẽ cảnh, chỉ vẽ k lần đầu; tắt thì gỡ móc
         caption-set.js               [5] chữ đi theo vật: tra content.captions, chiếu điểm neo ra màn hình mỗi khung, hết giờ theo đồng hồ của cảnh
         dial-set.js                  [4] Dial của bức: đọc/ghi (kẹp min/max/step), chữ giá trị, ghi chú, snapshot
+        recipe-set.js                [9] công thức của một cảnh: mặc định của máy đang xem, phân loại khóa, khác biệt, tóm tắt
+        recipe-url.js                [9] thanh địa chỉ mang công thức: replaceState gộp 500 ms, hashchange
+        translate.js                 [9] bản dịch: mã shader của vật và quad cuối (getShaderAsync trong ngữ cảnh của scene pass, hai bước, giữ khung); nơi lớp có mặt
         clock.js                     [3→4] đồng hồ + trần 60 khung/giây; GĐ 4: màn ≤ ~63 Hz không bị bỏ khung nào
         layers.js                    [0→5] trọng số (GĐ 2: tween), createCtx, dựng lớp theo thứ tự + nối onKnob, lưới an toàn emissive; GĐ 5: ctx.captions
-        knob-set.js                  [2→4] bộ núm của một lớp: uniform có tên hợp lệ, giá trị đã chuẩn hóa, get/set/values, onKnob; GĐ 4: kiểm trần do max() trả
-        studio.js                    [2→4] bàn thợ: API duy nhất cho Sổ tay và __sma (trọng số, núm, thí nghiệm, số đo, snapshot); GĐ 3: compare, ms CPU, nấc; GĐ 4: công cụ, Dial, ms GPU
+        knob-set.js                  [2→4] bộ núm của một lớp: uniform có tên hợp lệ, giá trị đã chuẩn hóa, get/set/values, onKnob; GĐ 4: kiểm trần do max() trả; GĐ 9: giá trị ban đầu từ công thức
+        studio.js                    [2→4] bàn thợ: API duy nhất cho Sổ tay và __sma (trọng số, núm, thí nghiệm, số đo, snapshot); GĐ 3: compare, ms CPU, nấc; GĐ 4: công cụ, Dial, ms GPU; GĐ 9: translation, recipe, applyRecipe, reset, onChange
         input.js                     [1→4] pointer → cử chỉ + tia; công cụ trước, bức sau; 'drag' cho camera; GĐ 4: 'hover' (chuột, chỉ công cụ), g.pointer
         debug.js                     [1→2] ?debug → Inspector; ?debug=stats → stats-gl (import động); GĐ 2: openDebug không bao giờ ném
         gesture.js                   [1→5] phân loại cử chỉ (hàm thuần): tap / hold-* / swipe; kéo là của camera; GĐ 5: double-tap
@@ -1042,17 +1069,20 @@ son-mai-anh-sang/
       tsl/noise.js                   [1] fbm; [3] thêm curl, và fbm nhận số octave là node (vòng lặp thật trong shader)
       tsl/particles.js               [8] bể hạt compute (Bức 1 và Bức 4): cấp phát một lần, khởi tạo, bước, đổi số lượng, rắc theo vòng đệm
     ui/                              DOM thuần: không three, không import engine/; nhận t qua tham số
-      strings.vi.js                  [0→5] export default t: chữ của xưởng, bảng tên tháng/can/chi, formatSeal(); GĐ 4: t.tools, t.views, ms GPU, nấc khóa; GĐ 5: t.tools['tung-soi']
+      strings.vi.js                  [0→5] export default t: chữ của xưởng, bảng tên tháng/can/chi, formatSeal(); GĐ 4: t.tools, t.views, ms GPU, nấc khóa; GĐ 5: t.tools['tung-soi']; GĐ 9: t.translation, t.recipe
       shell.js                       [0→5] poster ↔ canvas, data-state, con dấu, hòa dần; [1]: gợi ý, lời mời "{n} lớp"; [4]: ?poster (body[data-poster]); [5]: progress(mốc) → quầng trăng
       badge.js                       [0→4] huy hiệu tầng + mức, data-backend; GĐ 3: "hạ {n} nấc", data-steps; GĐ 4: nấc bị khóa
       moon-svg.js                    [1] vẽ trăng đúng pha vào [data-moon] nếu trang có ô đó
       moon-progress.js               [5] quầng trăng tiến độ trong [data-moon]: HALO_STEPS (mốc → đích, số giây bò), CSS transition, tan khi hòa dần (CROSSFADE_MS); vòng vẽ ở tọa độ gấp 100 (r 105, rotate(-90) scale(0.01), pathLength 1)
       captions.js                    [5] DOM của chữ đi theo vật: một vùng aria-live phủ lên canvas, mỗi lúc một dòng (câu + nguồn); giữ chữ trong màn hình và trên chân khung; CAPTION_SECONDS, CAPTION_FADE
       workshop.js                    [2→5] thanh lớp + Sổ tay + chế độ mài; nhận studio() (null ở tầng tĩnh: chỉ đọc); GĐ 4: Đồ nghề + Dial, đóng thì tắt công cụ; GĐ 5: thanh lớp ngay trước, Sổ tay ngay sau thanh công cụ (thứ tự Tab)
-      layer-rail.js notebook.js notebook-pages.js code-view.js dom.js   [2]; GĐ 3: notebook-pages.js vẽ hai cột "Tắt / Bật" của compare; GĐ 4: ms GPU; GĐ 8: code-view.js hiện cả lib/tsl
+      layer-rail.js notebook.js notebook-pages.js code-view.js dom.js   [2]; GĐ 3: notebook-pages.js vẽ hai cột "Tắt / Bật" của compare; GĐ 4: ms GPU; GĐ 8: code-view.js hiện cả lib/tsl; GĐ 9: code-view.js có nút Bản dịch
       knobs.js                       [2] Tweakpane; chỉ được import() động khi tab Chỉnh mở lần đầu
       dials.js                       [4] thanh trượt cho các Dial của bức
       rail-tools.js                  [4] mục "Đồ nghề" (nút aria-pressed của từng công cụ) + Dial, trong thanh lớp
+      recipe-panel.js                [9] mục "Công thức" của thanh lớp (chép link) + dòng tóm tắt và "Về nguyên bản"
+      translation-view.js            [9] khung Bản dịch trong tab Chỉnh: Vật, Đỉnh/Điểm ảnh, dòng trạng thái, mã
+      shader-text.js                 [9] tô màu WGSL/GLSL, đánh dấu uniform của lớp (hàm thuần)
     styles/ tokens.css shell.css     [0→5] (GĐ 5: khung chữ một cột; quầng trăng cạnh trăng)   notebook.css [2→5] (shell.css @import; GĐ 5: --rail-w, --notebook-w)   tools.css [4→5] thanh công cụ, kính, tay nắm gạt, Đồ nghề; GĐ 5: bảng công cụ không nằm dưới thanh lớp hay Sổ tay, Sổ tay thu lại dưới 1240px   captions.css [5] chữ đi theo vật   gallery.css [7] Phòng tranh
     paintings/
       registry.js                    [0] SITE + [{ meta, page, lang }]. Node đọc được; trình duyệt KHÔNG import
@@ -1460,6 +1490,8 @@ son-mai-anh-sang/
  * [4] tools() → { id, on }[] · setTool(id | null) (bật một, tắt các cái khác) · dials() → { id, min, max, step, value, text, note }[]
  *     · setDial(id, v) (kẹp theo min/max/step) · stats().gpuMs (null khi máy không đo được) · compare() mỗi bên thêm gpuMs
  *     · quality() thêm gpu (đo được ms GPU không) và locked (id các nấc bị khóa chống dao động) · snapshot()/restore() có dials
+ * [9] translation(layerId) → Promise<Translation> (§21.3) · recipe() → { text, counts } · applyRecipe(text) → Promise<{ counts, problems }>
+ *     · reset() → Promise (về mặc định của máy đang xem) · onChange(cb) → hàm bỏ nghe (sau mọi thay đổi trọng số, núm, Dial)
  * Mọi hàm đổi trạng thái trả Promise, xong khi khung đã được vẽ lại (khi ?freeze đã dừng vòng lặp).
  * @typedef {Object} Studio */
 ```
@@ -1603,7 +1635,8 @@ Mỗi mốc đặt một ĐÍCH (phần vòng) và một thời gian bò (`HALO_
 | Lần vẽ (GĐ 5) | `gpu/draws.js` (móc của renderer); `ToolApi.draws`; `tools/tung-soi.js` vẽ thanh điều khiển; nhãn vật ở `content.layers[id].objects` | Móc chỉ gắn khi Từng sợi bật; chỉ `draws.js` được đặt móc (§8.2) |
 
 ### 8.7 Cờ URL, HTML, poster và chunk trên GitHub Pages
-**Cờ URL** (`engine/flags.js`). Query string là môi trường; hash là trạng thái tác phẩm (giữ chỗ `#r=…` cho link công thức ở GĐ 5).
+**Cờ URL** (`engine/flags.js`). Query string là môi trường; hash là trạng thái tác phẩm. Từ GĐ 9, `#r=…` là link công thức (§21.2,
+§21.4): `engine/recipe.js` đọc nó, không qua `readFlags`.
 
 | Cờ | Nghĩa |
 |---|---|
@@ -1720,6 +1753,8 @@ Mỗi mốc đặt một ĐÍCH (phần vòng) và một thời gian bò (`HALO_
   Cờ `?poster` không đổi gì trong `__sma`.
 - GĐ 5 thêm `readouts(layerId)`: số đo riêng của một lớp, qua bàn thợ (e2e đọc số hoa đăng đang trôi; DevTools xem mọi số đo mà không
   phải mở Sổ tay).
+- GĐ 9 thêm `recipe()` (chuỗi công thức hiện tại, không có `#r=`), `applyRecipe(text)` và `translate(layerId)` (bản dịch của lớp, như
+  Sổ tay đọc; §21.3), cũng qua bàn thợ.
 
 ### Tranh tĩnh (tầng C) của một bức: `showStatic(entry, shell, { reason, error })`, gọi nhiều lần vẫn an toàn
 - (GĐ 5) Không có quầng trăng: tầng tĩnh không tải gì để chờ. Rơi về tĩnh giữa lúc tải thì quầng biến mất ngay.
@@ -2388,6 +2423,8 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
   tranh tự khép lại.
 - (GĐ 8) VoiceOver đọc dải link Bức 3 ⇄ Bức 4; Phòng tranh có bốn mục.
 - (GĐ 8) Bao đọc lại thơ của Bức 4 trên trang (§20.2), duyệt hình gà và ảnh poster (§20.3).
+- (GĐ 9) Safari trên Mac và iPhone: thanh địa chỉ đổi theo khi mài; chép link; mở link nhận được thì đúng bức đã mài (§21.2).
+- (GĐ 9) VoiceOver đọc dòng trạng thái của Bản dịch và dòng "Đã chép link".
 
 ## 13. Repo, CI, deploy
 
@@ -2488,7 +2525,8 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | **6 · Bức 2 · Đèn Kéo Quân** | Bức mới theo luật 7 (§18): gian nhà tối, đèn lục giác, đoàn quân rước cờ; sáu lớp Cốt, Ngọn nến, Gian nhà, Giấy, Kéo quân, Phủ bóng; gobo `atan(y, x)` làm node bóng tự viết của ngọn nến, shadow map thật là thí nghiệm "so"; ba cử chỉ thổi nến, giữ trống, gạt trống (tính thẳng theo thời gian); link lật tranh giữa các trang; e2e chia hai phần trên CI. Làm thẳng, task rủi ro nhất trước (§18.9) | Mọi test và e2e qua (cả Bức 1); mức cao ≤ 45 draw call; hợp đồng không đổi; Bao duyệt thơ, hình nhân và poster; đã deploy |
 | **7 · Bức 3 · Cung Quế** | Bức mới theo luật 7 (§19): tiểu hành tinh SDF, dò tia trong một khối bao; sáu lớp Cốt, Mặt trời, Bóng mềm, Ánh đất, Lá đa, Phủ bóng; pha trăng thật với Dial "Ngày âm lịch"; chạm cho lá rơi, giữ cho cây bay. Kèm theo: Phòng tranh và trình sinh trang (§19.7); CI chia e2e theo bức (§19.9) | Bức 3 chạy trên cả hai backend, 60 khung/giây trên Mac M2 ở mức cao; e2e chặn qua trong CI; Bao duyệt ảnh và thơ; đã deploy |
 | **8 · Bức 4 · Đàn Gà Mẹ Con** | Bức mới theo luật 7 (§20): một tờ tranh Đông Hồ bước vào được; sáu lớp Cốt, Bản màu, Bản nét, Giấy điệp, Đàn gà, Phủ bóng; vẽ phi hiện thực (chia nấc, dò cạnh trên ảnh độ sâu, hạt điệp); chạm để rắc thóc, giữ để gà mẹ gọi con. Kèm theo: camera trực giao và tranh tự khép lại (trường tùy chọn của `CameraSpec`), độ sâu đúng cho camera trực giao, bể hạt `lib/tsl/particles.js` (Bức 1 chuyển sang mà giữ nguyên shader), Sổ tay hiện code của hộp màu | Bức 4 chạy trên cả hai backend, 60 khung/giây trên Mac M2 ở mức cao; mã shader của đom đóm (Bức 1) không đổi; e2e chặn qua trong CI; Bao duyệt ảnh và thơ; đã deploy |
-| 9+ · *(tùy chọn)* | Chọn từ §16 khi muốn: công cụ học (Xem bản dịch, Link công thức, tô sáng sợi vừa vẽ); thêm cho các bức đã có (Bức 3 quay hành tinh, Hằng Nga; Bức 2 Dial gió, hơi nóng; Bức 1 cánh sen sáng xuyên; Bức 4 camera phối cảnh để so); âm thanh (đàn bầu); bản tiếng Anh (§15 d); dọn nợ (tách `tuner.js`); bức mới, như một tranh Đông Hồ khác (lúc đó rút Bản nét, Giấy điệp lên lớp dùng chung theo luật hai lần) | tùy |
+| **9 · Bản dịch + Link công thức** *(tùy chọn)* | Hai công cụ học của xưởng cho cả bốn bức (§21): **Bản dịch** trong Sổ tay › Chỉnh (mã shader thật qua `renderer.debug.getShaderAsync` trong ngữ cảnh của scene pass, hai bước, giữ khung; mọi nơi lớp có mặt, kể cả lượt cuối; sáng dòng theo núm) và **Link công thức** `#r=…` (đọc được; chỉ giá trị khác mặc định; áp lúc dựng; thanh địa chỉ tự mang công thức; nút chép link; mở link thì thanh lớp mở sẵn với dòng tóm tắt và "Về nguyên bản") | Hai công cụ chạy trên cả hai backend ở cả bốn bức; mã của Bản dịch trùng mã của lượt vẽ cảnh; e2e chặn qua trong CI; Bao duyệt trang ảnh giữa chừng; đã deploy |
+| 10+ · *(tùy chọn)* | Chọn từ §16 khi muốn: công cụ học (tô sáng sợi vừa vẽ, bản dịch của compute và theo từng sợi); thêm cho các bức đã có (Bức 3 quay hành tinh, Hằng Nga; Bức 2 Dial gió, hơi nóng; Bức 1 cánh sen sáng xuyên; Bức 4 camera phối cảnh để so); âm thanh (đàn bầu); bản tiếng Anh (§15 d); dọn nợ (tách `tuner.js`); bức mới, như một tranh Đông Hồ khác (lúc đó rút Bản nét, Giấy điệp lên lớp dùng chung theo luật hai lần) | tùy |
 
 **GĐ 0 · Nền móng gồm:**
 - **Máy và công cụ:** Node 24 (hướng dẫn fnm), Vite 8, Vitest 5, Playwright; `.gitignore`; `CLAUDE.md`; README khung.
@@ -2601,8 +2639,8 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 |---|---|---|
 | ~~Trình sinh HTML~~ | Làm ở GĐ 7 | §19.7: `scripts/pages.js` (`npm run pages`) sinh trang từ một khuôn; trang vẫn commit trong repo, test giữ trang khớp. Không làm plugin Vite: trang phải là file thật cho tầng tĩnh, và build không ghi vào thư mục nguồn |
 | ~~Phòng tranh `/tranh/`~~ | Làm ở GĐ 7 | §19.7: trang tĩnh sinh từ registry, không có script. URL gốc vẫn là Bức 1 |
-| Link công thức `#r=` | Khi Bao chọn (GĐ 5 không chọn) | `engine/recipe.js` (hàm thuần) mã hóa `snapshot()` = `{ weights, knobs: {'layerId.knobId': v}, dials }`. Giải mã trước `createLayer`; chỉ ghi các giá trị khác mặc định, kẹp theo `max` của tầng |
-| Xem bản dịch | Khi Bao chọn (GĐ 5 không chọn) | `renderer.debug.getShaderAsync(scene, camera, obj)` cho từng `layer.objects`. Tên đặt bằng `setName` giúp đọc được mã sinh ra |
+| ~~Link công thức `#r=`~~ | Làm ở GĐ 9 | §21.2, §21.4: `engine/recipe.js` đọc, ghi chuỗi đọc được; `gpu/recipe-set.js` lấy mặc định của máy đang xem và khác biệt; áp lúc dựng (núm `rebuild` dựng một lần); thanh địa chỉ tự mang công thức (`replaceState` gộp 500 ms) |
+| ~~Xem bản dịch~~ | Làm ở GĐ 9 | §21.1, §21.3: trong Sổ tay › Chỉnh; không chỉ `layer.objects` của lớp mà mọi nơi uniform của lớp có mặt, cộng quad cuối; đọc trong ngữ cảnh của scene pass, hai bước, giữ khung. Tên đặt bằng `setName` là thứ để tìm lớp trong mã |
 | ~~Công cụ soi ("Từng sợi")~~ | Làm ở GĐ 5 | §7 Từng sợi: `ToolApi.draws` thay cho `layers()`/`stats()` dự định trước đây |
 | Đàn bầu | Khi Bao chọn (GĐ 5 không chọn) | Trường tùy chọn `Painting.sound` cùng `lib/audio/`, chỉ phát khi người xem bật |
 | ~~Đông Hồ~~ | Làm ở GĐ 8 | §20: Bức 4 · Đàn Gà Mẹ Con. `CameraSpec.kind: 'ortho'`, thêm `home`; bể hạt `lib/tsl/particles.js`; `meta.palette` đã có từ GĐ 0 |
@@ -2638,6 +2676,10 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | (GĐ 8) Rút Bản nét, Bản màu, Giấy điệp lên lớp dùng chung | Luật hai lần: khi bức thứ hai cần (một tranh Đông Hồ khác, như Đàn lợn âm dương) | `engine/stock/<id>/` như Phủ bóng, chữ viết trung tính; fence của Bức 4 đã không rào tên kỹ thuật (§20.6) |
 | (GĐ 8) Chữ Hán Nôm in trên tranh | Khi Bao chọn | Chữ vẽ sẵn thành texture, dán ở góc tờ giấy, màu mực của bản nét |
 | (GĐ 8) Bóng in dưới chân gà | Khi thấy gà "lơ lửng" lúc xoay | Một hình bầu dục tối mềm trên giấy dưới mỗi con, tính từ mảng vị trí (uniform); không dùng shadow map |
+| (GĐ 9) Bản dịch của compute shader (đom đóm, thóc) | Khi three có API công khai, hay khi Bao chọn | three không có hàm công khai trả mã compute: đọc `renderer._nodes.getForCompute(node).computeShader` (trường riêng, ghim bằng test), hay dịch riêng như `tests/helpers/nodes.js#compileCompute`; lớp khai báo node compute của mình bằng một trường tùy chọn |
+| (GĐ 9) Bản dịch theo từng sợi | Khi người xem cần | Bảng của Từng sợi thêm nút "Xem bản dịch" của sợi đang xem; dùng chung `translate.js` |
+| (GĐ 9) Công thức mang thí nghiệm, góc camera | Khi Bao chọn | Thêm loại khóa riêng cho thí nghiệm và cho camera; Bức 4 tự khép lại, nên góc camera chỉ có nghĩa ở Bức 1–3 |
+| (GĐ 9) Chia sẻ bằng bảng chia sẻ của điện thoại | Khi thấy cần | Nút chép link dùng `navigator.share` trên máy có bảng chia sẻ, chép link ở máy khác |
 
 **Không làm**, và lý do:
 - **npm workspaces:** một repo, một người đọc; thư mục cộng test ranh giới là đủ.
@@ -5014,6 +5056,351 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
 - **AgX làm giấy xám:** chỉnh ở lượt màu (`exposure`, tone của Phủ bóng). Đã chỉnh (GĐ 8 Task 11): ACES, lộ sáng 1,2 (§20.3).
 - **Hàng rào từ vựng bắt nhầm:** `hen` là chuỗi con của `denThen`, nên đã bỏ khỏi fence (§20.6).
 
+## 21. Bản dịch và Link công thức (GĐ 9)
+
+> Hai công cụ học cho cả bốn bức. **Bản dịch:** code TSL của một lớp thành mã shader thật mà GPU chạy, và trọng số, núm của lớp nằm ở dòng
+> nào trong mã ấy. **Link công thức:** mài, chỉnh xong thì gửi được đúng bức tranh ấy bằng một link.
+
+**Nơi ở:** cả hai thuộc xưởng (`src/engine/`, `src/ui/`): không biết có bức nào, không đổi gì trong bốn bức. Những gì Bao đã chọn nằm ở §1
+(GĐ 9); phần còn lại do Claude quyết, Bao duyệt khi đọc spec.
+
+**Điều mới so với các giai đoạn trước:**
+- Lần đầu Sổ tay hiện thứ do GPU dịch ra lúc chạy, không phải file trong repo: code sống (§7) là code JS lúc build; bản dịch là WGSL hay
+  GLSL mà three sinh ra trên chính máy người xem.
+- Lần đầu hash của URL mang trạng thái tác phẩm, như §8.7 đã giữ chỗ từ GĐ 0: `#r=…`.
+
+### 21.1 Bản dịch: người xem thấy gì
+
+Ở **Sổ tay › Chỉnh**, chỉ ở bản 3D (tầng tĩnh không có renderer, nên không có Bản dịch).
+- Hàng nút tên file có thêm nút cuối **"Bản dịch"**. Hàng nút luôn hiện ở bản 3D, kể cả khi lớp chỉ có một file. Bấm vào thì khung code đổi
+  sang mã shader; bấm tên một file thì về code JS như cũ.
+- Trên khung:
+  - ô chọn **Vật** (`<select>` có nhãn): những nơi lớp có mặt (dưới đây);
+  - hai nút **Đỉnh / Điểm ảnh** (`aria-pressed`): vertex shader hay fragment shader. Mặc định là phần có nhiều dòng của lớp hơn; bằng nhau
+    thì Điểm ảnh;
+  - một dòng trạng thái (`aria-live`): "WGSL · WebGPU · 412 dòng · 6 dòng có lớp Sương". WebGL2 thì "GLSL ES 3.0 · WebGL2";
+  - một dòng nhắc, cố định cho mọi lớp trừ Cốt: "Mài lớp này chỉ đổi số trong `w_suong`: mã không đổi, nên không biên dịch lại." (luật 2
+    của kỹ thuật, thấy tận mắt).
+- Mã hiện theo dòng, có số dòng, tô màu bằng bảng sơn mài (§21.5). Dòng dài (mã sinh ra có dòng gần 1.000 ký tự) thì xuống dòng, thụt vào
+  sau số dòng.
+- Dòng có uniform của lớp có vạch vàng lá bên trái. Uniform của lớp là:
+  - trọng số `w_<id>` (`layers.js#createWeights`, gạch nối thành gạch dưới);
+  - núm `uniform`: `<id>_<knobId>` (`knob-set.js#uniformName`). Núm `js`, `rebuild` không có uniform: rê lên chúng chỉ sáng code JS, như
+    trước.
+- Rê một núm (`onHover` của Tweakpane, như code JS đang làm): sáng đúng các dòng có uniform của núm ấy, và khung mã cuộn tới dòng đầu.
+- Lần đầu mở Bản dịch của một bức: "Đang dịch… (3/14)". Cảnh vẫn chạy; mỗi lần đọc mã của một vật, cảnh giữ ảnh cũ chừng một nhịp khung
+  (§21.3).
+- Đổi núm hay bật thí nghiệm lúc Bản dịch đang mở thì dịch lại (chờ 300 ms sau thay đổi cuối): núm `rebuild` hay thí nghiệm có thể đổi
+  material, nên mã đổi.
+
+**Những nơi lớp có mặt.** Nhiều lớp không có vật riêng (`objects: []`): Sương góp vào shader của lá sen, Bản màu của Bức 4 góp vào material
+của đàn gà, Bản nét và Phủ bóng nằm trong lượt hậu kỳ. Nên danh sách Vật không lấy từ `layer.objects` của riêng lớp:
+- xưởng dịch mọi **vật vẽ được** của bức: Mesh, InstancedMesh, Sprite, Points, Line có material, tìm trong `objects` của mọi lớp, kể cả con
+  của một Group; mỗi cặp (vật, material) một mục. Cộng một mục **"Lượt cuối · hậu kỳ"**: quad của RenderPipeline (§21.3);
+- giữ những mục mà mã có uniform của lớp (so cả tên, `\b<tên>\b`, không so tiền tố). Thứ tự: vật của chính lớp, rồi vật của các lớp khác
+  theo thứ tự phủ, rồi lượt cuối;
+- nhãn: nhãn vật của lớp chủ (`content.layers[chủ].objects[tên]`, như Từng sợi) · tên lớp chủ, ví dụ "Lá sen · Cốt". Group có nhiều material
+  thì thêm "(1/3)"; vật thiếu nhãn thì dùng tên vật;
+- lớp không có uniform nào trong mọi mã (chỉ đổi cảnh bằng JS) thì hiện vật của chính nó, kèm câu "Lớp này đổi cảnh bằng JS: trọng số và
+  núm của nó không vào shader." Lớp không có vật nào và không có uniform trong mã: chỉ câu ấy.
+
+**Để sau** (§16): mã compute (đom đóm, thóc: three không có API công khai để lấy mã compute); bản dịch theo từng sợi của Từng sợi.
+
+### 21.2 Link công thức: người xem thấy gì
+
+**Dạng link** (đọc được, sửa tay được):
+`https://giabao2610.github.io/son-mai-anh-sang/#r=suong:0,mat-nuoc:0,suong.density:0.02,phu-bong.toneMapping:aces,gio:23`
+- `#r=` rồi các mục `khóa:giá trị` cách nhau bằng dấu phẩy. Khóa:
+  - `<layerId>`: trọng số (đích của tween, như `snapshot()`), 0–1;
+  - `<layerId>.<knobId>`: núm;
+  - `<dialId>`: Dial (núm của cả bức).
+- Giá trị:
+  - số: ghi ngắn nhất, làm tròn theo số chữ số thập phân của `step` (tối đa 4; trọng số 2), bỏ số 0 thừa: `0.02`, `23`, `-1.5`;
+  - bool: `1` / `0`;
+  - select: id của lựa chọn (`aces`);
+  - màu: 6 chữ số hex, không `#` (dấu `#` thứ hai trong URL không hợp lệ): `ffcc66`.
+- Chỉ ghi những giá trị **khác mặc định**; thứ tự cố định: trọng số theo thứ tự phủ, rồi núm theo lớp và theo thứ tự khai báo, rồi Dial.
+  Nên hai người mài giống nhau ra cùng một link, và bức nguyên bản không có `#r=`.
+- Mặc định là của **máy đang xem**: trọng số 1; núm là `value` đã chuẩn hóa theo tầng và mức của máy này; Dial là giá trị ngay sau
+  `setup()` (Bức 1: giờ của "bây giờ", ban ngày thì 21:00; Bức 3: ngày âm lịch hôm nay). Nên link không mang giờ nếu người gửi không kéo
+  thanh giờ: người nhận thấy đêm của chính họ.
+
+**Lấy link:**
+- Mục **"Công thức"** trong thanh lớp, ngay dưới Đồ nghề: nút "Chép link công thức".
+  - Link = `origin + pathname + #r=…`: **bỏ query string**. Cờ là môi trường của máy người gửi (`?debug`, `?level=thap`, `?freeze`), không
+    phải tác phẩm.
+  - Chép bằng `navigator.clipboard.writeText`; dòng trạng thái (`aria-live`): "Đã chép link", tự xóa sau 4 giây. Chép không được (trình
+    duyệt chặn): hiện link trong một ô chỉ đọc đã chọn sẵn, kèm "Chưa chép được: link ở ô dưới".
+- **Thanh địa chỉ tự mang công thức:** mỗi lần trọng số, núm hay Dial đổi, xưởng ghi lại hash bằng `history.replaceState` (§21.4). Tải lại
+  trang không mất việc đang mài; bookmark hay chép thẳng từ thanh địa chỉ đều được. `replaceState` giữ nguyên query string của trang đang mở
+  và không thêm mục vào lịch sử (nút Back không phải bấm qua từng lần mài).
+
+**Mở một link có công thức:**
+- Cảnh hiện thẳng theo công thức: công thức áp lúc dựng, trước lần biên dịch đầu (§21.4), nên poster hòa sang đúng bức đã mài.
+- Thanh lớp mở sẵn, **không** vào chế độ mài (không tween mọi lớp về 0). Đầu thanh có một dòng tóm tắt và nút **"Về nguyên bản"**:
+  "Công thức trong link: 2 lớp đã mài · 3 núm đã chỉnh · giờ 23:00". Phần nào bằng 0 thì bỏ; Dial ghi bằng nhãn và chữ giá trị của nó
+  (`content.dials[id].label`, `format`). Sổ tay vẫn đóng.
+- Không có gợi ý "Chạm vào…" và lời mời "mài thử?" (thanh lớp đang mở).
+- "Về nguyên bản": trọng số tween về 1 như công tắc của thanh lớp, núm và Dial về mặc định ngay, hash về trống, dòng tóm tắt biến mất (vùng
+  `aria-live` để trống, không `hidden`).
+- Đóng thanh lớp vẫn như cũ (§4.1): mọi lớp phủ lại, núm và Dial giữ nguyên; hash theo đó còn núm và Dial.
+- Đang xem mà hash đổi (dán link khác vào cùng tab, sửa tay, Back/Forward): áp công thức mới thành **trạng thái đủ** (mọi thứ không có
+  trong link về mặc định), và thanh lớp mở với dòng tóm tắt mới. Hash trống: như "Về nguyên bản".
+- Ở tầng tĩnh: không áp (không có gì để mài). Lời giải thích của trang tĩnh thêm câu "Link này có công thức mài; công thức chỉ áp được ở
+  bản 3D."
+- Mục hỏng (khóa lạ, giá trị sai kiểu, lựa chọn không có) thì bỏ, kèm MỘT dòng `console.warn` liệt kê; các mục còn lại vẫn áp. Công thức
+  không bao giờ đưa trang về tĩnh. Giá trị vượt trần của máy này thì kẹp (`normalizeKnob`), như kéo núm.
+
+**Công thức không mang** (§16): thí nghiệm đang bật, công cụ đang bật, góc camera, mức chất lượng.
+
+### 21.3 Xưởng: dịch mã (`engine/gpu/translate.js`)
+
+**Lấy mã bằng API công khai.** `renderer.debug.getShaderAsync(scene, camera, object)` trả `{ vertexShader, fragmentShader }` của
+RenderObject ứng với render target và MRT **đang đặt trên renderer lúc nó chạy xong** (Phụ lục A.102). Đặt đúng target và MRT của scene pass
+thì ra đúng biến thể mà lượt vẽ cảnh dùng: cùng đầu ra MRT (`output`, `emissive`, và `normal` khi view Normal đã được xin), cùng `mrtNode`
+của material. Không đặt thì three dịch biến thể vẽ thẳng ra màn hình: một đầu ra, bỏ `mrtNode`, mà cảnh không bao giờ vẽ như thế.
+
+**Hai bước cho mỗi vật**, vì `getShaderAsync` chờ `compileAsync`, mà `compileAsync` của r186 nhường luồng chính giữa các vật (Phụ lục A.103):
+trong lúc chờ, vòng lặp vẽ khung, và khung đó vẽ với target, MRT đang đặt sai.
+1. **Làm nóng, không giữ khung:** đặt target + MRT của scene pass, gọi `renderer.compileAsync(vật, camera, scene)`, rồi trả target + MRT về
+   NGAY trong cùng lượt (trước lần chờ đầu). `compileAsync` chụp render context lúc gọi và ghi vào từng việc của hàng đợi (A.103), nên phần
+   biên dịch sau đó vẫn đúng ngữ cảnh, còn cảnh vẽ như thường.
+2. **Đọc, giữ khung:** giữ khung (dưới đây), đặt target + MRT, `await getShaderAsync(…)`, trả target + MRT, thôi giữ. Vật đã nóng nên lần
+   đọc chỉ nhường một nhịp (`yieldToMain`): cảnh giữ ảnh cũ chừng một khung.
+
+**Lượt cuối · hậu kỳ.** Quad của RenderPipeline (`pipeline._quadMesh`) là trường riêng duy nhất xưởng đọc của three (A.104; test ghim nó với
+three 0.186.1, §21.8). Lúc vẽ quad, `RenderPipeline.render()` tạm đặt `toneMapping = NoToneMapping` và `outputColorSpace` = không gian màu
+làm việc, không render target, không MRT. Dịch quad thì làm y như thế, cả lần gọi trong lúc giữ khung (đổi rồi trả lại tone mapping như
+chính `render()` làm mỗi khung: đây là ngoại lệ có chủ đích của luật "không đổi `renderer.toneMapping` lúc chạy"). Mã ấy gồm mọi phần hậu
+kỳ ghép vào lượt cuối (Bản nét, Phủ bóng, overlay của công cụ đang bật); bloom và FXAA có lượt vẽ riêng bên trong node của chúng, không
+nằm trong mục này.
+
+**Giữ khung.** `scene-quality.js` thêm `hold()` (trả hàm thôi giữ; giữ lồng nhau được, đếm số lần):
+- lúc giữ, `quality.sample()` trả `true` như lúc thử ngừng vẽ: `scene.step()` không vẽ, không tiến đồng hồ, ảnh cũ ở lại (luật của
+  `CLAUDE.md`: việc mới trong `step()` đi qua đúng dòng đó);
+- `redraw()` của `?freeze` cũng chờ thôi giữ rồi mới vẽ (Sổ tay đổi núm giữa lúc đang dịch);
+- thôi giữ thì bộ điều chỉnh đo lại từ đầu (`tuner.guard(chế độ hiện tại)`, có khởi động 2 giây), nên quãng giữ không bao giờ thành một
+  mẫu "khung chậm".
+
+**Thứ tự và bộ nhớ.**
+- Mỗi lúc một lần dịch (hàng đợi trong `translate.js`); lỗi của một vật thì mục ấy ghi "Chưa dịch được vật này", các vật khác vẫn dịch,
+  và giữ khung luôn được thả (`finally`).
+- Nhớ mã theo `object.id`, `material.id`, `material.version` và id của MRT đang dùng. Mở lại một lớp, hay lớp khác của cùng bức, thì dùng
+  lại; material đổi version (núm `rebuild`, thí nghiệm) thì dịch lại vật đó.
+- `getShaderAsync` dùng render context ở độ sâu gọi 0, còn scene pass vẽ ở độ sâu 1 (lồng trong lần vẽ quad; A.102): mỗi vật có thêm một
+  RenderObject (một lần dựng NodeBuilder trên CPU). three giữ program của GPU theo chính chuỗi mã (A.103), nên mã trùng thì không có lần
+  biên dịch GPU nào mới. Task 1 đo cả hai điều này (§21.9).
+- Gỡ cảnh (`disposer`) thì bỏ bộ nhớ mã.
+
+**Bàn thợ.** `studio.translation(layerId)` → `Promise<Translation>`:
+```js
+/** [9] @typedef {{ language: 'wgsl' | 'glsl', backend: 'webgpu' | 'webgl2',
+ *   uniforms: { weight: string | null, knobs: Record<string, string> },   // tên trong mã; Cốt: weight null (luật 1)
+ *   places: { key: string, label: string, owner: string | null, own: boolean,
+ *             vertex: string | null, fragment: string, hits: { vertex: number, fragment: number }, error?: string }[] }} Translation */
+```
+`__sma.translate(layerId)` trả đúng object đó (DevTools, e2e).
+
+### 21.4 Xưởng: công thức
+
+**`engine/recipe.js`** (đường nhẹ, hàm thuần, không three; luật ES2020 của đường nhẹ áp vì `boot.js` import nó):
+- `readRecipe(hash)` → `{ entries: { key, value }[], problems: string[] } | null`: `null` khi hash không bắt đầu bằng `#r=`. Giải mã
+  phần trăm, dài quá 2.048 ký tự thì bỏ cả công thức (một problem), tách theo dấu phẩy và dấu hai chấm đầu tiên. Khóa phải khớp
+  `^[a-z0-9-]+(\.[A-Za-z][A-Za-z0-9]*)?$`, giá trị `^[A-Za-z0-9.+-]+$`; mục không khớp vào `problems`. Khóa lặp thì mục sau thắng.
+- `writeRecipe(entries)` → chuỗi (không có `#r=`); `formatValue(kind, value, step)` theo luật của §21.2.
+- Không biết bức nào: phân loại khóa (trọng số, núm, Dial) cần id của bức, nên làm ở phần nặng.
+
+**`engine/gpu/recipe-set.js`** (công thức của một cảnh; `studio.js` đã 231 dòng nên phần này ở file riêng, như `dial-set.js`):
+- `defaults`: chụp lúc dựng (trước khi áp công thức): trọng số 1; núm `normalizeKnob(knobValue(k, env))` theo `env` của máy này; Dial
+  ngay sau `setup()`.
+- `classify(entries)` → `{ weights, knobs, dials, problems }`: khóa có dấu chấm là núm (lớp và núm phải có thật; chuỗi đổi sang kiểu của
+  núm: số, `1`/`0`, lựa chọn có trong `options`, `#` + hex); khóa không chấm là id lớp (trọng số 0–1; `cot` bỏ qua, luật 1) hay id Dial.
+  Còn lại vào `problems`.
+- `diff(snapshot)` → entries: chỉ giá trị khác `defaults` (số so sau khi làm tròn theo `step`, nên 0.0200000004 bằng 0.02).
+- `counts(snapshot)` → `{ layers, knobs, dials }` cho dòng tóm tắt.
+
+**Áp lúc dựng** (§16 đã ghi: "giải mã trước `createLayer`"):
+- `boot.js` đọc `readRecipe(location.hash)` cùng lúc với cờ, đưa vào `run()` như `flags`; tầng tĩnh thì đưa vào `showStatic` (câu thêm của
+  §21.2).
+- `scene.js` phân loại sau `setup()` (id Dial chỉ có từ đó), rồi:
+  - núm: `buildLayers` nhận giá trị ban đầu, `createKnobs(layerId, knobs, env, initial)` dùng `initial[id]` thay cho `knobValue()`; giá trị
+    hỏng thì cảnh báo và dùng mặc định. Lớp đọc giá trị ban đầu bằng `ctx.knobValue(id)` như luật đã có, nên núm `rebuild` dựng MỘT lần với
+    giá trị của công thức;
+  - trọng số: `weights.set(id, v)` (không tween) ngay sau khi dựng lớp;
+  - Dial: `dials.restore(…)` ngay sau `createDialSet`;
+  - tất cả trước `scene.compile()`: lần biên dịch đầu đã là cảnh của công thức.
+- `run.js`: lần mở trang có công thức thì lúc live mở xưởng không mài, kèm dòng tóm tắt, thay cho gợi ý và lời mời. "Dựng lại cảnh" vẫn đi
+  đường `restore(snapshot)` như GĐ 2.
+
+**Bàn thợ** thêm:
+- `recipe()` → `{ text, counts }` (`text` không có `#r=`; rỗng là nguyên bản);
+- `applyRecipe(text)` → `Promise`: trạng thái đủ = `defaults` ghép công thức, đi qua `restore()` (trọng số đặt ngay; núm khác giá trị hiện tại
+  thì set lần lượt; Dial); trả `{ counts, problems }`;
+- `reset()` → `Promise`: về `defaults`, trọng số tween;
+- `onChange(cb)` → hàm bỏ nghe: báo sau mọi `setWeight`, `setKnob`, `setDial`, `restore`, `applyRecipe`, `reset`. Không báo theo khung:
+  tween không đổi đích.
+
+**`engine/gpu/recipe-url.js`** (thanh địa chỉ; `run.js` gắn lúc live, gỡ bằng `disposer`; "Dựng lại cảnh" gắn lại với bàn thợ mới):
+- nghe `studio.onChange`: chuỗi mới khác chuỗi đã ghi thì hẹn ghi, gộp các lần đổi trong 500 ms (WebKit ném `SecurityError` khi
+  `replaceState` quá 100 lần trong 30 giây; 500 ms là tối đa 60 lần). Trang ẩn (`pagehide`, `visibilitychange`) thì ghi ngay phần còn hẹn;
+- ghi: `history.replaceState(history.state, '', pathname + search + (text ? '#r=' + text : ''))`. Lỗi thì cảnh báo một lần và thôi ghi cho
+  phiên đó; nút chép link vẫn chạy;
+- nghe `hashchange` (`replaceState` không phát sự kiện này, nên chỉ thay đổi của người xem tới đây): `readRecipe` → `applyRecipe` → mở xưởng
+  với dòng tóm tắt; hash trống thì `reset()`; hash khác dạng (không bắt đầu bằng `#r=`) thì bỏ qua.
+
+**`__sma`** thêm `recipe()` (chuỗi `text`) và `applyRecipe(text)`, qua bàn thợ như mọi hàm khác.
+
+### 21.5 Giao diện và chữ
+
+**File mới ở `ui/`** (DOM thuần, không import engine hay three; mọi thứ của cảnh qua `studio()`):
+- `ui/shader-text.js`: hàm thuần `shaderHtml(code, { language, layerUniforms, knobUniforms })` → `{ html, lines, hits }`. Escape HTML
+  trước, rồi tô:
+  - từ khóa (WGSL: `fn let var const return if else for loop break continue struct switch case default discard`; GLSL: thêm `void in out
+    uniform layout precision highp mediump`);
+  - kiểu (`f32 i32 u32 bool vec2…4 vec2f… mat3x3 mat4x4 texture_2d sampler`; GLSL `float int vec2…4 mat3 mat4 sampler2D`);
+  - số, chú thích `//`, thuộc tính WGSL (`@location`, `@builtin`, `@group`, `@binding`, `@vertex`, `@fragment`);
+  - uniform của lớp: `<span class="u-layer" data-u="<tên>">`; dòng có nó mang `is-layer`.
+
+  Màu lấy từ theme của code sống (§7: chữ ngà trên đen then, từ khóa vàng lá…), cùng luật tương phản ≥ 4,5:1. Không kéo Shiki vào lúc chạy:
+  Shiki và ngữ pháp WGSL/GLSL nặng hơn cả chunk của Sổ tay, mà mã sinh ra chỉ cần chừng ấy loại token.
+- `ui/translation-view.js`: khung Bản dịch (ô Vật, hai nút Đỉnh/Điểm ảnh, dòng trạng thái, dòng nhắc, mã). `code-view.js` thêm nút "Bản
+  dịch" và chuyển giữa hai khung; `light(knobId)` sáng cả dòng JS (như cũ) lẫn dòng của uniform trong Bản dịch đang mở.
+- `ui/recipe-panel.js`: mục "Công thức" của thanh lớp (nút chép link, dòng trạng thái, ô link khi chép hỏng) và dòng tóm tắt + "Về nguyên
+  bản" ở đầu thanh. `workshop.open({ recipe })` hiện dòng tóm tắt.
+
+**Thứ tự Tab** không đổi (thanh lớp → thanh công cụ → Sổ tay, §7): dòng tóm tắt và mục Công thức nằm TRONG thanh lớp, Bản dịch nằm trong
+tab Chỉnh.
+
+**Điện thoại:** thanh lớp là một dải ngang (§7). Dòng tóm tắt thu thành một chip "Công thức · Về nguyên bản" trên dải; mục Công thức là một
+nút trên dải, như nút của Dial. Bản dịch trong tấm trượt của Sổ tay: khung mã cuộn riêng, dòng dài xuống dòng.
+
+**Chữ của xưởng** (`strings.vi.js`):
+- `t.translation`: `button` "Bản dịch", `object` "Vật", `vertex` "Đỉnh", `fragment` "Điểm ảnh", `translating(k, n)`, `status({ language,
+  backend, lines, hits, layer })`, `weightHint(name)`, `jsOnly`, `post` "Lượt cuối · hậu kỳ", `failed`;
+- `t.recipe`: `title` "Công thức", `copy` "Chép link công thức", `copied` "Đã chép link", `copyFailed`, `summary(parts)`, `reset` "Về nguyên
+  bản", `staticNote`.
+
+Không có chữ mới trong `content` của các bức: nhãn vật đã có từ GĐ 5, nhãn Dial từ GĐ 4.
+
+### 21.6 Hợp đồng và luật
+
+- **Không có trường mới** trong hợp đồng của bức. `contracts/runtime.js` (JSDoc) thêm vào `Studio`: `translation`, `recipe`, `applyRecipe`,
+  `reset`, `onChange`, và typedef `Translation`. `Snapshot` giữ nguyên.
+- **Test hợp đồng** thêm hai luật cho mọi bức đã deploy, để chuỗi công thức không bao giờ mơ hồ:
+  - id Dial không trùng id lớp nào (`gio:23` chỉ có một nghĩa);
+  - id lựa chọn của núm `select` khớp `^[A-Za-z0-9-]+$` (không có dấu phẩy, hai chấm). Bốn bức hiện đều đạt.
+- **Test luật** (`tests/rules/files.test.js`): chỉ `engine/gpu/translate.js` được gọi `debug.getShaderAsync` và đọc `_quadMesh`, như luật
+  `setRenderObjectFunction` của GĐ 5.
+- **Kích thước file:** `run.js` đã 248 dòng. Phần mở xưởng (lời mời, mở theo công thức) tách ra file riêng trong `engine/gpu/` trong task đầu
+  tiên chạm `run.js`. `studio.js` không quá 250: phần công thức ở `recipe-set.js`.
+- **`CLAUDE.md`** thêm mục GĐ 9: hai bước dịch, giữ khung, `_quadMesh`, dạng `#r=`, `replaceState` có gộp.
+
+### 21.7 Chất lượng và hiệu năng
+
+- Không thêm draw call, không tốn gì mỗi khung khi không dùng. Đồng bộ thanh địa chỉ chạy theo thay đổi, không theo khung.
+- Bản dịch, trên Mac M2 (WebGPU, mức cao), bức có nhiều vật nhất:
+  - mỗi lần đọc giữ khung tối đa 2 nhịp;
+  - lần dịch đầu cả bức xong trong 2 giây;
+  - mở lại dưới 200 ms;
+  - sau khi dịch, khung hình không đổi (so checksum dưới `?freeze`) và số khung mỗi giây về như trước trong 3 giây.
+- Bộ nhớ mã: vài chục vật, mỗi vật vài chục kB chữ: dưới 2 MB, gỡ cùng cảnh.
+- Công thức không đổi gì của bộ điều chỉnh: nấc, mức, trần của núm giữ nguyên luật GĐ 3–4 (giá trị trong link bị kẹp theo trần của máy này).
+
+### 21.8 Kiểm thử
+
+**Unit (Vitest, node; jsdom cho file `ui/`):**
+- `recipe.js`: đọc/ghi qua lại cho mọi kiểu; thứ tự; làm tròn theo `step`; giải mã phần trăm; khóa lặp; mục hỏng vào `problems`; dài quá
+  2.048; hash không phải `#r=` ra `null`; không dùng built-in ES2022 (luật đường nhẹ có sẵn).
+- `recipe-set.js`: `defaults` theo `env` (trần theo mức), `classify` (lớp, núm, Dial, `cot`, lựa chọn lạ, màu), `diff` bỏ sai số dấu phẩy
+  động, `counts`.
+- `knob-set.js`: giá trị ban đầu từ công thức, kẹp theo trần, hỏng thì về mặc định kèm cảnh báo; `buildLayers` đưa đúng giá trị tới
+  `ctx.knobValue`.
+- `studio.js`: `applyRecipe` là trạng thái đủ; `reset`; `onChange` báo đúng một lần mỗi thay đổi; `recipe().text` rỗng ở nguyên bản.
+- `recipe-url.js` (cửa sổ giả): gộp 500 ms; ghi giữ query string; `SecurityError` thì thôi ghi; `hashchange` áp công thức; hash trống thì
+  `reset`; ghi của chính nó không quay về như một lần đổi.
+- `translate.js` (renderer giả): đặt rồi trả target + MRT ĐÚNG lúc (bước 1 trả trước lần chờ đầu; bước 2 giữ suốt lần chờ); giữ khung luôn
+  được thả kể cả khi `getShaderAsync` ném lỗi; mỗi lúc một lần dịch; nhớ theo version; lượt cuối đổi và trả tone mapping, màu ra.
+- `scene-quality.js`: `hold()` làm `sample()` trả `true`; thôi giữ thì `tuner.guard()` được gọi lại; giữ lồng nhau.
+- `scene.js`: `redraw()` chờ thôi giữ.
+- `shader-text.js`: escape trước khi tô, các loại token, uniform so cả tên (`w_suong` không khớp `w_suong_2`), đếm dòng và `hits`.
+- `translation-view.js`, `recipe-panel.js`, `code-view.js` (jsdom): nút Bản dịch chỉ khi có `studio()`; Đỉnh/Điểm ảnh; dòng trạng thái;
+  sáng dòng theo núm; chép link (clipboard giả, hỏng thì ô link); dòng tóm tắt; Về nguyên bản.
+- `boot.js`, `static.js`: công thức tới `run()`; tầng tĩnh thêm câu.
+- Ghim three: `RenderPipeline` có `_quadMesh` là Mesh; `debug.getShaderAsync` có mặt.
+
+**Test của bức** (Node, `buildPainting`, `compileMaterial`): mỗi lớp của mỗi bức, liệt kê những vật mà mã có uniform của lớp, rồi ghi lại
+bằng bảng snapshot. Thay đổi làm một lớp mất khỏi mọi mã thì test đỏ và người sửa thấy ngay. Lượt cuối (quad của RenderPipeline) kiểm ở e2e.
+
+**E2E** (mỗi bức trong `describe` của nó, nên vào job của bức; Bức 3, Bức 4 thêm tag `@khoi` cho job WebGPU):
+- **Bản dịch**: mở Sổ tay › Chỉnh › Bản dịch của một lớp có mặt ở vật của lớp khác (Bức 1: Sương; Bức 2: Giấy, góp vào material đèn
+  của Cốt; Bức 3: Bóng mềm; Bức 4: Bản nét, ở lượt cuối) và của Phủ bóng:
+  - nhãn ngôn ngữ đúng backend;
+  - mã có `w_<id>`, số dòng sáng > 0;
+  - rê một núm uniform thì có dòng sáng;
+  - không lỗi console;
+  - cảnh vẫn chạy sau đó (`frames` tăng);
+  - dưới `?freeze`, ảnh sau khi dịch trùng ảnh trước.
+
+  Thêm một lần, chỉ trong e2e: so mã của một vật với mã của chính RenderObject mà lượt vẽ cảnh dùng (đọc bằng trường riêng của three trong
+  test, không phải trong code), ở cả hai backend.
+- **Link công thức** (Bức 1 đủ đường, ba bức kia mở link):
+  - mở `?force3d&freeze=N#r=…` thì `__sma.snapshot()` đúng công thức, thanh lớp mở với dòng tóm tắt, ảnh khác ảnh nguyên bản;
+  - "Về nguyên bản" thì snapshot về mặc định và hash trống;
+  - tắt một lớp thì hash đổi (chờ hết 500 ms);
+  - đổi hash trong trang thì áp;
+  - nút chép link đưa vào clipboard (giả) đúng link, không có query string;
+  - mục hỏng thì bỏ, cảnh vẫn live;
+  - Bức 1 có Dial `gio`, Bức 3 có Dial `ngay`.
+- a11y (axe) với Bản dịch đang mở và với dòng tóm tắt.
+- Trên GPU thật ở máy local; khung nhìn điện thoại (390 × 844) cho chip công thức và Bản dịch trong tấm trượt.
+
+**Kiểm tay** (thêm vào §12): Safari trên Mac và iPhone (thanh địa chỉ đổi theo khi mài; chép link; mở link nhận được); VoiceOver đọc dòng
+trạng thái của Bản dịch và dòng "Đã chép link".
+
+### 21.9 Cách làm GĐ 9
+
+Như GĐ 6–8: làm thẳng trên nhánh `gd9-ban-dich-cong-thuc`, vừa làm vừa sửa; plan gọn, code đầy đủ chỉ ở chỗ khó (hai bước dịch, giữ khung,
+lượt cuối, đọc/ghi công thức).
+1. **Task rủi ro nhất làm trước:** `translate.js` và giữ khung, chạy thật trên Bức 1 (vật thường) và Bức 4 (lượt cuối), WebGPU trên GPU thật
+   và WebGL2 SwiftShader.
+
+   **Luật dừng:** một trong bốn điều sau không đạt thì dừng, báo Bao, và chọn đường lùi:
+   - mã của vật trùng từng ký tự với mã của RenderObject mà lượt vẽ cảnh dùng, ở cả hai backend;
+   - mỗi lần đọc giữ khung tối đa 2 nhịp; lần dịch đầu cả bức dưới 2 giây (Bức 1 và Bức 4, Mac M2);
+   - dưới `?freeze`, ảnh sau khi dịch trùng ảnh trước; không lỗi console;
+   - không có lần biên dịch GPU nào mới (đếm program của renderer trước và sau).
+
+   **Đường lùi:** "bắt lúc vẽ": `draws.js` (chỗ duy nhất đặt móc) đọc RenderObject của lần vẽ thật bằng trường riêng của three; test ghim
+   trường đó với three 0.186.1.
+2. Bản dịch trong Sổ tay: `shader-text.js`, `translation-view.js`, nút ở `code-view.js`, những nơi lớp có mặt, sáng theo núm.
+3. Công thức: `recipe.js`, `recipe-set.js`, áp lúc dựng (`createKnobs` nhận giá trị ban đầu), bàn thợ, `__sma`.
+4. Thanh địa chỉ và `hashchange` (`recipe-url.js`); mục Công thức, dòng tóm tắt, Về nguyên bản; câu của tầng tĩnh.
+
+   **Điểm duyệt ảnh giữa chừng** (một trang ảnh riêng tư): Bản dịch trong Sổ tay (máy tính và điện thoại dọc, cả hai backend), thanh lớp
+   có dòng tóm tắt và mục Công thức (máy tính và điện thoại). Bao duyệt trước khi viết e2e và chữ cuối.
+5. E2E bốn bức, a11y, test của bức; `CLAUDE.md`, README (mục "Link công thức" cho người xem), spec.
+6. Review cuối cả nhánh, rồi hỏi Bao trước khi push, và hỏi lại trước khi merge (merge là deploy).
+
+### 21.10 Rủi ro riêng
+
+- **`getShaderAsync` không ra đúng mã đang chạy**: render context của nó ở độ sâu gọi 0, scene pass ở độ sâu 1 (A.102), nên là một
+  RenderObject khác.
+  - Lý do tin rằng mã vẫn trùng: mã sinh ra theo material, vật, đầu ra của render target và MRT; độ sâu gọi chỉ là khóa của bộ nhớ.
+  - Cách kiểm: Task 1 so từng ký tự với RenderObject thật (luật dừng). Lệch thì đi đường lùi.
+- **Khung vẽ trong lúc target, MRT đang đặt cho lần dịch**: hai bước + giữ khung (§21.3); unit test giữ thứ tự đặt/trả.
+- **Bộ điều chỉnh hiểu quãng giữ là máy chậm**: thôi giữ thì đo lại từ đầu (§21.3).
+- **`_quadMesh` đổi ở bản three sau**: test ghim đỏ khi nâng three; lúc đó thay bằng một QuadMesh của xưởng mang cùng `outputNode` và
+  `contextNode`.
+- **Mã quá dài trên điện thoại** (800 dòng, dòng gần 1.000 ký tự): xuống dòng, cuộn riêng khung mã; vài nghìn `span` không làm chậm Sổ tay
+  (đo ở Task 2).
+- **Safari giới hạn `replaceState`**: gộp 500 ms, bắt lỗi rồi thôi ghi (§21.4).
+- **Link dài**: chỉ ghi giá trị khác mặc định. Bức 1 (nhiều núm nhất) chỉnh hết mọi núm, tắt hết mọi lớp và kéo giờ thì chưa tới 1.500 ký tự,
+  dưới trần 2.048 của `readRecipe`.
+- **Mặc định khác nhau giữa hai máy** (núm có `value` theo mức, Dial theo giờ): link chỉ mang giá trị người gửi đã đổi, nên phần còn lại là
+  mặc định của máy người nhận. Đó là ý định (§21.2), ghi trong README.
+- **Công thức đổi `rebuild` lúc dựng làm chậm lần mở trang**: núm `rebuild` dựng một lần với giá trị của công thức (§21.4), nên không chậm
+  hơn trang nguyên bản; giá trị nặng hơn mặc định (nhiều vòng hơn) thì đã bị kẹp theo trần của máy.
+
 ## Phụ lục A: sự thật API đã kiểm trên three@0.186.1
 
 Các mục dưới đây đã được kiểm bằng ba cách:
@@ -5548,3 +5935,28 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - Hệ quả: lớp chỉ cần ghi `array[i].set(…)` trước khi compute (mảng mỏ của Bức 4, mỗi khung), không `needsUpdate`, không dựng node mới.
     - WGSL đặt mảng trong một struct uniform riêng, tên theo `setName` (`array< vec4<f32>, 10 >`, có dấu cách: test so bằng regex). GLSL
       (transform feedback của WebGL2) đặt nó vào một khối `uniform NodeBuffer_<id>` và bỏ tên (như `CLAUDE.md` ghi từ GĐ 6 cho material).
+102. **`renderer.debug.getShaderAsync` đọc render target và MRT SAU lần chờ, và dùng render context ở độ sâu gọi 0**
+     (`renderers/common/Renderer.js#debug.getShaderAsync`, `renderers/common/RenderContexts.js#get`; GĐ 9, đọc mã nguồn):
+    - `getShaderAsync(scene, camera, object)` gọi `await this.compileAsync(object, camera, scene)` RỒI mới đọc `this._renderTarget ||
+      this._outputRenderTarget` (hay framebuffer target khi `needsFrameBufferTarget`) và `this._mrt` để lấy RenderObject. Target và MRT phải
+      còn đúng lúc lần chờ xong.
+    - Khóa của render context: số ảnh, format, type, samples, depth, stencil của target + id của MRT + độ sâu gọi. `getShaderAsync` và
+      `compileAsync` gọi `_renderContexts.get(target, mrt)`, tức độ sâu 0. `render()` dùng `_callDepth` (bắt đầu −1, tăng ở mỗi lần render
+      lồng): scene pass vẽ trong `updateBefore` của quad cuối nên ở độ sâu 1, và RenderObject của nó khác cái mà `getShaderAsync` lấy (thêm một
+      lần dựng NodeBuilder). Quad cuối vẽ ở độ sâu 0: với nó là cùng một RenderObject.
+103. **`compileAsync` chụp render context lúc gọi rồi nhường luồng chính giữa các vật; program giữ theo chuỗi mã**
+     (`Renderer.js#compileAsync`, `#_createObjectPipeline`, `utils.js#yieldToMain`, `Pipelines.js#getForRender`; GĐ 9, đọc mã nguồn):
+    - phần đồng bộ (tới trước lần chờ đầu) tính render context từ target và MRT đang đặt, chiếu vật vào render list, và mỗi vật thành một việc
+      của hàng đợi mang theo chính `renderContext` đó (`_createObjectPipeline` ở chế độ async chỉ ghi việc);
+    - phần async làm từng việc: `await nodes.getForRenderAsync`, tạo pipeline, rồi `await yieldToMain()` (`scheduler.yield()`, không có thì
+      `requestAnimationFrame`). Giữa hai vật, vòng lặp của trang vẽ được khung;
+    - hệ quả: trả target + MRT ngay sau khi gọi (trước lần chờ đầu) không làm sai phần biên dịch. Nhưng `getShaderAsync` đọc lại chúng sau
+      lần chờ (A.102), nên lúc đọc phải giữ khung (§21.3);
+    - `Pipelines` giữ program đỉnh, điểm ảnh và compute trong `programs.vertex`, `.fragment`, `.compute`, khóa là chính chuỗi mã: RenderObject
+      mới mà mã trùng thì dùng lại program cũ.
+104. **`RenderPipeline` vẽ quad cuối với tone mapping tắt; quad là trường riêng** (`renderers/common/RenderPipeline.js`; GĐ 9, đọc mã nguồn):
+    - `render()` gọi `_update()`, tạm đặt `renderer.toneMapping = NoToneMapping` và `outputColorSpace` = không gian màu làm việc, tắt XR, vẽ
+      `this._quadMesh` (một `QuadMesh` với `NodeMaterial` tên `'RenderPipeline'`), rồi trả lại cả ba;
+    - `_updateContext()` đặt `material.contextNode = context({ toneMapping, outputColorSpace, … })` (khi `outputColorTransform` là `false`) và
+      `material.fragmentNode = outputNode`;
+    - không có API công khai trả quad hay mã của nó: xưởng đọc `_quadMesh`, chỉ ở `engine/gpu/translate.js` (test ghim, §21.8).
