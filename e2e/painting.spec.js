@@ -647,17 +647,19 @@ for (const { meta, page: htmlPage, lang, ciWebgpuSmoke } of paintings) {
     test('Bản dịch (GĐ 9) lúc cảnh đang chạy: bắt khung kế tiếp, hai lần liền ra cùng mã; cảnh vẽ tiếp, không lỗi GPU', smoke, async ({
       page,
     }, testInfo) => {
-      test.setTimeout(180_000);
+      // Test khói: job WebGPU SwiftShader của CI chạy nó cho Bức 3 (chừng 0,2 khung/giây) và Bức 4. Chờ như spec riêng của Bức 3: ổn định
+      // 60 s, khung tăng 120 s; hai khung bắt của Bản dịch cũng là hai khung vẽ. Hai khung mới là đủ thấy cảnh vẫn vẽ tiếp sau khi bắt.
+      test.setTimeout(240_000);
       const { query } = testInfo.project.metadata;
       const layer = GD9[meta.slug].layer;
       await page.goto(urlOf(htmlPage, query));
-      expect((await waitForSettled(page)).state).toBe('live');
+      expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
       const first = await page.evaluate((id) => window.__sma.translate(id), layer);
       const again = await page.evaluate((id) => window.__sma.translate(id), layer);
       expect(first.places.some((p) => p.hits.vertex + p.hits.fragment > 0), 'không nơi nào có uniform của lớp').toBe(true);
       expect(changedPlaces(first, again), 'hai lần dịch liền nhau mà mã khác').toEqual([]);
       const frames = (await readSma(page)).frames;
-      await expect.poll(async () => (await readSma(page)).frames, { timeout: 60_000 }).toBeGreaterThan(frames + 10);
+      await expect.poll(async () => (await readSma(page)).frames, { timeout: 120_000 }).toBeGreaterThan(frames + 2);
       expect((await readSma(page)).state).toBe('live');
       expect(log.errors).toEqual([]);
       expect(log.warnings).toEqual([]);
