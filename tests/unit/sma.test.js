@@ -69,6 +69,21 @@ describe('studioApi (GĐ 4): các hàm của bàn thợ mà __sma lộ ra', () =
     expect(api.tools()).toEqual([{ id: 'kinh', on: false }]);
   });
 
+  it('translate(id) (GĐ 9): Bản dịch của một lớp qua bàn thợ, trả đúng Promise (page.evaluate chờ được); chưa có bàn thợ thì null', async () => {
+    let studio = null;
+    const api = studioApi(() => studio);
+    expect(api.translate('hai')).toBeNull();
+    const asked = [];
+    studio = {
+      translation: async (layerId) => {
+        asked.push(layerId);
+        return { language: 'glsl', places: [] };
+      },
+    };
+    await expect(api.translate('hai')).resolves.toEqual({ language: 'glsl', places: [] });
+    expect(asked).toEqual(['hai']);
+  });
+
   it('readouts(id) (GĐ 5): số đo riêng của một lớp, đọc qua bàn thợ; chưa có bàn thợ thì mảng rỗng', () => {
     let studio = null;
     const api = studioApi(() => studio);

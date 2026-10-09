@@ -477,6 +477,41 @@ describe('buildScene', () => {
     expect(fn).toBeNull(); // gỡ cảnh thì trả hàm vẽ cũ, kể cả khi công cụ không tự stop()
   });
 
+  it('Bản dịch (GĐ 9): bắt khung qua móc lần vẽ; lúc chạy là khung kế tiếp, ?freeze thì vẽ lại khung đứng yên; gỡ cảnh thì lần bắt chờ hỏng', async () => {
+    const { stage, scene, disposer, flush, renders } = build();
+    const r = stage.renderer;
+    let fn = null;
+    r.setRenderObjectFunction.mockImplementation((f) => {
+      fn = f;
+    });
+    r.getRenderObjectFunction.mockImplementation(() => fn);
+    // Hai trường riêng mà móc đọc (draws.js): render context của lượt đang vẽ, và bảng RenderObject mang mã đã dịch.
+    r._currentRenderContext = { name: 'scene-pass' };
+    r._objects = { get: (o) => ({ getNodeBuilderState: () => ({ vertexShader: 'v', fragmentShader: `f ${o.name} w_to_mau` }) }) };
+    r.render.mockImplementation(() => {
+      for (const o of stage.scene.children.filter((c) => c.isMesh)) {
+        (fn ?? r.renderObject).call(r, o, stage.scene, stage.camera, o.geometry, o.material, null, null, null, null);
+      }
+    });
+    const live = scene.studio.translation('to-mau');
+    expect(fn).not.toBeNull(); // gắn ngay: khung kế tiếp đi qua móc
+    scene.step(1000);
+    const tr = await live;
+    expect(tr.places.map((p) => [p.label, p.owner, p.drawn, p.hits.fragment])).toEqual([['khoi · Cốt', 'cot', true, 1]]);
+    expect(fn).toBeNull(); // bắt xong thì gỡ móc
+    scene.freeze();
+    const before = renders();
+    const still = scene.studio.translation('to-mau');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flush(); // nhịp rAF: vẽ lại khung đứng yên, khung ấy được bắt
+    expect((await still).places).toHaveLength(1);
+    expect(renders()).toBe(before + 1);
+    const pending = scene.studio.translation('to-mau');
+    disposer.closeAll();
+    await expect(pending).rejects.toThrow('Cảnh đã gỡ');
+    expect(fn).toBeNull();
+  });
+
   it('ms CPU của khung đi vào số đo của bàn thợ', () => {
     const { scene } = build();
     scene.step(1000);
@@ -554,7 +589,7 @@ describe('buildScene', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(frames).toHaveLength(1); // nhịp vẽ lại đã xin
     const second = hanging();
-    const secondRun = scene.hold.run(() => second.promise); // việc giữ kế tiếp (đọc mã vật tiếp theo) bắt đầu trước nhịp
+    const secondRun = scene.hold.run(() => second.promise); // một lần giữ khác (lần biên dịch kế tiếp) bắt đầu trước nhịp
     flush();
     expect(renders()).toBe(0);
     second.release();

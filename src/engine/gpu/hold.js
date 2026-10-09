@@ -1,4 +1,4 @@
-// engine/gpu/hold.js — giữ khung: trong lúc một việc async chạy với render target của lượt khác đang đặt trên renderer (biên dịch, đọc mã shader), cảnh không vẽ.
+// engine/gpu/hold.js — giữ khung: trong lúc một việc async chạy với render target của lượt khác đang đặt trên renderer (biên dịch lại giữa chừng), cảnh không vẽ.
 
 /**
  * Bộ giữ khung của MỘT cảnh (spec §21.3). three r186 dựng mã của vật trong lúc `compileAsync` nhường luồng chính, và lúc dựng nó đọc

@@ -1,10 +1,11 @@
-// tests/unit/draws.test.js — móc lần vẽ trên renderer giả: start/stop trả đúng hàm cũ, ghi lần vẽ của camera chính, phản chiếu lồng, limit(k) theo vật + material + lượt, chủ và nhãn của vật.
+// tests/unit/draws.test.js — móc lần vẽ trên renderer giả: start/stop trả đúng hàm cũ, ghi lần vẽ của camera chính, phản chiếu lồng, limit(k) theo vật + material + lượt, chủ và nhãn của vật; GĐ 9: capture() đọc mã của RenderObject đang vẽ; ghim three 0.186.1.
 import { describe, it, expect, vi } from 'vitest';
 import {
   BoxGeometry, BufferGeometry, Float32BufferAttribute, Group, InstancedBufferGeometry, InstancedMesh, Line, LineBasicNodeMaterial, Mesh,
-  MeshStandardNodeMaterial, OrthographicCamera, PerspectiveCamera, PlaneGeometry, Points, PointsNodeMaterial, Scene, Sprite,
-  SpriteNodeMaterial,
+  MeshStandardNodeMaterial, OrthographicCamera, PerspectiveCamera, PlaneGeometry, Points, PointsNodeMaterial, QuadMesh, Renderer, Scene,
+  Sprite, SpriteNodeMaterial,
 } from 'three/webgpu';
+import RenderObject from 'three/src/renderers/common/RenderObject.js';
 import { createDrawProbe } from '../../src/engine/gpu/draws.js';
 
 const SCENE = new Scene();
@@ -411,5 +412,197 @@ describe('createDrawProbe', () => {
     expect(probe.list().map((d) => d.nested)).toEqual([0, 2, 0]);
     probe.stop();
     expect(r._fn).toBeNull();
+  });
+});
+
+/**
+ * Renderer giả cho Bản dịch (GĐ 9): như fakeRenderer, thêm hai trường riêng mà móc đọc. Mỗi lượt render() đặt render context của nó vào
+ * _currentRenderContext rồi trả lại khi xong (như _renderScene của three); _objects.get(…) trả RenderObject có mã ghép từ tên vật, tên
+ * context và passId, nên test thấy móc tìm đúng context (lấy lúc vào móc) và đúng lượt.
+ */
+function shaderRenderer() {
+  const r = fakeRenderer();
+  r._currentRenderContext = null;
+  r._objects = {
+    get: vi.fn((object, material, scene, cam, lightsNode, context, clippingContext, passId) => ({
+      getNodeBuilderState: () => {
+        if (object.name === 'vo') throw new Error('RenderObject hỏng');
+        return { vertexShader: `v ${object.name} @${context?.name}`, fragmentShader: `f ${object.name} @${context?.name} ${passId ?? '-'}` };
+      },
+    })),
+  };
+  return r;
+}
+
+/** Một lượt render() của three với render context riêng: đặt _currentRenderContext, vẽ các mục, trả context cũ (kể cả khi lỗi). */
+function pass(r, name, items, cam, passId = null) {
+  const outer = r._currentRenderContext;
+  r._currentRenderContext = { name };
+  try {
+    render(r, items, cam, passId);
+  } finally {
+    r._currentRenderContext = outer;
+  }
+}
+
+/**
+ * Bức giả cho Bản dịch: quad cuối (QuadMesh, camera trực giao) vẽ scene pass NGAY TRONG lần vẽ của nó (updateBefore), mặt gương vẽ phản
+ * chiếu lồng bằng camera ảo với context của ảnh phản chiếu. Một lượt hậu kỳ khác (Mesh thường, camera khác, ngoài cùng) vẽ sau quad.
+ */
+function frameWithPost() {
+  const r = shaderRenderer();
+  const clay = Object.assign(new Mesh(new BoxGeometry(), mat()), { name: 'khoi' });
+  const grains = Object.assign(new InstancedMesh(new PlaneGeometry(), mat(), 50), { name: 'hat' });
+  const glass = Object.assign(new Mesh(new PlaneGeometry(), mat()), { name: 'guong' });
+  glass.onDraw = (cam) => cam === camera && pass(r, 'phan-chieu', [clay, grains], mirror);
+  const quad = Object.assign(new QuadMesh(mat()), { name: 'quad' });
+  quad.onDraw = () => pass(r, 'scene-pass', [clay, glass, grains], camera);
+  const after = Object.assign(new Mesh(new PlaneGeometry(), mat()), { name: 'sau' });
+  const layers = [{ id: 'cot', layer: { objects: [clay, grains] } }, { id: 'guong', layer: { objects: [glass] } }];
+  const probe = createDrawProbe({ renderer: r, camera, layers, meta: META, content: CONTENT });
+  const ortho = new OrthographicCamera();
+  const frame = () => {
+    probe.begin();
+    pass(r, 'man-hinh', [quad], ortho);
+    pass(r, 'man-hinh', [after], ortho);
+    probe.end();
+  };
+  return { r, probe, clay, grains, glass, quad, frame };
+}
+
+const codes = (list) => list.map((d) => [d.object.name, d.vertex, d.fragment]);
+
+describe('capture (GĐ 9, Bản dịch: "bắt lúc vẽ")', () => {
+  it('Từng sợi tắt: capture() gắn móc ngay, khung kế tiếp được bắt, rồi gỡ móc và trả đúng hàm cũ', async () => {
+    const { r, probe, frame } = frameWithPost();
+    const shot = probe.capture();
+    expect(typeof r._fn).toBe('function'); // gắn ngay: begin() của khung kế tiếp thấy nó
+    frame();
+    const { scene, post } = await shot;
+    // Mã đọc bằng context LÚC VÀO móc (scene pass), không phải context của lượt lồng bên trong (phản chiếu của mặt gương).
+    expect(codes(scene)).toEqual([
+      ['khoi', 'v khoi @scene-pass', 'f khoi @scene-pass -'],
+      ['guong', 'v guong @scene-pass', 'f guong @scene-pass -'],
+      ['hat', 'v hat @scene-pass', 'f hat @scene-pass -'],
+    ]);
+    expect(scene.map((d) => [d.material === d.object.material, d.passId])).toEqual([[true, null], [true, null], [true, null]]);
+    // Phản chiếu (lồng) không bắt; lượt hậu kỳ ngoài cùng chỉ bắt QuadMesh.
+    expect(codes(post)).toEqual([['quad', 'v quad @man-hinh', 'f quad @man-hinh -']]);
+    expect(r._fn).toBeNull();
+    expect(r.renderObject).toHaveBeenCalledTimes(7); // vẽ đủ: quad, 3 vật, 2 lần phản chiếu, lượt sau
+    // Một hàm khác đã đặt trước: gắn rồi trả đúng nó.
+    const other = vi.fn(function (...args) {
+      this.renderObject(...args);
+    });
+    r._fn = other;
+    const again = probe.capture();
+    frame();
+    await again;
+    expect(r._fn).toBe(other);
+    expect(other).toHaveBeenCalledTimes(7);
+  });
+
+  it('Từng sợi đang bật: bắt không đổi móc, list() và counts() của Từng sợi; Từng sợi tắt giữa chừng thì móc ở lại tới khung bắt', async () => {
+    const { r, probe, frame } = frameWithPost();
+    probe.start();
+    frame();
+    const hook = r._fn;
+    const listed = probe.list().map((d) => d.name);
+    const counted = probe.counts();
+    const shot = probe.capture();
+    expect(r._fn).toBe(hook); // không gắn hai lần
+    frame();
+    expect((await shot).scene).toHaveLength(3);
+    expect(r._fn).toBe(hook); // Từng sợi còn bật: móc ở lại
+    expect([probe.list().map((d) => d.name), probe.counts()]).toEqual([listed, counted]);
+    // Bắt đang chờ thì stop() của Từng sợi chưa gỡ móc; khung bắt xong mới gỡ, và trả đúng hàm cũ.
+    const late = probe.capture();
+    probe.stop();
+    expect(r._fn).toBe(hook);
+    frame();
+    await late;
+    expect(r._fn).toBeNull();
+    // start() lúc bắt đang chờ: một móc, prev giữ nguyên; stop() sau khung bắt thì gỡ.
+    const third = probe.capture();
+    probe.start();
+    frame();
+    await third;
+    expect(r._fn).toBe(hook); // Từng sợi bật: móc ở lại sau khung bắt
+    probe.stop();
+    expect(r._fn).toBeNull();
+  });
+
+  it('limit(k) của Từng sợi bỏ lần vẽ: lần vẽ bị bỏ vẫn được bắt (RenderObject có từ khung vẽ đủ), mà không vẽ', async () => {
+    const { r, probe, frame } = frameWithPost();
+    probe.start();
+    frame();
+    probe.limit(1);
+    r.renderObject.mockClear();
+    const shot = probe.capture();
+    frame();
+    const { scene } = await shot;
+    expect(scene.map((d) => d.object.name)).toEqual(['khoi', 'guong', 'hat']);
+    expect(r.renderObject.mock.calls.map(([o]) => o.name)).toEqual(['quad', 'khoi', 'sau']);
+    expect(probe.list().map((d) => d.name)).toEqual(['khoi', 'guong', 'hat']); // đang limit: list đứng yên
+  });
+
+  it('đọc một vật hỏng: mục đó có error thay cho mã; khung, các vật khác và móc vẫn chạy', async () => {
+    const r = shaderRenderer();
+    const broken = Object.assign(new Mesh(new BoxGeometry(), mat()), { name: 'vo' });
+    const clay = Object.assign(new Mesh(new BoxGeometry(), mat()), { name: 'khoi' });
+    const probe = createDrawProbe({ renderer: r, camera, layers: [], meta: META });
+    const shot = probe.capture();
+    probe.begin();
+    pass(r, 'scene-pass', [broken, clay], camera);
+    probe.end();
+    const { scene } = await shot;
+    expect(scene.map((d) => [d.object.name, d.error ?? null, d.vertex ?? null])).toEqual([
+      ['vo', 'RenderObject hỏng', null], ['khoi', null, 'v khoi @scene-pass'],
+    ]);
+    expect(r.renderObject).toHaveBeenCalledTimes(2);
+  });
+
+  it('render() ném lỗi (không tới end()): lần bắt chờ khung sau; khung sau bắt lại từ đầu, không mang mục của khung hỏng', async () => {
+    const { r, probe, glass, frame } = frameWithPost();
+    const shot = probe.capture();
+    const draw = r.renderObject.getMockImplementation();
+    r.renderObject.mockImplementation(function (o, ...rest) {
+      if (o === glass) throw new Error('GPU hỏng');
+      draw.call(this, o, ...rest);
+    });
+    expect(() => frame()).toThrow('GPU hỏng');
+    let done = false;
+    shot.then(() => {
+      done = true;
+    });
+    await Promise.resolve();
+    expect(done).toBe(false);
+    expect(typeof r._fn).toBe('function');
+    r.renderObject.mockImplementation(draw);
+    frame();
+    expect(codes((await shot).scene).map(([name]) => name)).toEqual(['khoi', 'guong', 'hat']);
+    expect(r._fn).toBeNull();
+  });
+
+  it('gỡ cảnh (dispose) lúc lần bắt còn chờ: Promise hỏng, móc được gỡ, Từng sợi tắt; capture() sau đó hỏng ngay', async () => {
+    const { r, probe } = frameWithPost();
+    probe.start();
+    const shot = probe.capture();
+    probe.dispose();
+    await expect(shot).rejects.toThrow('Cảnh đã gỡ');
+    expect(r._fn).toBeNull();
+    expect(probe.list()).toEqual([]);
+    await expect(probe.capture()).rejects.toThrow('Cảnh đã gỡ');
+    expect(r._fn).toBeNull();
+  });
+});
+
+describe('ghim three 0.186.1 (Phụ lục A.102): móc tìm lại RenderObject đúng như three tìm lúc vẽ', () => {
+  it('_renderObjectDirect tìm RenderObject bằng đúng lời gọi này; QuadMesh có isQuadMesh; RenderObject có getNodeBuilderState', () => {
+    expect(Renderer.prototype._renderObjectDirect.toString()).toContain(
+      'this._objects.get( object, material, scene, camera, lightsNode, this._currentRenderContext, clippingContext, passId )',
+    );
+    expect(new QuadMesh().isQuadMesh).toBe(true);
+    expect(typeof RenderObject.prototype.getNodeBuilderState).toBe('function');
   });
 });

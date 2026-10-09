@@ -1,10 +1,11 @@
-// e2e/painting.spec.js — E2E chung cho MỌI bức trong registry: tầng tĩnh; cảnh 3D trên WebGL2 / WebGPU; công cụ học, ?poster (GĐ 4); Từng sợi, quầng trăng (GĐ 5).
+// e2e/painting.spec.js — E2E chung cho MỌI bức trong registry: tầng tĩnh; cảnh 3D trên WebGL2 / WebGPU; công cụ học, ?poster (GĐ 4); Từng sợi, quầng trăng (GĐ 5); Bản dịch (GĐ 9).
 import { readdirSync, readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { paintings } from '../src/paintings/registry.js';
 import t from '../src/ui/strings.vi.js';
 import { HALO_STEPS } from '../src/ui/moon-progress.js';
 import { playStepMs, playStride } from '../src/engine/tools/tung-soi.js';
+import { SMOKE_TAG } from '../scripts/e2e-groups.js';
 import {
   DARK, FULL, waitForSettled, waitForFrames, canvasStats, canvasRegions, twoFrames, gpuReport, collectConsole, readSma,
 } from './helpers.js';
@@ -16,6 +17,31 @@ import {
  * 0,13–0,135. Ngưỡng 0,02 gần gấp ba sợi 0 mà chưa tới một phần sáu khung đủ.
  */
 const ONE_COLOUR_STD = 0.02;
+
+/**
+ * GĐ 9 (spec §21.8): lớp để thử Bản dịch của mỗi bức (lớp có mặt ở vật của lớp khác, hay ở quad cuối) và công thức thử (Task 7).
+ * Bức 1: Sương vào shader của mọi vật qua sương mù; Bức 2: Giấy góp vào material đèn của Cốt; Bức 3: Bóng mềm vào khối bao SDF;
+ * Bức 4: Bản nét ở quad cuối.
+ */
+const GD9 = {
+  'ao-sen-dem': { layer: 'suong', recipe: 'suong:0,suong.density:0.02,gio:23' },
+  'den-keo-quan': { layer: 'giay', recipe: 'giay:0,giay.dye:0.3' },
+  'cung-que': { layer: 'bong-mem', recipe: 'bong-mem:0,ngay:15' },
+  'dan-ga-me-con': { layer: 'ban-net', recipe: 'ban-net:0,ban-net.lineWidth:3' },
+};
+/** Nhãn của những nơi mà hai bản dịch khác nhau (khóa, mã đỉnh hay mã điểm ảnh), hay thiếu ở một bên: so ngắn gọn, không in cả mã. */
+const changedPlaces = (a, b) => {
+  const byKey = new Map(b.places.map((p) => [p.key, p]));
+  const changed = a.places.filter((p) => byKey.get(p.key)?.vertex !== p.vertex || byKey.get(p.key)?.fragment !== p.fragment);
+  const missing = b.places.filter((p) => !a.places.some((q) => q.key === p.key));
+  return [...changed, ...missing].map((p) => p.label);
+};
+/** Số ảnh fragment shader ghi ra (như tests/helpers/nodes.js#countOutputs): scene pass ghi ≥ 2 (output, emissive), vẽ thẳng ra màn hình 1. */
+const outputsOf = (code) => {
+  const struct = /struct Output\w* \{([^}]*)\}/.exec(code);
+  if (struct) return (struct[1].match(/@location\(/g) ?? []).length;
+  return (code.match(/layout\( location = \d+ \) out /g) ?? []).length;
+};
 
 /**
  * URL tương đối (không có '/' đầu) để giữ base '/son-mai-anh-sang/' của baseURL.
@@ -49,7 +75,8 @@ test.afterEach(async ({ page }, testInfo) => {
   await testInfo.attach('console.txt', { body: log.all.join('\n') || '(console trống)', contentType: 'text/plain' });
 });
 
-for (const { meta, page: htmlPage, lang } of paintings) {
+for (const { meta, page: htmlPage, lang, ciWebgpuSmoke } of paintings) {
+  const smoke = ciWebgpuSmoke ? { tag: SMOKE_TAG } : {}; // bức nặng: job WebGPU của CI chỉ chạy test mang tag khói
   const posterImg = `img[src$="${meta.poster.src.replace(/^\//, '')}"]`;
 
   test.describe(`${meta.title} · tầng tĩnh`, () => {
@@ -592,6 +619,49 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       expect(log.warnings).toEqual([]);
       // Chromium báo lỗi GL của WebGL2 ("GL_INVALID_OPERATION: … missing fragment shader outputs") ở mức console.warning và không
       // khớp DEPRECATION, nên `log.errors` / `log.warnings` đều không thấy: quét thẳng toàn bộ console.
+      expect(log.all.filter((line) => /GL_INVALID_|Lỗi GPU|Render pipeline creation failed|Invalid (RenderPipeline|CommandBuffer)/.test(line))).toEqual([]);
+    });
+
+    test('Bản dịch (GĐ 9) dưới ?freeze: mã của lượt vẽ cảnh và của quad cuối, đúng ngôn ngữ; dịch lại ra cùng mã; ảnh không đổi', async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(180_000);
+      const { backend } = testInfo.project.metadata;
+      const layer = GD9[meta.slug].layer;
+      await still(page, testInfo);
+      const before = (await canvasRegions(page)).all.checksum;
+      const tr = await page.evaluate((id) => window.__sma.translate(id), layer);
+      expect([tr.backend, tr.language]).toEqual([backend, backend === 'webgpu' ? 'wgsl' : 'glsl']);
+      expect(tr.places.some((p) => p.hits.vertex + p.hits.fragment > 0), 'không nơi nào có uniform của lớp').toBe(true);
+      expect(tr.places.filter((p) => p.error).map((p) => `${p.label}: ${p.error}`)).toEqual([]);
+      for (const p of tr.places.filter((x) => x.drawn && !x.post)) expect(outputsOf(p.fragment), p.label).toBeGreaterThanOrEqual(2);
+      // Khung đứng yên vẽ lại không dựng lại gì: bắt lần hai ra đúng từng ký tự.
+      const again = await page.evaluate((id) => window.__sma.translate(id), layer);
+      expect(changedPlaces(tr, again), 'dịch lại khung đứng yên mà mã khác').toEqual([]);
+      const post = await page.evaluate(() => window.__sma.translate('phu-bong'));
+      expect(post.places.some((p) => p.post && /\bw_phu_bong\b/.test(p.fragment))).toBe(true);
+      expect((await canvasRegions(page)).all.checksum, 'dịch xong mà khung đứng yên đổi').toBe(before);
+      expect(log.errors).toEqual([]);
+    });
+
+    test('Bản dịch (GĐ 9) lúc cảnh đang chạy: bắt khung kế tiếp, hai lần liền ra cùng mã; cảnh vẽ tiếp, không lỗi GPU', smoke, async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(180_000);
+      const { query } = testInfo.project.metadata;
+      const layer = GD9[meta.slug].layer;
+      await page.goto(urlOf(htmlPage, query));
+      expect((await waitForSettled(page)).state).toBe('live');
+      const first = await page.evaluate((id) => window.__sma.translate(id), layer);
+      const again = await page.evaluate((id) => window.__sma.translate(id), layer);
+      expect(first.places.some((p) => p.hits.vertex + p.hits.fragment > 0), 'không nơi nào có uniform của lớp').toBe(true);
+      expect(changedPlaces(first, again), 'hai lần dịch liền nhau mà mã khác').toEqual([]);
+      const frames = (await readSma(page)).frames;
+      await expect.poll(async () => (await readSma(page)).frames, { timeout: 60_000 }).toBeGreaterThan(frames + 10);
+      expect((await readSma(page)).state).toBe('live');
+      expect(log.errors).toEqual([]);
+      expect(log.warnings).toEqual([]);
+      // Lỗi GL của WebGL2 tới console ở mức warning (Phụ lục A.105): quét thẳng toàn bộ console như test Normal lúc cảnh đang chạy.
       expect(log.all.filter((line) => /GL_INVALID_|Lỗi GPU|Render pipeline creation failed|Invalid (RenderPipeline|CommandBuffer)/.test(line))).toEqual([]);
     });
 

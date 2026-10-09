@@ -1,4 +1,4 @@
-// engine/gpu/scene.js — dựng MỘT cảnh trên một sân khấu: chữ → ctx → setup → lớp → pipeline → móc lần vẽ → thang nấc → input → bàn thợ; và hàm vẽ một khung.
+// engine/gpu/scene.js — dựng MỘT cảnh trên một sân khấu: chữ → ctx → setup → lớp → pipeline → móc lần vẽ → thang nấc → đồ nghề → bản dịch → input → bàn thợ; và hàm vẽ một khung.
 import { budgetFor, isMobile, pickLevel } from '../quality.js';
 import { FRAME_BUDGET_MS, createTuner } from '../tuner.js';
 import { createGpuTimer } from './gpu-timer.js';
@@ -13,12 +13,13 @@ import { createToolbox } from './toolbox.js';
 import { createDialSet } from './dial-set.js';
 import { createCaptionSet } from './caption-set.js';
 import { createDrawProbe } from './draws.js';
+import { createTranslator } from './translate.js';
 import { mountCaptions } from '../../ui/captions.js';
 
 /**
  * run.js gọi hàm này một lần khi mở trang, và thêm một lần nữa nếu người xem bấm "Dựng lại cảnh" sau khi mất GPU.
  * Mọi thứ tạo ra đều đăng ký vào `disposer` theo thứ tự tạo (chữ → setup → lớp → pipeline → móc lần vẽ → bộ đo GPU → đồ nghề →
- * input), nên gỡ được ngược lại.
+ * bản dịch → input), nên gỡ được ngược lại.
  * Nếu setup/createLayer ném lỗi, buildLayers đã gỡ các lớp dựng dở; lỗi đi tiếp lên run.js.
  *
  * @param {object} p
@@ -31,7 +32,7 @@ import { mountCaptions } from '../../ui/captions.js';
  * @param {boolean} p.reducedMotion
  * @param {Window} p.win
  * @param {import('../contracts/runtime.js').Tool[]} [p.tools]   công cụ học (engine/tools/index.js)
- * @param {Record<string, any>} [p.t]        chữ giao diện (nhãn view của công cụ)
+ * @param {Record<string, any>} [p.t]        chữ giao diện (nhãn view của công cụ; GĐ 9: nhãn quad cuối của Bản dịch)
  * @param {object | null} [p.content]        chữ của bức (nhãn tap của lớp, chữ đi theo vật)
  */
 export function buildScene({ stage, disposer, painting, meta, flags, now, reducedMotion, win, tools = [], t = {}, content = null }) {
@@ -68,12 +69,14 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
   ensureEmissive(stage.scene, {
     warn: (name) => ctx.debug && console.warn(`Material "${name}" thiếu emissiveNode; xưởng gán vec3(0).`),
   });
-  const hold = createHold(); // GĐ 9: giữ khung (biên dịch Normal, Bản dịch: spec §21.3)
+  const hold = createHold(); // GĐ 9: giữ khung khi biên dịch lại giữa chừng (view Normal: spec §21.3)
   const pipeline = createPipeline({ renderer: stage.renderer, scene: stage.scene, camera: stage.camera, layers, weight: ctx.weight, hold });
   disposer.add(() => pipeline.dispose());
-  // Móc lần vẽ (GĐ 5): chỉ gắn khi Từng sợi bật (start/stop); lúc khác cảnh không tốn gì. Tên lớp ở meta, nhãn vật ở content.
+  // Móc lần vẽ (GĐ 5): chỉ gắn khi Từng sợi bật (start/stop) hay Bản dịch đang chờ bắt khung (GĐ 9, capture); lúc khác cảnh không tốn gì.
+  // Tên lớp ở meta, nhãn vật ở content.
   const draws = createDrawProbe({ renderer: stage.renderer, camera: stage.camera, layers, meta, content });
-  disposer.add(() => draws.stop()); // gỡ sau hộp đồ nghề (thứ tự ngược): công cụ hỏng không tự stop() thì móc vẫn được gỡ
+  // Gỡ sau hộp đồ nghề và bản dịch (thứ tự ngược): công cụ hỏng không tự stop() thì móc vẫn được gỡ; lần bắt của Bản dịch còn chờ thì hỏng.
+  disposer.add(() => draws.dispose());
   // Thang nấc dựng SAU pipeline: nấc của lớp dùng chung (bloom) chạm vào node mà pipeline vừa dựng.
   const ladder = createLadder({ ladder: painting.quality?.ladder, layers, stage, dpr: budget.dpr });
   const tuner = flags.freeze ? null : createTuner({ budgetMs: mobile ? FRAME_BUDGET_MS.mobile : FRAME_BUDGET_MS.desktop });
@@ -93,8 +96,8 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
   // của three chỉ vẽ lại cảnh một lần mỗi frameId, mà frameId chỉ tăng ở mỗi nhịp rAF của renderer. Vẽ lại hai lần
   // trong cùng một nhịp thì lần sau dùng lại ảnh cảnh cũ. Vẽ hỏng thì Promise hỏng theo (không treo mãi):
   // Sổ tay báo lỗi và mở khóa nút, __sma.setWeight trả lỗi cho người gọi.
-  // GĐ 9: đang giữ khung (biên dịch, đọc mã với target của lượt khác) thì chờ thả; nhịp tới mà việc giữ khác vừa bắt đầu (đọc mã vật
-  // kế tiếp) thì chờ tiếp, không vẽ giữa chừng (spec §21.3).
+  // GĐ 9: đang giữ khung (biên dịch lại với target + MRT của scene pass đang đặt) thì chờ thả; nhịp tới mà một lần giữ khác vừa bắt
+  // đầu thì chờ tiếp, không vẽ giữa chừng (spec §21.3).
   let frozen = false;
   let pending = null;
   const drawStill = () => new Promise((resolve, reject) => {
@@ -113,7 +116,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
           setup?.update?.(0, t);
           for (const { layer } of layers) layer.update?.(0, t);
           captionSet.step(); // đồng hồ đứng nên chữ ở lại; camera có thể vừa bị kéo: chiếu lại
-          draws.begin(); // Từng sợi đổi sợi rồi vẽ lại: khung N đi qua móc như mọi khung
+          draws.begin(); // Từng sợi đổi sợi rồi vẽ lại, hay Bản dịch bắt khung: khung N đi qua móc như mọi khung
           pipeline.render();
           draws.end();
         }
@@ -132,6 +135,11 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
   // Công cụ học (GĐ 4): gắn vào pipeline, overlay ghép MỘT lần; mỗi lúc một công cụ (toolbox.js).
   const toolbox = createToolbox({ tools, views: pipeline.views, doc: win.document, t, content, redraw, draws });
   disposer.add(() => toolbox.dispose());
+  // Bản dịch (GĐ 9, spec §21.3): mã shader thật của từng vật và của quad cuối, bắt từ một khung vẽ thật qua móc lần vẽ.
+  const translator = createTranslator({
+    renderer: stage.renderer, draws, redraw, layers, meta, content, postLabel: t.translation?.post ?? '',
+  });
+  disposer.add(() => translator.dispose());
 
   // Con trỏ → cử chỉ (hàng đợi, xử lý đầu mỗi khung). Kéo là của camera; công cụ học nhận trước bức.
   // Khung đứng yên: cử chỉ tới thì vẽ lại cho nó có tác dụng. Rê chuột chỉ công cụ nhận, nên chỉ vẽ lại khi có công cụ bật.
@@ -166,6 +174,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     quality,
     toolbox,
     dials: createDialSet(setup?.dials ?? []), // núm của cả bức (Bức 1: thanh giờ)
+    translator, // Bản dịch (GĐ 9)
   });
 
   return {
@@ -189,7 +198,7 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
       stage.returnHome(dt); // tranh tự khép lại: sau breathe (điểm nhìn của khung này), trước controls.update()
       stage.controls?.update();
       captionSet.step(); // chữ đi theo điểm neo, theo camera của chính khung này
-      draws.begin(); // móc (khi Từng sợi bật) ghi lần vẽ của đúng khung này
+      draws.begin(); // móc (Từng sợi bật, hay Bản dịch đang chờ bắt) ghi lần vẽ của đúng khung này
       pipeline.render();
       draws.end();
       timer.poll(ms ?? start); // hỏi ms GPU của các khung trước, không chờ

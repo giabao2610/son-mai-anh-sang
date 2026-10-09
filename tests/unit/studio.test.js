@@ -9,7 +9,7 @@ const env = { tier: 'webgl2', level: 'vua', budget: {}, now: new Date('2026-09-2
 const meta = { layers: [{ id: 'cot', name: 'Cốt' }, { id: 'lop-hai', name: 'Lớp hai' }] };
 
 /** Hai lớp giả: Cốt có núm uniform + núm rebuild; lớp hai có thí nghiệm (một kiểu compare) và số đo. */
-function setup({ tier = 'webgl2', quality, toolbox, dials } = {}) {
+function setup({ tier = 'webgl2', quality, toolbox, dials, translator } = {}) {
   const log = [];
   const cot = {
     id: 'cot',
@@ -37,7 +37,9 @@ function setup({ tier = 'webgl2', quality, toolbox, dials } = {}) {
   const weights = createWeights(meta.layers);
   const layers = buildLayers([cot, two], {}, {}, { ...env, tier });
   const redraw = vi.fn();
-  const studio = createStudio({ meta, layers, weights, env: { ...env, tier }, redraw, tweenSeconds: 0.5, quality, toolbox, dials });
+  const studio = createStudio({
+    meta, layers, weights, env: { ...env, tier }, redraw, tweenSeconds: 0.5, quality, toolbox, dials, translator,
+  });
   return { studio, weights, layers, redraw, log };
 }
 
@@ -212,6 +214,18 @@ describe('createStudio', () => {
     expect(hour.value).toBe(29.5);
     expect(setup().studio.snapshot()).not.toHaveProperty('dials');
     await expect(setup().studio.setDial('gio', 20)).rejects.toThrow('Bức không có Dial "gio"');
+  });
+
+  it('Bản dịch (GĐ 9): translation(id) gọi bộ dịch; lớp lạ thì ném; cảnh không có bộ dịch thì Promise hỏng', async () => {
+    const result = { language: 'wgsl', places: [] };
+    const translator = { translation: vi.fn(async () => result) };
+    const { studio, redraw } = setup({ translator });
+    await expect(studio.translation('lop-hai')).resolves.toBe(result);
+    expect(translator.translation.mock.calls).toEqual([['lop-hai']]);
+    expect(() => studio.translation('khong-co')).toThrow('Không có lớp "khong-co"');
+    expect(translator.translation).toHaveBeenCalledTimes(1);
+    expect(redraw).not.toHaveBeenCalled(); // bàn thợ không tự vẽ lại: bộ dịch bắt khung (và vẽ lại khi ?freeze) qua móc lần vẽ
+    await expect(setup().studio.translation('cot')).rejects.toThrow('Cảnh này không có bản dịch');
   });
 
   it('snapshot → JSON gọn: trọng số lấy ĐÍCH của tween, núm theo địa chỉ "layerId.knobId"', () => {

@@ -137,6 +137,8 @@ const t = {
   views: { final: 'Ảnh cuối', emissive: 'Chỉ emissive', normal: 'Normal', depth: 'Depth' },
   /** Dòng trạng thái (aria-live) trên thanh công cụ: view Normal phải biên dịch lại một lần. */
   toolStatus: { grinding: 'đang mài…', failed: 'Không mài được view này; vẫn giữ view cũ.' },
+  /** Bản dịch (GĐ 9): mã shader thật của những nơi một lớp có mặt. `post`: nhãn của quad cuối (mọi phần hậu kỳ ghép lại). */
+  translation: { post: 'Lượt cuối · hậu kỳ' },
   /** Sổ tay của một lớp: ba tab Hiểu / Chỉnh / Phá. */
   notebook: {
     label: 'Sổ tay',

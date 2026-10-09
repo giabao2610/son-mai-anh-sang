@@ -163,7 +163,9 @@ Ao Sen Đêm là **Bức 1**. (GĐ 6) Đèn Kéo Quân là **Bức 2** (§18). (
   - lấy link bằng **nút "Chép link công thức" cộng thanh địa chỉ** tự mang công thức (`#r=…`) mỗi khi mài hay chỉnh;
   - mở một link có công thức thì cảnh hiện thẳng theo công thức, **thanh lớp mở sẵn** với một dòng tóm tắt và nút "Về nguyên bản";
   - lấy mã shader bằng **API công khai** `renderer.debug.getShaderAsync`, đặt đúng render target và MRT của lượt vẽ cảnh; lúc đọc thì
-    cảnh giữ khung. Task đầu thử trước; hỏng thì đổi sang đọc RenderObject của lần vẽ thật.
+    cảnh giữ khung. Task đầu thử trước; hỏng thì đổi sang đọc RenderObject của lần vẽ thật. Luật dừng của Task 2 không đạt (mã lệch từng
+    ký tự, thêm program mới: §21.9); ngày 2026-10-09 Bạn đồng ý đường lùi **"bắt lúc vẽ"**: mã đọc từ chính RenderObject của một khung vẽ
+    thật, qua móc lần vẽ (§21.3).
 
   Sau phần thiết kế đầu tiên (Bản dịch), Bạn nói "làm luôn đến spec": Claude tự quyết phần còn lại của §21 (dạng link, áp công
   thức lúc dựng, thanh địa chỉ, xưởng, kiểm thử, cách làm), rồi Bạn duyệt một lượt trong spec.
@@ -1033,13 +1035,14 @@ son-mai-anh-sang/
         gpu-timer.js                 [4] ms GPU mỗi khung: resolveTimestampsAsync (render + compute), không chờ, không gọi chồng
         meter.js                     [4] số đo của bàn thợ: draw call, tam giác, ms, ms CPU, ms GPU; hai bên "Tắt / Bật" của compare
         toolbox.js                   [4→5] hộp đồ nghề: gắn công cụ, cử chỉ tới công cụ trước bức, mỗi lúc một công cụ, body[data-tool]; GĐ 5: ToolApi.draws (năm hàm của móc), thanh công cụ ngay sau thanh lớp (thứ tự Tab)
-        draws.js                     [5] móc lần vẽ cho Từng sợi (setRenderObjectFunction): ghi danh sách lần vẽ của lượt vẽ cảnh, chỉ vẽ k lần đầu; tắt thì gỡ móc
+        draws.js                     [5→9] móc lần vẽ cho Từng sợi (setRenderObjectFunction): ghi danh sách lần vẽ của lượt vẽ cảnh, chỉ vẽ k lần đầu; tắt thì gỡ móc; GĐ 9: capture() bắt mã shader của RenderObject đang vẽ (Bản dịch: chỗ duy nhất đọc _objects, _currentRenderContext), móc gắn khi Từng sợi bật hay còn lần bắt chờ; dispose() khi gỡ cảnh
+        draw-info.js                 [9] hàm thuần của DrawInfo (loại vật, số bản, số tam giác) và chỗ DrawInfo chưa khớp three, tách từ draws.js
         caption-set.js               [5] chữ đi theo vật: tra content.captions, chiếu điểm neo ra màn hình mỗi khung, hết giờ theo đồng hồ của cảnh
         dial-set.js                  [4] Dial của bức: đọc/ghi (kẹp min/max/step), chữ giá trị, ghi chú, snapshot
         recipe-set.js                [9] công thức của một cảnh: mặc định của máy đang xem, phân loại khóa, khác biệt, tóm tắt
         recipe-url.js                [9] thanh địa chỉ mang công thức: replaceState gộp 500 ms, hashchange
-        translate.js                 [9] bản dịch: mã shader của vật và quad cuối (getShaderAsync trong ngữ cảnh của scene pass, giữ khung suốt lần đọc); nơi lớp có mặt
-        hold.js                      [9] giữ khung: việc async chạy với target của lượt khác đang đặt thì cảnh không vẽ (Bản dịch, biên dịch Normal)
+        translate.js                 [9] bản dịch: nơi lớp có mặt, theo thứ tự phủ, từ mã của MỘT khung vẽ thật (draws.capture(); không getShaderAsync, không giữ khung)
+        hold.js                      [9] giữ khung: việc async chạy với target của lượt khác đang đặt thì cảnh không vẽ (biên dịch lại giữa chừng: view Normal)
         clock.js                     [3→4] đồng hồ + trần 60 khung/giây; GĐ 4: màn ≤ ~63 Hz không bị bỏ khung nào
         layers.js                    [0→5] trọng số (GĐ 2: tween), createCtx, dựng lớp theo thứ tự + nối onKnob, lưới an toàn emissive; GĐ 5: ctx.captions
         knob-set.js                  [2→4] bộ núm của một lớp: uniform có tên hợp lệ, giá trị đã chuẩn hóa, get/set/values, onKnob; GĐ 4: kiểm trần do max() trả; GĐ 9: giá trị ban đầu từ công thức
@@ -1138,7 +1141,7 @@ son-mai-anh-sang/
     paintings/cung-que/              [7] test của từng lớp Bức 3 (cot, mat-troi, bong-mem, anh-dat, la-da); the-gioi, cot-cay-bay; chữ; quality
     paintings/dan-ga-me-con/         [8] test của từng lớp Bức 4 (cot, ban-mau, ban-net, giay-diep, dan-ga, phu-bong); cot-bo-cuc, cot-hinh-ga; đàn gà dạng đóng (dan-ga-song, dan-ga-duong, dan-ga-tranh-me, dan-ga-muot); dan-ga-thoc (bản JS của luật, khóa bằng __fixtures__/thoc/); cử chỉ (cu-chi); chữ; quality
     rules/imports.test.js            [0→8] luật ranh giới, đường nhẹ, hàng rào từ vựng; GĐ 5: phần nhẹ không gọi built-in ES2022 trở lên (Safari 14); GĐ 8: tự kiểm hàng rào bắt từ của Bức 4, không bắt denThen hay grain
-    rules/files.test.js              [0→5] dòng 1 là chú thích, số dòng, API cấm; GĐ 5: chỉ draws.js đặt móc lần vẽ
+    rules/files.test.js              [0→9] dòng 1 là chú thích, số dòng, API cấm; GĐ 5: chỉ draws.js đặt móc lần vẽ; GĐ 9: chỉ draws.js đọc _objects, _currentRenderContext của renderer, không file nào gọi getShaderAsync
     rules/e2e.test.js                [7→8] describe của spec riêng bắt đầu bằng "{tên bức} · "; nhóm e2e của CI; GĐ 8: gom cả spec tách file theo slug dài nhất, đếm test mang tag khói trên mọi file của bức
     scripts/pages.test.js main-guard.test.js   [7] trang sinh ra khớp từng byte trang trên đĩa; script chạy trực tiếp nhận ra mình là module chính
     paintings/html.test.js           [0] trang HTML của mỗi dòng registry khớp meta (JSDOM, không chạy script)
@@ -1188,6 +1191,8 @@ son-mai-anh-sang/
 - **Ngoại lệ glob:** `ui/code-view.js` (GĐ 2) được glob `?code` trên `paintings/*/` (trừ `_mau`) và `engine/stock/`. `import.meta.glob` chỉ được dùng ở đó, và luôn kèm `?code`.
 - **(GĐ 5) Móc lần vẽ:** chỉ `engine/gpu/draws.js` được gọi `setRenderObjectFunction` (`tests/rules/files.test.js` quét sau khi bỏ chú
   thích). Một móc thứ hai ở chỗ khác sẽ âm thầm đè móc của Từng sợi, hay bị Từng sợi đè.
+- **(GĐ 9) RenderObject đang vẽ:** chỉ `engine/gpu/draws.js` được đọc `_objects` và `_currentRenderContext` của renderer (Bản dịch bắt lúc
+  vẽ, §21.3; test ghim với three 0.186.1); không file nào trong `src/` gọi `getShaderAsync` (Phụ lục A.102: nó không trả mã đang chạy).
 - **`@fontsource/*`** chỉ được import từ file `.css`.
 - **Chữ giao diện:** không file nào trong `src/` import `ui/strings.*.js`.
   - Chỉ trang HTML import file đó, rồi truyền `{ lang, t }` vào `boot`.
@@ -1755,7 +1760,7 @@ Mỗi mốc đặt một ĐÍCH (phần vòng) và một thời gian bò (`HALO_
 - GĐ 5 thêm `readouts(layerId)`: số đo riêng của một lớp, qua bàn thợ (e2e đọc số hoa đăng đang trôi; DevTools xem mọi số đo mà không
   phải mở Sổ tay).
 - GĐ 9 thêm `recipe()` (chuỗi công thức hiện tại, không có `#r=`), `applyRecipe(text)` và `translate(layerId)` (bản dịch của lớp, như
-  Sổ tay đọc; §21.3), cũng qua bàn thợ.
+  Sổ tay đọc, bắt từ khung vẽ kế tiếp; §21.3), cũng qua bàn thợ.
 
 ### Tranh tĩnh (tầng C) của một bức: `showStatic(entry, shell, { reason, error })`, gọi nhiều lần vẫn an toàn
 - (GĐ 5) Không có quầng trăng: tầng tĩnh không tải gì để chờ. Rơi về tĩnh giữa lúc tải thì quầng biến mất ngay.
@@ -2229,6 +2234,7 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
     - `Math.random` (ngẫu nhiên phải có hạt giống);
     - import `time` hoặc `deltaTime` từ `three/tsl`.
   - (GĐ 5) `setRenderObjectFunction` ở bất cứ file nào ngoài `engine/gpu/draws.js` (§8.2).
+  - (GĐ 9) `_objects`, `_currentRenderContext` ở bất cứ file nào ngoài `engine/gpu/draws.js`; `getShaderAsync` ở bất cứ đâu (§8.2).
 
 ### Hợp đồng (`tests/paintings/contract.test.js`, lặp qua registry; từ GĐ 2 lặp cả `_mau`)
 - **GĐ 0:**
@@ -2526,7 +2532,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | **6 · Bức 2 · Đèn Kéo Quân** | Bức mới theo luật 7 (§18): gian nhà tối, đèn lục giác, đoàn quân rước cờ; sáu lớp Cốt, Ngọn nến, Gian nhà, Giấy, Kéo quân, Phủ bóng; gobo `atan(y, x)` làm node bóng tự viết của ngọn nến, shadow map thật là thí nghiệm "so"; ba cử chỉ thổi nến, giữ trống, gạt trống (tính thẳng theo thời gian); link lật tranh giữa các trang; e2e chia hai phần trên CI. Làm thẳng, task rủi ro nhất trước (§18.9) | Mọi test và e2e qua (cả Bức 1); mức cao ≤ 45 draw call; hợp đồng không đổi; Bao duyệt thơ, hình nhân và poster; đã deploy |
 | **7 · Bức 3 · Cung Quế** | Bức mới theo luật 7 (§19): tiểu hành tinh SDF, dò tia trong một khối bao; sáu lớp Cốt, Mặt trời, Bóng mềm, Ánh đất, Lá đa, Phủ bóng; pha trăng thật với Dial "Ngày âm lịch"; chạm cho lá rơi, giữ cho cây bay. Kèm theo: Phòng tranh và trình sinh trang (§19.7); CI chia e2e theo bức (§19.9) | Bức 3 chạy trên cả hai backend, 60 khung/giây trên Mac M2 ở mức cao; e2e chặn qua trong CI; Bao duyệt ảnh và thơ; đã deploy |
 | **8 · Bức 4 · Đàn Gà Mẹ Con** | Bức mới theo luật 7 (§20): một tờ tranh Đông Hồ bước vào được; sáu lớp Cốt, Bản màu, Bản nét, Giấy điệp, Đàn gà, Phủ bóng; vẽ phi hiện thực (chia nấc, dò cạnh trên ảnh độ sâu, hạt điệp); chạm để rắc thóc, giữ để gà mẹ gọi con. Kèm theo: camera trực giao và tranh tự khép lại (trường tùy chọn của `CameraSpec`), độ sâu đúng cho camera trực giao, bể hạt `lib/tsl/particles.js` (Bức 1 chuyển sang mà giữ nguyên shader), Sổ tay hiện code của hộp màu | Bức 4 chạy trên cả hai backend, 60 khung/giây trên Mac M2 ở mức cao; mã shader của đom đóm (Bức 1) không đổi; e2e chặn qua trong CI; Bao duyệt ảnh và thơ; đã deploy |
-| **9 · Bản dịch + Link công thức** *(tùy chọn)* | Hai công cụ học của xưởng cho cả bốn bức (§21): **Bản dịch** trong Sổ tay › Chỉnh (mã shader thật qua `renderer.debug.getShaderAsync` trong ngữ cảnh của scene pass, giữ khung suốt lần đọc; mọi nơi lớp có mặt, kể cả lượt cuối; sáng dòng theo núm) và **Link công thức** `#r=…` (đọc được; chỉ giá trị khác mặc định; áp lúc dựng; thanh địa chỉ tự mang công thức; nút chép link; mở link thì thanh lớp mở sẵn với dòng tóm tắt và "Về nguyên bản"). Kèm theo: sửa Normal của Kính mài lúc cảnh đang chạy (lỗi từ GĐ 4) | Hai công cụ chạy trên cả hai backend ở cả bốn bức; mã của Bản dịch trùng mã của lượt vẽ cảnh; e2e chặn qua trong CI; Bao duyệt trang ảnh giữa chừng; đã deploy |
+| **9 · Bản dịch + Link công thức** *(tùy chọn)* | Hai công cụ học của xưởng cho cả bốn bức (§21): **Bản dịch** trong Sổ tay › Chỉnh (mã shader thật của RenderObject đang vẽ, bắt từ một khung qua móc lần vẽ: "bắt lúc vẽ", sau khi `getShaderAsync` không qua luật dừng; mọi nơi lớp có mặt, kể cả lượt cuối; sáng dòng theo núm) và **Link công thức** `#r=…` (đọc được; chỉ giá trị khác mặc định; áp lúc dựng; thanh địa chỉ tự mang công thức; nút chép link; mở link thì thanh lớp mở sẵn với dòng tóm tắt và "Về nguyên bản"). Kèm theo: sửa Normal của Kính mài lúc cảnh đang chạy (lỗi từ GĐ 4) | Hai công cụ chạy trên cả hai backend ở cả bốn bức; mã của Bản dịch trùng mã của lượt vẽ cảnh; e2e chặn qua trong CI; Bao duyệt trang ảnh giữa chừng; đã deploy |
 | 10+ · *(tùy chọn)* | Chọn từ §16 khi muốn: công cụ học (tô sáng sợi vừa vẽ, bản dịch của compute và theo từng sợi); thêm cho các bức đã có (Bức 3 quay hành tinh, Hằng Nga; Bức 2 Dial gió, hơi nóng; Bức 1 cánh sen sáng xuyên; Bức 4 camera phối cảnh để so); âm thanh (đàn bầu); bản tiếng Anh (§15 d); dọn nợ (tách `tuner.js`); bức mới, như một tranh Đông Hồ khác (lúc đó rút Bản nét, Giấy điệp lên lớp dùng chung theo luật hai lần) | tùy |
 
 **GĐ 0 · Nền móng gồm:**
@@ -2641,7 +2647,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | ~~Trình sinh HTML~~ | Làm ở GĐ 7 | §19.7: `scripts/pages.js` (`npm run pages`) sinh trang từ một khuôn; trang vẫn commit trong repo, test giữ trang khớp. Không làm plugin Vite: trang phải là file thật cho tầng tĩnh, và build không ghi vào thư mục nguồn |
 | ~~Phòng tranh `/tranh/`~~ | Làm ở GĐ 7 | §19.7: trang tĩnh sinh từ registry, không có script. URL gốc vẫn là Bức 1 |
 | ~~Link công thức `#r=`~~ | Làm ở GĐ 9 | §21.2, §21.4: `engine/recipe.js` đọc, ghi chuỗi đọc được; `gpu/recipe-set.js` lấy mặc định của máy đang xem và khác biệt; áp lúc dựng (núm `rebuild` dựng một lần); thanh địa chỉ tự mang công thức (`replaceState` gộp 500 ms) |
-| ~~Xem bản dịch~~ | Làm ở GĐ 9 | §21.1, §21.3: trong Sổ tay › Chỉnh; không chỉ `layer.objects` của lớp mà mọi nơi uniform của lớp có mặt, cộng quad cuối; đọc trong ngữ cảnh của scene pass, giữ khung suốt lần đọc. Tên đặt bằng `setName` là thứ để tìm lớp trong mã |
+| ~~Xem bản dịch~~ | Làm ở GĐ 9 | §21.1, §21.3: trong Sổ tay › Chỉnh; không chỉ `layer.objects` của lớp mà mọi nơi uniform của lớp có mặt, cộng quad cuối; đọc RenderObject của một khung vẽ thật (bắt lúc vẽ). Tên đặt bằng `setName` là thứ để tìm lớp trong mã |
 | ~~Công cụ soi ("Từng sợi")~~ | Làm ở GĐ 5 | §7 Từng sợi: `ToolApi.draws` thay cho `layers()`/`stats()` dự định trước đây |
 | Đàn bầu | Khi Bao chọn (GĐ 5 không chọn) | Trường tùy chọn `Painting.sound` cùng `lib/audio/`, chỉ phát khi người xem bật |
 | ~~Đông Hồ~~ | Làm ở GĐ 8 | §20: Bức 4 · Đàn Gà Mẹ Con. `CameraSpec.kind: 'ortho'`, thêm `home`; bể hạt `lib/tsl/particles.js`; `meta.palette` đã có từ GĐ 0 |
@@ -5070,7 +5076,7 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
   GLSL mà three sinh ra trên chính máy người xem.
 - Lần đầu hash của URL mang trạng thái tác phẩm, như §8.7 đã giữ chỗ từ GĐ 0: `#r=…`.
 - **Sửa kèm một lỗi có từ GĐ 4** (§21.3 "Normal lúc cảnh đang chạy"): chọn view Normal của Kính mài khi cảnh không đứng yên làm quad cuối
-  vẽ vào render target của scene pass trong lúc biên dịch. Cùng cơ chế giữ khung của Bản dịch sửa nó.
+  vẽ vào render target của scene pass trong lúc biên dịch. Giữ khung (`hold.js`, §21.3) sửa nó.
 
 ### 21.1 Bản dịch: người xem thấy gì
 
@@ -5091,17 +5097,19 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
   - núm `uniform`: `<id>_<knobId>` (`knob-set.js#uniformName`). Núm `js`, `rebuild` không có uniform: rê lên chúng chỉ sáng code JS, như
     trước.
 - Rê một núm (`onHover` của Tweakpane, như code JS đang làm): sáng đúng các dòng có uniform của núm ấy, và khung mã cuộn tới dòng đầu.
-- Lần đầu mở Bản dịch của một bức: "Đang dịch… (3/14)". Mỗi vật, cảnh giữ ảnh cũ trong lúc three dựng mã của vật đó (vài chục ms),
-  giữa hai vật cảnh vẽ tiếp: cảnh khựng từng nhịp ngắn, một lần cho mỗi bức (§21.3). Mở lại thì mã đã nhớ: không khựng.
+- Mở Bản dịch: "Đang dịch…" tới khi khung vẽ kế tiếp xong. Xưởng đọc mã của chính khung ấy (§21.3): cảnh không khựng, không giữ khung;
+  dưới `?freeze`, khung đứng yên được vẽ lại một lần.
 - Đổi núm hay bật thí nghiệm lúc Bản dịch đang mở thì dịch lại (chờ 300 ms sau thay đổi cuối): núm `rebuild` hay thí nghiệm có thể đổi
   material, nên mã đổi.
 
 **Những nơi lớp có mặt.** Nhiều lớp không có vật riêng (`objects: []`): Sương góp vào shader của lá sen, Bản màu của Bức 4 góp vào material
 của đàn gà, Bản nét và Phủ bóng nằm trong lượt hậu kỳ. Nên danh sách Vật không lấy từ `layer.objects` của riêng lớp:
-- xưởng dịch mọi **vật vẽ được** của bức: Mesh, InstancedMesh, Sprite, Points, Line có material, tìm trong `objects` của mọi lớp, kể cả con
-  của một Group; mỗi cặp (vật, material) một mục. Cộng một mục **"Lượt cuối · hậu kỳ"**: quad của RenderPipeline (§21.3);
+- xưởng đọc mã của mọi **vật vẽ được** của bức trong khung bắt được: Mesh, InstancedMesh, Sprite, Points, Line có material, tìm trong
+  `objects` của mọi lớp, kể cả con của một Group; mỗi cặp (vật, lượt vẽ) một mục; vật của chính lớp mà khung ấy không vẽ vẫn có mục (không
+  có mã). Vật không lớp nào giữ chỉ thành mục khi mã có uniform của lớp. Cộng một mục **"Lượt cuối · hậu kỳ"**: quad của RenderPipeline
+  (§21.3);
 - giữ những mục mà mã có uniform của lớp (so cả tên, `\b<tên>\b`, không so tiền tố). Thứ tự: vật của chính lớp, rồi vật của các lớp khác
-  theo thứ tự phủ, rồi lượt cuối;
+  theo thứ tự phủ, rồi vật không lớp nào giữ, rồi lượt cuối;
 - nhãn: nhãn vật của lớp chủ (`content.layers[chủ].objects[tên]`, như Từng sợi) · tên lớp chủ, ví dụ "Lá sen · Cốt". Group có nhiều material
   thì thêm "(1/3)"; vật thiếu nhãn thì dùng tên vật;
 - lớp không có uniform nào trong mọi mã (chỉ đổi cảnh bằng JS) thì hiện vật của chính nó, kèm câu "Lớp này đổi cảnh bằng JS: trọng số và
@@ -5156,39 +5164,58 @@ của đàn gà, Bản nét và Phủ bóng nằm trong lượt hậu kỳ. Nên
 
 **Công thức không mang** (§16): thí nghiệm đang bật, công cụ đang bật, góc camera, mức chất lượng.
 
-### 21.3 Xưởng: dịch mã (`engine/gpu/translate.js`)
+### 21.3 Xưởng: đọc mã lúc vẽ (`engine/gpu/draws.js`, `engine/gpu/translate.js`)
 
-**Lấy mã bằng API công khai.** `renderer.debug.getShaderAsync(scene, camera, object)` trả `{ vertexShader, fragmentShader }` của
-RenderObject ứng với render target và MRT **đang đặt trên renderer lúc nó chạy xong** (Phụ lục A.102). Đặt đúng target và MRT của scene pass
-thì ra đúng biến thể mà lượt vẽ cảnh dùng: cùng đầu ra MRT (`output`, `emissive`, và `normal` khi view Normal đã được xin), cùng `mrtNode`
-của material. Không đặt thì three dịch biến thể vẽ thẳng ra màn hình: một đầu ra, bỏ `mrtNode`, mà cảnh không bao giờ vẽ như thế.
+**Bắt lúc vẽ.** Mã của một nơi là chuỗi mà three đã dịch cho chính RenderObject nó vừa vẽ, không phải một lần dịch riêng. Cách đầu tiên của
+spec (`renderer.debug.getShaderAsync` trong ngữ cảnh của scene pass, giữ khung suốt lần đọc) không qua luật dừng của Task 2 (§21.9, Phụ lục
+A.102); ngày 2026-10-09 Bao đồng ý đường lùi này. Móc lần vẽ của GĐ 5 (`draws.js`, chỗ duy nhất đặt `setRenderObjectFunction`) có thêm
+`capture()`: Promise mã của khung vẽ KẾ TIẾP giữa `begin()` và `end()`. Trong khung ấy, ngay sau mỗi lần vẽ, móc tìm lại RenderObject đúng
+như `Renderer._renderObjectDirect` tìm lúc vẽ, rồi đọc chuỗi mã đã dịch của nó:
 
-**Giữ khung suốt lần đọc.** `getShaderAsync` chờ `compileAsync`, mà `compileAsync` của r186 nhường luồng chính giữa các vật (Phụ lục A.103),
-và mã của vật được dựng ngay trong lúc chờ đó. `NodeMaterial.setup` đọc target và MRT đang đặt trên renderer LÚC DỰNG (A.105). Nên:
-- target + MRT của scene pass phải đặt suốt lần chờ: trả sớm thì three dựng biến thể vẽ thẳng ra màn hình;
-- trong lúc đó không khung nào được vẽ: khung vẽ giữa chừng đi qua RenderPipeline với target của scene pass đang đặt, và quad cuối vẽ vào
-  chính ảnh nó đang đọc (lỗi GPU, A.105).
+```js
+renderer._objects.get(object, material, scene, camera, lightsNode, context, clippingContext, passId).getNodeBuilderState()
+// → { vertexShader, fragmentShader }: chuỗi mà Pipelines đã dùng làm khóa của program GPU (A.103)
+```
 
-Đọc một vật: giữ khung (dưới đây) → đặt target + MRT → `await getShaderAsync(…)` → trả target + MRT → thôi giữ. Lần đầu của một vật, cảnh
-giữ ảnh cũ tới khi three dựng xong NodeBuilder của vật đó (vài chục ms; tới chừng 100 ms với material có đèn, đo ở Task 1). Mở lại thì mã đã
-nhớ trong `translate.js`: không gọi three, không giữ khung.
+- `context` là `renderer._currentRenderContext` lấy LÚC VÀO móc: lần vẽ lồng bên trong (phản chiếu, scene pass vẽ trong lần vẽ quad cuối)
+  đổi rồi trả nó. Cùng tham số với lần vẽ thì ra đúng RenderObject ấy, không tạo mới; NodeBuilderState của nó đã dựng lúc vẽ, nên chỉ đọc
+  chuỗi: không dựng, không biên dịch, không thêm program nào. Hai trường riêng (`_objects`, `_currentRenderContext`) chỉ `draws.js` đọc;
+  test ghim lời gọi của `_renderObjectDirect`, `QuadMesh.isQuadMesh` và `RenderObject.getNodeBuilderState` với three 0.186.1 (§21.8).
+- Lần vẽ của camera chính (scene pass) vào danh sách `scene`, kể cả lần mà Từng sợi đang bỏ (`limit(k)`: RenderObject đã có từ các khung vẽ
+  đủ trước). Lần vẽ ngoài cùng của camera khác mà là `QuadMesh` vào danh sách `post`: quad cuối của RenderPipeline, dịch đúng như
+  `RenderPipeline.render()` vẽ nó (tone mapping tắt, `_vertexNode` của QuadMesh), vì đó chính là lần vẽ ấy. Phản chiếu (lần vẽ lồng của camera
+  khác) không bắt; bóng đổ, bloom và RTT tự cất móc (A.53), nên móc không thấy chúng.
+- Đọc một vật hỏng thì mục ấy có `error`; khung và móc chạy tiếp. `render()` ném lỗi (không tới `end()`) thì lần bắt chờ khung sau. Gỡ cảnh
+  (`draws.dispose()`, disposer của `scene.js`) thì lần bắt còn chờ hỏng, kèm câu tiếng Việt.
+- Móc chỉ gắn khi có người cần: Từng sợi bật, hay còn lần bắt đang chờ. `capture()` gắn ngay, để khung kế tiếp đi qua móc; khung bắt xong thì
+  gỡ, trừ khi Từng sợi đang bật. `start()`, `stop()` và `capture()` dùng chung một lần gắn: không gắn hai lần, không gỡ của nhau, không mất hàm
+  vẽ trước đó. `list()`, `limit()`, `counts()` của Từng sợi không đổi. Lúc không ai cần, cảnh không tốn gì.
 
-**Lượt cuối · hậu kỳ.** Quad của RenderPipeline (`pipeline._quadMesh`) là trường riêng duy nhất xưởng đọc của three (A.104; test ghim nó với
-three 0.186.1, §21.8). Lúc vẽ quad, `RenderPipeline.render()` tạm đặt `toneMapping = NoToneMapping` và `outputColorSpace` = không gian màu
-làm việc, không render target, không MRT. Dịch quad thì làm y như thế, cả lần gọi trong lúc giữ khung (đổi rồi trả lại tone mapping như
-chính `render()` làm mỗi khung: đây là ngoại lệ có chủ đích của luật "không đổi `renderer.toneMapping` lúc chạy"). Mã ấy gồm mọi phần hậu
-kỳ ghép vào lượt cuối (Bản nét, Phủ bóng, overlay của công cụ đang bật); bloom và FXAA có lượt vẽ riêng bên trong node của chúng, không
-nằm trong mục này.
+**Một bản dịch là một khung.** `translate.js#createTranslator({ renderer, draws, redraw, layers, meta, content, postLabel })`:
+`translation(layerId)` gắn lần bắt rồi gọi `redraw()` trong một `Promise.all` (redraw hỏng thì bản dịch hỏng theo, và lần bắt bị làm hỏng sau
+đó khi gỡ cảnh vẫn có người nghe). Dưới `?freeze`, `redraw()` vẽ lại khung đứng yên một lần và khung ấy được bắt; lúc cảnh chạy, nó xong ngay
+và khung kế tiếp của vòng lặp được bắt. Không giữ khung; không đổi target, MRT hay tone mapping; không nhớ mã: mở lại là bắt một khung mới, nên
+mã luôn là mã đang chạy (núm `rebuild`, thí nghiệm hay view Normal đổi biến thể thì lần dịch sau thấy ngay).
 
-**Giữ khung** (`engine/gpu/hold.js`, file mới; một bộ giữ cho mỗi cảnh, `scene.js` dựng trước pipeline):
+**Những nơi, theo thứ tự cố định** (không theo thứ tự vẽ: three sắp vật đục theo độ sâu, camera dời là đổi):
+- mỗi vật vẽ được của các lớp theo thứ tự phủ (`drawablesOf`: Mesh, InstancedMesh, Sprite, Points, Line có một material, kể cả con của một
+  Group), một nơi cho mỗi lần vẽ đã bắt của vật ấy. Vật của CHÍNH lớp mà khung ấy không vẽ vẫn có một nơi: `drawn: false`, không có mã;
+- vật không lớp nào giữ: chỉ khi mã có uniform của lớp (`owner` null, nhãn là tên vật hay loại);
+- quad cuối, sau cùng: "Lượt cuối · hậu kỳ" (`post: true`; thêm "(i/n)" nếu có nhiều). Mã ấy gồm mọi phần hậu kỳ ghép vào lượt cuối (Bản
+  nét, Phủ bóng, overlay của công cụ đang bật); bloom và FXAA có lượt vẽ riêng bên trong node của chúng, không nằm trong mục này;
+- khóa: `<object.id>:<passId>` (vật trong suốt có transmission vẽ hai lượt, mỗi lượt một nơi) và `post:<i>`: bền qua các lần dịch, để Sổ tay
+  giữ chỗ người xem đang xem;
+- giữ những nơi mà mã có uniform của lớp, cộng nơi đọc hỏng; vật của chính lớp lên đầu. Không nơi nào có thì trả vật của chính lớp, `jsOnly`.
+
+**Giữ khung** (`engine/gpu/hold.js`, file mới; một bộ giữ cho mỗi cảnh, `scene.js` dựng trước pipeline). Bản dịch không dùng nó: chỉ còn
+`pipeline.compile()` (biên dịch lại giữa chừng, mục dưới). Lúc đang giữ, `step()` bỏ khung, nên lần bắt chờ tới khung vẽ đầu tiên sau khi thả.
 - `hold.run(fn)` chạy việc async trong lúc giữ và luôn thả (`finally`), kể cả khi `fn` ném lỗi; giữ lồng nhau được (đếm số lần);
   `hold.active`; `hold.idle()` là Promise xong khi không còn ai giữ; `hold.onRelease(cb)`;
 - lúc giữ, `quality.sample()` trả `true` như lúc thử ngừng vẽ: `scene.step()` không vẽ, không tiến đồng hồ, ảnh cũ ở lại (luật của
   `CLAUDE.md`: việc mới trong `step()` đi qua đúng dòng đó). Thôi giữ thì `dt` của khung sau vẫn bị kẹp 0,1 s như mọi khung;
-- `redraw()` của `?freeze` chờ `hold.idle()` rồi mới vẽ (Sổ tay đổi núm giữa lúc đang dịch);
+- `redraw()` của `?freeze` chờ `hold.idle()` rồi mới vẽ (Sổ tay đổi núm giữa lúc đang biên dịch);
 - thôi giữ thì bộ điều chỉnh đo lại từ đầu (`tuner.guard(chế độ hiện tại)`, có khởi động 2 giây), nên quãng giữ không bao giờ thành một
-  mẫu "khung chậm";
-- người dùng: `translate.js` (mỗi lần đọc) và `pipeline.compile()` (mục dưới).
+  mẫu "khung chậm".
 
 **Normal lúc cảnh đang chạy (lỗi có từ GĐ 4).** `views.require('normal')` thêm kênh normal vào MRT rồi biên dịch lại cả cảnh bằng
 `scenePass.compileAsync(renderer)`. Hàm đó của three đặt target + MRT của scene pass, chờ `renderer.compileAsync`, rồi mới trả (A.105); vòng
@@ -5203,22 +5230,15 @@ E2e của GĐ 4 không thấy vì luôn mở với `?freeze` (vòng lặp đã d
 lúc "đang mài…" (đo được 0,2 giây trên GPU thật ở WebGPU, 1 giây ở WebGL2), không khung nào vẽ với target sai. Lần biên dịch lúc mở trang
 cũng đi đường này (chưa có vòng lặp nên không khác gì).
 
-**Thứ tự và bộ nhớ.**
-- Mỗi lúc một lần dịch (hàng đợi trong `translate.js`); lỗi của một vật thì mục ấy ghi "Chưa dịch được vật này", các vật khác vẫn dịch,
-  và giữ khung luôn được thả (`finally`).
-- Nhớ mã theo `object.id`, `material.id`, `material.version` và id của MRT đang dùng. Mở lại một lớp, hay lớp khác của cùng bức, thì dùng
-  lại; material đổi version (núm `rebuild`, thí nghiệm) thì dịch lại vật đó.
-- `getShaderAsync` dùng render context ở độ sâu gọi 0, còn scene pass vẽ ở độ sâu 1 (lồng trong lần vẽ quad; A.102): mỗi vật có thêm một
-  RenderObject (một lần dựng NodeBuilder trên CPU). three giữ program của GPU theo chính chuỗi mã (A.103), nên mã trùng thì không có lần
-  biên dịch GPU nào mới. Task 1 đo cả hai điều này (§21.9).
-- Gỡ cảnh (`disposer`) thì bỏ bộ nhớ mã.
+**Gỡ cảnh.** `translator.dispose()` thì lần dịch sau hỏng ngay; lần bắt đang chờ thì `draws.dispose()` làm hỏng (draws.js giữ chúng). Không có
+bộ nhớ mã nào để bỏ.
 
-**Bàn thợ.** `studio.translation(layerId)` → `Promise<Translation>`:
+**Bàn thợ.** `studio.translation(layerId)` → `Promise<Translation>` (không có tùy chọn: một bản dịch là một khung, không có tiến độ):
 ```js
 /** [9] @typedef {{ language: 'wgsl' | 'glsl', backend: 'webgpu' | 'webgl2',
  *   uniforms: { weight: string | null, knobs: Record<string, string> },   // tên trong mã; Cốt: weight null (luật 1)
- *   places: { key: string, label: string, owner: string | null, own: boolean, vertex: string | null, fragment: string,
- *             hits: { vertex: number, fragment: number }, ms: number, error?: string }[],   // ms: giữ khung của lần đọc (0: đã nhớ)
+ *   places: { key: string, label: string, owner: string | null, own: boolean, post: boolean, drawn: boolean, vertex: string | null,
+ *             fragment: string | null, hits: { vertex: number, fragment: number }, error?: string }[],
  *   jsOnly: boolean }} Translation   // jsOnly: không mã nào có uniform của lớp (places là vật của chính lớp) */
 ```
 `__sma.translate(layerId)` trả đúng object đó (DevTools, e2e).
@@ -5298,7 +5318,7 @@ tab Chỉnh.
 nút trên dải, như nút của Dial. Bản dịch trong tấm trượt của Sổ tay: khung mã cuộn riêng, dòng dài xuống dòng.
 
 **Chữ của xưởng** (`strings.vi.js`):
-- `t.translation`: `button` "Bản dịch", `object` "Vật", `vertex` "Đỉnh", `fragment` "Điểm ảnh", `translating(k, n)`, `status({ language,
+- `t.translation`: `button` "Bản dịch", `object` "Vật", `vertex` "Đỉnh", `fragment` "Điểm ảnh", `translating` "Đang dịch…", `status({ language,
   backend, lines, hits, layer })`, `weightHint(name)`, `jsOnly`, `post` "Lượt cuối · hậu kỳ", `failed`;
 - `t.recipe`: `title` "Công thức", `copy` "Chép link công thức", `copied` "Đã chép link", `copyFailed`, `summary(parts)`, `reset` "Về nguyên
   bản", `staticNote`.
@@ -5312,22 +5332,27 @@ Không có chữ mới trong `content` của các bức: nhãn vật đã có t�
 - **Test hợp đồng** thêm hai luật cho mọi bức đã deploy, để chuỗi công thức không bao giờ mơ hồ:
   - id Dial không trùng id lớp nào (`gio:23` chỉ có một nghĩa);
   - id lựa chọn của núm `select` khớp `^[A-Za-z0-9-]+$` (không có dấu phẩy, hai chấm). Bốn bức hiện đều đạt.
-- **Test luật** (`tests/rules/files.test.js`): chỉ `engine/gpu/translate.js` được gọi `debug.getShaderAsync` và đọc `_quadMesh`, như luật
-  `setRenderObjectFunction` của GĐ 5.
+- **Test luật** (`tests/rules/files.test.js`), như luật `setRenderObjectFunction` của GĐ 5:
+  - chỉ `engine/gpu/draws.js` được đọc `_objects` và `_currentRenderContext` của renderer (tự kiểm: file ấy còn đọc cả hai);
+  - không file nào trong `src/` gọi `getShaderAsync` (A.102: nó không trả mã của RenderObject đang vẽ).
+
+  Luật "không đổi `renderer.toneMapping` lúc chạy" không có ngoại lệ nào: Bản dịch đọc quad cuối lúc RenderPipeline vẽ nó, không dịch lại.
 - **Kích thước file:** `run.js` đã 248 dòng. Phần mở xưởng (lời mời, mở theo công thức) tách ra `engine/gpu/workshop-door.js` ở task thêm
   phần mở theo công thức (Task 6 của plan). `studio.js` không quá 250: phần công thức ở `recipe-set.js`.
-- **`CLAUDE.md`** thêm mục GĐ 9: đọc mã và biên dịch giữa chừng trong lúc giữ khung (`hold.js`), `_quadMesh`, dạng `#r=`, `replaceState`
-  có gộp.
+- **`CLAUDE.md`** thêm mục GĐ 9: biên dịch giữa chừng trong lúc giữ khung (`hold.js`); Bản dịch bắt lúc vẽ (`draws.js#capture`, hai trường
+  riêng của renderer, không `getShaderAsync`); dạng `#r=`, `replaceState` có gộp.
 
 ### 21.7 Chất lượng và hiệu năng
 
 - Không thêm draw call, không tốn gì mỗi khung khi không dùng. Đồng bộ thanh địa chỉ chạy theo thay đổi, không theo khung.
-- Bản dịch, trên Mac M2 (WebGPU, mức cao), bức có nhiều vật nhất:
-  - lần đọc đầu của một vật giữ khung tối đa 250 ms;
-  - lần dịch đầu cả bức xong trong 3 giây;
-  - mở lại không giữ khung và dưới 200 ms;
-  - sau khi dịch, khung hình không đổi (so checksum dưới `?freeze`) và số khung mỗi giây về như trước trong 3 giây.
-- Bộ nhớ mã: vài chục vật, mỗi vật vài chục kB chữ: dưới 2 MB, gỡ cùng cảnh.
+- Bản dịch là MỘT khung, đo trên Mac M2 (headless Chromium, GPU thật, mức cao, `?freeze=10`, 2026-10-09):
+  - từ lúc gọi tới lúc có kết quả (vẽ lại khung đứng yên một lần): 15–19 ms ở cả hai backend (Bức 1 Sương 19 ms WebGPU, 18 ms WebGL2;
+    Bức 4 Bản nét 18 ms cả hai; Phủ bóng 15–16 ms); lúc cảnh chạy là khung kế tiếp của vòng lặp;
+  - không giữ khung, không dựng, không biên dịch: số program của renderer trước và sau bằng nhau (Bức 1: 74 ở WebGPU, 67 ở WebGL2; Bức 4: 27
+    ở cả hai);
+  - khung bắt chỉ tra thêm một RenderObject cho mỗi lần vẽ và đọc chuỗi có sẵn; khung không bắt không tốn gì (móc không gắn);
+  - sau khi dịch, khung hình không đổi (so checksum dưới `?freeze`) và cảnh vẽ tiếp (e2e).
+- Không giữ mã giữa hai lần dịch: chuỗi chỉ sống trong Translation mà Sổ tay đang hiện (vài chục vật, mỗi vật vài chục kB chữ: dưới 2 MB).
 - Công thức không đổi gì của bộ điều chỉnh: nấc, mức, trần của núm giữ nguyên luật GĐ 3–4 (giá trị trong link bị kẹp theo trần của máy này).
 
 ### 21.8 Kiểm thử
@@ -5342,17 +5367,24 @@ Không có chữ mới trong `content` của các bức: nhãn vật đã có t�
 - `studio.js`: `applyRecipe` là trạng thái đủ; `reset`; `onChange` báo đúng một lần mỗi thay đổi; `recipe().text` rỗng ở nguyên bản.
 - `recipe-url.js` (cửa sổ giả): gộp 500 ms; ghi giữ query string; `SecurityError` thì thôi ghi; `hashchange` áp công thức; hash trống thì
   `reset`; ghi của chính nó không quay về như một lần đổi.
-- `translate.js` (renderer giả): target + MRT của scene pass đặt TRƯỚC lời gọi và còn nguyên tới khi lần chờ xong, rồi mới trả; mọi lần
-  đọc trong lúc giữ khung, và giữ luôn được thả kể cả khi `getShaderAsync` ném lỗi; mỗi lúc một lần dịch; nhớ theo version (lần sau không
-  gọi renderer); lượt cuối đổi rồi trả tone mapping và màu ra.
+- `draws.js#capture` (renderer giả có `_objects`, `_currentRenderContext`): Từng sợi tắt thì gắn, bắt, gỡ và trả đúng hàm cũ; Từng sợi bật
+  thì móc, `list()`, `counts()` còn nguyên, và `stop()` lúc bắt còn chờ chưa gỡ móc; lần vẽ mà `limit(k)` bỏ vẫn được bắt; phản chiếu không
+  bắt, quad cuối thì có (`post`); mã đọc bằng context lấy lúc vào móc; một vật đọc hỏng thì có `error`, vật khác vẫn có mã; `render()` ném
+  lỗi thì bắt ở khung sau; gỡ cảnh thì lần bắt chờ hỏng.
+- `translate.js` (móc giả): gắn lần bắt trước khi vẽ lại; thứ tự theo thứ tự phủ, không theo thứ tự vẽ; nhãn và `(i/n)`; vật của chính lớp
+  mà khung không vẽ thì `drawn: false`; vật không lớp nào giữ chỉ khi có uniform; quad cuối sau cùng; hai lượt (`passId`) là hai nơi; `jsOnly`;
+  WGSL/GLSL; lớp lạ; vẽ lại hỏng thì bản dịch hỏng mà không để lại lỗi lơ lửng.
 - `hold.js`: `run` đếm lồng nhau, thả cả khi lỗi; `idle()`; `onRelease`.
 - `scene-quality.js`: lúc giữ thì `sample()` trả `true`; thôi giữ thì `tuner.guard()` được gọi lại.
-- `scene.js`: `redraw()` chờ `hold.idle()`; `pipeline.compile()` chạy trong lúc giữ.
+- `scene.js`: `redraw()` chờ `hold.idle()`; `pipeline.compile()` chạy trong lúc giữ; Bản dịch bắt khung kế tiếp lúc cảnh chạy, vẽ lại khung
+  đứng yên dưới `?freeze`, gỡ cảnh thì lần bắt chờ hỏng.
 - `shader-text.js`: escape trước khi tô, các loại token, uniform so cả tên (`w_suong` không khớp `w_suong_2`), đếm dòng và `hits`.
 - `translation-view.js`, `recipe-panel.js`, `code-view.js` (jsdom): nút Bản dịch chỉ khi có `studio()`; Đỉnh/Điểm ảnh; dòng trạng thái;
   sáng dòng theo núm; chép link (clipboard giả, hỏng thì ô link); dòng tóm tắt; Về nguyên bản.
 - `boot.js`, `static.js`: công thức tới `run()`; tầng tĩnh thêm câu.
-- Ghim three: `RenderPipeline` có `_quadMesh` là Mesh; `debug.getShaderAsync` có mặt.
+- Ghim three 0.186.1 (`draws.test.js`): `Renderer._renderObjectDirect` tìm RenderObject bằng đúng lời gọi `this._objects.get( object,
+  material, scene, camera, lightsNode, this._currentRenderContext, clippingContext, passId )`; `QuadMesh` có `isQuadMesh`;
+  `RenderObject.getNodeBuilderState` có mặt.
 
 **Test của bức** (Node, `buildPainting`, `compileMaterial`): mỗi lớp của mỗi bức, liệt kê những vật mà mã có uniform của lớp, rồi ghi lại
 bằng bảng snapshot. Thay đổi làm một lớp mất khỏi mọi mã thì test đỏ và người sửa thấy ngay. Lượt cuối (quad của RenderPipeline) kiểm ở e2e.
@@ -5367,8 +5399,10 @@ bằng bảng snapshot. Thay đổi làm một lớp mất khỏi mọi mã thì
   - cảnh vẫn chạy sau đó (`frames` tăng);
   - dưới `?freeze`, ảnh sau khi dịch trùng ảnh trước.
 
-  Thêm một lần, chỉ trong e2e: so mã của một vật với mã của chính RenderObject mà lượt vẽ cảnh dùng (đọc bằng trường riêng của three trong
-  test, không phải trong code), ở cả hai backend.
+  E2e của `__sma.translate` (Task 2, mọi bức, cả hai backend): dưới `?freeze`, dịch lại ra cùng mã từng ký tự, nơi của lượt vẽ cảnh ghi ≥ 2
+  ảnh (MRT), quad cuối (`post`) có `w_phu_bong`, ảnh đứng yên không đổi; lúc cảnh chạy, hai lần dịch liền nhau ra cùng mã, cảnh vẽ tiếp,
+  không lỗi GPU (quét `log.all`). Kiểm một lần (script, không commit; §21.9): mã của mọi nơi trùng từng ký tự với mã của program GPU mà
+  backend vẽ, ở cả hai backend.
 - **Link công thức** (Bức 1 đủ đường, ba bức kia mở link):
   - mở `?force3d&freeze=N#r=…` thì `__sma.snapshot()` đúng công thức, thanh lớp mở với dòng tóm tắt, ảnh khác ảnh nguyên bản;
   - "Về nguyên bản" thì snapshot về mặc định và hash trống;
@@ -5396,7 +5430,7 @@ Như GĐ 6–8: làm thẳng trên nhánh `gd9-ban-dich-cong-thuc`, vừa làm v
 Plan: `docs/superpowers/plans/2026-10-08-gd9-ban-dich-cong-thuc.md` (chín task).
 1. **Hai task rủi ro nhất làm trước**, chạy thật trên Bức 1 (vật thường) và Bức 4 (lượt cuối), WebGPU trên GPU thật và WebGL2 SwiftShader:
    - Task 1: `hold.js` và sửa Normal lúc cảnh đang chạy (cùng bộ giữ), e2e đỏ trước trên code cũ;
-   - Task 2: `translate.js`, bàn thợ, `__sma.translate`.
+   - Task 2: `translate.js`, bàn thợ, `__sma.translate` (cuối cùng: bắt lúc vẽ qua `draws.js#capture`).
 
    **Luật dừng (Task 2):** một trong bốn điều sau không đạt thì dừng, báo Bao, và chọn đường lùi:
    - mã của vật trùng từng ký tự với mã của RenderObject mà lượt vẽ cảnh dùng, ở cả hai backend;
@@ -5406,6 +5440,21 @@ Plan: `docs/superpowers/plans/2026-10-08-gd9-ban-dich-cong-thuc.md` (chín task)
 
    **Đường lùi:** "bắt lúc vẽ": `draws.js` (chỗ duy nhất đặt móc) đọc RenderObject của lần vẽ thật bằng trường riêng của three; test ghim
    trường đó với three 0.186.1.
+
+   **Kết quả (2026-10-08, Mac M2, headless Chromium, `?freeze=10`): cách `getShaderAsync` không đạt điều 1, 2 và 4.**
+   - Mã lệch từng ký tự: Bức 1 lệch 8/10 vật ở WebGPU, 4/10 ở WebGL2 (tên `NodeBuffer_<id>`, thứ tự thành viên của struct uniform, thứ tự
+     hàm; Lá nổi và Mặt nước còn lệch cả sau khi bỏ số id); Bức 4 lệch Mười gà con, và quad cuối là một biến thể khác (vertex shader mặc
+     định thay cho `_vertexNode` của QuadMesh).
+   - Thêm program: Bức 1 74 → 89 (WebGPU), 67 → 74 (WebGL2); Bức 4 27 → 31 ở cả hai: `compileAsync` vẽ lại phản chiếu và scene pass ở độ
+     sâu gọi 0, và dựng quad với vertex shader mặc định.
+   - Lần đọc đầu của quad cuối Bức 4 lúc bộ đệm shader của máy còn lạnh: 738 ms (WebGPU), 696 ms (WebGL2); ấm thì 78–112 ms. Cả bức dưới
+     1 giây.
+   - Đạt: ảnh dưới `?freeze` không đổi, console sạch, mở lại không giữ khung.
+
+   Nguyên nhân ở Phụ lục A.102. Bao đồng ý đường lùi ngày 2026-10-09. Kiểm một lần cho đường lùi (2026-10-09; script, không commit), Bức 1
+   (Sương, Phủ bóng) và Bức 4 (Bản nét, Phủ bóng), WebGPU GPU thật và WebGL2: mã của MỌI nơi trùng từng ký tự với mã của program GPU mà
+   backend vẽ (`backend.draw` nhận RenderObject; `_pipelines.get(ro).pipeline` cho hai program), đo ở một khung riêng trước khung bắt; số
+   program trước và sau bằng nhau; mỗi bản dịch 15–19 ms.
 2. Task 3: Bản dịch trong Sổ tay: `shader-text.js`, `translation-view.js`, nút ở `code-view.js`, những nơi lớp có mặt, sáng theo núm.
 3. Task 4–5: công thức: `recipe.js`, `recipe-set.js`, áp lúc dựng (`createKnobs` nhận giá trị ban đầu), bàn thợ, `__sma`, câu của tầng tĩnh.
 4. Task 6: thanh địa chỉ và `hashchange` (`recipe-url.js`); mục Công thức, dòng tóm tắt, Về nguyên bản; tách `workshop-door.js` khỏi
@@ -5418,18 +5467,17 @@ Plan: `docs/superpowers/plans/2026-10-08-gd9-ban-dich-cong-thuc.md` (chín task)
 
 ### 21.10 Rủi ro riêng
 
-- **`getShaderAsync` không ra đúng mã đang chạy**: render context của nó ở độ sâu gọi 0, scene pass ở độ sâu 1 (A.102), nên là một
-  RenderObject khác.
-  - Lý do tin rằng mã vẫn trùng: mã sinh ra theo material, vật, đầu ra của render target và MRT; độ sâu gọi chỉ là khóa của bộ nhớ.
-  - Cách kiểm: Task 1 so từng ký tự với RenderObject thật (luật dừng). Lệch thì đi đường lùi.
-- **Khung vẽ trong lúc target, MRT đang đặt cho lần dịch**: giữ khung suốt lần đọc (§21.3); unit test giữ thứ tự đặt/trả.
-- **Cảnh khựng ở lần dịch đầu** (mỗi vật vài chục ms): một lần cho mỗi bức, có dòng "Đang dịch… (k/n)"; vượt 250 ms một vật hay 3 giây cả
-  bức trên M2 là luật dừng của Task 1.
+- **`getShaderAsync` không ra đúng mã đang chạy** (đã gặp ở Task 2, §21.9): RenderObject của nó nằm ở chain map khác (`'default'`; lần vẽ
+  dùng passId `null`) và dựng bằng một lần dựng NodeBuilder khác (A.102). Giải: bắt lúc vẽ (§21.3), kiểm một lần trùng từng ký tự với
+  program GPU ở cả hai backend; luật cấm `getShaderAsync` trong `src/`.
+- **Trường riêng của three đổi ở bản sau** (`_objects`, `_currentRenderContext`, lời gọi trong `_renderObjectDirect`, `isQuadMesh`): test ghim
+  đỏ khi nâng three; chỉ `draws.js` phải xem lại.
+- **Lần bắt không tới** (tab ẩn nên vòng lặp không vẽ, khung lỗi): bản dịch chờ khung vẽ kế tiếp; khung lỗi thì bắt ở khung sau; gỡ cảnh thì
+  hỏng kèm câu tiếng Việt, không treo mãi.
+- **Khung vẽ trong lúc biên dịch lại giữa chừng** (view Normal): giữ khung (§21.3).
 - **Bộ điều chỉnh hiểu quãng giữ là máy chậm**: thôi giữ thì đo lại từ đầu (§21.3).
-- **`_quadMesh` đổi ở bản three sau**: test ghim đỏ khi nâng three; lúc đó thay bằng một QuadMesh của xưởng mang cùng `outputNode` và
-  `contextNode`.
 - **Mã quá dài trên điện thoại** (800 dòng, dòng gần 1.000 ký tự): xuống dòng, cuộn riêng khung mã; vài nghìn `span` không làm chậm Sổ tay
-  (đo ở Task 2).
+  (đo ở Task 3).
 - **Safari giới hạn `replaceState`**: gộp 500 ms, bắt lỗi rồi thôi ghi (§21.4).
 - **Link dài**: chỉ ghi giá trị khác mặc định. Bức 1 (nhiều núm nhất) chỉnh hết mọi núm, tắt hết mọi lớp và kéo giờ thì chưa tới 1.500 ký tự,
   dưới trần 2.048 của `readRecipe`.
@@ -5972,15 +6020,28 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - Hệ quả: lớp chỉ cần ghi `array[i].set(…)` trước khi compute (mảng mỏ của Bức 4, mỗi khung), không `needsUpdate`, không dựng node mới.
     - WGSL đặt mảng trong một struct uniform riêng, tên theo `setName` (`array< vec4<f32>, 10 >`, có dấu cách: test so bằng regex). GLSL
       (transform feedback của WebGL2) đặt nó vào một khối `uniform NodeBuffer_<id>` và bỏ tên (như `CLAUDE.md` ghi từ GĐ 6 cho material).
-102. **`renderer.debug.getShaderAsync` đọc render target và MRT SAU lần chờ, và dùng render context ở độ sâu gọi 0**
-     (`renderers/common/Renderer.js#debug.getShaderAsync`, `renderers/common/RenderContexts.js#get`; GĐ 9, đọc mã nguồn):
-    - `getShaderAsync(scene, camera, object)` gọi `await this.compileAsync(object, camera, scene)` RỒI mới đọc `this._renderTarget ||
-      this._outputRenderTarget` (hay framebuffer target khi `needsFrameBufferTarget`) và `this._mrt` để lấy RenderObject. Target và MRT phải
-      còn đúng lúc lần chờ xong.
-    - Khóa của render context: số ảnh, format, type, samples, depth, stencil của target + id của MRT + độ sâu gọi. `getShaderAsync` và
-      `compileAsync` gọi `_renderContexts.get(target, mrt)`, tức độ sâu 0. `render()` dùng `_callDepth` (bắt đầu −1, tăng ở mỗi lần render
-      lồng): scene pass vẽ trong `updateBefore` của quad cuối nên ở độ sâu 1, và RenderObject của nó khác cái mà `getShaderAsync` lấy (thêm một
-      lần dựng NodeBuilder). Quad cuối vẽ ở độ sâu 0: với nó là cùng một RenderObject.
+102. **`renderer.debug.getShaderAsync` KHÔNG trả mã của RenderObject đang vẽ; móc lần vẽ tìm lại được đúng RenderObject ấy**
+     (`renderers/common/Renderer.js#debug.getShaderAsync`, `#_renderObjectDirect`, `#_renderScene`, `RenderObjects.js#get`,
+     `RenderContexts.js#get`, `Pipelines.js#getForRender`; GĐ 9, đọc mã nguồn rồi đo trên site, §21.9):
+    - `getShaderAsync(scene, camera, object)` gọi `await this.compileAsync(object, camera, scene)` rồi mới đọc `this._renderTarget ||
+      this._outputRenderTarget` và `this._mrt` để lấy RenderObject bằng `this._objects.get(…)` KHÔNG có passId: tham số mặc định của
+      `RenderObjects.getChainMap(passId = 'default')` chỉ áp cho `undefined`, nên nó tra chain map `'default'`. Lần vẽ (`_renderObjects`,
+      `renderObject`) và `compileAsync` truyền passId `null`. Nên nó KHÔNG BAO GIỜ trả RenderObject mà renderer vẽ, kể cả với quad cuối
+      (câu cũ "quad cuối ... cùng một RenderObject" là sai): nó lấy hay tạo một RenderObject riêng, mà NodeBuilderState đến từ bộ nhớ chung của
+      `Nodes` (khóa là cache key của RenderObject), tức lần dựng lúc `pipeline.compile()` mở trang (độ sâu gọi 0), không phải lần dựng của
+      scene pass (độ sâu 1: khóa của render context gồm cả độ sâu gọi).
+    - Mã sinh ra phụ thuộc lịch sử dựng: tên `NodeBuffer_<id của node>`, thứ tự thành viên của struct uniform, thứ tự hàm. Hai lần dựng cùng
+      material, target và MRT ra mã tương đương mà không trùng từng ký tự (Bức 1: 8/10 vật lệch ở WebGPU, 4/10 ở WebGL2).
+    - `compileAsync` của nó chạy `updateBefore` loại FRAME của từng vật (`frameId` đã tăng trong `nodeFrame.update()`): reflector vẽ lại phản
+      chiếu, PassNode vẽ lại scene pass, ở độ sâu gọi 0, nên có RenderObject mới với tên node mới, thành program mới (Bức 1: 74 → 89).
+    - Với quad cuối, `compileAsync(quad, camera, quad)` dùng `sceneRef = _scene` (lightsNode khác lần vẽ) và dựng không có `_vertexNode` của
+      QuadMesh (`QuadMesh.render` chỉ gán nó quanh lần vẽ của chính nó): một biến thể với vertex shader mặc định (`renderStruct`), thêm program.
+    - Cách đúng (GĐ 9, `draws.js#capture`): ngay trong lần vẽ, sau khi hàm vẽ gốc trả về, gọi lại đúng lời gọi của `_renderObjectDirect`:
+      `renderer._objects.get(object, material, scene, camera, lightsNode, context, clippingContext, passId)`, với `context` =
+      `renderer._currentRenderContext` lấy LÚC VÀO móc (`_renderScene` của lượt lồng đổi rồi trả nó). Cùng chain key (vật, material, context,
+      lightsNode; passId) thì ra đúng RenderObject vừa vẽ, không tạo mới; `getNodeBuilderState()` trả NodeBuilderState đã dựng, và
+      `Pipelines.getForRender` dùng chính hai chuỗi ấy làm khóa của program GPU (A.103). Quad cuối nhận ra bằng `isQuadMesh` ở lần vẽ ngoài
+      cùng. Đo một lần (§21.9): trùng từng ký tự với mã của program mà backend vẽ, không thêm program nào.
 103. **`compileAsync` chụp render context lúc gọi rồi nhường luồng chính giữa các vật; program giữ theo chuỗi mã**
      (`Renderer.js#compileAsync`, `#_createObjectPipeline`, `utils.js#yieldToMain`, `Pipelines.js#getForRender`; GĐ 9, đọc mã nguồn):
     - phần đồng bộ (tới trước lần chờ đầu) tính render context từ target và MRT đang đặt, chiếu vật vào render list, và mỗi vật thành một việc
@@ -5988,7 +6049,7 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - phần async làm từng việc: `await nodes.getForRenderAsync`, tạo pipeline, rồi `await yieldToMain()` (`scheduler.yield()`, không có thì
       `requestAnimationFrame`). Giữa hai vật, vòng lặp của trang vẽ được khung;
     - hệ quả: render context chụp lúc gọi, nhưng mã dựng sau đó đọc target và MRT HIỆN TẠI của renderer (A.105): trả target + MRT ngay sau
-      lời gọi thì dựng ra biến thể sai cho một render context đúng. Phải để chúng nguyên suốt lần chờ, và giữ khung (§21.3);
+      lời gọi thì dựng ra biến thể sai cho một render context đúng. Phải để chúng nguyên suốt lần chờ, và giữ khung (§21.3: `pipeline.compile`);
     - `Pipelines` giữ program đỉnh, điểm ảnh và compute trong `programs.vertex`, `.fragment`, `.compute`, khóa là chính chuỗi mã: RenderObject
       mới mà mã trùng thì dùng lại program cũ.
 104. **`RenderPipeline` vẽ quad cuối với tone mapping tắt; quad là trường riêng** (`renderers/common/RenderPipeline.js`; GĐ 9, đọc mã nguồn):
@@ -5996,7 +6057,8 @@ Các mục dưới đây đã được kiểm bằng ba cách:
       `this._quadMesh` (một `QuadMesh` với `NodeMaterial` tên `'RenderPipeline'`), rồi trả lại cả ba;
     - `_updateContext()` đặt `material.contextNode = context({ toneMapping, outputColorSpace, … })` (khi `outputColorTransform` là `false`) và
       `material.fragmentNode = outputNode`;
-    - không có API công khai trả quad hay mã của nó: xưởng đọc `_quadMesh`, chỉ ở `engine/gpu/translate.js` (test ghim, §21.8).
+    - không có API công khai trả quad hay mã của nó. GĐ 9 không chép việc này: Bản dịch bắt quad cuối ngay lúc RenderPipeline vẽ nó (A.102),
+      không đọc `_quadMesh`, không đổi tone mapping.
 105. **`NodeMaterial.setup` đọc render target và MRT của renderer lúc dựng; `PassNode.compileAsync` giữ chúng suốt lần chờ**
      (`materials/nodes/NodeMaterial.js#setup`, `nodes/display/PassNode.js#compileAsync`; GĐ 9, đọc mã nguồn và chạy thật trên site):
     - `setup(builder)` gọi `renderer.getRenderTarget()`; khác `null` thì ghép `renderer.getMRT()` (và `mrtNode` của material) vào đầu ra, và
@@ -6007,6 +6069,6 @@ Các mục dưới đây đã được kiểm bằng ba cách:
     - Đo trên site thật (2026-10-08, headless Chromium, GPU thật, không `?freeze`), Kính mài chọn Normal lúc cảnh đang chạy: WebGPU báo
       "Render pipeline creation failed … Color target has no corresponding fragment stage output" kèm hai lỗi GPU (Bức 1; Bức 4 năm dòng lỗi);
       WebGL2 báo mười bảy lần "GL_INVALID_OPERATION: glDrawArrays: Active draw buffers with missing fragment shader outputs". Xưởng biên dịch
-      và đọc mã trong lúc giữ khung (`engine/gpu/hold.js`, §21.3).
+      lại trong lúc giữ khung (`engine/gpu/hold.js`, §21.3); Bản dịch không đặt target nào (bắt lúc vẽ, A.102).
     - Lỗi GL của WebGL2 đến console ở mức `warning`, không phải `error`: e2e chỉ thấy khi quét `log.all` (§21.8). Trên SwiftShader (Bức 1)
       đo bảy lần (mười bảy trên GPU thật): số lần theo số khung vẽ lọt vào lúc chờ, nên khác nhau giữa các máy.

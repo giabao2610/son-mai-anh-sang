@@ -38,11 +38,12 @@ const NO_QUALITY = Object.freeze({
  *   bộ điều chỉnh của cảnh (scene.js): mức, nấc đang hạ, hạ/nâng tay một nấc
  * @param {{ list: () => { id: string, on: boolean }[], set: (id: string | null) => void }} [p.toolbox]  công cụ học (toolbox.js)
  * @param {ReturnType<typeof createDialSet>} [p.dials]   núm của cả bức (dial-set.js)
+ * @param {ReturnType<import('./translate.js').createTranslator> | null} [p.translator]   Bản dịch (GĐ 9); test không có
  * @returns {ReturnType<typeof createMeter> & object}  measure() và gpu() của bộ đo: scene.js đưa số vào mỗi khung
  */
 export function createStudio({
   meta, layers, weights, env, redraw = () => {}, tweenSeconds = TWEEN_SECONDS, quality = NO_QUALITY, toolbox = NO_TOOLS,
-  dials = createDialSet(),
+  dials = createDialSet(), translator = null,
 }) {
   const byId = new Map(layers.map((b) => [b.id, b]));
   const names = new Map(meta.layers.map((l) => [l.id, l.name]));
@@ -181,6 +182,15 @@ export function createStudio({
     /** Đổi một Dial (kẹp theo min/max/step); xong khi khung đã vẽ lại. */
     setDial(id, v) {
       return settle(() => dials.set(id, v));
+    },
+
+    /**
+     * Bản dịch của một lớp (GĐ 9, spec §21.3): Promise<Translation>, bắt từ khung vẽ kế tiếp (dưới ?freeze, bộ dịch vẽ lại khung đứng yên).
+     * Cảnh không có bộ dịch (test) thì Promise hỏng.
+     */
+    translation(layerId) {
+      layerOf(layerId);
+      return translator ? translator.translation(layerId) : Promise.reject(new Error('Cảnh này không có bản dịch'));
     },
 
     /**
