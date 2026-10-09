@@ -345,20 +345,22 @@ describe('pending, failed, hide', () => {
     expect(status.textContent).toBe(t.translation.failed);
   });
 
-  it('hide(): ẩn ô Vật, hai nút và dòng nhắc; dòng trạng thái rỗng; quên nơi, núm đang sáng', () => {
-    const { tr, status, hint, controls, view, lit } = mount();
+  it('hide(): ẩn ô Vật, hai nút và dòng nhắc; dòng trạng thái rỗng; quên nơi, danh sách nơi, núm đang sáng', () => {
+    const { tr, status, hint, controls, view, lit, select } = mount();
     tr.show(translation(), { layerName: 'Hai' });
     tr.light('glow');
     tr.hide();
     expect(controls.hidden).toBe(true);
     expect(hint.hidden).toBe(true);
     expect(status.textContent).toBe('');
+    expect(select.options, 'ô chọn ẩn không giữ nơi của lớp cũ').toHaveLength(0);
     expect(tr.key).toBeNull();
     // khung view là của bên ngoài (code-view.js) sau hide(); Bản dịch kế tiếp vẽ lại hoàn toàn và không sáng núm cũ
     view.textContent = 'code JS';
     tr.show(translation(), { layerName: 'Hai' });
     expect(view.querySelectorAll('.line')).toHaveLength(6);
     expect(lit()).toEqual([]);
+    expect([...select.options].map((o) => o.textContent), 'cùng danh sách nơi vẫn dựng lại ô chọn sau hide()').toEqual(['Lá · Hai', 'Thân · Hai', 'Lượt cuối · hậu kỳ']);
   });
 });
 

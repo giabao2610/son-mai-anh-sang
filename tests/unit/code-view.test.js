@@ -303,6 +303,113 @@ describe('createCodeView · nút "Bản dịch"', () => {
     });
   });
 
+  describe('lớp mới đang nạp: hàng nút của lớp cũ còn trong cây nhưng không còn dùng được (review Task 3)', () => {
+    /**
+     * Người xem đang ở Bản dịch (hay ở code JS) của lớp 'a' thì Sổ tay mở lớp 'b': notebook.js#show đã đặt tên và số của lớp mới, còn
+     * file của 'b' nạp chậm, nên trong khoảng ấy hàng nút vẫn là của 'a'. `loading` là lời hứa của show() của 'b'; `release()` cho file
+     * chậm nạp xong; `pressedBefore` là aria-pressed của hàng nút lúc còn là lớp 'a'. translateA nhận các lần gọi: lần đầu (người xem bấm
+     * khi 'a' còn là lớp đang xem) xong ngay, lần sau do `afterwards` quyết định.
+     */
+    async function switching({ inTranslation = true, afterwards = async () => translation() } = {}) {
+      const slow = defer();
+      const loadSlow = (file) => (file === 'b/parts/slow.js' ? slow.promise : load(file));
+      const code = createCodeView(document, { t, load: loadSlow });
+      const translateA = vi.fn().mockImplementationOnce(async () => translation()).mockImplementation(afterwards);
+      const translateB = vi.fn(async () => translation({ places: [place('y:', 'Cành · Hai')] }));
+      await code.show(['a/layers/l1.js'], { layerId: 'a', layerName: 'Một', translate: translateA });
+      if (inTranslation) {
+        q(code, '[data-code-translate]').click();
+        await settle();
+      }
+      const pressedBefore = bar(code).map((b) => b.getAttribute('aria-pressed'));
+      const loading = code.show(['b/parts/slow.js'], { layerId: 'b', layerName: 'Hai', translate: translateB });
+      return { code, translateA, translateB, loading, pressedBefore, release: () => slow.resolve({ html: html(9), knobs: {} }) };
+    }
+    const bar = (code) => [...code.el.querySelectorAll('.code-files button')];
+    /** Sau khi lớp 'b' nạp xong: hàng nút, code, dòng trạng thái đều là của 'b' (code JS, chưa dịch), mọi nút dùng được. */
+    function expectLayerB(code) {
+      expect(bar(code).map((b) => b.textContent), 'hàng nút phải là của lớp mới: show() của nó đã xong').toEqual(['slow.js', t.translation.button]);
+      expect(bar(code).map((b) => b.disabled)).toEqual([false, false]);
+      expect(q(code, '[data-code-translate]').getAttribute('aria-pressed')).toBe('false');
+      expect(code.el.querySelectorAll('.code-view [data-line]')).toHaveLength(9);
+      expect(q(code, '.shader')).toBeNull();
+      expect(status(code), 'không còn dòng trạng thái của lớp cũ').toBe('');
+      expect(q(code, '.tr-controls').hidden).toBe(true);
+      expect(code.el.querySelectorAll('[data-tr-place] option'), 'chưa dịch lớp mới: ô Vật không giữ nơi nào của lớp cũ').toHaveLength(0);
+    }
+    /** Bản dịch của lớp mới chạy bình thường: gọi translate của 'b', các nơi và dòng trạng thái là của 'b'. */
+    async function expectTranslatesB(code, translateB) {
+      q(code, '[data-code-translate]').click();
+      await settle();
+      expect(translateB.mock.calls).toEqual([['b']]);
+      expect([...code.el.querySelectorAll('[data-tr-place] option')].map((o) => o.textContent)).toEqual(['Cành · Hai']);
+      expect(status(code)).toContain('dòng có lớp Hai');
+    }
+
+    it('nút "Bản dịch" của lớp cũ bị khóa và bỏ chọn ngay khi lớp mới bắt đầu nạp; bấm nó không dịch lớp cũ, không hủy lần nạp; nạp xong thì mọi thứ là của lớp mới', async () => {
+      const { code, translateA, translateB, loading, pressedBefore, release } = await switching();
+      expect(pressedBefore, 'trước khi đổi lớp: đang ở Bản dịch').toEqual(['false', 'true']);
+      const old = bar(code);
+      expect(old.map((b) => b.textContent)).toEqual(['l1.js', t.translation.button]);
+      expect(old.map((b) => b.disabled), 'mọi nút của lớp cũ bị khóa').toEqual([true, true]);
+      expect(old.map((b) => b.getAttribute('aria-pressed')), 'và không nút nào còn đang chọn (Bản dịch đã tắt)').toEqual(['false', 'false']);
+      expect(status(code)).toBe('');
+      expect(q(code, '.code-view').textContent).toBe(t.notebook.loading);
+      old[1].click(); // người xem bấm "Bản dịch" của lớp cũ trong khoảng nạp
+      expect(q(code, '.code-view').textContent, 'cú bấm không làm gì').toBe(t.notebook.loading);
+      expect(status(code)).toBe('');
+      release();
+      await loading;
+      await settle();
+      expectLayerB(code);
+      expect(translateA, 'chỉ lần bấm đầu, lúc lớp cũ còn là lớp đang xem').toHaveBeenCalledTimes(1);
+      await expectTranslatesB(code, translateB);
+    });
+
+    it('nút tên file của lớp cũ cũng bị khóa và bỏ chọn: bấm nó không hiện code lớp cũ dưới tên lớp mới', async () => {
+      const { code, loading, pressedBefore, release } = await switching({ inTranslation: false });
+      expect(pressedBefore, 'trước khi đổi lớp: đang ở code JS của file đầu').toEqual(['true', 'false']);
+      const [file] = bar(code);
+      expect(file.disabled).toBe(true);
+      expect(bar(code).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false']);
+      file.click();
+      expect(q(code, '.code-view').textContent, 'khung vẫn là "Đang tải…", không phải code lớp cũ').toBe(t.notebook.loading);
+      release();
+      await loading;
+      await settle();
+      expectLayerB(code);
+    });
+
+    // Lớp phòng thủ thứ hai: `show()` và `translate()` không dùng chung bộ đếm, nên dù nút bị khóa mà vẫn có một cú bấm tới `translate()`
+    // (sự kiện tổng hợp, mà jsdom và vài trình duyệt cho qua nút disabled), lần nạp của lớp mới vẫn xong và xóa dấu vết của lớp cũ.
+    it('dù một cú bấm lọt qua nút đã khóa, lần dịch của lớp cũ không hủy lần nạp của lớp mới; khung về đúng lớp mới', async () => {
+      const { code, translateB, loading, release } = await switching();
+      const stale = q(code, '[data-code-translate]');
+      expect(stale.disabled).toBe(true);
+      stale.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await settle(); // lần dịch (muộn) của lớp cũ xong TRƯỚC khi lớp mới nạp xong
+      release();
+      await loading;
+      await settle();
+      expectLayerB(code);
+      await expectTranslatesB(code, translateB);
+    });
+
+    it('lần dịch của lớp cũ (cú bấm lọt qua nút khóa) về SAU khi lớp mới nạp xong thì bị bỏ, không đè lên code của lớp mới', async () => {
+      const slowA = defer();
+      const { code, loading, release } = await switching({ afterwards: () => slowA.promise });
+      q(code, '[data-code-translate]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      release();
+      await loading;
+      await settle();
+      expectLayerB(code);
+      slowA.resolve(translation({ places: [place('cu:', 'Nơi của lớp cũ')] }));
+      await settle();
+      expectLayerB(code);
+      expect(code.el.querySelectorAll('[data-tr-place] option')).toHaveLength(0);
+    });
+  });
+
   describe('refresh(): dịch lại sau 300 ms, chỉ khi đang ở Bản dịch', () => {
     /** Mở Bản dịch bằng đồng hồ giả. */
     async function inTranslation(translate) {

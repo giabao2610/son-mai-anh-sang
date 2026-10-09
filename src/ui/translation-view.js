@@ -158,11 +158,16 @@ export function createTranslationView(doc, { t, view }) {
     get key() {
       return place?.key ?? null;
     },
-    /** Khung view về tay code-view.js (code JS, hay lớp khác): giấu ô chọn, dòng nhắc, xóa dòng trạng thái, quên nơi và núm. */
+    /**
+     * Khung view về tay code-view.js (code JS, hay lớp khác): giấu ô chọn, dòng nhắc, xóa dòng trạng thái, quên nơi, núm và cả danh sách
+     * nơi: ô chọn ẩn mà còn giữ nơi của lớp cũ thì lớp mới mở ra với dữ liệu của lớp cũ trong cây.
+     */
     hide() {
       controls.hidden = true;
       hint.hidden = true;
       say('');
+      select.replaceChildren();
+      listed = '';
       tr = null;
       place = null;
       lit = null;

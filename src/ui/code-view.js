@@ -58,7 +58,8 @@ export function createCodeView(doc, { t, load = loadCode }) {
 
   let files = []; // [{ file, code, button }]
   let current = null;
-  let request = 0; // lần nạp hay lần dịch mới nhất: bỏ kết quả của lần cũ về muộn
+  let request = 0; // lần nạp (show) mới nhất: bỏ kết quả nạp của lần cũ về muộn
+  let ticket = 0; // lần dịch mới nhất: bỏ kết quả dịch của lần cũ về muộn. TÁCH khỏi `request`; show() cũng tăng nó
   let mode = 'js'; // 'js' | 'translation'
   let layer = { id: null, name: '', translate: null }; // lớp đang mở và hàm dịch của nó (null: tầng không có bản dịch)
   let toTranslation = null; // nút "Bản dịch" của lớp đang mở
@@ -84,17 +85,19 @@ export function createCodeView(doc, { t, load = loadCode }) {
   /**
    * Dịch bằng bàn thợ. fresh: người xem vừa bấm "Bản dịch" (xóa khung, bắt đầu lại); không thì là dịch lại sau một thay đổi, và khung
    * cũ ở nguyên tới khi có kết quả mới (xóa nó ở mỗi nhịp kéo núm thì khung nhấp nháy và Đỉnh/Điểm ảnh về mặc định). Kết quả chỉ được
-   * dùng khi VẪN là lần dịch mới nhất (`request`) và người xem VẪN ở Bản dịch (`mode`): showFile không tăng `request`, nên chỉ xét
-   * `request` thì kết quả về muộn sau một cú bấm tên file vẫn đè lên code JS.
+   * dùng khi VẪN là lần dịch mới nhất (`ticket`) và người xem VẪN ở Bản dịch (`mode`): showFile không tăng `ticket`, nên chỉ xét
+   * `ticket` thì kết quả về muộn sau một cú bấm tên file vẫn đè lên code JS.
+   * Bộ đếm này tách khỏi `request` của show(): chung một bộ đếm thì một cú bấm "Bản dịch" trong lúc lớp mới còn đang nạp làm show() tự bỏ
+   * cuộc (nó thấy bộ đếm đã đổi), nên hàng nút, khung và dòng trạng thái của lớp cũ ở lại dưới tên lớp mới.
    */
   const translate = async (fresh) => {
     stopTimer();
-    const mine = ++request;
+    const mine = ++ticket;
     mode = 'translation';
     for (const f of files) f.button.setAttribute('aria-pressed', 'false');
     toTranslation.setAttribute('aria-pressed', 'true');
     if (fresh) tr.pending();
-    const latest = () => mine === request && mode === 'translation';
+    const latest = () => mine === ticket && mode === 'translation';
     try {
       const result = await layer.translate(layer.id);
       if (latest()) tr.show(result, { layerName: layer.name, keep: fresh ? null : tr.key });
@@ -114,9 +117,17 @@ export function createCodeView(doc, { t, load = loadCode }) {
      */
     async show(fileList, { layerId = null, layerName = '', translate: run = null } = {}) {
       const mine = ++request;
+      ticket += 1; // một lần dịch của lớp cũ còn đang chờ thì thành vô hiệu
       stopTimer();
       mode = 'js';
       tr.hide();
+      // Hàng nút của lớp cũ còn nằm trong cây tới khi lớp mới nạp xong, mà Sổ tay đã mang tên và số của lớp mới từ lúc này: khóa nó và bỏ
+      // chọn, không thì bấm một nút của lớp cũ trong khoảng ấy dịch lớp cũ (hay hiện code lớp cũ) dưới tên lớp mới. Dùng `disabled`, không
+      // dùng `inert` (tầng tĩnh chạy cả trên Safari 14). Nút của lớp mới là phần tử mới nên không bị khóa.
+      for (const b of bar.querySelectorAll('button')) {
+        b.disabled = true;
+        b.setAttribute('aria-pressed', 'false');
+      }
       view.textContent = t.notebook.loading;
       const codes = await Promise.all(fileList.map((f) => load(f).catch((err) => {
         console.warn(`Không tải được code của ${f}:`, err);

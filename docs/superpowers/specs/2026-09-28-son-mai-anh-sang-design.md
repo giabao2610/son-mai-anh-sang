@@ -5317,7 +5317,11 @@ bộ nhớ mã nào để bỏ.
 - `ui/translation-view.js`: khung Bản dịch (ô Vật, hai nút Đỉnh/Điểm ảnh, dòng trạng thái, dòng nhắc, mã). `code-view.js` thêm nút "Bản
   dịch" và chuyển giữa hai khung; `light(knobId)` sáng cả dòng JS (như cũ) lẫn dòng của uniform trong Bản dịch đang mở. Kết quả của một
   lần dịch chỉ được dùng khi đó VẪN là lần dịch mới nhất và người xem VẪN ở Bản dịch (bấm tên một file không tăng bộ đếm lần dịch, nên
-  chỉ xét bộ đếm thì kết quả về muộn đè lên code JS). `code-view.js` đặt `refresh()` (300 ms, gộp lần gọi) vào sau mỗi thay đổi của núm
+  chỉ xét bộ đếm thì kết quả về muộn đè lên code JS). Bộ đếm lần dịch TÁCH khỏi bộ đếm lần nạp của `show()` (chung một bộ đếm thì bấm "Bản
+  dịch" của lớp cũ lúc file của lớp mới còn đang nạp làm `show()` tự bỏ cuộc, và hàng nút, khung, dòng trạng thái của lớp cũ ở lại dưới tên
+  lớp mới); `show()` cũng tăng bộ đếm lần dịch (lần dịch còn chờ của lớp cũ thành vô hiệu) và khóa hàng nút cũ ngay từ đầu (`disabled`,
+  bỏ `aria-pressed`; không dùng `inert`, tầng tĩnh chạy cả trên Safari 14) tới khi hàng nút mới thay vào; `hide()` của khung Bản dịch quên cả
+  danh sách nơi. `code-view.js` đặt `refresh()` (300 ms, gộp lần gọi) vào sau mỗi thay đổi của núm
   hay thí nghiệm: `notebook.js#track` gọi nó, vì cả hai đều đi qua `track`.
 - `ui/recipe-panel.js`: mục "Công thức" của thanh lớp (nút chép link, dòng trạng thái, ô link khi chép hỏng) và dòng tóm tắt + "Về nguyên
   bản" ở đầu thanh. `workshop.open({ recipe })` hiện dòng tóm tắt.
