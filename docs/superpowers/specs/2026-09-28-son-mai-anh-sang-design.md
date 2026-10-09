@@ -5087,7 +5087,9 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
   - ô chọn **Vật** (`<select>` có nhãn): những nơi lớp có mặt (dưới đây);
   - hai nút **Đỉnh / Điểm ảnh** (`aria-pressed`): vertex shader hay fragment shader. Mặc định là phần có nhiều dòng của lớp hơn; bằng nhau
     thì Điểm ảnh;
-  - một dòng trạng thái (`aria-live`): "WGSL · WebGPU · 412 dòng · 6 dòng có lớp Sương". WebGL2 thì "GLSL ES 3.0 · WebGL2";
+  - một dòng trạng thái (`aria-live`): "WGSL · WebGPU · 412 dòng · 6 dòng có lớp Sương". WebGL2 thì "GLSL ES 3.0 · WebGL2". Vùng này luôn
+    nằm trong cây và không có tổ tiên nào `hidden` (chữ điền cùng nhịp với lúc bỏ `hidden` thì VoiceOver bỏ qua); trống thì CSS thu lại
+    bằng `:empty`. Chỉ ô Vật, hai nút và dòng nhắc ẩn, tới khi có gì để chọn;
   - một dòng nhắc, cố định cho mọi lớp trừ Cốt: "Mài lớp này chỉ đổi số trong `w_suong`: mã không đổi, nên không biên dịch lại." (luật 2
     của kỹ thuật, thấy tận mắt).
 - Mã hiện theo dòng, có số dòng, tô màu bằng bảng sơn mài (§21.5). Dòng dài (mã sinh ra có dòng gần 1.000 ký tự) thì xuống dòng, thụt vào
@@ -5097,16 +5099,21 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
   - núm `uniform`: `<id>_<knobId>` (`knob-set.js#uniformName`). Núm `js`, `rebuild` không có uniform: rê lên chúng chỉ sáng code JS, như
     trước.
 - Rê một núm (`onHover` của Tweakpane, như code JS đang làm): sáng đúng các dòng có uniform của núm ấy, và khung mã cuộn tới dòng đầu.
+  Dòng ấy nằm ở 1/3 phần khung mà người xem THẤY: tab Chỉnh dài hơn màn hình laptop (bảy núm cộng đầu khung Bản dịch), nên khung hay thò
+  xuống dưới đáy Sổ tay, và 1/3 cả khung là chỗ bị cắt (đo trên Bức 1 ở 1280 × 800).
 - Mở Bản dịch: "Đang dịch…" tới khi khung vẽ kế tiếp xong. Xưởng đọc mã của chính khung ấy (§21.3): cảnh không khựng, không giữ khung;
   dưới `?freeze`, khung đứng yên được vẽ lại một lần.
 - Đổi núm hay bật thí nghiệm lúc Bản dịch đang mở thì dịch lại (chờ 300 ms sau thay đổi cuối): núm `rebuild` hay thí nghiệm có thể đổi
-  material, nên mã đổi.
+  material, nên mã đổi. Dịch lại KHÔNG xóa khung: nơi đang xem, phần Đỉnh/Điểm ảnh và núm đang sáng ở nguyên chỗ, dòng "Đang dịch…" không
+  hiện, và mã y hệt thì khung không vẽ lại, dòng trạng thái không ghi lại (kéo một núm `uniform` không đổi mã, nên không có gì nhấp nháy,
+  trình đọc màn hình không đọc lại câu cũ). Chỉ cú bấm "Bản dịch" xóa khung và bắt đầu lại từ nơi đầu tiên.
 
 **Những nơi lớp có mặt.** Nhiều lớp không có vật riêng (`objects: []`): Sương góp vào shader của lá sen, Bản màu của Bức 4 góp vào material
 của đàn gà, Bản nét và Phủ bóng nằm trong lượt hậu kỳ. Nên danh sách Vật không lấy từ `layer.objects` của riêng lớp:
 - xưởng đọc mã của mọi **vật vẽ được** của bức trong khung bắt được: Mesh, InstancedMesh, Sprite, Points, Line có material, tìm trong
   `objects` của mọi lớp, kể cả con của một Group; mỗi cặp (vật, lượt vẽ) một mục; vật của chính lớp mà khung ấy không vẽ vẫn có mục (không
-  có mã). Vật không lớp nào giữ chỉ thành mục khi mã có uniform của lớp. Cộng một mục **"Lượt cuối · hậu kỳ"**: quad của RenderPipeline
+  có mã: dòng trạng thái là "Vật này không được vẽ ở khung vừa rồi (đang ẩn hay ngoài khung nhìn).", khung mã trống, hai nút Đỉnh/Điểm
+  ảnh bị khóa). Vật không lớp nào giữ chỉ thành mục khi mã có uniform của lớp. Cộng một mục **"Lượt cuối · hậu kỳ"**: quad của RenderPipeline
   (§21.3);
 - giữ những mục mà mã có uniform của lớp (so cả tên, `\b<tên>\b`, không so tiền tố). Thứ tự: vật của chính lớp, rồi vật của các lớp khác
   theo thứ tự phủ, rồi vật không lớp nào giữ, rồi lượt cuối;
@@ -5296,18 +5303,22 @@ bộ nhớ mã nào để bỏ.
 ### 21.5 Giao diện và chữ
 
 **File mới ở `ui/`** (DOM thuần, không import engine hay three; mọi thứ của cảnh qua `studio()`):
-- `ui/shader-text.js`: hàm thuần `shaderHtml(code, { language, layerUniforms, knobUniforms })` → `{ html, lines, hits }`. Escape HTML
-  trước, rồi tô:
+- `ui/shader-text.js`: hàm thuần `shaderHtml(code, { uniforms })` → `{ html, lines, hits }` (`uniforms`: mọi tên uniform của lớp, trọng số và
+  núm; mã rỗng hay `null` ra khung rỗng, 0 dòng; WGSL và GLSL dùng chung một bộ token nên không cần `language`). Escape TỪNG token lúc ghi
+  ra, rồi tô:
   - từ khóa (WGSL: `fn let var const return if else for loop break continue struct switch case default discard`; GLSL: thêm `void in out
     uniform layout precision highp mediump`);
   - kiểu (`f32 i32 u32 bool vec2…4 vec2f… mat3x3 mat4x4 texture_2d sampler`; GLSL `float int vec2…4 mat3 mat4 sampler2D`);
-  - số, chú thích `//`, thuộc tính WGSL (`@location`, `@builtin`, `@group`, `@binding`, `@vertex`, `@fragment`);
+  - số (`1`, `1.`, `.5`, `1e-3`, `2u`, `0x1Fu`), chú thích `//`, thuộc tính WGSL (`@location`, `@builtin`, `@group`, `@binding`, `@vertex`, `@fragment`);
   - uniform của lớp: `<span class="u-layer" data-u="<tên>">`; dòng có nó mang `is-layer`.
 
   Màu lấy từ theme của code sống (§7: chữ ngà trên đen then, từ khóa vàng lá…), cùng luật tương phản ≥ 4,5:1. Không kéo Shiki vào lúc chạy:
   Shiki và ngữ pháp WGSL/GLSL nặng hơn cả chunk của Sổ tay, mà mã sinh ra chỉ cần chừng ấy loại token.
 - `ui/translation-view.js`: khung Bản dịch (ô Vật, hai nút Đỉnh/Điểm ảnh, dòng trạng thái, dòng nhắc, mã). `code-view.js` thêm nút "Bản
-  dịch" và chuyển giữa hai khung; `light(knobId)` sáng cả dòng JS (như cũ) lẫn dòng của uniform trong Bản dịch đang mở.
+  dịch" và chuyển giữa hai khung; `light(knobId)` sáng cả dòng JS (như cũ) lẫn dòng của uniform trong Bản dịch đang mở. Kết quả của một
+  lần dịch chỉ được dùng khi đó VẪN là lần dịch mới nhất và người xem VẪN ở Bản dịch (bấm tên một file không tăng bộ đếm lần dịch, nên
+  chỉ xét bộ đếm thì kết quả về muộn đè lên code JS). `code-view.js` đặt `refresh()` (300 ms, gộp lần gọi) vào sau mỗi thay đổi của núm
+  hay thí nghiệm: `notebook.js#track` gọi nó, vì cả hai đều đi qua `track`.
 - `ui/recipe-panel.js`: mục "Công thức" của thanh lớp (nút chép link, dòng trạng thái, ô link khi chép hỏng) và dòng tóm tắt + "Về nguyên
   bản" ở đầu thanh. `workshop.open({ recipe })` hiện dòng tóm tắt.
 
@@ -5318,8 +5329,9 @@ tab Chỉnh.
 nút trên dải, như nút của Dial. Bản dịch trong tấm trượt của Sổ tay: khung mã cuộn riêng, dòng dài xuống dòng.
 
 **Chữ của xưởng** (`strings.vi.js`):
-- `t.translation`: `button` "Bản dịch", `object` "Vật", `vertex` "Đỉnh", `fragment` "Điểm ảnh", `translating` "Đang dịch…", `status({ language,
-  backend, lines, hits, layer })`, `weightHint(name)`, `jsOnly`, `post` "Lượt cuối · hậu kỳ", `failed`;
+- `t.translation`: `button` "Bản dịch", `object` "Vật", `stages` "Phần của shader", `vertex` "Đỉnh", `fragment` "Điểm ảnh", `translating`
+  "Đang dịch…" (chuỗi thường, không đếm), `status({ language, backend, lines, hits, layer })`, `weightHint(name)`, `jsOnly`, `post` "Lượt
+  cuối · hậu kỳ", `notDrawn` "Vật này không được vẽ ở khung vừa rồi (đang ẩn hay ngoài khung nhìn).", `failed`;
 - `t.recipe`: `title` "Công thức", `copy` "Chép link công thức", `copied` "Đã chép link", `copyFailed`, `summary(parts)`, `reset` "Về nguyên
   bản", `staticNote`.
 

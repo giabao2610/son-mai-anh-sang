@@ -244,6 +244,51 @@ body:is([data-state='lost'], [data-state='loading'], [data-state='compiling'], [
   box-shadow: inset 3px 0 0 var(--vang-la);
 }
 
+/* ── Bản dịch (GĐ 9): mã shader thật do three sinh, tô bởi ui/shader-text.js, trong cùng khung cuộn với code sống ─────
+   .tr-status là vùng aria-live: không bao giờ hidden, trống thì thu lại bằng :empty. Ô Vật, hai nút và dòng nhắc thì hidden tới khi có gì chọn. */
+.tr-head { margin-bottom: 8px; }
+.tr-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.tr-place { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; font: 600 11px/1.4 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--vang-la); }
+.tr-place select,
+.tr-stages button {
+  padding: 4px 10px;
+  font: 400 12px/1.4 var(--mono);
+  color: var(--bac-la);
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--bac-la) 30%, transparent);
+  border-radius: 999px;
+}
+.tr-place select { min-width: 0; max-width: 100%; color-scheme: dark; cursor: pointer; } /* dark: danh sách thả xuống không trắng chữ sáng */
+.tr-stages { display: flex; gap: 6px; }
+.tr-stages button[aria-pressed='true'] { color: var(--den-then); background: var(--vang-la); border-color: var(--vang-la); }
+.tr-stages button:disabled { cursor: default; opacity: 0.45; }
+.tr-status,
+.tr-hint { margin: 6px 0 0; font-size: 12px; line-height: 1.5; color: var(--dat-set); }
+.tr-status:empty { margin: 0; }
+/* Mỗi dòng mã là một khối, xuống dòng được (mã sinh ra có dòng dài tới hàng nghìn ký tự); số dòng nằm trong phần thụt, dòng nối tiếp
+   thụt vào sau nó. white-space: normal trên <pre>: giữa các khối là ký tự \n, và trong <pre> nó thành một dòng trống (đo trên Chromium:
+   bước dòng 18 → 37 px); mỗi dòng tự giữ khoảng trắng bằng pre-wrap. Số dòng là nội dung sinh bằng CSS với chữ thay thế rỗng: không
+   chép theo mã, và trình đọc màn hình bỏ qua. */
+.code-view .shader { background: var(--den-then); color: var(--nga); white-space: normal; }
+.code-view .shader .line { display: block; white-space: pre-wrap; overflow-wrap: anywhere; padding-left: 3.8em; text-indent: -3.2em; }
+.code-view .shader .line::before {
+  content: attr(data-line);
+  content: attr(data-line) / '';
+  display: inline-block;
+  width: 2.8em;
+  margin-right: 0.4em;
+  text-align: right;
+  color: var(--dat-set);
+}
+.shader .line.is-layer { box-shadow: inset 3px 0 0 var(--vang-la); } /* dòng có uniform của lớp: vạch vàng lá bên trái */
+.shader .u-layer { text-decoration: underline var(--vang-la); text-underline-offset: 2px; }
+/* Sáu màu của theme code sống (plugins/vite-plugin-code-view.js#lacquerTheme); số dùng đỏ son pha ngà như theme, vì đỏ son nguyên chất quá tối. */
+.shader .tk-k { color: var(--vang-la); }
+.shader .tk-t { color: var(--vang-la-sang); }
+.shader .tk-n { color: #D08476; }
+.shader .tk-c { color: var(--dat-set); font-style: italic; }
+.shader .tk-a { color: var(--bac-la); }
+
 /* ── Phá: nút bật/tắt thí nghiệm và bảng số đo ─────────────────────────────────────── */
 .nb-experiments { padding: 0 !important; list-style: none; }
 .nb-experiments li { padding: 10px 0; border-bottom: 1px solid color-mix(in srgb, var(--vang-la) 15%, transparent); }

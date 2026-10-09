@@ -63,6 +63,17 @@ function fakeStudio() {
     compare: (layerId, id) => (id === 'so'
       ? { off: { ms: 16.7, cpuMs: 2, gpuMs: 4 }, on: { ms: 33.4, cpuMs: 9.5, gpuMs: null } }
       : { off: null, on: null }),
+    /** Bản dịch (GĐ 9): một nơi có mã giả, trọng số `w_<id>` (Cốt không có). */
+    translation: vi.fn(async (id) => ({
+      language: 'wgsl',
+      backend: 'webgpu',
+      uniforms: { weight: id === 'cot' ? null : `w_${id}`, knobs: { size: 'cot_size' } },
+      places: [{
+        key: 'o:', label: 'Vật', owner: id, own: true, post: false, drawn: true, vertex: 'fn v() {}', fragment: `fn f() {\n  let a = w_${id};\n}`,
+        hits: { vertex: 0, fragment: 1 },
+      }],
+      jsOnly: false,
+    })),
   };
 }
 
@@ -274,6 +285,79 @@ describe('Sổ tay', () => {
     expect(notebook.querySelector('[data-line="2"]').classList.contains('is-lit')).toBe(true);
     await opts.onChange('size', 0.8);
     expect(studio.setKnob).toHaveBeenCalledWith('cot', 'size', 0.8);
+    workshop.dispose();
+  });
+
+  it('Chỉnh (GĐ 9): có bàn thợ thì có nút "Bản dịch" gọi studio.translation(id lớp), ghi tên lớp lên dòng trạng thái; tầng tĩnh không có nút', async () => {
+    const studio = fakeStudio();
+    const { workshop, notebook } = mount(studio);
+    workshop.open({ grind: true });
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(notebook.querySelector('[data-code-translate]')).not.toBeNull());
+    notebook.querySelector('[data-code-translate]').click();
+    expect(studio.translation.mock.calls).toEqual([['cot']]);
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-status').textContent).toContain('dòng có lớp Cốt'));
+    expect(notebook.querySelector('.tr-hint').hidden, 'Cốt không có trọng số: không có dòng nhắc').toBe(true);
+    // lớp khác: khung về code JS (Bản dịch không đi theo sang lớp khác), nút dịch lớp mới
+    document.querySelector('[data-layer="hai"] .rail-name').click();
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-status').textContent).toBe(''));
+    await vi.waitFor(() => expect(notebook.querySelector('.code-view [data-line="1"]')).not.toBeNull());
+    notebook.querySelector('[data-code-translate]').click();
+    expect(studio.translation).toHaveBeenLastCalledWith('hai');
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-hint').textContent).toBe(t.translation.weightHint('w_hai')));
+    workshop.dispose();
+
+    document.body.replaceChildren();
+    const readOnly = mount(null);
+    readOnly.workshop.open({ grind: true });
+    await vi.waitFor(() => expect(readOnly.notebook.querySelector('.code-view [data-line="1"]')).not.toBeNull());
+    expect(readOnly.notebook.querySelector('[data-code-translate]')).toBeNull();
+    readOnly.workshop.dispose();
+  });
+
+  it('Bản dịch đang mở: núm áp xong hay thí nghiệm áp xong thì dịch lại sau 300 ms (kéo liền nhiều lần chỉ dịch một lần); code JS thì không dịch', async () => {
+    const studio = fakeStudio();
+    const { workshop, rail, notebook } = mount(studio);
+    workshop.open({ grind: true });
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(knobsModule.mountKnobs).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(notebook.querySelector('[data-code-translate]')).not.toBeNull());
+    const { opts } = knobsModule.mountKnobs.mock.results[0].value;
+    vi.useFakeTimers();
+    await opts.onChange('size', 0.6); // đang ở code JS: không dịch
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(studio.translation).not.toHaveBeenCalled();
+    vi.useRealTimers();
+    notebook.querySelector('[data-code-translate]').click();
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-status').textContent).toContain('dòng có lớp'));
+    expect(studio.translation).toHaveBeenCalledTimes(1);
+
+    vi.useFakeTimers();
+    await opts.onChange('size', 0.7);
+    await vi.advanceTimersByTimeAsync(200);
+    await opts.onChange('size', 0.8); // kéo tiếp: hẹn lại từ lần này
+    await vi.advanceTimersByTimeAsync(299);
+    expect(studio.translation).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(studio.translation).toHaveBeenCalledTimes(2);
+    expect(studio.translation).toHaveBeenLastCalledWith('cot');
+
+    // thí nghiệm ở tab Phá của lớp đang xem cũng làm Bản dịch đang mở dịch lại
+    rail.querySelector('[data-layer="hai"] .rail-name').click();
+    await vi.advanceTimersByTimeAsync(0);
+    vi.useRealTimers();
+    await vi.waitFor(() => expect(notebook.querySelector('[data-code-translate]')).not.toBeNull());
+    notebook.querySelector('[data-code-translate]').click();
+    await vi.waitFor(() => expect(studio.translation).toHaveBeenCalledTimes(3));
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-status').textContent).toContain('dòng có lớp Hai'));
+    notebook.querySelector('[data-tab="pha"]').click();
+    vi.useFakeTimers();
+    notebook.querySelector('[data-experiment="pha"]').click();
+    await vi.advanceTimersByTimeAsync(299);
+    expect(studio.translation).toHaveBeenCalledTimes(3);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(studio.translation).toHaveBeenCalledTimes(4);
+    expect(studio.translation).toHaveBeenLastCalledWith('hai');
     workshop.dispose();
   });
 

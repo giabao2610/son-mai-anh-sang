@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// tests/unit/code-view.test.js — khung code của một lớp: glob ?code, đổi file, sáng dòng theo núm.
-import { describe, it, expect, vi } from 'vitest';
+// tests/unit/code-view.test.js — khung code của một lớp: glob ?code, đổi file, sáng dòng theo núm, và (GĐ 9) nút "Bản dịch" chuyển qua mã shader.
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createCodeView, hasCode } from '../../src/ui/code-view.js';
 import t from '../../src/ui/strings.vi.js';
 
@@ -84,5 +84,375 @@ describe('createCodeView', () => {
     release({ html: html(2), knobs: {} });
     await first;
     expect(code.el.querySelectorAll('[data-line]')).toHaveLength(9);
+  });
+});
+
+// ─── Bản dịch (GĐ 9) ─────────────────────────────────────────────────────────────────────────────────────────────
+const place = (key, label, over = {}) => ({
+  key,
+  label,
+  owner: 'a',
+  own: true,
+  post: false,
+  drawn: true,
+  vertex: 'fn v() {\n  return w_a;\n}', // 3 dòng, 1 có lớp
+  fragment: 'fn f() {\n  let g = a_glow;\n  let w = w_a;\n}', // 4 dòng, 2 có lớp (a_glow ở dòng 2)
+  hits: { vertex: 1, fragment: 2 },
+  ...over,
+});
+const translation = (over = {}) => ({
+  language: 'wgsl',
+  backend: 'webgpu',
+  uniforms: { weight: 'w_a', knobs: { glow: 'a_glow' } },
+  places: [place('x:', 'Lá · Một'), place('post:0', 'Lượt cuối · hậu kỳ', { own: false, post: true })],
+  jsOnly: false,
+  ...over,
+});
+const defer = () => {
+  const d = {};
+  d.promise = new Promise((resolve, reject) => {
+    d.resolve = resolve;
+    d.reject = reject;
+  });
+  return d;
+};
+/** Mở khung code của lớp 'a' với một hàm dịch (null: tầng không có bản dịch). */
+async function open(translate, files = ['a/layers/l1.js']) {
+  const code = createCodeView(document, { t, load });
+  await code.show(files, { layerId: 'a', layerName: 'Một', translate });
+  return code;
+}
+const settle = async () => {
+  for (let i = 0; i < 6; i += 1) await Promise.resolve();
+};
+const q = (code, sel) => code.el.querySelector(sel);
+const status = (code) => q(code, '.tr-status').textContent;
+const statusLine = (lines, hits) => t.translation.status({ language: 'wgsl', backend: 'webgpu', lines, hits, layer: 'Một' });
+/** Không phần tử nào từ .tr-status lên tới gốc khung code (gồm cả gốc) có thuộc tính hidden. */
+function expectLiveRegionVisible(code, where) {
+  for (let node = q(code, '.tr-status'); node; node = node.parentElement) {
+    expect(node.hidden, `${where}: ${node.className || node.tagName} đang hidden`).toBe(false);
+    if (node === code.el) return;
+  }
+  throw new Error('.tr-status không nằm trong khung code');
+}
+
+describe('createCodeView · nút "Bản dịch"', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('có translate thì hàng nút hiện kể cả khi lớp chỉ có một file, và nút "Bản dịch" đứng cuối', async () => {
+    const code = await open(vi.fn());
+    expect(q(code, '.code-files').hidden).toBe(false);
+    const buttons = [...code.el.querySelectorAll('.code-files button')];
+    expect(buttons.map((b) => b.textContent)).toEqual(['l1.js', t.translation.button]);
+    expect(buttons.at(-1).hasAttribute('data-code-translate')).toBe(true);
+    expect(buttons.at(-1).getAttribute('aria-pressed')).toBe('false');
+    expect(buttons.at(-1).type).toBe('button');
+    const many = await open(vi.fn(), ['a/layers/l1.js', 'a/parts/p.js']);
+    expect([...many.el.querySelectorAll('.code-files button')].map((b) => b.textContent)).toEqual(['l1.js', 'p.js', 'Bản dịch']);
+  });
+
+  it('không có translate (tầng tĩnh) thì không có nút, và một file thì không hiện hàng nút', async () => {
+    for (const code of [await open(null), await open(undefined)]) {
+      expect(code.el.querySelector('[data-code-translate]')).toBeNull();
+      expect(q(code, '.code-files').hidden).toBe(true);
+    }
+    const noOptions = createCodeView(document, { t, load });
+    await noOptions.show(['a/layers/l1.js']);
+    expect(noOptions.el.querySelector('[data-code-translate]')).toBeNull();
+  });
+
+  it('show() cho lớp khác thì nút Bản dịch của lớp cũ đi mất, nút mới gọi translate với id lớp mới', async () => {
+    const first = vi.fn(async () => translation());
+    const second = vi.fn(async () => translation());
+    const code = await open(first);
+    await code.show(['a/parts/p.js'], { layerId: 'b', layerName: 'Hai', translate: second });
+    expect(code.el.querySelectorAll('[data-code-translate]')).toHaveLength(1);
+    q(code, '[data-code-translate]').click();
+    expect(first).not.toHaveBeenCalled();
+    expect(second.mock.calls).toEqual([['b']]);
+    await settle();
+    expect(status(code)).toContain('dòng có lớp Hai');
+  });
+
+  it('bấm thì gọi translate(layerId) (một đối số), hiện "Đang dịch…" trong lúc chờ, rồi hiện kết quả', async () => {
+    const d = defer();
+    const translate = vi.fn(() => d.promise);
+    const code = await open(translate);
+    const button = q(code, '[data-code-translate]');
+    button.click();
+    expect(translate.mock.calls).toEqual([['a']]);
+    expect(status(code)).toBe('Đang dịch…');
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(q(code, '.code-files button').getAttribute('aria-pressed'), 'tên file không còn được chọn').toBe('false');
+    expect(q(code, '.code-view').textContent, 'code JS đã ra khỏi khung, chưa có mã shader').toBe('');
+    d.resolve(translation());
+    await settle();
+    expect(code.el.querySelectorAll('.code-view .shader .line')).toHaveLength(4);
+    expect(status(code)).toBe(statusLine(4, 2));
+    expect(q(code, '.tr-controls').hidden).toBe(false);
+    expect([...code.el.querySelectorAll('[data-tr-place] option')].map((o) => o.textContent)).toEqual(['Lá · Một', 'Lượt cuối · hậu kỳ']);
+  });
+
+  it('bấm tên file thì về code JS: mã shader, ô Vật và dòng trạng thái đều đi, nút Bản dịch hết bấm', async () => {
+    const code = await open(vi.fn(async () => translation()));
+    q(code, '[data-code-translate]').click();
+    await settle();
+    expect(q(code, '.shader')).not.toBeNull();
+    q(code, '.code-files button').click();
+    expect(q(code, '.shader')).toBeNull();
+    expect(code.el.querySelectorAll('.code-view [data-line]')).toHaveLength(5);
+    expect(status(code)).toBe('');
+    expect(q(code, '.tr-controls').hidden).toBe(true);
+    expect(q(code, '[data-code-translate]').getAttribute('aria-pressed')).toBe('false');
+    expect(q(code, '.code-files button').getAttribute('aria-pressed')).toBe('true');
+    expect(code.light('size'), 'về code JS thì núm js sáng dòng như cũ').toBe(1);
+  });
+
+  it('bấm Bản dịch lần nữa sau khi về code JS thì dịch lại từ đầu (Điểm ảnh mặc định, nơi đầu)', async () => {
+    const translate = vi.fn(async () => translation());
+    const code = await open(translate);
+    q(code, '[data-code-translate]').click();
+    await settle();
+    q(code, '[data-tr-stage="vertex"]').click();
+    q(code, '.code-files button').click();
+    q(code, '[data-code-translate]').click();
+    await settle();
+    expect(translate).toHaveBeenCalledTimes(2);
+    expect(q(code, '[data-tr-stage="fragment"]').getAttribute('aria-pressed')).toBe('true');
+    expect(code.el.querySelectorAll('.shader .line')).toHaveLength(4);
+  });
+
+  it('đang ở Bản dịch thì light(núm) sáng dòng của uniform, không chuyển về code JS; núm không có uniform thì 0', async () => {
+    const code = await open(vi.fn(async () => translation()), ['a/layers/l1.js', 'a/parts/p.js']);
+    q(code, '[data-code-translate]').click();
+    await settle();
+    expect(code.light('glow')).toBe(1);
+    expect([...code.el.querySelectorAll('.shader .is-lit')].map((el) => el.dataset.line)).toEqual(['2']);
+    expect(code.light('size'), 'size có marker trong l1.js nhưng không có uniform').toBe(0);
+    expect(q(code, '.shader'), 'vẫn ở Bản dịch').not.toBeNull();
+    expect(q(code, '[data-code-translate]').getAttribute('aria-pressed')).toBe('true');
+    expect(code.light(null)).toBe(0);
+    expect(code.el.querySelectorAll('.is-lit')).toHaveLength(0);
+  });
+
+  it('hover núm bắt đầu và kết thúc lúc đã về code JS: không còn dòng sáng nào của Bản dịch cũ khi vào lại', async () => {
+    const code = await open(vi.fn(async () => translation()));
+    q(code, '[data-code-translate]').click();
+    await settle();
+    code.light('glow');
+    q(code, '.code-files button').click(); // về code JS khi núm còn đang rê
+    code.light(null);
+    q(code, '[data-code-translate]').click();
+    await settle();
+    expect(code.el.querySelectorAll('.shader .is-lit')).toHaveLength(0);
+  });
+
+  describe('kết quả của lần dịch cũ về muộn bị bỏ', () => {
+    it('người xem đã đổi lớp (show() lại)', async () => {
+      const d = defer();
+      const code = await open(vi.fn(() => d.promise));
+      q(code, '[data-code-translate]').click();
+      await code.show(['a/parts/p.js'], { layerId: 'b', layerName: 'Hai', translate: vi.fn(async () => translation()) });
+      d.resolve(translation());
+      await settle();
+      expect(q(code, '.shader')).toBeNull();
+      expect(code.el.querySelectorAll('.code-view [data-line]')).toHaveLength(9);
+      expect(status(code)).toBe('');
+    });
+
+    it('người xem đã bấm tên file (showFile không tăng request: phải xét cả mode)', async () => {
+      const d = defer();
+      const code = await open(vi.fn(() => d.promise));
+      q(code, '[data-code-translate]').click();
+      q(code, '.code-files button').click();
+      d.resolve(translation());
+      await settle();
+      expect(q(code, '.shader')).toBeNull();
+      expect(code.el.querySelectorAll('.code-view [data-line]')).toHaveLength(5);
+      expect(status(code)).toBe('');
+      expect(q(code, '.tr-controls').hidden).toBe(true);
+    });
+
+    it('người xem bấm Bản dịch hai lần: chỉ kết quả của lần bấm sau được dùng', async () => {
+      const first = defer();
+      const second = defer();
+      const translate = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+      const code = await open(translate);
+      q(code, '[data-code-translate]').click();
+      q(code, '[data-code-translate]').click();
+      second.resolve(translation({ places: [place('moi:', 'Nơi mới')] }));
+      await settle();
+      first.resolve(translation({ places: [place('cu:', 'Nơi cũ')] }));
+      await settle();
+      expect([...code.el.querySelectorAll('[data-tr-place] option')].map((o) => o.textContent)).toEqual(['Nơi mới']);
+    });
+
+    it('lần dịch cũ hỏng muộn cũng không ghi "chưa dịch được" lên khung đã sang việc khác', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const d = defer();
+      const code = await open(vi.fn(() => d.promise));
+      q(code, '[data-code-translate]').click();
+      q(code, '.code-files button').click();
+      d.reject(new Error('muộn'));
+      await settle();
+      expect(status(code)).toBe('');
+      warn.mockRestore();
+    });
+  });
+
+  describe('refresh(): dịch lại sau 300 ms, chỉ khi đang ở Bản dịch', () => {
+    /** Mở Bản dịch bằng đồng hồ giả. */
+    async function inTranslation(translate) {
+      vi.useFakeTimers();
+      const code = await open(translate);
+      q(code, '[data-code-translate]').click();
+      await vi.advanceTimersByTimeAsync(0);
+      return code;
+    }
+
+    it('gọi lại translate đúng sau 300 ms; nhiều lần refresh gộp thành một, tính từ lần cuối', async () => {
+      const translate = vi.fn(async () => translation());
+      const code = await inTranslation(translate);
+      expect(translate).toHaveBeenCalledTimes(1);
+      code.refresh();
+      await vi.advanceTimersByTimeAsync(299);
+      expect(translate).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(translate).toHaveBeenCalledTimes(2);
+      expect(translate.mock.calls[1]).toEqual(['a']);
+      code.refresh();
+      await vi.advanceTimersByTimeAsync(100);
+      code.refresh();
+      await vi.advanceTimersByTimeAsync(100);
+      code.refresh();
+      await vi.advanceTimersByTimeAsync(299);
+      expect(translate).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(translate).toHaveBeenCalledTimes(3);
+    });
+
+    it('không đang ở Bản dịch (code JS, hay không có translate) thì không làm gì', async () => {
+      vi.useFakeTimers();
+      const translate = vi.fn(async () => translation());
+      const code = await open(translate);
+      code.refresh();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(translate).not.toHaveBeenCalled();
+      const plain = await open(null);
+      plain.refresh();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(q(plain, '.tr-status').textContent).toBe('');
+    });
+
+    it('người xem về code JS trong lúc chờ 300 ms: lần dịch lại bị hủy', async () => {
+      const translate = vi.fn(async () => translation());
+      const code = await inTranslation(translate);
+      code.refresh();
+      q(code, '.code-files button').click();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(translate).toHaveBeenCalledTimes(1);
+      expect(q(code, '.shader')).toBeNull();
+    });
+
+    it('không xóa khung trong lúc dịch lại, không đổi dòng trạng thái; giữ nơi, Đỉnh/Điểm ảnh và núm đang sáng', async () => {
+      const d = defer();
+      const translate = vi.fn().mockResolvedValueOnce(translation()).mockReturnValueOnce(d.promise);
+      const code = await inTranslation(translate);
+      const select = q(code, '[data-tr-place]');
+      select.value = '1';
+      select.dispatchEvent(new Event('change'));
+      q(code, '[data-tr-stage="vertex"]').click(); // người xem chọn nơi thứ hai, phần Đỉnh
+      code.light('glow'); // vertex của place() không có a_glow: núm được nhớ, chưa sáng dòng nào
+      const shader = q(code, '.shader');
+      const before = status(code);
+      code.refresh();
+      await vi.advanceTimersByTimeAsync(300);
+      expect(translate).toHaveBeenCalledTimes(2);
+      expect(q(code, '.shader'), 'khung vẫn còn trong lúc chờ').toBe(shader);
+      expect(status(code)).toBe(before);
+      d.resolve(translation({ places: [place('x:', 'Lá · Một'), place('post:0', 'Lượt cuối · hậu kỳ', { own: false, post: true, vertex: 'fn v() {\n  return w_a;\n  // mới\n}' })] }));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(select.value, 'vẫn ở nơi thứ hai').toBe('1');
+      expect(q(code, '[data-tr-stage="vertex"]').getAttribute('aria-pressed')).toBe('true');
+      expect(code.el.querySelectorAll('.shader .line'), 'mã mới có thêm một dòng').toHaveLength(4);
+      q(code, '[data-tr-stage="fragment"]').click();
+      expect(code.el.querySelectorAll('.shader .is-lit'), 'núm vẫn được nhớ qua lần dịch lại').toHaveLength(1);
+    });
+
+    it('lần dịch lại về muộn sau khi người xem đã về code JS thì bị bỏ', async () => {
+      const d = defer();
+      const translate = vi.fn().mockResolvedValueOnce(translation()).mockReturnValueOnce(d.promise);
+      const code = await inTranslation(translate);
+      code.refresh();
+      await vi.advanceTimersByTimeAsync(300);
+      q(code, '.code-files button').click();
+      d.resolve(translation());
+      await vi.advanceTimersByTimeAsync(0);
+      expect(q(code, '.shader')).toBeNull();
+      expect(status(code)).toBe('');
+      expect(q(code, '.tr-controls').hidden).toBe(true);
+    });
+
+    it('dịch lại hỏng thì báo "chưa dịch được" và ghi console.warn bằng tiếng Việt', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const translate = vi.fn().mockResolvedValueOnce(translation()).mockRejectedValueOnce(new Error('hỏng'));
+      const code = await inTranslation(translate);
+      code.refresh();
+      await vi.advanceTimersByTimeAsync(300);
+      expect(status(code)).toBe(t.translation.failed);
+      expect(warn.mock.calls[0][0]).toMatch(/dịch/);
+      warn.mockRestore();
+    });
+  });
+
+  it('dịch hỏng (Promise từ chối, hay ném ngay): dòng "chưa dịch được", console.warn, và các nút tên file vẫn dùng được', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    for (const translate of [vi.fn(async () => { throw new Error('hỏng'); }), vi.fn(() => { throw new Error('ném ngay'); })]) {
+      const code = await open(translate);
+      q(code, '[data-code-translate]').click();
+      await settle();
+      expect(status(code)).toBe(t.translation.failed);
+      q(code, '.code-files button').click();
+      expect(code.el.querySelectorAll('.code-view [data-line]')).toHaveLength(5);
+      expect(status(code)).toBe('');
+    }
+    expect(warn).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
+  });
+
+  it('vùng aria-live .tr-status không bao giờ nằm trong phần tử hidden: lúc rảnh, lúc dịch, có kết quả, hỏng, về code JS', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const d = defer();
+    const code = await open(vi.fn().mockReturnValueOnce(d.promise).mockRejectedValueOnce(new Error('x')));
+    expectLiveRegionVisible(code, 'rảnh');
+    q(code, '[data-code-translate]').click();
+    expectLiveRegionVisible(code, 'đang dịch');
+    d.resolve(translation());
+    await settle();
+    expectLiveRegionVisible(code, 'có kết quả');
+    q(code, '.code-files button').click();
+    expectLiveRegionVisible(code, 'về code JS');
+    q(code, '[data-code-translate]').click();
+    await settle();
+    expectLiveRegionVisible(code, 'hỏng');
+    expect(q(code, '.tr-status').getAttribute('aria-live')).toBe('polite');
+    // Thứ tự trong khung: hàng nút, khung Bản dịch, rồi khung mã (cuộn riêng)
+    expect([...code.el.children].map((el) => el.className)).toEqual(['code-files', 'tr-head', 'code-view']);
+    warn.mockRestore();
+  });
+
+  it('show() lại (đổi lớp, hay "Dựng lại cảnh") đưa khung về code JS', async () => {
+    const translate = vi.fn(async () => translation());
+    const code = await open(translate);
+    q(code, '[data-code-translate]').click();
+    await settle();
+    await code.show(['a/layers/l1.js'], { layerId: 'a', layerName: 'Một', translate });
+    expect(q(code, '.shader')).toBeNull();
+    expect(code.el.querySelectorAll('.code-view [data-line]')).toHaveLength(5);
+    expect(status(code)).toBe('');
+    expect(q(code, '[data-code-translate]').getAttribute('aria-pressed')).toBe('false');
   });
 });

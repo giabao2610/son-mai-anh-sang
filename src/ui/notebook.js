@@ -53,6 +53,8 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
 
   const layerOf = (id) => meta.layers.find((l) => l.id === id);
   const specOf = (id) => studio()?.layers().find((l) => l.id === id) ?? null;
+  /** Bản dịch của một lớp (GĐ 9): hỏi bàn thợ ĐANG CÓ lúc bấm (cảnh dựng lại thì bàn thợ đổi). Không có bàn thợ: code-view không có nút. */
+  const translateLayer = (id) => studio().translation(id);
 
   /**
    * Chờ một thay đổi (núm, thí nghiệm) xong; trong lúc chờ hiện "đang dựng…". Áp không được thì ghi log và báo một
@@ -70,6 +72,7 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
     } finally {
       pending -= 1;
       if (pending === 0) busy.textContent = failed ? t.notebook.changeFailed : '';
+      code.refresh(); // Bản dịch đang mở thì dịch lại: núm 'rebuild' và thí nghiệm có thể đã đổi material
     }
   };
 
@@ -228,7 +231,7 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
       no.textContent = t.notebook.layerNo(index + 1, meta.layers.length);
       title.textContent = layer.name;
       panels.hieu.replaceChildren(...understandPage(doc, { layer, text: content?.layers?.[id], t }).filter(Boolean));
-      code.show(layer.files);
+      code.show(layer.files, { layerId: id, layerName: layer.name, translate: studio() ? translateLayer : null });
       if (paneFor !== id) disposePane();
       renderBreak();
       el.hidden = false;

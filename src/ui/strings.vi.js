@@ -137,8 +137,26 @@ const t = {
   views: { final: 'Ảnh cuối', emissive: 'Chỉ emissive', normal: 'Normal', depth: 'Depth' },
   /** Dòng trạng thái (aria-live) trên thanh công cụ: view Normal phải biên dịch lại một lần. */
   toolStatus: { grinding: 'đang mài…', failed: 'Không mài được view này; vẫn giữ view cũ.' },
-  /** Bản dịch (GĐ 9): mã shader thật của những nơi một lớp có mặt. `post`: nhãn của quad cuối (mọi phần hậu kỳ ghép lại). */
-  translation: { post: 'Lượt cuối · hậu kỳ' },
+  /**
+   * Bản dịch (GĐ 9, spec §21.1): khung mã shader thật trong tab Chỉnh. `post`: nhãn của quad cuối (mọi phần hậu kỳ ghép lại).
+   * `translating` là chuỗi thường: một bản dịch chỉ là một khung vẽ, nên không có tiến độ để đếm.
+   */
+  translation: {
+    button: 'Bản dịch',
+    object: 'Vật',
+    stages: 'Phần của shader',
+    vertex: 'Đỉnh',
+    fragment: 'Điểm ảnh',
+    post: 'Lượt cuối · hậu kỳ',
+    translating: 'Đang dịch…',
+    status: ({ language, backend, lines, hits, layer }) => `${language === 'wgsl' ? 'WGSL' : 'GLSL ES 3.0'} · `
+      + `${backend === 'webgpu' ? 'WebGPU' : 'WebGL2'} · ${num(lines)} dòng · ${num(hits)} dòng có lớp ${layer}`,
+    weightHint: (name) => `Mài lớp này chỉ đổi số trong ${name}: mã không đổi, nên không biên dịch lại.`,
+    jsOnly: 'Lớp này đổi cảnh bằng JS: trọng số và núm của nó không vào shader.',
+    /** Vật của chính lớp mà khung vừa bắt không vẽ (đang ẩn, hay nằm ngoài khung nhìn): không có mã để đọc. */
+    notDrawn: 'Vật này không được vẽ ở khung vừa rồi (đang ẩn hay ngoài khung nhìn).',
+    failed: 'Chưa dịch được vật này; chi tiết ở console của trình duyệt.',
+  },
   /** Sổ tay của một lớp: ba tab Hiểu / Chỉnh / Phá. */
   notebook: {
     label: 'Sổ tay',
