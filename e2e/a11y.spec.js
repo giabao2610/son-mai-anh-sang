@@ -73,7 +73,8 @@ for (const { meta, page: htmlPage } of paintings) {
       }
 
       test('thanh lớp + Sổ tay (Hiểu, Chỉnh, Phá) và khi một công cụ bật: không lỗi serious/critical', async ({ page }, testInfo) => {
-        test.setTimeout(180_000);
+        // 300 s (từ 180, sau GĐ 9): thêm một lần quét cho Chỉnh của mỗi lớp, mà runner vẽ Cung Quế chỉ 1–2 khung/giây.
+        test.setTimeout(300_000);
         await openWorkshop(page, testInfo);
         const notebook = page.locator('[data-notebook]');
         const errors = await audit(page, 'Hiểu');

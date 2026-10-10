@@ -112,6 +112,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks(); // spyOn (console.error…): trả lại cả khi một expect hỏng giữa test
 });
 
 describe('chế độ mài', () => {
@@ -231,7 +232,6 @@ describe('chế độ mài', () => {
     expect(rail.querySelector('[data-layer="hai"] [role="switch"]').getAttribute('aria-checked')).toBe('false');
     expect(error).toHaveBeenCalledTimes(1);
     workshop.dispose();
-    error.mockRestore();
   });
 });
 
