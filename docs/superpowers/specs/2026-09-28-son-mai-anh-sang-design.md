@@ -2494,6 +2494,9 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
     - (sau GĐ 7) thời gian thật của lượt CI đầu, và vì sao job WebGPU chỉ chạy test khói của Bức 3: §19.9;
     - (sau GĐ 8) thời gian thật của lượt CI đầu có Bức 4 (PR #9), vì sao hai loại test của Bức 4 hỏng trên runner, và vì sao job WebGPU
       của Bức 4 cũng chỉ chạy test khói: §20.9.
+    - (sau GĐ 9, đợt dọn nợ) `e2e` và `e2e-webgpu` có trần 55 phút (từ 40). Ở mọi lượt của PR #10, bước e2e chặn của Cung Quế mất
+      28,9–29,0 phút, của Ao Sen Đêm 16,7–28,6 phút tùy runner; cộng bước cài Chromium (có lúc gần 7 phút) là sát 40, mà job này chặn
+      deploy. Bước e2e WebGPU của Ao Sen Đêm mất 18,7–32,8 phút.
 - **URL:** `https://giabao2610.github.io/son-mai-anh-sang/`.
 - **Luật trong `CLAUDE.md`:**
   - **Nguồn tham chiếu:**
@@ -2690,6 +2693,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | (GĐ 9) Bản dịch theo từng sợi | Khi người xem cần | Bảng của Từng sợi thêm nút "Xem bản dịch" của sợi đang xem; dùng chung `translate.js` |
 | (GĐ 9) Công thức mang thí nghiệm, góc camera | Khi Bao chọn | Thêm loại khóa riêng cho thí nghiệm và cho camera; Bức 4 tự khép lại, nên góc camera chỉ có nghĩa ở Bức 1–3 |
 | (GĐ 9) Chia sẻ bằng bảng chia sẻ của điện thoại | Khi thấy cần | Nút chép link dùng `navigator.share` trên máy có bảng chia sẻ, chép link ở máy khác |
+| (Sau GĐ 9) Chia e2e của một bức nặng thành nhiều job | Khi job chặn của một bức tới gần trần 55 phút (Cung Quế: 29 phút sau GĐ 9) | `scripts/e2e-groups.js` cho bức nặng nhiều nhóm theo file spec (`e2e/<slug>-<phần>.spec.js` đã có từ GĐ 8) hay theo `--shard` riêng trong nhóm đó; test luật vẫn đòi mỗi test thuộc đúng một nhóm |
 
 **Không làm**, và lý do:
 - **npm workspaces:** một repo, một người đọc; thư mục cộng test ranh giới là đủ.
@@ -5515,7 +5519,8 @@ bằng bảng snapshot. Thay đổi làm một lớp mất khỏi mọi mã thì
   - Đèn Kéo Quân gần gấp đôi ở cả hai job (8,7 → 16,7 và 9,5 → 18,1 phút), vì mỗi bức có thêm test Bản dịch, Mở link, Normal lúc cảnh chạy.
   - Ao Sen Đêm ở job WebGPU lên 33,4 phút (GĐ 8: 27,0), trên trần 40.
   - Đàn Gà Mẹ Con ở job chặn giảm (21,5 → 11,4 phút): ở GĐ 8 có một test hỏng, chạy hai lần.
-- Bức sau thêm test chung cho mọi bức mà job WebGPU của Bức 1 vượt trần thì bật `ciWebgpuSmoke` cho Bức 1, như Bức 3 và Bức 4.
+- Bức sau thêm test chung cho mọi bức mà job WebGPU của Bức 1 vượt trần thì bật `ciWebgpuSmoke` cho Bức 1, như Bức 3 và Bức 4. (Đợt dọn
+  nợ sau GĐ 9: chưa vượt lần nào, nên chưa bật; trần của cả hai job e2e lên 55 phút, §13.)
 
 **Kiểm tay** (thêm vào §12): Safari trên Mac và iPhone (thanh địa chỉ đổi theo khi mài; chép link; mở link nhận được); VoiceOver đọc dòng
 trạng thái của Bản dịch và dòng "Đã chép link".

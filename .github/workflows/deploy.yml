@@ -67,11 +67,12 @@ jobs:
         run: node scripts/e2e-groups.js >> "$GITHUB_OUTPUT"
 
   # Cổng chặn phần 2: tranh tĩnh + WebGL2 trên SwiftShader (kèm a11y), mỗi nhóm một job chạy song song. GĐ 3 đo được khoảng 12 phút
-  # e2e cho một bức.
+  # e2e cho một bức. Trần 55 phút (sau GĐ 9, từ 40): riêng bước e2e của Cung Quế mất 28,9–29,0 phút ở mọi lượt của PR #10, của Ao Sen
+  # Đêm từ 16,7 tới 28,6 phút tùy runner; cộng bước cài Chromium (có lúc gần 7 phút) là sát 40, mà job này chặn deploy.
   e2e:
     needs: nhom-e2e
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 55
     strategy:
       fail-fast: false
       matrix:
@@ -130,13 +131,13 @@ jobs:
           retention-days: 7
 
   # WebGPU trên SwiftShader (Chromium đầy đủ): KHÔNG chặn, chia theo nhóm như e2e chặn. Tách job riêng từ GĐ 3: hỏng hay treo cũng
-  # không kéo cổng chặn theo. Trần 40 phút cho mỗi nhóm: trước khi chia, riêng e2e đã mất khoảng 18,5 phút cho một bức, còn bước cài
-  # Chromium kèm thư viện hệ thống lúc 19 giây, lúc gần 7 phút (PR #5 bị hủy ở trần 25 phút dù mọi test đã chạy đều qua).
+  # không kéo cổng chặn theo. Bước cài Chromium kèm thư viện hệ thống lúc 19 giây, lúc gần 7 phút (PR #5 bị hủy ở trần 25 phút dù mọi
+  # test đã chạy đều qua). Trần 55 phút cho mỗi nhóm (sau GĐ 9, từ 40): bước e2e của Ao Sen Đêm mất 18,7–32,8 phút ở PR #10.
   e2e-webgpu:
     needs: nhom-e2e
     runs-on: ubuntu-latest
     continue-on-error: true
-    timeout-minutes: 40
+    timeout-minutes: 55
     strategy:
       fail-fast: false
       matrix:
