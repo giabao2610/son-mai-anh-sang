@@ -71,7 +71,7 @@ export function syncRecipeUrl({ win, studio, onApplied }) {
     written = isReset ? '' : fromHash(hash); // chuỗi đang nằm trên thanh địa chỉ, ngay lúc này
     queue = queue
       .then(() => apply(hash))
-      .catch((err) => console.error('Công thức: áp hash mới không được, cảnh giữ trạng thái đang có:', err))
+      .catch((err) => console.error('Công thức: áp hash mới hay mở xưởng sau đó không được:', err))
       .finally(() => {
         waiting -= 1;
         if (waiting === 0 && !disposed) schedule(); // MỘT lần ghi dạng chuẩn (số làm tròn, mục hỏng bỏ), sau lần áp cuối

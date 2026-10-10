@@ -2,7 +2,7 @@
 
 /**
  * Số đã kẹp trong [min, max] về nấc gần nhất tính từ min (Math.round: nửa nấc làm tròn lên), bỏ sai số dấu phẩy động, rồi không vượt max
- * (max lệch nấc thì về nấc ngay dưới nó). Hàm thuần, dùng chung cho Dial và (GĐ 9) núm số của công thức trong link.
+ * (làm tròn vượt max thì lấy chính max, kể cả max lệch nấc: 4096 với nấc 100 vẫn là 4096). Hàm thuần, dùng chung cho Dial và (GĐ 9) núm số của công thức trong link.
  * @param {number} clamped
  * @param {{ min: number, max: number, step: number }} range
  */
