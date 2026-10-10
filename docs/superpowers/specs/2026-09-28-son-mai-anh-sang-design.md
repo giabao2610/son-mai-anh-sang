@@ -2763,8 +2763,8 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
   Tránh lá thật sự để sau (§16).
 - **(GĐ 9) Nút màu của Tweakpane không có tên (axe `button-name`).** Núm màu `rimColor`, `candleColor` của lớp Ánh trăng (Bức 1) dựng nút
   `tp-colswv_b` không có tên; Task 7 thấy khi test a11y của GĐ 9 mở Chỉnh của lớp ấy. Lỗi có từ trước (không do GĐ 9), nên test a11y của
-  GĐ 9 dùng lớp khác. Sửa ở `ui/knobs.js` (đặt `aria-label` cho nút đó sau khi dựng núm màu) trong một task riêng, rồi cho test a11y quét cả
-  lớp Ánh trăng. Tới lúc đó VoiceOver đọc nút ấy không tên.
+  GĐ 9 dùng lớp khác. **Đã sửa sau GĐ 9** (đợt dọn nợ): `ui/knobs.js` đặt `aria-label` (nhãn của núm) cho mọi `input`, `select` và
+  `button` của blade, và test a11y quét Chỉnh của MỌI lớp ở cả bốn bức, có ô màu thì quét cả lúc bảng chọn màu mở.
 
 ---
 
