@@ -1,5 +1,6 @@
 // engine/gpu/recipe-set.js — công thức của MỘT cảnh (GĐ 9): mặc định của máy đang xem, phân loại mục của #r= thành trọng số/núm/Dial, khác biệt, tóm tắt, và ba hàm của bàn thợ.
 import { RECIPE_PREFIX, formatValue, readRecipe, stepDecimals, writeRecipe } from '../recipe.js';
+import { snapDial } from './dial-set.js';
 import { knobValue, normalizeKnob } from './knob-set.js';
 
 const WEIGHT_DECIMALS = 2;
@@ -80,9 +81,7 @@ export function createRecipeSet({ modules, env, dials = [], dialDefaults = {} })
             if (!Number.isFinite(w)) throw new Error(`"${value}" không phải số`);
             out.weights[key] = Math.min(Math.max(w, 0), 1);
           } else if (dialById.has(key)) {
-            const v = Number(value);
-            if (!Number.isFinite(v)) throw new Error(`"${value}" không phải số`);
-            out.dials[key] = v; // dial-set.js kẹp và làm tròn theo step khi đặt
+            out.dials[key] = snapDial(dialById.get(key), value); // làm tròn theo step MỘT lần, ở đây
           } else {
             throw new Error('khóa lạ');
           }

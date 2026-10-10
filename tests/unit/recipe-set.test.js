@@ -1,6 +1,8 @@
 // tests/unit/recipe-set.test.js — công thức của một cảnh (GĐ 9): mặc định theo máy, phân loại, khác biệt, tóm tắt, ba hàm của bàn thợ.
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createRecipeSet, recipeMethods } from '../../src/engine/gpu/recipe-set.js';
+import { createDialSet } from '../../src/engine/gpu/dial-set.js';
+import { uniform } from 'three/tsl';
 
 const vua = { tier: 'webgl2', level: 'vua', budget: {}, now: new Date('2026-09-28T14:00:00Z'), mobile: false };
 const thap = { ...vua, level: 'thap' };
@@ -133,5 +135,39 @@ describe('recipeMethods', () => {
     expect(tweenAll).toHaveBeenCalledTimes(1);
     expect(restore).toHaveBeenCalledWith({ knobs: make().defaults.knobs, dials: { gio: 21 } });
     expect(m.recipe().text).toBe('');
+  });
+});
+
+describe('Dial mặc định không nằm trên nấc (GĐ 9, giờ thật của Bức 1)', () => {
+  const rigOff = () => {
+    const hour = uniform(21.6167);
+    const dialDef = { id: 'gio', uniform: hour, min: 18, max: 29.5, step: 0.25 };
+    const dialSet = createDialSet([dialDef]);
+    const recipes = createRecipeSet({ modules, env: vua, dials: [dialDef], dialDefaults: dialSet.snapshot() });
+    const state = { weights: { cot: 1, 'to-mau': 1, 'phu-bong': 1 }, knobs: recipes.defaults.knobs };
+    const restore = async (snap) => {
+      Object.assign(state.weights, snap.weights ?? {});
+      dialSet.restore(snap.dials ?? {}, { exact: true });
+    };
+    const m = recipeMethods(recipes, {
+      snapshot: () => ({ ...state, dials: dialSet.snapshot() }), restore, tweenAll: () => Object.keys(state.weights).forEach((id) => { state.weights[id] = 1; }),
+    });
+    return { m, hour, recipes };
+  };
+  it('applyRecipe("") và reset() cho text rỗng và giữ nguyên giá trị Dial', async () => {
+    const { m, hour } = rigOff();
+    expect(m.recipe().text).toBe('');
+    await m.applyRecipe('');
+    expect([m.recipe().text, hour.value]).toEqual(['', 21.6167]);
+    await m.applyRecipe('to-mau:0');
+    expect(m.recipe().text).toBe('to-mau:0');
+    await m.reset();
+    expect([m.recipe().text, hour.value]).toEqual(['', 21.6167]);
+  });
+  it('applyRecipe("gio:23.1") ra 23; classify làm tròn một lần', async () => {
+    const { m, hour, recipes } = rigOff();
+    expect(recipes.classify(pairs(['gio', '23.1'])).dials).toEqual({ gio: 23 });
+    await m.applyRecipe('gio:23.1');
+    expect([hour.value, m.recipe().text]).toEqual([23, 'gio:23']);
   });
 });

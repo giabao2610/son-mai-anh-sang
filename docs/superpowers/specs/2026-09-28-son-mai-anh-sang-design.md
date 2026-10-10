@@ -5264,9 +5264,12 @@ bộ nhớ mã nào để bỏ.
   ngay sau `setup()`.
 - `classify(entries)` → `{ weights, knobs, dials, problems }`: khóa có dấu chấm là núm (lớp và núm phải có thật; chuỗi đổi sang kiểu của
   núm: số, `1`/`0`, lựa chọn có trong `options`, `#` + hex); khóa không chấm là id lớp (trọng số 0–1; `cot` bỏ qua, luật 1) hay id Dial.
-  Còn lại vào `problems`.
+  Còn lại vào `problems`. Giá trị Dial của link được làm tròn MỘT lần ở đây, bằng `snapDial(dial, raw)` của `dial-set.js` (kẹp rồi về nấc).
 - `diff(snapshot)` → entries: chỉ giá trị khác `defaults` (số so sau khi làm tròn theo `step`, nên 0.0200000004 bằng 0.02).
 - `countsOf(entries)` → `{ layers, knobs, dials }` cho dòng tóm tắt (`dials`: id các Dial đã khác mặc định).
+- Khôi phục Dial (`studio.restore`, nên cả `applyRecipe`, `reset` và "Dựng lại cảnh") dùng `dials.restore(values, { exact: true })`: chỉ kẹp, không
+  làm tròn theo `step`. Mặc định của Dial có thể lệch nấc (giờ thật của Bức 1 ban đêm); làm tròn lại sẽ thành một công thức ma `gio:21.5`.
+  `setDial` và lúc dựng vẫn làm tròn.
 - `recipeMethods(recipes, …)`: ba hàm `recipe`, `applyRecipe`, `reset` mà bàn thợ trải vào API của nó.
 
 **Áp lúc dựng** (§16 đã ghi: "giải mã trước `createLayer`"):

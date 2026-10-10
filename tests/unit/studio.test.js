@@ -340,6 +340,22 @@ describe('createStudio', () => {
       expect(studio.recipe().text).toBe('');
     });
 
+    it('Dial mặc định lệch nấc: restore giữ đúng giá trị, setDial vẫn làm tròn', async () => {
+      const hour = uniform(21.6167);
+      const dials = createDialSet([{ id: 'gio', uniform: hour, min: 18, max: 29.5, step: 0.25 }]);
+      const { studio } = setup({ dials });
+      expect(studio.recipe().text).toBe('');
+      await studio.restore({ dials: { gio: 21.6167 } });
+      expect(hour.value).toBe(21.6167);
+      await studio.applyRecipe('');
+      await studio.reset();
+      expect([hour.value, studio.recipe().text]).toEqual([21.6167, '']);
+      await studio.applyRecipe('gio:23.1');
+      expect(hour.value).toBe(23);
+      await studio.setDial('gio', 22.1);
+      expect(hour.value).toBe(22);
+    });
+
     it('reset: trọng số tween về 1, núm và Dial về mặc định', async () => {
       const { studio, weights } = setup({ dials: hourDials() });
       await studio.setWeight('lop-hai', 0);

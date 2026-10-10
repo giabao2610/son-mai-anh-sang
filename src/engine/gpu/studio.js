@@ -213,7 +213,7 @@ export function createStudio({
      */
     async restore({ weights: w = {}, knobs = {}, dials: dialValues = {} } = {}) {
       try {
-        dials.restore(dialValues);
+        dials.restore(dialValues, { exact: true }); // giá trị của chính Dial (mặc định có thể lệch nấc): không làm tròn lại
         for (const [id, v] of Object.entries(w)) {
           if (byId.has(id)) weights.set(id, v);
           else console.warn(`restore: bỏ qua trọng số của lớp lạ "${id}"`);
