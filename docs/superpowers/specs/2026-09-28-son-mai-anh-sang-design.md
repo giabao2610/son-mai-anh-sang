@@ -5490,6 +5490,31 @@ bằng bảng snapshot. Thay đổi làm một lớp mất khỏi mọi mã thì
   `candleColor` của lớp Ánh trăng, Bức 1) có nút `tp-colswv_b` không tên (axe `button-name`, critical); test a11y cũ chỉ mở lớp đầu nên không
   thấy. Chưa sửa, xem §17.
 
+**Sau đợt sửa cuối** (commit `8677ef2`, Mac M2, mỗi bộ chạy một mình):
+- `npm test`: 129 file, 1732 test, xanh.
+- static + webgl2-swiftshader: 215 qua, 0 lỗi (37,9 phút). `webgpu-real-gpu`: 184 qua, 32 bỏ qua, 0 lỗi (9,5 phút).
+- webgpu-swiftshader:
+  - Bức 1, Bức 2 và nhóm chung: 83 qua, 6 lỗi "Quá hạn 10000 ms" lúc boot, cùng kiểu lỗi của Task 7. Sáu test chạy lại riêng: 6/6 qua
+    (2,4 phút).
+  - Bức 3, Bức 4, chỉ test khói: 16/16 qua.
+
+**Thời gian thật trên CI**, lượt đầu của PR #10 (run 38063867528, tính cả bước cài đặt). Cả hai job đều xanh, không test nào phải chạy lại:
+
+| Nhóm | `e2e` (chặn) | `e2e-webgpu` (không chặn) |
+|---|---|---|
+| Ao Sen Đêm | 17,3 phút | 33,4 phút |
+| Đèn Kéo Quân | 16,7 phút | 18,1 phút |
+| Cung Quế | 29,6 phút | 3,3 phút (chỉ test khói) |
+| Đàn Gà Mẹ Con | 11,4 phút | 3,5 phút (chỉ test khói) |
+| `chung` | 0,8 phút | 0,7 phút |
+
+- `build` 0,7 phút.
+- So với GĐ 8:
+  - Đèn Kéo Quân gần gấp đôi ở cả hai job (8,7 → 16,7 và 9,5 → 18,1 phút), vì mỗi bức có thêm test Bản dịch, Mở link, Normal lúc cảnh chạy.
+  - Ao Sen Đêm ở job WebGPU lên 33,4 phút (GĐ 8: 27,0), trên trần 40.
+  - Đàn Gà Mẹ Con ở job chặn giảm (21,5 → 11,4 phút): ở GĐ 8 có một test hỏng, chạy hai lần.
+- Bức sau thêm test chung cho mọi bức mà job WebGPU của Bức 1 vượt trần thì bật `ciWebgpuSmoke` cho Bức 1, như Bức 3 và Bức 4.
+
 **Kiểm tay** (thêm vào §12): Safari trên Mac và iPhone (thanh địa chỉ đổi theo khi mài; chép link; mở link nhận được); VoiceOver đọc dòng
 trạng thái của Bản dịch và dòng "Đã chép link".
 
