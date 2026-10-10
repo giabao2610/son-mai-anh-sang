@@ -69,6 +69,21 @@ describe('studioApi (GĐ 4): các hàm của bàn thợ mà __sma lộ ra', () =
     expect(api.tools()).toEqual([{ id: 'kinh', on: false }]);
   });
 
+  it('translate(id) (GĐ 9): Bản dịch của một lớp qua bàn thợ, trả đúng Promise (page.evaluate chờ được); chưa có bàn thợ thì null', async () => {
+    let studio = null;
+    const api = studioApi(() => studio);
+    expect(api.translate('hai')).toBeNull();
+    const asked = [];
+    studio = {
+      translation: async (layerId) => {
+        asked.push(layerId);
+        return { language: 'glsl', places: [] };
+      },
+    };
+    await expect(api.translate('hai')).resolves.toEqual({ language: 'glsl', places: [] });
+    expect(asked).toEqual(['hai']);
+  });
+
   it('readouts(id) (GĐ 5): số đo riêng của một lớp, đọc qua bàn thợ; chưa có bàn thợ thì mảng rỗng', () => {
     let studio = null;
     const api = studioApi(() => studio);
@@ -82,5 +97,18 @@ describe('studioApi (GĐ 4): các hàm của bàn thợ mà __sma lộ ra', () =
     };
     expect(api.readouts('hai')).toEqual([{ id: 'dinh', value: 42, unit: 'đỉnh' }]);
     expect(asked).toEqual(['hai']);
+  });
+});
+
+describe('studioApi (GĐ 9): công thức', () => {
+  it('recipe() ra chuỗi công thức, applyRecipe(text) đi qua bàn thợ; chưa có bàn thợ thì null / undefined', async () => {
+    let studio = null;
+    const api = studioApi(() => studio);
+    expect([api.recipe(), api.applyRecipe('a:0')]).toEqual([null, undefined]);
+    const applied = [];
+    studio = { recipe: () => ({ text: 'a:0', counts: {} }), applyRecipe: async (text) => { applied.push(text); } };
+    expect(api.recipe()).toBe('a:0');
+    await api.applyRecipe('b:1');
+    expect(applied).toEqual(['b:1']);
   });
 });

@@ -5,6 +5,7 @@ import {
 } from 'three/webgpu';
 import { rtt, uniform, vec4 } from 'three/tsl';
 import { buildFinalNode, createPipeline, linearDepth } from '../../src/engine/gpu/pipeline.js';
+import { createHold } from '../../src/engine/gpu/hold.js';
 import { lensNode } from '../../src/engine/tools/kinh-mai.js';
 import { peelNode } from '../../src/engine/tools/lot-lop.js';
 import { buildFinalPass } from '../helpers/final-pass.js';
@@ -83,8 +84,9 @@ describe('buildFinalNode', () => {
 });
 
 describe('createPipeline (dựng đồ thị, không cần GPU)', () => {
-  // RenderPipeline chỉ đọc hai trường này trong constructor; render()/compile() mới cần GPU thật.
-  const fakeRenderer = { toneMapping: NoToneMapping, outputColorSpace: SRGBColorSpace };
+  // RenderPipeline chỉ đọc hai trường này trong constructor; render()/compile() mới cần GPU thật. compile() (GĐ 9) đọc target + MRT đang
+  // đặt để trả lại nếu biên dịch hỏng: renderer giả có hai hàm đọc ấy.
+  const fakeRenderer = { toneMapping: NoToneMapping, outputColorSpace: SRGBColorSpace, getRenderTarget: () => null, getMRT: () => null };
 
   it('MRT output + emissive (emissive blend theo material); channel() trả đúng node; kênh lạ thì ném lỗi', () => {
     const seen = {};
@@ -201,6 +203,34 @@ describe('createPipeline (dựng đồ thị, không cần GPU)', () => {
     done();
     await Promise.all([first, second]);
     expect([setMRT.mock.calls.length, p.scenePass.compileAsync.mock.calls.length, overlay.mock.calls.length]).toEqual([1, 1, 2]);
+    p.dispose();
+  });
+});
+
+describe('pipeline.compile (GĐ 9): biên dịch hỏng thì trả lại target và MRT của renderer (C4)', () => {
+  /** Renderer giả: chỉ những gì RenderPipeline (constructor) và PassNode.compileAsync đọc; compileAsync của renderer ném lỗi. */
+  const failing = () => {
+    const state = { target: 'canvas', mrt: 'mrt-cua-trang' };
+    return {
+      state,
+      toneMapping: NoToneMapping,
+      outputColorSpace: SRGBColorSpace,
+      getRenderTarget: () => state.target,
+      getMRT: () => state.mrt,
+      setRenderTarget: vi.fn((t) => { state.target = t; }),
+      setMRT: vi.fn((m) => { state.mrt = m; }),
+      compileAsync: vi.fn(async () => { throw new Error('biên dịch hỏng'); }),
+    };
+  };
+
+  it('scenePass.compileAsync ném lỗi giữa chừng: lỗi đi tiếp tới người gọi, renderer về đúng target + MRT trước đó, khung không còn bị giữ', async () => {
+    const renderer = failing();
+    const hold = createHold();
+    const p = createPipeline({ renderer, scene: new Scene(), camera: new PerspectiveCamera(), layers: [], weight: () => uniform(1), hold });
+    await expect(p.compile()).rejects.toThrow('biên dịch hỏng');
+    expect(renderer.setRenderTarget).toHaveBeenCalledWith(p.scenePass.renderTarget); // three đã đặt target của pass trước khi chờ
+    expect(renderer.state).toEqual({ target: 'canvas', mrt: 'mrt-cua-trang' });
+    expect(hold.active).toBe(false);
     p.dispose();
   });
 });

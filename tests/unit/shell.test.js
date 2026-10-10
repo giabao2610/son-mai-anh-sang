@@ -251,6 +251,18 @@ describe('gợi ý và lời mời', () => {
     expect(page.hint.dataset.kind).toBeUndefined();
   });
 
+  it('clearHint xóa cả gợi ý lẫn lời mời; vùng aria-live ở lại, không hidden', () => {
+    const shell = mountShell(document, meta, { now: NOW, t });
+    shell.showHint('Chạm vào đây');
+    shell.clearHint();
+    expect(page.hint.textContent).toBe('');
+    expect(page.hint.dataset.kind).toBeUndefined();
+    shell.invite(() => {});
+    shell.clearHint();
+    expect(page.hint.querySelector('button')).toBeNull();
+    expect(page.hint.hasAttribute('hidden')).toBe(false);
+  });
+
   it('về tầng tĩnh thì xóa gợi ý; gợi ý hay lời mời đến muộn cũng không hiện lại', () => {
     const shell = mountShell(document, meta, { now: NOW, t });
     shell.showHint('Chạm vào đây');

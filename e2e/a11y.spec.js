@@ -2,7 +2,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { paintings } from '../src/paintings/registry.js';
-import { waitForSettled, waitForFrames, gpuReport, collectConsole, readSma, doubleTapAt } from './helpers.js';
+import { waitForSettled, waitForFrames, gpuReport, collectConsole, readSma, doubleTapAt, GD9 } from './helpers.js';
 
 /** Luật WCAG 2.0 và 2.1, mức A và AA (spec §12). */
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
@@ -98,6 +98,27 @@ for (const { meta, page: htmlPage } of paintings) {
         expect(log.errors).toEqual([]);
       });
 
+      test('Sổ tay ở Bản dịch và thanh lớp có dòng tóm tắt công thức (GĐ 9): không lỗi serious/critical', async ({ page }, testInfo) => {
+        test.setTimeout(300_000);
+        await openWorkshop(page, testInfo);
+        const notebook = page.locator('[data-notebook]');
+        await page.locator(`[data-rail] [data-layer="${GD9[meta.slug].layer}"] .rail-name`).click();
+        await notebook.locator('[data-tab="chinh"]').click();
+        await expect(notebook.locator('[data-knobs]')).toHaveAttribute('data-state', /^(ready|empty)$/);
+        await notebook.locator('[data-code-translate]').click();
+        await expect(notebook.locator('.tr-status')).toContainText('dòng có lớp', { timeout: 120_000 });
+        const errors = await audit(page, 'Bản dịch');
+        // Mở theo link công thức: thanh lớp mở với dòng tóm tắt và nút "Về nguyên bản".
+        await page.goto('about:blank');
+        await page.goto(`${urlOf(htmlPage, testInfo.project.metadata.query, 'at=2026-09-28T21:00')}#r=${GD9[meta.slug].layer}:0`);
+        expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
+        await expect(page.locator('[data-recipe-summary] .rail-recipe-text')).not.toBeEmpty();
+        await expect(page.locator('[data-recipe-reset]')).toBeVisible();
+        errors.push(...await audit(page, 'thanh lớp có tóm tắt công thức'));
+        expect(errors).toEqual([]);
+        expect(log.errors).toEqual([]);
+      });
+
       test('bàn phím: Tab tới lời mời, Enter vào chế độ mài; đi hết thanh lớp, Đồ nghề, thanh giờ, Sổ tay; Escape đóng Sổ tay; từ nút Từng sợi, Tab qua phần còn lại của thanh lớp rồi tới thanh và nút của nó (khung hẹp, máy tính)', async ({
         page,
       }, testInfo) => {
@@ -174,17 +195,19 @@ for (const { meta, page: htmlPage } of paintings) {
         const tools = (await page.evaluate(() => window.__sma.tools())).map((x) => x.id);
         const laterTools = tools.slice(tools.indexOf('tung-soi') + 1).map((id) => `button@rail:${id}`);
         const next = (await page.locator('[data-rail] .rail-next').isVisible()) ? ['button@rail'] : [];
+        // GĐ 9: mục Công thức (nút "Chép link công thức") nằm trong thanh lớp, sau Đồ nghề và thanh giờ, trước "Phủ lớp tiếp theo".
+        const recipeStops = ['button@rail'];
         const toolStops = ['input@tool:range', 'button@tool'];
         // Khung hẹp (640px, như điện thoại): thanh giờ ở sau nút nhỏ "◷ 21:00", ô trượt đã mở ở lượt đi trên; Sổ tay thu lại.
         if (dials.length > 0) await expect(page.locator('[data-rail] .dial-chip')).toHaveAttribute('aria-expanded', 'true');
         const narrowDials = dials.length > 0 ? ['button@rail:chip', ...dials.map(() => 'input@rail:range')] : [];
-        const narrow = [...laterTools, ...narrowDials, ...next, 'button@rail', ...toolStops];
+        const narrow = [...laterTools, ...narrowDials, ...recipeStops, ...next, 'button@rail', ...toolStops];
         expect(await tabsFromWeave(narrow.length), 'khung hẹp: từ nút Từng sợi tới bảng của nó').toEqual(narrow);
         // Máy tính: thanh giờ nằm thẳng trong thanh lớp, và Sổ tay (mở lại, đủ chỗ ở 1280px) đứng SAU bảng công cụ.
         await page.setViewportSize({ width: 1280, height: 800 });
         await page.locator(`[data-rail] [data-layer="${meta.layers[0].id}"] .rail-name`).click();
         await expect(page.locator('[data-notebook]')).toBeVisible();
-        const wide = [...laterTools, ...dials.map(() => 'input@rail:range'), ...next, 'button@rail', ...toolStops, 'button@nb'];
+        const wide = [...laterTools, ...dials.map(() => 'input@rail:range'), ...recipeStops, ...next, 'button@rail', ...toolStops, 'button@nb'];
         expect(await tabsFromWeave(wide.length), 'máy tính: từ nút Từng sợi tới bảng của nó, rồi Sổ tay').toEqual(wide);
         // Mũi tên trên thanh đổi sợi đang xem; trình đọc màn hình nghe qua aria-valuetext.
         await range.focus();

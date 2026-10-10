@@ -49,6 +49,7 @@ export function mountShell(doc, meta, { now, t, onState = () => {}, poster: post
     badgeNote.textContent = open ? badge.title : '';
   });
 
+  /** Xóa chữ của [data-hint] (gợi ý hay lời mời); vùng aria-live ở lại, chỉ trống: không bao giờ hidden. */
   const clearHint = () => {
     if (!hint) return;
     hint.replaceChildren();
@@ -181,5 +182,5 @@ export function mountShell(doc, meta, { now, t, onState = () => {}, poster: post
     });
   }
 
-  return { stageEl, setState, progress, crossfade, showBadge, showNote, showHint, invite, showLost };
+  return { stageEl, setState, progress, crossfade, showBadge, showNote, showHint, clearHint, invite, showLost };
 }

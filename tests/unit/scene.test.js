@@ -7,6 +7,7 @@ import { buildScene } from '../../src/engine/gpu/scene.js';
 import { createDisposer } from '../../src/engine/gpu/disposer.js';
 import { CAPTION_SECONDS } from '../../src/ui/captions.js';
 import { fakeRenderer } from '../helpers/fake-ctx.js';
+import { readRecipe } from '../../src/engine/recipe.js';
 
 /** Test gắn hàm vào đây để nghe update() của lớp tô màu. */
 const hooks = { update: null };
@@ -85,14 +86,14 @@ function fakeWin(doc) {
   return { win, frames, flush: () => frames.splice(0).forEach((cb) => cb(16)) };
 }
 
-function build({ backend = 'webgpu', reducedMotion = false, flags = {}, setup, tools = [], content = null } = {}) {
+function build({ backend = 'webgpu', reducedMotion = false, flags = {}, setup, tools = [], content = null, recipe = null, paintingOverride = null } = {}) {
   // Trang là DOM thật: [data-stage] chứa canvas và vùng chữ đi theo vật; thanh công cụ gắn vào body.
   const doc = new JSDOM('<div data-stage></div>').window.document;
   const stage = fakeStage(backend, doc);
   const disposer = createDisposer();
   const { win, frames, flush } = fakeWin(doc);
   const scene = buildScene({
-    stage, disposer, painting: setup ? { ...painting, setup } : painting, meta, flags,
+    stage, disposer, painting: { ...(paintingOverride ?? painting), ...(setup ? { setup } : {}) }, meta, flags, recipe,
     now: new Date('2026-09-28T14:00:00Z'), reducedMotion, win, tools, content,
   });
   const renders = () => stage.renderer.render.mock.calls.length;
@@ -131,6 +132,45 @@ function buildWithCaptions() {
 const captionX = (caption) => Number(/translate\(([-+\d.e]+)px/.exec(caption.style.transform)[1]);
 
 describe('buildScene', () => {
+  it('công thức của link (GĐ 9): trọng số đặt trước lần render đầu, đúng một console.warn nhắc khóa lạ, recipe().text khớp', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { scene, stage, renders } = build({ recipe: readRecipe('#r=to-mau:0,khong-co:1') });
+    expect(renders()).toBe(0);
+    expect(scene.studio.weight('to-mau').value).toBe(0);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('khong-co');
+    expect(scene.studio.recipe().text).toBe('to-mau:0');
+    expect(stage).toBeTruthy();
+    warn.mockRestore();
+  });
+
+  it('công thức + Dial + núm rebuild (GĐ 9): Dial đặt trước setup trả về dùng, onKnob KHÔNG gọi lúc dựng, createLayer thấy giá trị của công thức', () => {
+    const hour = uniform(21);
+    const seen = [];
+    const onKnob = vi.fn();
+    const rebuildPainting = {
+      ...painting,
+      layers: [
+        painting.layers[0],
+        {
+          id: 'to-mau',
+          knobs: [{ id: 'count', via: 'rebuild', min: 1, max: 100, value: 10 }],
+          createLayer(ctx, shared) {
+            seen.push(ctx.knobValue('count'));
+            shared.cot.material.colorNode = mix(color(ctx.palette.hex.datSet), color(ctx.palette.hex.doSon), ctx.weight('to-mau'));
+            return { onKnob: { count: onKnob }, dispose() {} };
+          },
+        },
+      ],
+    };
+    const dial = { id: 'gio', uniform: hour, min: 18, max: 29.5, step: 0.25 };
+    const { scene } = build({ paintingOverride: rebuildPainting, setup: () => ({ dials: [dial] }), recipe: readRecipe('#r=to-mau.count:42,gio:23') });
+    expect(seen).toEqual([42]);
+    expect(onKnob).not.toHaveBeenCalled();
+    expect(hour.value).toBe(23);
+    expect(scene.studio.recipe().text).toBe('to-mau.count:42,gio:23');
+  });
+
   it('mức theo backend THẬT: WebGPU máy tính → cao (dpr 2), WebGL2 → vừa (dpr 1.5); camera theo CameraSpec của bức', () => {
     const a = build();
     expect(a.scene.level).toBe('cao');
@@ -477,6 +517,41 @@ describe('buildScene', () => {
     expect(fn).toBeNull(); // gỡ cảnh thì trả hàm vẽ cũ, kể cả khi công cụ không tự stop()
   });
 
+  it('Bản dịch (GĐ 9): bắt khung qua móc lần vẽ; lúc chạy là khung kế tiếp, ?freeze thì vẽ lại khung đứng yên; gỡ cảnh thì lần bắt chờ hỏng', async () => {
+    const { stage, scene, disposer, flush, renders } = build();
+    const r = stage.renderer;
+    let fn = null;
+    r.setRenderObjectFunction.mockImplementation((f) => {
+      fn = f;
+    });
+    r.getRenderObjectFunction.mockImplementation(() => fn);
+    // Hai trường riêng mà móc đọc (draws.js): render context của lượt đang vẽ, và bảng RenderObject mang mã đã dịch.
+    r._currentRenderContext = { name: 'scene-pass' };
+    r._objects = { get: (o) => ({ getNodeBuilderState: () => ({ vertexShader: 'v', fragmentShader: `f ${o.name} w_to_mau` }) }) };
+    r.render.mockImplementation(() => {
+      for (const o of stage.scene.children.filter((c) => c.isMesh)) {
+        (fn ?? r.renderObject).call(r, o, stage.scene, stage.camera, o.geometry, o.material, null, null, null, null);
+      }
+    });
+    const live = scene.studio.translation('to-mau');
+    expect(fn).not.toBeNull(); // gắn ngay: khung kế tiếp đi qua móc
+    scene.step(1000);
+    const tr = await live;
+    expect(tr.places.map((p) => [p.label, p.owner, p.drawn, p.hits.fragment])).toEqual([['khoi · Cốt', 'cot', true, 1]]);
+    expect(fn).toBeNull(); // bắt xong thì gỡ móc
+    scene.freeze();
+    const before = renders();
+    const still = scene.studio.translation('to-mau');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flush(); // nhịp rAF: vẽ lại khung đứng yên, khung ấy được bắt
+    expect((await still).places).toHaveLength(1);
+    expect(renders()).toBe(before + 1);
+    const pending = scene.studio.translation('to-mau');
+    disposer.closeAll();
+    await expect(pending).rejects.toThrow('Cảnh đã gỡ');
+    expect(fn).toBeNull();
+  });
+
   it('ms CPU của khung đi vào số đo của bàn thợ', () => {
     const { scene } = build();
     scene.step(1000);
@@ -490,6 +565,79 @@ describe('buildScene', () => {
     const normal = build().scene;
     normal.studio.setWeight('to-mau', 0, { tween: true });
     expect(normal.studio.weight('to-mau')).toEqual({ value: 1, target: 0 });
+  });
+
+  /** Việc async treo tới khi test thả. */
+  const hanging = () => {
+    let release;
+    const promise = new Promise((resolve) => {
+      release = resolve;
+    });
+    return { promise, release };
+  };
+
+  it('GĐ 9: lúc giữ khung, step() không vẽ, không tiến đồng hồ; thả thì vẽ', async () => {
+    const { scene, stage, renders } = build();
+    scene.quality.start();
+    const job = hanging();
+    const run = scene.hold.run(() => job.promise);
+    scene.step(16);
+    expect(renders()).toBe(0);
+    expect(stage.tick).not.toHaveBeenCalled();
+    job.release();
+    await run;
+    scene.step(32);
+    expect(renders()).toBe(1);
+    expect(stage.tick).toHaveBeenCalledTimes(1);
+  });
+
+  it('GĐ 9: pipeline.compile() chạy trong lúc giữ khung', async () => {
+    const { scene, stage } = build();
+    const job = hanging();
+    stage.renderer.compileAsync = vi.fn(() => job.promise);
+    const c = scene.compile();
+    expect(scene.hold.active).toBe(true);
+    job.release();
+    await c;
+    expect(scene.hold.active).toBe(false);
+  });
+
+  it('GĐ 9: vẽ lại khung đứng yên chờ thả', async () => {
+    const { scene, flush, renders } = build();
+    scene.freeze();
+    const job = hanging();
+    const run = scene.hold.run(() => job.promise);
+    const done = scene.studio.setWeight('to-mau', 0);
+    flush();
+    expect(renders()).toBe(0);
+    job.release();
+    await run;
+    await new Promise((resolve) => setTimeout(resolve, 0)); // hold.idle().then(drawStill) xin nhịp rAF sau vài microtask
+    flush();
+    await done;
+    expect(renders()).toBe(1);
+  });
+
+  it('GĐ 9: giữ lại bắt đầu đúng lúc nhịp vẽ lại tới: chờ thả tiếp, không vẽ giữa chừng', async () => {
+    const { scene, frames, flush, renders } = build();
+    scene.freeze();
+    const first = hanging();
+    const firstRun = scene.hold.run(() => first.promise);
+    const done = scene.studio.setWeight('to-mau', 0);
+    first.release();
+    await firstRun;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(frames).toHaveLength(1); // nhịp vẽ lại đã xin
+    const second = hanging();
+    const secondRun = scene.hold.run(() => second.promise); // một lần giữ khác (lần biên dịch kế tiếp) bắt đầu trước nhịp
+    flush();
+    expect(renders()).toBe(0);
+    second.release();
+    await secondRun;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flush();
+    await done;
+    expect(renders()).toBe(1);
   });
 
   it('disposer gỡ sạch: lớp rời scene; đã gỡ thì freeze + đổi trọng số không vẽ gì nữa', async () => {

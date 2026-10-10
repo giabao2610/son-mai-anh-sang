@@ -232,3 +232,22 @@ describe('ensureEmissive', () => {
     expect(a.emissiveNode.isNode).toBe(true);
   });
 });
+
+describe('buildLayers: giá trị ban đầu của núm từ công thức (GĐ 9)', () => {
+  it('{ "lop.knob": v } tới ctx.knobValue của ĐÚNG lớp; id lớp là tiền tố của lớp khác không lẫn', () => {
+    const seen = {};
+    const mod = (id) => ({
+      id,
+      knobs: [{ id: 'size', via: 'js', min: 0, max: 10, value: 1 }],
+      createLayer: (ctx) => {
+        seen[id] = ctx.knobValue('size');
+        return { onKnob: { size() {} }, dispose() {} };
+      },
+    });
+    buildLayers([mod('ban'), mod('ban-net')], {}, {}, env, { 'ban.size': 4, 'ban-net.size': 9 });
+    expect(seen).toEqual({ ban: 4, 'ban-net': 9 });
+    seen.ban = null;
+    buildLayers([mod('ban'), mod('ban-net')], {}, {}, env, { 'ban-net.size': 9 });
+    expect(seen).toEqual({ ban: 1, 'ban-net': 9 });
+  });
+});

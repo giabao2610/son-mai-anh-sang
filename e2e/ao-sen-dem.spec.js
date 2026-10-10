@@ -1,4 +1,4 @@
-// e2e/ao-sen-dem.spec.js — tương tác riêng của Bức 1: chạm, giữ, vuốt (sương xoáy) mặt nước; thả hoa đăng; thanh giờ; chế độ mài; chất lượng; CPU vs GPU; trăng SVG.
+// e2e/ao-sen-dem.spec.js — tương tác riêng của Bức 1: chạm, giữ, vuốt (sương xoáy) mặt nước; thả hoa đăng; thanh giờ; chế độ mài; chất lượng; CPU vs GPU; trăng SVG; link công thức (GĐ 9).
 import { test, expect } from '@playwright/test';
 import {
   DARK, waitForSettled, waitForFrames, canvasStats, canvasRegions, gpuReport, collectConsole, readSma, twoFrames, doubleTapAt,
@@ -483,5 +483,145 @@ test.describe('Ao Sen Đêm · tầng tĩnh', () => {
     expect(d).toMatch(/^M0 -1A1 1 0 0 0 0 1A/);
     await expect(page.locator('[data-moon]')).toBeVisible();
     await expect(page.locator('[data-hint]')).toBeHidden();
+  });
+});
+
+test.describe('Ao Sen Đêm · link công thức (GĐ 9)', () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.metadata.kind !== '3d', 'chỉ chạy ở project 3D');
+  });
+
+  /** Mở cảnh (không ?freeze: địa chỉ và tween chỉ chạy khi cảnh sống) ở giờ cố định, với hash tùy chọn. */
+  async function openAt(page, testInfo, hash = '', ...flags) {
+    const { query } = testInfo.project.metadata;
+    await page.goto('about:blank'); // cùng URL chỉ khác hash là điều hướng trong trang, không nạp lại cảnh
+    await page.goto(`./?${query.replace(/^\?/, '')}&${AT}${flags.map((f) => `&${f}`).join('')}${hash}`);
+    const settled = await waitForSettled(page, { timeout: 60_000 });
+    expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+  }
+  const snapshot = (page) => page.evaluate(() => window.__sma.snapshot());
+  const summary = (page) => page.locator('[data-recipe-summary] .rail-recipe-text');
+
+  test('"Về nguyên bản": snapshot về mặc định, hash rỗng, dòng tóm tắt rỗng', async ({ page }, testInfo) => {
+    await openAt(page, testInfo);
+    const original = await snapshot(page);
+    await openAt(page, testInfo, '#r=suong:0,suong.density:0.02,gio:23');
+    await expect(page.locator('[data-rail]')).toBeVisible();
+    await expect(summary(page)).not.toBeEmpty();
+    expect(await snapshot(page)).not.toEqual(original);
+    await page.locator('[data-recipe-reset]').click();
+    await expect.poll(() => snapshot(page), { timeout: 10_000 }).toEqual(original);
+    await expect(summary(page)).toBeEmpty();
+    await expect.poll(() => page.evaluate(() => location.hash), { timeout: 3000 }).toBe('');
+    expect(await page.evaluate(() => window.__sma.recipe())).toBe('');
+    expect(log.errors).toEqual([]);
+  });
+
+  test('thanh địa chỉ: tắt một lớp thì hash có #r=… trong 2 giây; đổi liên tục 3 giây thì replaceState không quá 2 lần mỗi giây', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    await page.addInitScript(() => {
+      window.__replaces = 0;
+      const original = history.replaceState.bind(history);
+      history.replaceState = (...args) => {
+        window.__replaces += 1;
+        return original(...args);
+      };
+    });
+    await openAt(page, testInfo, '#r=gio:23'); // mở theo link: thanh lớp mở, không vào chế độ mài
+    await expect(page.locator('[data-rail]')).toBeVisible();
+    await page.locator('[data-rail] [data-layer="suong"] .rail-switch').click();
+    await expect.poll(() => page.evaluate(() => location.hash), { timeout: 2000 }).toMatch(/^#r=.*suong:0/);
+    // 60 lần đổi trong 3 giây (trọng số hai lớp và Dial giờ), ngay trong trang; đếm replaceState của riêng khoảng này.
+    await page.waitForTimeout(700); // qua hết lần ghi đang chờ của cú bấm
+    const { writes, seconds } = await page.evaluate(() => new Promise((resolve) => {
+      const before = window.__replaces;
+      const start = performance.now();
+      let i = 0;
+      const tick = () => {
+        window.__sma.setWeight(i % 2 ? 'anh-trang' : 'vang-la', (i % 4) < 2 ? 0 : 1);
+        window.__sma.setDial('gio', 18 + (i % 6));
+        i += 1;
+        if (i < 60) setTimeout(tick, 50);
+        else setTimeout(() => resolve({ writes: window.__replaces - before, seconds: (performance.now() - start) / 1000 }), 700);
+      };
+      tick();
+    }));
+    expect(writes, `${writes} lần ghi trong ${seconds.toFixed(1)} giây`).toBeLessThanOrEqual(Math.ceil(seconds * 2));
+    expect(writes).toBeGreaterThan(0);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('đổi hash trong trang: áp thành trạng thái đủ, thanh lớp có dòng tóm tắt mới', async ({ page }, testInfo) => {
+    await openAt(page, testInfo, '#r=suong:0');
+    await expect.poll(async () => (await snapshot(page)).weights.suong).toBe(0);
+    await expect(summary(page)).not.toBeEmpty();
+    const before = await summary(page).textContent();
+    await page.evaluate(() => { location.hash = '#r=anh-trang:0,gio:23'; });
+    await expect.poll(async () => (await snapshot(page)).weights['anh-trang']).toBe(0);
+    expect((await snapshot(page)).weights.suong, 'trạng thái ĐỦ: suong không còn trong công thức nên về 1').toBe(1);
+    await expect.poll(() => summary(page).textContent()).not.toBe(before);
+    await expect(summary(page)).not.toBeEmpty();
+    expect(log.errors).toEqual([]);
+  });
+
+  test('nút chép link: chép đúng link công thức, không có query string', async ({ page }, testInfo) => {
+    await page.addInitScript(() => {
+      window.__copied = [];
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (text) => { window.__copied.push(text); } }, configurable: true });
+    });
+    await openAt(page, testInfo, '#r=suong:0,gio:23');
+    await expect(page.locator('[data-rail]')).toBeVisible();
+    await page.locator('[data-recipe-copy]').click();
+    await expect.poll(() => page.evaluate(() => window.__copied.length)).toBe(1);
+    const [copied] = await page.evaluate(() => window.__copied);
+    const recipe = await page.evaluate(() => window.__sma.recipe());
+    const base = await page.evaluate(() => location.origin + location.pathname);
+    expect(copied).toBe(`${base}#r=${recipe}`);
+    expect(copied).not.toContain('?');
+    await expect(page.locator('.rail-recipe-status')).not.toBeEmpty();
+    expect(log.errors).toEqual([]);
+  });
+
+  test('công thức có mục hỏng: cảnh vẫn live, đúng một cảnh báo nhắc hai mục, lớp hợp lệ vẫn áp', async ({ page }, testInfo) => {
+    await openAt(page, testInfo, '#r=suong:0,khong-co:1,suong.density:abc');
+    await expect.poll(async () => (await snapshot(page)).weights.suong).toBe(0);
+    expect((await readSma(page)).state).toBe('live');
+    const warnings = log.all.filter((line) => line.startsWith('[warning] Công thức trong link:'));
+    expect(warnings, 'đúng một cảnh báo').toHaveLength(1);
+    expect(warnings[0]).toContain('khong-co:1');
+    expect(warnings[0]).toContain('suong.density:abc');
+    expect(log.errors).toEqual([]);
+  });
+
+  test('mức thấp: núm vượt trần của mức thấp thì kẹp về trần', async ({ page }, testInfo) => {
+    await openAt(page, testInfo, '#r=suong.octaves:6', 'level=thap');
+    expect((await readSma(page)).level).toBe('thap');
+    expect((await snapshot(page)).knobs['suong.octaves'], 'trần octaves của mức thấp là 3').toBe(3);
+    expect(log.errors).toEqual([]);
+  });
+
+  test('khung 390 × 844: chip công thức thấy được và bấm trúng; Bản dịch trong tấm trượt không tràn ngang', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openAt(page, testInfo, '#r=suong:0,gio:23');
+    const chip = page.locator('[data-recipe-summary][data-on]');
+    await expect(chip).toBeVisible();
+    await chip.scrollIntoViewIfNeeded();
+    await page.locator('[data-recipe-reset]').click({ trial: true }); // bấm trúng được: không bị phần tử khác che
+    const notebook = page.locator('[data-notebook]');
+    await page.locator('[data-rail] [data-layer="suong"] .rail-name').click();
+    await notebook.locator('[data-tab="chinh"]').click();
+    await expect(notebook.locator('[data-knobs]')).toHaveAttribute('data-state', /^(ready|empty)$/);
+    await notebook.locator('[data-code-translate]').click();
+    await expect(notebook.locator('.tr-status')).toContainText('dòng có lớp', { timeout: 120_000 });
+    const widths = await page.evaluate(() => ({ body: [document.body.scrollWidth, document.body.clientWidth], notebook: (() => {
+      const n = document.querySelector('[data-notebook]');
+      return [n.scrollWidth, n.clientWidth];
+    })() }));
+    expect(widths.body[0], 'body tràn ngang').toBeLessThanOrEqual(widths.body[1]);
+    expect(widths.notebook[0], 'Sổ tay tràn ngang').toBeLessThanOrEqual(widths.notebook[1]);
+    expect(log.errors).toEqual([]);
   });
 });

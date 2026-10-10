@@ -2,6 +2,7 @@
 import { createRail } from './layer-rail.js';
 import { createNotebook } from './notebook.js';
 import { createRailTools } from './rail-tools.js';
+import { createRecipePanel } from './recipe-panel.js';
 
 /**
  * Chế độ mài (spec §4.1): mọi lớp trừ Cốt mờ dần về 0, bức trở về đất sét; "Phủ lớp tiếp theo" sơn lại lần lượt
@@ -27,8 +28,14 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
   let bound = studio(); // bàn thợ đang vẽ Sổ tay; "Dựng lại cảnh" tạo bàn thợ mới
 
   const notebook = createNotebook(doc, { meta, content, t, studio, ...notebookOptions });
+  // GĐ 9: bàn thợ đổi từ chỗ khác (công thức áp, "Về nguyên bản", Back/Forward, __sma.restore): Sổ tay đọc lại núm, dịch lại Bản dịch đang
+  // mở. Nghe bàn thợ đang có; "Dựng lại cảnh" thì sync() chuyển sang nghe bàn thợ mới.
+  const watch = (s) => s?.onChange?.(() => notebook.sync()) ?? null;
+  let unwatch = watch(bound);
   // Đồ nghề (công cụ học) và thanh trượt của các Dial: chỉ khi có cảnh 3D.
   const tools = interactive ? createRailTools(doc, { t, content, studio }) : null;
+  // Công thức (GĐ 9): dòng tóm tắt đầu thanh và nút chép link; cũng chỉ khi có cảnh 3D (công thức là trạng thái của cảnh).
+  const panel = interactive ? createRecipePanel(doc, { t, content, studio, win }) : null;
   const openLayer = (id, options) => {
     notebook.show(id, options);
     rail.setActive(id);
@@ -53,6 +60,7 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
       close: () => close(),
     },
     tools: tools?.el ?? null,
+    recipe: panel,
   });
   // Thứ tự Tab theo thứ tự DOM (WCAG 2.4.3): thanh lớp → thanh công cụ → Sổ tay. Đi hết thanh lớp là Tab vào bảng công cụ.
   // Cảnh dựng thanh công cụ trước khi xưởng mở lần đầu, nên hai tấm của xưởng đứng hai bên nó; "Dựng lại cảnh" thì
@@ -63,15 +71,29 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
     toolbar.after(notebook.el);
   } else doc.body.append(rail.el, notebook.el);
 
+  // Máy tính: thanh lớp bắt đầu ngay dưới đầu trang (tên bức + lật tranh), nên đo đáy của nó vào --rail-top (notebook.css).
+  // Đo lúc mở, lúc đổi cỡ cửa sổ và khi font tải xong (tên bức xuống dòng hay không). Điện thoại đặt thanh ở đáy: biến không dùng.
+  const measureTop = () => {
+    const header = doc.querySelector('.frame header');
+    if (!header) return;
+    const gap = 16;
+    rail.el.style.setProperty('--rail-top', `${Math.ceil(header.getBoundingClientRect().bottom + gap)}px`);
+  };
+  win.addEventListener('resize', measureTop);
+  doc.fonts?.ready?.then(measureTop);
+
   /** Vẽ lại thanh lớp theo bàn thợ: vạch trọng số chạy theo tween, công tắc theo đích, nút "tiếp theo". */
   const sync = () => {
     const s = studio();
     if (s) for (const { id } of meta.layers) rail.setWeight(id, s.weight(id));
     rail.setNext(nextLayer()?.name ?? null);
     tools?.sync();
-    // Cảnh vừa được dựng lại (bàn thợ mới, thí nghiệm về tắt hết): vẽ lại Sổ tay đang mở theo bàn thợ mới.
+    panel?.sync();
+    // Cảnh vừa được dựng lại (bàn thợ mới, thí nghiệm về tắt hết): nghe bàn thợ mới, vẽ lại Sổ tay đang mở theo nó.
     if (s && s !== bound) {
       bound = s;
+      unwatch?.();
+      unwatch = watch(s);
       if (notebook.layer) notebook.show(notebook.layer);
     }
   };
@@ -99,11 +121,16 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
     /**
      * Mở thanh lớp. grind: true (bấm lời mời) = vào chế độ mài: mọi lớp trừ Cốt mờ về 0, Sổ tay mở trang Cốt.
      * Ở tầng tĩnh không có trọng số để mài: chỉ mở Sổ tay trang Cốt để đọc.
-     * @param {{ grind?: boolean }} [options]
+     * recipe: true (trang mở bằng link có công thức, hay người xem dán link khác) = mở thanh lớp theo công thức: KHÔNG mài lớp nào,
+     * chỉ hiện dòng tóm tắt "Công thức trong link" (spec §21.2). Mài thì dòng đó ẩn: người xem đang bắt đầu lại từ đầu.
+     * @param {{ grind?: boolean, recipe?: boolean }} [options]
      */
-    open({ grind = false } = {}) {
+    open({ grind = false, recipe = false } = {}) {
       rail.el.hidden = false;
+      measureTop();
+      if (recipe) panel?.show();
       if (grind) {
+        panel?.hide();
         if (interactive) for (const { id } of rest) studio()?.setWeight(id, 0, { tween: true });
         openLayer(meta.layers[0].id, { tab: 'hieu' });
       }
@@ -121,6 +148,9 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
     },
     dispose() {
       stop();
+      unwatch?.();
+      unwatch = null;
+      win.removeEventListener('resize', measureTop);
       notebook.dispose();
       rail.el.remove();
     },

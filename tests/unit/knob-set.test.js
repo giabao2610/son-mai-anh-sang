@@ -168,3 +168,25 @@ describe('createKnobs', () => {
     expect(() => createKnobs('cot', [{ id: 'openness', value: 1 }], env).bind(undefined)).not.toThrow();
   });
 });
+
+describe('createKnobs: giá trị ban đầu từ công thức (GĐ 9)', () => {
+  const knobs = [
+    { id: 'size', min: 0, max: 1, value: 0.5 },
+    { id: 'tone', kind: 'select', options: ['none', 'agx'], value: 'agx' },
+  ];
+  it('initial thắng mặc định, đã kẹp; uniform mang giá trị đó ngay từ đầu', () => {
+    const k = createKnobs('lop', knobs, env, { size: 7, tone: 'none' });
+    expect(k.get('size')).toBe(1);
+    expect(k.knob('size').value).toBe(1);
+    expect(k.values()).toEqual({ size: 1, tone: 'none' });
+    expect(k.knob('tone').value).toBe(0);
+  });
+  it('giá trị hỏng thì giữ mặc định kèm cảnh báo tiếng Việt', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const k = createKnobs('lop', knobs, env, { tone: 'la' });
+    expect(k.get('tone')).toBe('agx');
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('lop.tone');
+    warn.mockRestore();
+  });
+});

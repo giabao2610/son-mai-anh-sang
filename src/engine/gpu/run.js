@@ -9,7 +9,8 @@ import { createFailCounter, createBurstCounter } from './guards.js';
 import { openDebug } from './debug.js';
 import { tools } from '../tools/index.js';
 import { createFrameCap } from './clock.js';
-import { mountWorkshop } from '../../ui/workshop.js';
+import { createWorkshopDoor } from './workshop-door.js';
+import { syncRecipeUrl } from './recipe-url.js';
 
 /** Hạn cho một lần "Dựng lại cảnh" (lần mở trang đã có hạn 10 s của boot.js). */
 const REBUILD_DEADLINE_MS = 10_000;
@@ -42,18 +43,17 @@ function loadContent(entry, lang) {
  * @param {Window} [opts.win]
  * @returns {Promise<{ dispose: () => void }>}
  */
-export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail, win = window }) {
+export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail, recipe = null, win = window }) {
   const { meta } = entry;
   let disposer = createDisposer(); // của lần dựng hiện tại; "Dựng lại cảnh" thay bằng một cái mới
   let studio = null; // bàn thợ của cảnh đang live (null khi chưa live, hoặc đang mất GPU)
   let quality = null; // bộ điều chỉnh của cảnh đang live: chỉ canh quá tải nặng khi thanh lớp mở
-  let workshop = null; // thanh lớp + Sổ tay: tạo một lần, sống qua các lần dựng lại
   let losses = 0;
   let failed = false;
   const handle = {
     dispose: () => {
       disposer.closeAll();
-      workshop?.dispose();
+      door.dispose();
     },
   };
   // fail() chạy MỘT lần: gỡ mọi thứ theo thứ tự ngược, rồi báo boot về tầng tĩnh với lý do.
@@ -84,17 +84,10 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
   let painting = null;
   let content = null;
 
-  // Lời mời "{n} lớp — mài thử?" là nút vào chế độ mài; đóng thanh lớp thì lời mời quay lại (mở lại lúc nào cũng được).
-  // Thanh lớp mở = người xem đang học, có khi cố ý làm chậm cảnh: bộ điều chỉnh chỉ canh quá tải nặng tới khi đóng.
-  const onClose = () => {
-    quality?.guard(false);
-    shell.invite(openWorkshop);
-  };
-  const openWorkshop = () => {
-    workshop ??= mountWorkshop(win.document, { meta, content, t, studio: () => studio, onClose });
-    workshop.open({ grind: true });
-    quality?.guard(true);
-  };
+  // Cửa vào xưởng (thanh lớp + Sổ tay): tạo một lần, sống qua các lần dựng lại.
+  const door = createWorkshopDoor({
+    win, meta, t, shell, getContent: () => content, getStudio: () => studio, getQuality: () => quality,
+  });
 
   /** Mất GPU trước khi live, hoặc lần thứ hai: tầng tĩnh. Lần đầu sau khi live: poster + nút "Dựng lại cảnh". */
   const onLost = (d, info) => {
@@ -129,7 +122,7 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
       console.error(`Lỗi GPU ${info?.type ?? ''}: ${info?.message ?? ''}`);
       if (gpuErrors.hit(win.performance.now())) fail('gpu-error', new Error(info?.message ?? 'Lỗi GPU'));
     });
-    const scene = buildScene({ stage, disposer: d, painting, meta, flags, now, reducedMotion, win, tools, t, content });
+    const scene = buildScene({ stage, disposer: d, painting, meta, flags, now, reducedMotion, win, tools, t, content, recipe: snapshot ? null : recipe });
     sma.set({ backend: stage.backend, level: scene.level });
     if (snapshot) await scene.studio.restore(snapshot);
     if (gone()) return false;
@@ -173,14 +166,17 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     d.add(scene.quality.onChange((q) => shell.showBadge({
       tier: stage.backend, level: q.level, steps: q.steps.length, locked: q.locked.length,
     })));
-    if (workshop?.isOpen) scene.quality.guard(true);
+    if (door.isOpen) scene.quality.guard(true);
     // DevTools: __sma.setWeight('<id lớp>', 0) mài một lớp, __sma.degrade() hạ một nấc; e2e so ảnh ở cùng một khung.
     d.add(sma.expose(studioApi(() => studio)));
-    // Gợi ý của bức ("Chạm vào…") chỉ lúc mở trang; lần chạm đầu tiên đổi thành lời mời mài lớp.
-    if (!snapshot && content?.hint) shell.showHint(content.hint);
-    if (!workshop) scene.input.onFirst(() => shell.invite(openWorkshop));
-    // Dựng lại cảnh xong mà thanh lớp đang đóng: poster lúc mất GPU đã xóa lời mời, nên mời lại ngay.
-    else if (!workshop.isOpen) shell.invite(openWorkshop);
+    // GĐ 9: thanh địa chỉ mang công thức; người xem đổi hash (dán link khác) thì áp rồi mở xưởng theo công thức.
+    d.add(syncRecipeUrl({ win, studio: scene.studio, onApplied: () => door.open({ grind: false, recipe: true }) }));
+    try {
+      door.afterLive({ input: scene.input, rebuilt: Boolean(snapshot) });
+    } catch (err) {
+      // Xưởng (thanh lớp, Sổ tay) là phần thêm: mở hỏng (kể cả mở theo link công thức) thì ghi log, cảnh vẫn live (spec §21.2).
+      console.error('Không mở được xưởng; cảnh vẫn chạy:', err);
+    }
 
     // Công cụ ?debug tải SAU khi live (không tính vào hạn 10 s); hỏng thì null, cảnh vẫn chạy.
     openDebug(flags.debug, stage.renderer, win.document).then((tool) => {
@@ -241,6 +237,7 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     return handle;
   } catch (err) {
     disposer.closeAll();
+    door.dispose(); // xưởng có thể đã mở (link công thức) trước khi lần dựng hỏng: không để thanh lớp mồ côi trên trang tĩnh
     // fail() đã báo tầng tĩnh với lý do đúng (vd. 'device-lost'); đừng để boot ghi đè thành 'error'.
     if (failed) return handle;
     throw err;

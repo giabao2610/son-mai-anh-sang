@@ -224,6 +224,18 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
     }
   });
 
+  it('id núm khớp ^[A-Za-z][A-Za-z0-9]*$ và lựa chọn của núm select khớp ^[A-Za-z0-9-]+$ (chuỗi công thức #r= GĐ 9)', async () => {
+    const { painting } = await loadPainting();
+    for (const m of painting.layers) {
+      for (const knob of m.knobs) {
+        expect(knob.id, `id núm "${m.id}.${knob.id}"`).toMatch(/^[A-Za-z][A-Za-z0-9]*$/);
+        if (knob.kind === 'select') {
+          for (const o of knob.options) expect(o, `lựa chọn "${m.id}.${knob.id}": "${o}"`).toMatch(/^[A-Za-z0-9-]+$/);
+        }
+      }
+    }
+  });
+
   it('Dial (nếu có): id kebab-case, không trùng; min < max; format ra chuỗi; có nhãn; mọi khóa note() trả ra đều có chữ', async () => {
     const { painting } = await loadPainting();
     // Ban đêm và ban ngày: note() có thể khác nhau (Bức 1 ghi chú 'daytime' khi mượn giờ).
@@ -232,6 +244,9 @@ describe.each(ALL.map((p) => [p.meta.slug, p]))('Bức "%s"', (slug, row) => {
       const dials = setup?.dials ?? [];
       const ids = dials.map((d) => d.id);
       expect(new Set(ids).size, `Dial trùng id: ${ids.join(', ')}`).toBe(ids.length);
+      for (const id of ids) {
+        expect(meta.layers.map((l) => l.id), `id Dial "${id}" trùng id lớp: chuỗi công thức sẽ mơ hồ`).not.toContain(id);
+      }
       for (const dial of dials) {
         expect(dial.id, `id Dial "${dial.id}"`).toMatch(KEBAB);
         expect(dial.min, `Dial "${dial.id}": min < max`).toBeLessThan(dial.max);

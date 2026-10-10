@@ -147,8 +147,8 @@
  *                                                 mount() (như Từng sợi), và toolbox.js bỏ riêng công cụ đó
  */
 /** @typedef {{ id: string, label: string, ready: boolean }} ViewInfo */
-/** [5] Móc lần vẽ (renderer.setRenderObjectFunction), phần công cụ thấy (ToolApi.draws). Chỉ gắn giữa start() và stop(); lúc khác
- * cảnh không tốn thêm gì. Móc mà scene.js giữ (createDrawProbe) còn có begin()/end(), gọi quanh mỗi pipeline.render().
+/** [5] Móc lần vẽ (renderer.setRenderObjectFunction), phần công cụ thấy (ToolApi.draws). Chỉ gắn khi có người cần; lúc khác cảnh không
+ * tốn thêm gì. Móc mà scene.js giữ (createDrawProbe) còn có begin()/end() quanh mỗi pipeline.render(), [9] capture() và dispose().
  * @typedef {Object} DrawProbe
  * @property {() => void} start                 gắn móc (công cụ bật); khung kế tiếp được ghi lại
  * @property {() => void} stop                  gỡ móc, trả hàm vẽ trước đó; vẽ đủ như chưa có gì
@@ -234,6 +234,16 @@
  * @property {() => { id: string, min: number, max: number, step: number, value: number, text: string, note: string | null }[]} dials
  *   [4] núm của cả bức: text là chữ của format (cũng là aria-valuetext), note là khóa ghi chú
  * @property {(id: string, v: number) => Promise<void>} setDial   [4] kẹp theo min/max/step
+ * @property {(layerId: string) => Promise<Translation>} translation   [9] Bản dịch: mã WGSL/GLSL thật của những nơi uniform của lớp
+ *   có mặt, bắt từ khung vẽ kế tiếp (spec §21.3); lớp lạ thì ném
+ * @property {Function} recipe  [9] recipe() · applyRecipe(text) → { counts, problems, applied } · reset() · onChange(cb) (spec §21.2, §21.4)
+ */
+/** [9] Bản dịch của một lớp (engine/gpu/translate.js). uniforms: tên trong mã (Cốt: weight null, luật 1). places: vật của chính lớp,
+ * vật của lớp khác theo thứ tự phủ, vật không lớp nào giữ (owner null), rồi quad cuối (post); key bền qua các lần dịch; drawn false:
+ * khung ấy không vẽ vật. jsOnly: không mã nào có uniform của lớp mà có vật của lớp được vẽ (hay lớp không có vật nào), spec §21.3.
+ * @typedef {{ language: 'wgsl' | 'glsl', backend: 'webgpu' | 'webgl2', uniforms: { weight: string | null, knobs: Record<string, string> },
+ *   places: { key: string, label: string, owner: string | null, own: boolean, post: boolean, drawn: boolean, vertex: string | null,
+ *     fragment: string | null, hits: { vertex: number, fragment: number }, error?: string }[], jsOnly: boolean }} Translation
  */
 
 export {};

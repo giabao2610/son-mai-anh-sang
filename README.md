@@ -82,6 +82,36 @@ Sau lần chạm đầu tiên (hoặc phím đầu tiên, với người dùng b
 - Mất GPU (máy ngủ, đổi card đồ họa): lần đầu trang hiện poster và nút "Dựng lại cảnh", dựng lại đúng trạng thái cũ;
   lần hai thì về tranh tĩnh.
 
+## Link công thức: gửi đúng bức tranh bạn vừa mài
+
+Mài vài lớp, chỉnh vài núm, kéo thanh giờ, rồi muốn gửi cho ai đó đúng bức tranh ấy:
+
+- **Chép link:** trong thanh lớp có mục **Công thức**, nút "Chép link công thức". Link dạng `…/son-mai-anh-sang/#r=suong:0,gio:23`:
+  đọc được, sửa tay được. Cờ như `?debug` hay `?level=thap` không vào link, vì chúng là môi trường của máy bạn, không phải bức tranh.
+  Chép không được (trình duyệt chặn) thì link hiện trong một ô để bạn chép tay.
+- **Thanh địa chỉ tự mang công thức:** mỗi lần mài hay chỉnh, thanh địa chỉ đổi theo (không thêm mục vào lịch sử, nút Back vẫn là Back).
+  Tải lại trang không mất việc đang mài; đánh dấu trang hay chép thẳng từ thanh địa chỉ đều được.
+- **Mở một link có công thức:** bức hiện thẳng theo công thức, thanh lớp mở sẵn với một dòng tóm tắt ("2 lớp đã mài · 3 núm đã chỉnh ·
+  giờ 23:00"). Dán một link khác vào cùng tab cũng áp ngay. Mục nào trong link hỏng thì bỏ, các mục còn lại vẫn áp.
+- **Về nguyên bản:** nút cạnh dòng tóm tắt; các lớp phủ lại, núm và Dial về mặc định, link về trống.
+- **Mặc định là của máy người mở.** Link chỉ ghi những gì bạn đã đổi. Thanh giờ bạn không kéo thì không có trong link: người nhận
+  thấy đêm của chính họ. Núm có trần theo mức máy thì bị kẹp theo máy người nhận.
+- Link không mang thí nghiệm đang bật, công cụ đang bật, góc camera và mức chất lượng.
+
+## Bản dịch: đọc mã shader mà GPU thật sự chạy
+
+Ở Sổ tay › **Chỉnh**, cạnh code JS của lớp có thêm nút **Bản dịch** (chỉ ở bản 3D). Code TSL là code JS; three dịch nó ra WGSL
+(WebGPU) hay GLSL (WebGL2) trên chính máy bạn, và đó mới là thứ GPU chạy.
+
+- Chọn **Vật** mà lớp có mặt (nhiều lớp không có vật riêng: Sương góp vào shader của lá sen, Phủ bóng nằm trong lượt cuối · hậu kỳ),
+  rồi **Đỉnh** hay **Điểm ảnh**. Dòng có uniform của lớp (`w_<lớp>`, `<lớp>_<núm>`) có vạch vàng; rê một núm thì sáng đúng các dòng
+  của núm ấy.
+- Vì sao có `w_<lớp>`: trọng số của lớp là một uniform trong mã. **Mài lớp chỉ đổi con số ấy, mã không đổi, nên không biên dịch lại**
+  (luật 2 của kỹ thuật). Mài thử rồi mở Bản dịch: mã vẫn y nguyên, chỉ giá trị của `w_<lớp>` đổi.
+- Mã là của một khung vẽ thật: xưởng bắt lấy chuỗi mã mà three vừa dùng, nên cảnh không khựng và không tạo thêm program nào cho GPU.
+  Đổi núm hay bật thí nghiệm lúc Bản dịch đang mở thì nó dịch lại.
+- Chưa có: mã compute (đom đóm, thóc), vì three không có API công khai để lấy.
+
 ## Công cụ học: nhìn vào bên trong một khung hình
 
 Trong thanh lớp có mục **Đồ nghề** (mỗi lúc bật một công cụ; đóng thanh lớp thì công cụ tắt):
@@ -186,6 +216,8 @@ Thêm vào sau địa chỉ trang, ví dụ `…/son-mai-anh-sang/?webgl&freeze=
 | `?freeze`, `?freeze=N` | Đồng hồ tất định: mỗi khung đúng 1/60 giây. `?freeze=N` dừng sau khung N |
 | `?poster` | Ẩn mọi giao diện trừ canvas, để chụp poster (dùng cùng `?at` và `?freeze=N`) |
 | `?level=cao\|vua\|thap` | Ép mức chất lượng (bỏ qua cách tự chọn theo máy); giá trị lạ thì bỏ qua |
+
+Hash khác với query: `#r=…` là công thức của bức tranh (xem "Link công thức"), không phải cờ.
 
 ## Cấu trúc
 

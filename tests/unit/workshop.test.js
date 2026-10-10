@@ -31,12 +31,27 @@ const content = {
   },
 };
 
+const studioRecipe = { text: '' }; // công thức mà bàn thợ giả báo (test đặt)
+
 /** Bàn thợ giả: đủ các hàm mà Sổ tay và thanh lớp gọi, ghi lại lời gọi. */
 function fakeStudio() {
   const weights = { cot: 1, hai: 1, ba: 1 };
   const on = new Set();
+  const listeners = new Set();
+  let knobValues = { size: 0.5 };
   return {
     calls: [],
+    /** studio.onChange (GĐ 9): báo sau mỗi thay đổi của người xem; trả hàm bỏ nghe. */
+    onChange(cb) {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    listeners,
+    /** Thay đổi từ chỗ khác ("Về nguyên bản", link dán, Back/Forward, __sma): núm đổi rồi báo, như studio.restore. */
+    external(values) {
+      knobValues = { ...knobValues, ...values };
+      listeners.forEach((cb) => cb());
+    },
     layers: () => [
       { id: 'cot', knobs: [{ id: 'size', kind: 'number', via: 'uniform', min: 0, max: 1, step: 0.1 }], experiments: [], readouts: [] },
       { id: 'hai', knobs: [], experiments: [{ id: 'pha', kind: 'toggle' }, { id: 'so', kind: 'compare' }], readouts: [{ id: 'dinh', unit: '' }] },
@@ -47,7 +62,7 @@ function fakeStudio() {
       this.calls.push(['setWeight', id, v, options]);
       weights[id] = v;
     },
-    knobs: () => ({ size: 0.5 }),
+    knobs: () => ({ ...knobValues }),
     setKnob: vi.fn(async () => {}),
     experiment: (layerId, id) => on.has(`${layerId}.${id}`),
     toggleExperiment: vi.fn(async (layerId, id, value) => (value ? on.add(`${layerId}.${id}`) : on.delete(`${layerId}.${id}`))),
@@ -56,6 +71,8 @@ function fakeStudio() {
     setTool: vi.fn(async () => {}),
     dials: () => [],
     setDial: vi.fn(async () => {}),
+    recipe: () => ({ text: studioRecipe.text, counts: { layers: 1, knobs: 0, dials: [] } }),
+    reset: vi.fn(async () => {}),
     gpuMs: 4.56,
     stats() {
       return { drawCalls: 21, triangles: 90000, ms: 16.66, cpuMs: 3.21, gpuMs: this.gpuMs };
@@ -63,6 +80,17 @@ function fakeStudio() {
     compare: (layerId, id) => (id === 'so'
       ? { off: { ms: 16.7, cpuMs: 2, gpuMs: 4 }, on: { ms: 33.4, cpuMs: 9.5, gpuMs: null } }
       : { off: null, on: null }),
+    /** Bản dịch (GĐ 9): một nơi có mã giả, trọng số `w_<id>` (Cốt không có). */
+    translation: vi.fn(async (id) => ({
+      language: 'wgsl',
+      backend: 'webgpu',
+      uniforms: { weight: id === 'cot' ? null : `w_${id}`, knobs: { size: 'cot_size' } },
+      places: [{
+        key: 'o:', label: 'Vật', owner: id, own: true, post: false, drawn: true, vertex: 'fn v() {}', fragment: `fn f() {\n  let a = w_${id};\n}`,
+        hits: { vertex: 0, fragment: 1 },
+      }],
+      jsOnly: false,
+    })),
   };
 }
 
@@ -77,6 +105,7 @@ function mount(studio, extra = {}) {
 }
 
 beforeEach(() => {
+  studioRecipe.text = '';
   document.body.replaceChildren();
   knobsModule = { mountKnobs: vi.fn((container, opts) => ({ opts, refresh: vi.fn(), dispose: vi.fn() })) };
   loadKnobs.mockClear();
@@ -124,7 +153,8 @@ describe('chế độ mài', () => {
     workshop.open();
     const section = rail.querySelector('.rail-tools');
     expect(section.previousElementSibling.tagName).toBe('OL');
-    expect(section.nextElementSibling.classList.contains('rail-next')).toBe(true);
+    expect(section.nextElementSibling.classList.contains('rail-recipe-tools')).toBe(true); // GĐ 9: mục Công thức ngay sau Đồ nghề
+    expect(section.nextElementSibling.nextElementSibling.classList.contains('rail-next')).toBe(true);
     expect(section.querySelector('[data-tool="kinh-mai"]').textContent).toBe(t.tools['kinh-mai'].name);
     workshop.dispose();
   });
@@ -274,6 +304,150 @@ describe('Sổ tay', () => {
     expect(notebook.querySelector('[data-line="2"]').classList.contains('is-lit')).toBe(true);
     await opts.onChange('size', 0.8);
     expect(studio.setKnob).toHaveBeenCalledWith('cot', 'size', 0.8);
+    workshop.dispose();
+  });
+
+  it('Chỉnh (GĐ 9): có bàn thợ thì có nút "Bản dịch" gọi studio.translation(id lớp), ghi tên lớp lên dòng trạng thái; tầng tĩnh không có nút', async () => {
+    const studio = fakeStudio();
+    const { workshop, notebook } = mount(studio);
+    workshop.open({ grind: true });
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(notebook.querySelector('[data-code-translate]')).not.toBeNull());
+    notebook.querySelector('[data-code-translate]').click();
+    expect(studio.translation.mock.calls).toEqual([['cot']]);
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-status').textContent).toContain('dòng có lớp Cốt'));
+    expect(notebook.querySelector('.tr-hint').hidden, 'Cốt không có trọng số: không có dòng nhắc').toBe(true);
+    // lớp khác: khung về code JS (Bản dịch không đi theo sang lớp khác), nút dịch lớp mới
+    document.querySelector('[data-layer="hai"] .rail-name').click();
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-status').textContent).toBe(''));
+    await vi.waitFor(() => expect(notebook.querySelector('.code-view [data-line="1"]')).not.toBeNull());
+    notebook.querySelector('[data-code-translate]').click();
+    expect(studio.translation).toHaveBeenLastCalledWith('hai');
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-hint').textContent).toBe(t.translation.weightHint('w_hai')));
+    workshop.dispose();
+
+    document.body.replaceChildren();
+    const readOnly = mount(null);
+    readOnly.workshop.open({ grind: true });
+    await vi.waitFor(() => expect(readOnly.notebook.querySelector('.code-view [data-line="1"]')).not.toBeNull());
+    expect(readOnly.notebook.querySelector('[data-code-translate]')).toBeNull();
+    readOnly.workshop.dispose();
+  });
+
+  it('Bản dịch đang mở: núm áp xong hay thí nghiệm áp xong thì dịch lại sau 300 ms (kéo liền nhiều lần chỉ dịch một lần); code JS thì không dịch', async () => {
+    const studio = fakeStudio();
+    const { workshop, rail, notebook } = mount(studio);
+    workshop.open({ grind: true });
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(knobsModule.mountKnobs).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(notebook.querySelector('[data-code-translate]')).not.toBeNull());
+    const { opts } = knobsModule.mountKnobs.mock.results[0].value;
+    vi.useFakeTimers();
+    await opts.onChange('size', 0.6); // đang ở code JS: không dịch
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(studio.translation).not.toHaveBeenCalled();
+    vi.useRealTimers();
+    notebook.querySelector('[data-code-translate]').click();
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-status').textContent).toContain('dòng có lớp'));
+    expect(studio.translation).toHaveBeenCalledTimes(1);
+
+    vi.useFakeTimers();
+    await opts.onChange('size', 0.7);
+    await vi.advanceTimersByTimeAsync(200);
+    await opts.onChange('size', 0.8); // kéo tiếp: hẹn lại từ lần này
+    await vi.advanceTimersByTimeAsync(299);
+    expect(studio.translation).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(studio.translation).toHaveBeenCalledTimes(2);
+    expect(studio.translation).toHaveBeenLastCalledWith('cot');
+
+    // thí nghiệm ở tab Phá của lớp đang xem cũng làm Bản dịch đang mở dịch lại
+    rail.querySelector('[data-layer="hai"] .rail-name').click();
+    await vi.advanceTimersByTimeAsync(0);
+    vi.useRealTimers();
+    await vi.waitFor(() => expect(notebook.querySelector('[data-code-translate]')).not.toBeNull());
+    notebook.querySelector('[data-code-translate]').click();
+    await vi.waitFor(() => expect(studio.translation).toHaveBeenCalledTimes(3));
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-status').textContent).toContain('dòng có lớp Hai'));
+    notebook.querySelector('[data-tab="pha"]').click();
+    vi.useFakeTimers();
+    notebook.querySelector('[data-experiment="pha"]').click();
+    await vi.advanceTimersByTimeAsync(299);
+    expect(studio.translation).toHaveBeenCalledTimes(3);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(studio.translation).toHaveBeenCalledTimes(4);
+    expect(studio.translation).toHaveBeenLastCalledWith('hai');
+    workshop.dispose();
+  });
+
+  it('bàn thợ đổi từ chỗ khác (Về nguyên bản, link dán, Back/Forward, __sma): núm đọc lại giá trị thật; Bản dịch đang mở thì dịch lại (F1)', async () => {
+    const studio = fakeStudio();
+    const { workshop, notebook } = mount(studio);
+    workshop.open({ grind: true });
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(knobsModule.mountKnobs).toHaveBeenCalledTimes(1));
+    const pane = knobsModule.mountKnobs.mock.results[0].value;
+    studio.external({ size: 0.2 });
+    expect(pane.refresh).toHaveBeenLastCalledWith({ size: 0.2 });
+    pane.refresh.mockClear();
+    studio.external({}); // thay đổi khác (trọng số, Dial): núm không đổi thì ô núm không vẽ lại
+    expect(pane.refresh).not.toHaveBeenCalled();
+
+    await vi.waitFor(() => expect(notebook.querySelector('[data-code-translate]')).not.toBeNull());
+    notebook.querySelector('[data-code-translate]').click();
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-status').textContent).toContain('dòng có lớp'));
+    expect(studio.translation).toHaveBeenCalledTimes(1);
+    vi.useFakeTimers();
+    studio.external({ size: 0.9 }); // núm 'rebuild' áp qua restore(): mã có thể đổi
+    await vi.advanceTimersByTimeAsync(300);
+    expect(studio.translation).toHaveBeenCalledTimes(2);
+    workshop.dispose();
+    expect(studio.listeners.size, 'gỡ xưởng thì bỏ nghe').toBe(0);
+  });
+
+  it('Sổ tay đang đóng lúc bàn thợ đổi: mở lại đúng lớp ấy thì núm đã là giá trị thật, không phải giá trị cũ (F1)', async () => {
+    const studio = fakeStudio();
+    const { workshop, rail, notebook } = mount(studio);
+    workshop.open({ grind: true });
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(knobsModule.mountKnobs).toHaveBeenCalledTimes(1));
+    const pane = knobsModule.mountKnobs.mock.results[0].value;
+    notebook.querySelector('.nb-close').click();
+    studio.external({ size: 0.1 });
+    rail.querySelector('[data-layer="cot"] .rail-name').click();
+    expect(knobsModule.mountKnobs).toHaveBeenCalledTimes(1); // cùng ô núm, không dựng lại
+    expect(pane.refresh).toHaveBeenLastCalledWith({ size: 0.1 });
+    workshop.dispose();
+  });
+
+  it('"Dựng lại cảnh" (bàn thợ mới): nghe bàn thợ mới, bỏ nghe bàn thợ cũ (F1)', () => {
+    let current = fakeStudio();
+    const workshop = mountWorkshop(document, { meta, content, t, studio: () => current, notebook: { loadCode, loadKnobs } });
+    const old = current;
+    expect(old.listeners.size).toBe(1);
+    current = null; // mất GPU: chưa có bàn thợ
+    workshop.open();
+    current = fakeStudio();
+    workshop.open(); // (vòng rAF gọi sync mỗi khung)
+    expect([old.listeners.size, current.listeners.size]).toEqual([0, 1]);
+    workshop.dispose();
+    expect(current.listeners.size).toBe(0);
+  });
+
+  it('mất GPU sau khi Sổ tay dựng nút "Bản dịch": bấm thì báo "chưa dịch được" kèm lỗi tiếng Việt, không TypeError (C5)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let current = fakeStudio();
+    const workshop = mountWorkshop(document, { meta, content, t, studio: () => current, notebook: { loadCode, loadKnobs } });
+    const notebook = document.querySelector('[data-notebook]');
+    workshop.open({ grind: true });
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(notebook.querySelector('[data-code-translate]')).not.toBeNull());
+    current = null;
+    notebook.querySelector('[data-code-translate]').click();
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-status').textContent).toBe(t.translation.failed));
+    const err = warn.mock.calls.find(([text]) => text === 'Sổ tay: không dịch được:')?.[1];
+    expect(err?.message).toBe('Cảnh chưa sẵn sàng: không có bản dịch');
+    warn.mockRestore();
     workshop.dispose();
   });
 
@@ -446,6 +620,48 @@ describe('Sổ tay', () => {
     notebook.querySelector('.nb-close').click();
     expect(notebook.hidden).toBe(true);
     expect(rail.hidden).toBe(false);
+    workshop.dispose();
+  });
+});
+
+describe('mục Công thức (GĐ 9)', () => {
+  it('open({ recipe }): thanh lớp mở, KHÔNG lớp nào tween về 0; dòng tóm tắt trống ngay lúc mở, điền ở khung sau (F5: VoiceOver)', () => {
+    vi.useFakeTimers();
+    studioRecipe.text = 'hai:0';
+    const studio = fakeStudio();
+    const { workshop, rail, $ } = mount(studio);
+    workshop.open({ recipe: true });
+    expect(rail.hidden).toBe(false);
+    expect(studio.calls).toEqual([]);
+    expect($('.rail-recipe-text').textContent, 'cùng nhịp với lúc bỏ hidden: chưa điền').toBe('');
+    vi.advanceTimersByTime(16); // một khung
+    expect($('.rail-recipe-text').textContent).toBe('Công thức trong link: 1 lớp đã mài');
+    expect(workshop.layer).toBe(null);
+    workshop.dispose();
+  });
+
+  it('open({ grind }): dòng tóm tắt ẩn, kể cả khi vừa hiện', () => {
+    studioRecipe.text = 'hai:0';
+    const { workshop, $ } = mount(fakeStudio());
+    workshop.open({ recipe: true });
+    workshop.open({ grind: true });
+    expect($('.rail-recipe-text').textContent).toBe('');
+    expect($('[data-recipe-reset]').hidden).toBe(true);
+    workshop.dispose();
+  });
+
+  it('mục Công thức nằm TRONG thanh lớp (Tab đi theo thứ tự DOM), sau Đồ nghề; tóm tắt đứng đầu', () => {
+    const { workshop, rail } = mount(fakeStudio());
+    const kids = [...rail.children].map((c) => c.className.split(' ')[0]);
+    expect(kids.indexOf('rail-recipe')).toBe(0);
+    expect(kids.indexOf('rail-recipe-tools')).toBe(kids.indexOf('rail-tools') + 1);
+    workshop.dispose();
+  });
+
+  it('tầng tĩnh (không có bàn thợ): không có mục Công thức', () => {
+    const { workshop, rail } = mount(null);
+    expect(rail.querySelector('.rail-recipe, .rail-recipe-tools')).toBeNull();
+    workshop.open({ recipe: true });
     workshop.dispose();
   });
 });

@@ -1,4 +1,4 @@
-// e2e/helpers.js — Tiện ích e2e: chờ __sma ổn định, chờ khung, đọc pixel canvas (cả khung và từng vùng), chạm hai lần trong trang, báo GPU, gom lỗi console.
+// e2e/helpers.js — Tiện ích e2e: chờ __sma ổn định, chờ khung, đọc pixel canvas (cả khung và từng vùng), chạm hai lần trong trang, báo GPU, gom lỗi console (và lọc lỗi GPU).
 import { expect } from '@playwright/test';
 
 /** Cảnh báo API cũ mà three in ra lúc chạy (spec §3: e2e bắt các cảnh báo này). */
@@ -286,6 +286,25 @@ export function collectConsole(page) {
   });
   return log;
 }
+
+/**
+ * GĐ 9 (spec §21.8): lớp để thử Bản dịch của mỗi bức (lớp có mặt ở vật của lớp khác, hay ở quad cuối) và công thức thử (Task 7).
+ * Bức 1: Sương vào shader của mọi vật qua sương mù; Bức 2: Giấy góp vào material đèn của Cốt; Bức 3: Bóng mềm vào khối bao SDF;
+ * Bức 4: Bản nét ở quad cuối.
+ */
+export const GD9 = {
+  'ao-sen-dem': { layer: 'suong', recipe: 'suong:0,suong.density:0.02,gio:23' },
+  'den-keo-quan': { layer: 'giay', recipe: 'giay:0,giay.dye:0.3' },
+  'cung-que': { layer: 'bong-mem', recipe: 'bong-mem:0,ngay:15' },
+  'dan-ga-me-con': { layer: 'ban-net', recipe: 'ban-net:0,ban-net.lineWidth:3' },
+};
+
+/**
+ * Các dòng console báo lỗi GPU. Chromium báo lỗi GL của WebGL2 ("GL_INVALID_OPERATION: … missing fragment shader outputs") ở mức
+ * console.warning và không khớp DEPRECATION, nên `log.errors` / `log.warnings` không thấy: quét thẳng toàn bộ `log.all`.
+ * @param {{ all: string[] }} log  kết quả của collectConsole
+ */
+export const gpuErrors = (log) => log.all.filter((line) => /GL_INVALID_|Lỗi GPU|Render pipeline creation failed|Invalid (RenderPipeline|CommandBuffer)/.test(line));
 
 /**
  * Bật/tắt một thí nghiệm như người xem. Bấm Tab (lần tương tác đầu, không chạm canvas: chạm là thổi nến; phím bổ trợ đứng một mình

@@ -116,6 +116,56 @@
 .dial-note { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.5; color: var(--bac-la); }
 .dial-chip { display: none; }
 
+/* ── Công thức (GĐ 9, ui/recipe-panel.js): dòng tóm tắt ở đầu thanh lớp, và mục chép link sau Đồ nghề ───────────────────
+   Hai dòng chữ (tóm tắt, trạng thái) là vùng aria-live: luôn có mặt, trống thì thu lại bằng margin 0 (không hidden, không display: none: trình đọc chỉ đọc chữ điền vào vùng ĐÃ có mặt). */
+.rail-recipe { display: grid; gap: 6px; }
+/* Khối viền vàng chỉ hiện khi có tóm tắt (ui/recipe-panel.js đặt data-on); không dùng :has() cho trình duyệt cũ. */
+.rail-recipe[data-on] {
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--vang-la) 40%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--vang-la) 8%, transparent);
+}
+.rail-recipe-label { display: none; }
+.rail-recipe-text { margin: 0; font-size: 12px; line-height: 1.5; color: var(--vang-la-sang); }
+.rail-recipe-reset {
+  justify-self: start;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: none;
+  border: 1px solid var(--vang-la);
+  border-radius: 999px;
+}
+.rail-recipe-reset:hover { color: var(--den-then); background: var(--vang-la); }
+.rail-recipe-tools { display: grid; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--vang-la) 25%, transparent); }
+.rail-recipe-copy {
+  justify-self: start;
+  margin-top: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: none;
+  border: 1px solid var(--vang-la);
+  border-radius: 999px;
+}
+.rail-recipe-copy:hover { color: var(--den-then); background: var(--vang-la); }
+.rail-recipe-status { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--bac-la); }
+.rail-recipe-status:empty { margin: 0; }
+.rail-recipe-link {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 5px 8px;
+  font: 400 12px/1.4 var(--mono);
+  color: var(--nga);
+  background: color-mix(in srgb, var(--den-then) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--vang-la) 55%, transparent);
+  border-radius: 6px;
+}
+.rail-recipe-link:focus-visible { outline: 2px solid var(--vang-la-sang); outline-offset: 2px; }
+.rail-recipe-link[hidden] { display: none; }
+
 /* Công cụ đang bật: thơ và con dấu ở chân tranh nhường chỗ cho thanh điều khiển (tắt công cụ thì hiện lại). */
 body[data-tool] .foot { visibility: hidden; }
 
@@ -152,6 +202,20 @@ body[data-tool] .foot { visibility: hidden; }
     border-top: 1px solid color-mix(in srgb, var(--vang-la) 35%, transparent);
   }
   .rail-dials:not([data-open]) { display: none; }
+  /* Công thức trên dải: dòng tóm tắt thu thành một chip "Công thức · Về nguyên bản" (chữ đầy đủ vẫn ở vùng aria-live), mục Công thức là một nút chép link. Không transform hay filter ở đây: rail-dials fixed nằm trong dải này. */
+  .rail-recipe { display: flex; align-items: center; flex-shrink: 0; gap: 8px; }
+  .rail-recipe[data-on] { padding: 3px 4px 3px 12px; border-radius: 999px; }
+  .rail-recipe:not([data-on]) { max-width: 0; overflow: hidden; gap: 0; } /* không display: none: vùng aria-live phải có sẵn trước khi có chữ */
+  .rail-recipe-label { display: inline; font: 600 12px/1.3 var(--sans); color: var(--vang-la-sang); white-space: nowrap; }
+  /* Dòng tóm tắt dài chỉ còn cho trình đọc màn hình (ẩn bằng cắt, không bằng display/hidden: vẫn trong cây trợ năng). */
+  .rail-recipe-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .rail-recipe-reset { flex-shrink: 0; white-space: nowrap; }
+  .rail-recipe-tools { display: flex; align-items: center; flex-shrink: 0; gap: 6px; padding: 0 0 0 10px; border-top: 0; border-left: 1px solid color-mix(in srgb, var(--vang-la) 25%, transparent); }
+  .rail-recipe-tools .rail-title { display: none; }
+  .rail-recipe-copy { margin-top: 0; white-space: nowrap; }
+  .rail-recipe-status { flex: 0 0 170px; margin: 0; } /* hai ba dòng: chữ chép hỏng không nằm vừa một dòng trên dải 390px */
+  .rail-recipe-status:empty { flex-basis: 0; } /* chưa có gì để nói: không giữ một khoảng trống 170px trên dải */
+  .rail-recipe-link { flex-shrink: 0; width: 200px; margin-top: 0; }
 }
 
 /* ── Xưởng mở (GĐ 5): bảng công cụ không bao giờ nằm dưới thanh lớp hay Sổ tay ─────────────────────────────────────────

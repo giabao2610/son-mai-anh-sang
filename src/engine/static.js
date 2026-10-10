@@ -75,9 +75,10 @@ function openReader(entry, shell, t, loadWorkshop) {
  * @param {object} entry  PaintingEntry của bức (Sổ tay chỉ đọc dùng meta và content)
  * @param {object} shell  vỏ trang từ ui/shell.js#mountShell
  * @param {{ reason: string, error?: any, debug?: boolean, t: Record<string, any>, sma: object,
- *           loadWorkshop?: () => Promise<{ mountWorkshop: Function }> }} opts   loadWorkshop: test thay bộ nạp Sổ tay
+ *           recipe?: { entries: object[] } | null, loadWorkshop?: () => Promise<{ mountWorkshop: Function }> }} opts
+ *   recipe: GĐ 9, kết quả readRecipe; loadWorkshop: test thay bộ nạp Sổ tay
  */
-export function showStatic(entry, shell, { reason, error = null, debug = false, t, sma, loadWorkshop = () => import('../ui/workshop.js') }) {
+export function showStatic(entry, shell, { reason, error = null, debug = false, t, sma, recipe = null, loadWorkshop = () => import('../ui/workshop.js') }) {
   if (sma.state === 'static' && sma.reason === reason) return;
   if (error) console.error(`Về tranh tĩnh (${reason}):`, error);
   sma.set({ reason, error: error ? String(error.message ?? error) : null });
@@ -86,7 +87,9 @@ export function showStatic(entry, shell, { reason, error = null, debug = false, 
   const note = staticNote(reason, t);
   // Người xem thường không có ?debug: với lý do lỗi, chỉ cho họ cách xem chi tiết.
   const hint = !debug && !NAMED_REASONS.includes(reason);
-  const text = hint ? `${note.text} ${t.static.debugHint}` : note.text;
+  // GĐ 9: link có công thức mà không có 3D thì nói rõ vì sao tranh không theo công thức (kể cả ?static, vốn không có chữ).
+  const extra = recipe?.entries.length > 0 ? t.recipe.staticNote : null;
+  const text = [hint ? `${note.text} ${t.static.debugHint}` : note.text, extra].filter(Boolean).join(' ') || null;
   // Trang vừa được cập nhật (chunk-load) thì chunk của Sổ tay cũng hỏng: chỉ mời tải lại.
   const action = reason === 'chunk-load'
     ? undefined

@@ -1,6 +1,7 @@
 // ui/notebook.js — Sổ tay của một lớp: ba tab Hiểu / Chỉnh / Phá (panel bên phải trên máy tính, tấm trượt dưới trên điện thoại).
 import { h } from './dom.js';
 import { createCodeView } from './code-view.js';
+import { createKnobPane } from './knob-pane.js';
 import { understandPage, experimentList, measureList, compareBars } from './notebook-pages.js';
 
 const TABS = ['hieu', 'chinh', 'pha'];
@@ -29,8 +30,6 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
   const panels = Object.fromEntries(TABS.map((id) => [id, h(doc, 'div', {
     role: 'tabpanel', id: `nb-panel-${id}`, 'aria-labelledby': `nb-tab-${id}`, 'data-panel': id, tabindex: '0',
   })]));
-  const knobsBox = h(doc, 'div', { class: 'nb-knobs', 'data-knobs': '' });
-  panels.chinh.append(knobsBox, h(doc, 'h3', { text: t.notebook.code }), code.el);
   // Dòng trạng thái ở đáy Sổ tay, thấy được ở mọi tab: "đang dựng…" khi núm hay thí nghiệm đang áp, hoặc báo áp hỏng.
   // Là vùng aria-live nên luôn có mặt, trống khi không có gì để nói (CSS thu lại khi :empty).
   const busy = h(doc, 'p', { class: 'nb-busy', 'aria-live': 'polite' });
@@ -42,8 +41,6 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
 
   let layerId = null;
   let tab = 'hieu';
-  let pane = null; // Tweakpane của lớp đang mở (null: chưa dựng)
-  let paneFor = null;
   let readouts = null;
   let compares = new Map(); // id thí nghiệm 'compare' → hai cột "Tắt / Bật"
   // "Lớp đang tắt": vùng aria-live nên luôn có mặt, trống khi lớp đang phủ (CSS thu lại khi :empty, không dùng hidden).
@@ -53,6 +50,11 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
 
   const layerOf = (id) => meta.layers.find((l) => l.id === id);
   const specOf = (id) => studio()?.layers().find((l) => l.id === id) ?? null;
+  /**
+   * Bản dịch của một lớp (GĐ 9): hỏi bàn thợ ĐANG CÓ lúc bấm (cảnh dựng lại thì bàn thợ đổi). Không có bàn thợ lúc dựng Sổ tay: code-view
+   * không có nút; mất GPU sau đó: Promise hỏng với câu tiếng Việt (code-view báo "chưa dịch được"), không TypeError.
+   */
+  const translateLayer = (id) => studio()?.translation(id) ?? Promise.reject(new Error('Cảnh chưa sẵn sàng: không có bản dịch'));
 
   /**
    * Chờ một thay đổi (núm, thí nghiệm) xong; trong lúc chờ hiện "đang dựng…". Áp không được thì ghi log và báo một
@@ -70,59 +72,13 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
     } finally {
       pending -= 1;
       if (pending === 0) busy.textContent = failed ? t.notebook.changeFailed : '';
+      code.refresh(); // Bản dịch đang mở thì dịch lại: núm 'rebuild' và thí nghiệm có thể đã đổi material
     }
   };
 
-  const disposePane = () => {
-    pane?.dispose();
-    pane = null;
-    paneFor = null;
-  };
-
-  /** Ô núm: chữ (hoặc trống) kèm data-state = 'loading' | 'ready' | 'empty' | 'static' | 'error' cho CSS và e2e đọc. */
-  const knobsState = (state, text = '') => {
-    knobsBox.dataset.state = state;
-    knobsBox.textContent = text;
-  };
-
-  /** Núm của lớp đang mở (Tweakpane). Tầng tĩnh: một dòng giải thích thay cho núm. */
-  const mountPane = async () => {
-    const id = layerId;
-    if (paneFor === id) return;
-    disposePane();
-    paneFor = id;
-    const spec = specOf(id);
-    if (!spec) {
-      knobsState('static', t.notebook.knobsStatic);
-      return;
-    }
-    if (spec.knobs.length === 0) {
-      knobsState('empty', t.notebook.noKnobs);
-      return;
-    }
-    knobsState('loading', t.notebook.loading);
-    try {
-      const { mountKnobs } = await loadKnobs();
-      if (paneFor !== id) return; // người xem đã chuyển lớp trong lúc tải Tweakpane
-      knobsState('ready');
-      pane = mountKnobs(knobsBox, {
-        knobs: spec.knobs,
-        values: studio().knobs(id),
-        labels: content?.layers?.[id]?.knobs,
-        // Xong (hay hỏng) thì đọc lại giá trị thật: lớp có thể đã kẹp giá trị, hoặc áp hỏng và giữ giá trị cũ.
-        onChange: (knobId, value) => track(() => studio()?.setKnob(id, knobId, value)).then(() => {
-          if (paneFor === id) pane?.refresh(studio()?.knobs(id) ?? {});
-        }),
-        onHover: (knobId) => code.light(knobId),
-      });
-    } catch (err) {
-      // Chunk Tweakpane tải hỏng (mạng, hay trang vừa deploy): báo thay vì "Đang tải…" mãi; mở lại tab thì thử lại.
-      console.warn('Sổ tay: không dựng được núm:', err);
-      if (paneFor !== id) return;
-      paneFor = null;
-      knobsState('error', t.notebook.knobsFailed);
-    }
-  };
+  // Ô núm (Tweakpane; ui/knob-pane.js): dựng khi tab Chỉnh mở, đọc lại giá trị thật khi bàn thợ đổi từ chỗ khác (sync).
+  const knobs = createKnobPane(doc, { t, content, studio, loadKnobs, track, onHover: (knobId) => code.light(knobId) });
+  panels.chinh.append(knobs.el, h(doc, 'h3', { text: t.notebook.code }), code.el);
 
   /** Số đo của tab Phá. `announce = false`: chưa đụng dòng "lớp đang tắt" (lần gọi cùng nhịp với lúc tab hiện). */
   const tick = (announce = true) => {
@@ -181,7 +137,7 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
       button.tabIndex = on ? 0 : -1;
     }
     for (const [name, panel] of Object.entries(panels)) panel.hidden = name !== id;
-    if (id === 'chinh') mountPane();
+    if (id === 'chinh') knobs.mount(layerId);
     stopTimer();
     if (id === 'pha' && readouts) {
       // Tab vừa hiện: dòng nhắc để trống, nhịp đo sau mới điền (điền cùng nhịp với lúc bỏ hidden thì VoiceOver bỏ qua).
@@ -228,16 +184,25 @@ export function createNotebook(doc, { meta, content, t, studio, loadKnobs = () =
       no.textContent = t.notebook.layerNo(index + 1, meta.layers.length);
       title.textContent = layer.name;
       panels.hieu.replaceChildren(...understandPage(doc, { layer, text: content?.layers?.[id], t }).filter(Boolean));
-      code.show(layer.files);
-      if (paneFor !== id) disposePane();
+      code.show(layer.files, { layerId: id, layerName: layer.name, translate: studio() ? translateLayer : null });
+      if (knobs.layer !== id) knobs.dispose();
+      else knobs.sync(); // ô núm của lớp này còn từ lần mở trước: bàn thợ có thể đã đổi trong lúc Sổ tay đóng
       renderBreak();
       el.hidden = false;
       select(want);
     },
     hide,
+    /**
+     * Bàn thợ vừa đổi (GĐ 9: công thức áp, "Về nguyên bản", Back/Forward, __sma; workshop.js nghe studio.onChange): núm hiện giá trị
+     * thật, và Bản dịch đang mở thì dịch lại (núm 'rebuild' có thể đã đổi material; code.refresh gộp và chỉ chạy ở Bản dịch).
+     */
+    sync() {
+      knobs.sync();
+      if (!el.hidden) code.refresh();
+    },
     dispose() {
       hide();
-      disposePane();
+      knobs.dispose();
       el.remove();
     },
   };

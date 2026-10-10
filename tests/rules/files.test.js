@@ -1,11 +1,13 @@
-// tests/rules/files.test.js — luật cho từng file nguồn (src/**/*.js, plugins/*.js): dòng 1 là chú thích, số dòng, API cấm, chỗ đặt móc lần vẽ.
+// tests/rules/files.test.js — luật cho từng file nguồn (src/**/*.js, plugins/*.js): dòng 1 là chú thích, số dòng, API cấm, chỗ đặt móc lần vẽ và đọc RenderObject (GĐ 9).
 import { afterAll, describe, expect, it } from 'vitest';
 import { importedNames, listSrc, read, stripComments } from '../helpers/source.js';
 
 const FILES = listSrc();
 const SOFT_LIMIT = 250; // mục tiêu: mỗi file đọc được trong một lần
 const HARD_LIMIT = 300; // quá mức này thì test hỏng
-const DRAW_HOOK_FILE = 'src/engine/gpu/draws.js'; // nơi DUY NHẤT đặt móc lần vẽ của renderer (GĐ 5, Từng sợi)
+const DRAW_HOOK_FILE = 'src/engine/gpu/draws.js'; // nơi DUY NHẤT đặt móc lần vẽ (GĐ 5, Từng sợi) và đọc RenderObject đang vẽ (GĐ 9, Bản dịch)
+/** Trường riêng của renderer mà móc đọc để tìm lại RenderObject vừa vẽ (GĐ 9, "bắt lúc vẽ", Phụ lục A.102; test ghim với three 0.186.1). */
+const RENDER_OBJECT_FIELDS = /\b(_objects|_currentRenderContext)\b/g;
 const nearLimit = [];
 
 /** Số dòng vật lý, đếm như `wc -l` (số ký tự xuống dòng). */
@@ -133,5 +135,31 @@ describe('luật file', () => {
     }
     // three chỉ giữ MỘT hàm vẽ: móc thứ hai ở chỗ khác sẽ âm thầm đè móc của Từng sợi, hay bị Từng sợi đè.
     expect(errors, report(`Chỉ ${DRAW_HOOK_FILE} được gọi setRenderObjectFunction:`, errors)).toEqual([]);
+  });
+
+  it(`chỉ ${DRAW_HOOK_FILE} được đọc _objects và _currentRenderContext của renderer (Bản dịch, spec §21.3, Phụ lục A.102)`, () => {
+    // Tự kiểm: file được miễn phải còn đọc cả hai trường, không thì luật này im lặng đúng với một chỗ đọc cũ.
+    const own = stripComments(read(DRAW_HOOK_FILE), DRAW_HOOK_FILE);
+    expect(own).toMatch(/\b_objects\b/);
+    expect(own).toMatch(/\b_currentRenderContext\b/);
+    const errors = [];
+    for (const file of FILES.filter((f) => f !== DRAW_HOOK_FILE)) {
+      const code = stripComments(read(file), file);
+      for (const m of code.matchAll(RENDER_OBJECT_FIELDS)) errors.push(`${file}:${lineOf(code, m.index)} — ${m[1]}`);
+    }
+    // Hai trường riêng: tìm lại RenderObject chỉ đúng ngay trong lần vẽ, với render context lấy lúc vào móc. Một chỗ duy nhất thì nâng
+    // three chỉ phải xem lại một file (test ghim nằm ở tests/unit/draws.test.js).
+    expect(errors, report(`Chỉ ${DRAW_HOOK_FILE} được đọc _objects / _currentRenderContext của renderer:`, errors)).toEqual([]);
+  });
+
+  it('không file nào gọi getShaderAsync (Phụ lục A.102: nó không trả mã của RenderObject đang vẽ)', () => {
+    const errors = [];
+    for (const file of FILES) {
+      const code = stripComments(read(file), file);
+      for (const m of code.matchAll(/\bgetShaderAsync\b/g)) errors.push(`${file}:${lineOf(code, m.index)} — getShaderAsync`);
+    }
+    // three r186 tìm RenderObject của nó ở chain map 'default' (lần vẽ dùng passId null), dịch lại bằng một lần dựng khác (tên NodeBuffer_<id>,
+    // thứ tự uniform và hàm khác), và compileAsync của nó vẽ lại phản chiếu, scene pass: thêm program mới. Bản dịch đọc lúc vẽ (draws.js).
+    expect(errors, report('getShaderAsync không ra mã đang chạy; đọc RenderObject lúc vẽ (draws.js#capture):', errors)).toEqual([]);
   });
 });

@@ -1,0 +1,145 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Bức "ao-sen-dem" > bảng nơi mỗi lớp có mặt trong mã (WGSL, mức cao) 1`] = `
+{
+  "anh-trang": [
+    "cot/la-noi",
+    "cot/la-dung",
+    "cot/canh-sen",
+    "cot/guong-sen",
+    "cot/cuong",
+    "cot/lau-say",
+    "anh-trang/trang",
+    "anh-trang/hoa-dang",
+    "suong/vom-troi",
+    "mat-nuoc/mat-nuoc",
+  ],
+  "cot": [
+    "cot/canh-sen",
+  ],
+  "mat-nuoc": [
+    "cot/la-noi",
+    "anh-trang/hoa-dang",
+    "mat-nuoc/mat-nuoc",
+  ],
+  "phu-bong": [],
+  "suong": [
+    "cot/la-noi",
+    "cot/la-dung",
+    "cot/canh-sen",
+    "cot/guong-sen",
+    "cot/cuong",
+    "cot/lau-say",
+    "anh-trang/hoa-dang",
+    "suong/vom-troi",
+    "mat-nuoc/mat-nuoc",
+    "vang-la/dom-dom",
+  ],
+  "vang-la": [
+    "vang-la/dom-dom",
+  ],
+}
+`;
+
+exports[`Bức "cung-que" > bảng nơi mỗi lớp có mặt trong mã (WGSL, mức cao) 1`] = `
+{
+  "anh-dat": [
+    "cot/khoi-bao",
+    "anh-dat/trai-dat",
+    "anh-dat/bau-troi",
+    "la-da/la-roi",
+  ],
+  "bong-mem": [
+    "cot/khoi-bao",
+    "la-da/la-roi",
+  ],
+  "cot": [
+    "cot/khoi-bao",
+    "la-da/la-roi",
+  ],
+  "la-da": [
+    "la-da/la-roi",
+  ],
+  "mat-troi": [
+    "cot/khoi-bao",
+    "la-da/la-roi",
+  ],
+  "phu-bong": [],
+}
+`;
+
+exports[`Bức "dan-ga-me-con" > bảng nơi mỗi lớp có mặt trong mã (WGSL, mức cao) 1`] = `
+{
+  "ban-mau": [
+    "cot/ga-me#1",
+    "cot/ga-me#2",
+    "cot/ga-me#3",
+    "cot/ga-con",
+    "dan-ga/thoc",
+  ],
+  "ban-net": [
+    "cot/ga-me#1",
+    "cot/ga-me#2",
+    "cot/ga-me#3",
+    "cot/ga-con",
+    "dan-ga/thoc",
+  ],
+  "cot": [],
+  "dan-ga": [
+    "dan-ga/thoc",
+  ],
+  "giay-diep": [
+    "cot/giay",
+  ],
+  "phu-bong": [],
+}
+`;
+
+exports[`Bức "den-keo-quan" > bảng nơi mỗi lớp có mặt trong mã (WGSL, mức cao) 1`] = `
+{
+  "cot": [],
+  "gian-nha": [
+    "cot/san",
+    "cot/vach",
+    "cot/tran",
+    "cot/xa",
+    "cot/cot-go",
+    "cot/khung-tre",
+    "cot/de-chop",
+    "cot/cay-nen",
+    "cot/day-treo",
+    "cot/tua",
+  ],
+  "giay": [
+    "cot/san",
+    "cot/vach",
+    "cot/tran",
+    "cot/xa",
+    "cot/cot-go",
+    "cot/giay",
+    "cot/tua",
+    "cot/trong",
+    "cot/chong-chong",
+  ],
+  "keo-quan": [
+    "cot/san",
+    "cot/vach",
+    "cot/tran",
+    "cot/xa",
+    "cot/cot-go",
+    "cot/giay",
+    "cot/tua",
+  ],
+  "ngon-nen": [
+    "cot/san",
+    "cot/vach",
+    "cot/tran",
+    "cot/xa",
+    "cot/cot-go",
+    "cot/giay",
+    "cot/tua",
+    "ngon-nen/ngon-lua",
+  ],
+  "phu-bong": [],
+}
+`;

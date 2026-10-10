@@ -137,6 +137,44 @@ const t = {
   views: { final: 'Ảnh cuối', emissive: 'Chỉ emissive', normal: 'Normal', depth: 'Depth' },
   /** Dòng trạng thái (aria-live) trên thanh công cụ: view Normal phải biên dịch lại một lần. */
   toolStatus: { grinding: 'đang mài…', failed: 'Không mài được view này; vẫn giữ view cũ.' },
+  /**
+   * Bản dịch (GĐ 9, spec §21.1): khung mã shader thật trong tab Chỉnh. `post`: nhãn của quad cuối (mọi phần hậu kỳ ghép lại).
+   * `translating` là chuỗi thường: một bản dịch chỉ là một khung vẽ, nên không có tiến độ để đếm.
+   */
+  recipe: {
+    staticNote: 'Link này có công thức mài; công thức chỉ áp được ở bản 3D.',
+    /** Mục Công thức trong thanh lớp (GĐ 9, spec §21.5). */
+    title: 'Công thức',
+    copy: 'Chép link công thức',
+    copied: 'Đã chép link',
+    copyFailed: 'Chưa chép được: link ở ô dưới, chọn rồi chép.',
+    /** Không đọc được công thức của cảnh (cảnh vừa gỡ, hay lỗi của xưởng): không có link nào để đưa ra ô. */
+    linkFailed: 'Chưa lấy được công thức của cảnh; chi tiết ở console của trình duyệt.',
+    linkLabel: 'Link công thức',
+    reset: 'Về nguyên bản',
+    /** Dòng tóm tắt đầu thanh lớp; phần bằng 0 bị bỏ. dials: [{ label, text }]. */
+    summary: ({ layers, knobs, dials }) => `Công thức trong link: ${[
+      layers ? `${layers} lớp đã mài` : null, knobs ? `${knobs} núm đã chỉnh` : null, ...dials.map((d) => `${d.label} ${d.text}`),
+    ].filter(Boolean).join(' · ')}`,
+  },
+  translation: {
+    button: 'Bản dịch',
+    object: 'Vật',
+    stages: 'Phần của shader',
+    vertex: 'Đỉnh',
+    fragment: 'Điểm ảnh',
+    post: 'Lượt cuối · hậu kỳ',
+    translating: 'Đang dịch…',
+    status: ({ language, backend, lines, hits, layer }) => `${language === 'wgsl' ? 'WGSL' : 'GLSL ES 3.0'} · `
+      + `${backend === 'webgpu' ? 'WebGPU' : 'WebGL2'} · ${num(lines)} dòng · ${num(hits)} dòng có lớp ${layer}`,
+    weightHint: (name) => `Mài lớp này chỉ đổi số trong ${name}: mã không đổi, nên không biên dịch lại.`,
+    jsOnly: 'Lớp này đổi cảnh bằng JS: trọng số và núm của nó không vào shader.',
+    /** Vật của chính lớp mà khung vừa bắt không vẽ (đang ẩn, hay nằm ngoài khung nhìn): không có mã để đọc. */
+    notDrawn: 'Vật này không được vẽ ở khung vừa rồi (đang ẩn hay ngoài khung nhìn).',
+    /** Dòng nhắc khi KHÔNG vật nào của lớp được vẽ (thường là lớp đang ở trọng số 0): chưa biết lớp có vào shader hay không. */
+    undrawn: 'Khung vừa rồi không vẽ vật nào của lớp này (lớp đang tắt?), nên chưa biết nó có mặt ở đâu trong mã.',
+    failed: 'Chưa dịch được vật này; chi tiết ở console của trình duyệt.',
+  },
   /** Sổ tay của một lớp: ba tab Hiểu / Chỉnh / Phá. */
   notebook: {
     label: 'Sổ tay',

@@ -2,6 +2,7 @@
 import { RenderPipeline, BlendMode, MaterialBlending, NoToneMapping } from 'three/webgpu';
 import { pass, mrt, output, emissive, normalView, packNormalToRGB, vec4, renderOutput } from 'three/tsl';
 import { createViews } from './views.js';
+import { createHold } from './hold.js';
 
 /**
  * Nối post của các lớp thành MỘT đồ thị node. Gọi một lần khi dựng pipeline:
@@ -62,11 +63,12 @@ export function linearDepth(scenePass, camera) {
 
 /**
  * Dựng pipeline hậu kỳ của cảnh.
- * @param {{ renderer: any, scene: any, camera: any, layers: { id: string, layer: object }[], weight: (id: string) => any }} options
+ * @param {{ renderer: any, scene: any, camera: any, layers: { id: string, layer: object }[], weight: (id: string) => any,
+ *   hold?: ReturnType<typeof createHold> }} options   hold: bộ giữ khung của cảnh (GĐ 9); thiếu thì pipeline tự giữ riêng
  * @returns {{ scenePass: any, renderPipeline: any, views: ReturnType<typeof createViews>, render: () => void,
  *   compile: () => Promise<void>, dispose: () => void }}
  */
-export function createPipeline({ renderer, scene, camera, layers, weight }) {
+export function createPipeline({ renderer, scene, camera, layers, weight, hold = createHold() }) {
   const scenePass = pass(scene, camera);
   scenePass.setMRT(makeMRT());
   const depth = linearDepth(scenePass, camera); // channel('depth') và view Depth cùng dùng node này
@@ -82,7 +84,20 @@ export function createPipeline({ renderer, scene, camera, layers, weight }) {
   renderPipeline.outputColorTransform = false;
   // Biên dịch trước với ĐÚNG render target + MRT của pass. renderer.compileAsync(scene, camera)
   // thì biên dịch cho canvas, không có MRT, nên khung đầu vẫn phải biên dịch lại.
-  const compile = () => scenePass.compileAsync(renderer);
+  // GĐ 9: `scenePass.compileAsync` giữ target + MRT của pass suốt lần chờ, mà vòng lặp vẫn vẽ trong lúc đó (view Normal lúc cảnh đang chạy,
+  // Phụ lục A.105): biên dịch trong lúc giữ khung. Hàm của three chỉ trả lại target + MRT khi xong êm: hỏng giữa chừng thì tự trả, không thì
+  // mọi khung sau (thả giữ rồi) vẽ quad cuối vào target của scene pass.
+  const compile = () => hold.run(async () => {
+    const target = renderer.getRenderTarget();
+    const mrt = renderer.getMRT();
+    try {
+      await scenePass.compileAsync(renderer);
+    } catch (err) {
+      renderer.setRenderTarget(target);
+      renderer.setMRT(mrt);
+      throw err;
+    }
+  });
   const taps = [];
   const final = buildFinalNode({ color: channel('output'), channel, layers, weight, taps });
   const views = createViews({ scenePass, renderPipeline, mrtFor: makeMRT, final, taps, compile, depth });

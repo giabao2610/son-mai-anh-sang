@@ -3,6 +3,7 @@ import { readFlags } from './flags.js';
 import { detectTier, envFromWindow } from './tier.js';
 import { withDeadline, DeadlineError } from './deadline.js';
 import { createSma } from './sma.js';
+import { readRecipe } from './recipe.js';
 import { showStatic, isChunkError } from './static.js';
 import { mountShell } from '../ui/shell.js';
 
@@ -23,6 +24,7 @@ export const BOOT_DEADLINE_MS = 10_000;
  */
 export async function boot(entry, { lang = 'vi', t, win = window, doc = document, loadRun = () => import('./gpu/run.js') } = {}) {
   const flags = readFlags(win.location.search);
+  const recipe = readRecipe(win.location.hash); // GĐ 9: công thức của tác phẩm (spec §21.4); null khi không có
   const now = flags.at ?? new Date(); // cố định lúc khởi động: con dấu và pha trăng cùng một "bây giờ"
   const sma = createSma(win);
   const shell = mountShell(doc, entry.meta, { now, t, onState: (state) => sma.set({ state }), poster: flags.poster });
@@ -38,12 +40,12 @@ export async function boot(entry, { lang = 'vi', t, win = window, doc = document
   sma.set({ tier });
   const debug = !!flags.debug;
   if (tier === 'static') {
-    showStatic(entry, shell, { reason: flags.static ? 'flag' : 'no-gpu', debug, t, sma });
+    showStatic(entry, shell, { reason: flags.static ? 'flag' : 'no-gpu', debug, t, sma, recipe });
     return;
   }
 
   shell.setState('loading');
-  const onFail = (reason, error) => showStatic(entry, shell, { reason, error, debug, t, sma });
+  const onFail = (reason, error) => showStatic(entry, shell, { reason, error, debug, t, sma, recipe });
 
   // Quá hạn thì run() vẫn có thể chạy nốt (máy yếu biên dịch shader lâu). Vỏ trang đưa cho run bị "khóa"
   // từ lúc đó, để phần 3D đến muộn không kéo được poster đi, đổi data-state hay vẽ lại quầng trăng; onLate sẽ gỡ nó.
@@ -57,6 +59,7 @@ export async function boot(entry, { lang = 'vi', t, win = window, doc = document
     showBadge: unlessLate(shell.showBadge),
     showNote: unlessLate(shell.showNote),
     showHint: unlessLate(shell.showHint),
+    clearHint: unlessLate(shell.clearHint),
     invite: unlessLate(shell.invite),
     showLost: unlessLate(shell.showLost),
   };
@@ -65,7 +68,7 @@ export async function boot(entry, { lang = 'vi', t, win = window, doc = document
     await withDeadline(
       loadRun().then(({ run }) => {
         runShell.progress('chunk'); // mốc của quầng trăng: code 3D đã tải xong
-        return run(entry, runShell, { tier, flags, now, lang, t, sma, onFail });
+        return run(entry, runShell, { tier, flags, now, lang, t, sma, onFail, recipe });
       }),
       BOOT_DEADLINE_MS,
       { onLate: (handle) => handle?.dispose?.() },
@@ -73,6 +76,6 @@ export async function boot(entry, { lang = 'vi', t, win = window, doc = document
   } catch (err) {
     late = true;
     const reason = err instanceof DeadlineError ? 'timeout' : isChunkError(err) ? 'chunk-load' : 'error';
-    showStatic(entry, shell, { reason, error: err, debug, t, sma });
+    showStatic(entry, shell, { reason, error: err, debug, t, sma, recipe });
   }
 }

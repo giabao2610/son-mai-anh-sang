@@ -9,7 +9,7 @@ const env = { tier: 'webgl2', level: 'vua', budget: {}, now: new Date('2026-09-2
 const meta = { layers: [{ id: 'cot', name: 'Cốt' }, { id: 'lop-hai', name: 'Lớp hai' }] };
 
 /** Hai lớp giả: Cốt có núm uniform + núm rebuild; lớp hai có thí nghiệm (một kiểu compare) và số đo. */
-function setup({ tier = 'webgl2', quality, toolbox, dials } = {}) {
+function setup({ tier = 'webgl2', quality, toolbox, dials, translator } = {}) {
   const log = [];
   const cot = {
     id: 'cot',
@@ -37,7 +37,9 @@ function setup({ tier = 'webgl2', quality, toolbox, dials } = {}) {
   const weights = createWeights(meta.layers);
   const layers = buildLayers([cot, two], {}, {}, { ...env, tier });
   const redraw = vi.fn();
-  const studio = createStudio({ meta, layers, weights, env: { ...env, tier }, redraw, tweenSeconds: 0.5, quality, toolbox, dials });
+  const studio = createStudio({
+    meta, layers, weights, env: { ...env, tier }, redraw, tweenSeconds: 0.5, quality, toolbox, dials, translator,
+  });
   return { studio, weights, layers, redraw, log };
 }
 
@@ -214,6 +216,18 @@ describe('createStudio', () => {
     await expect(setup().studio.setDial('gio', 20)).rejects.toThrow('Bức không có Dial "gio"');
   });
 
+  it('Bản dịch (GĐ 9): translation(id) gọi bộ dịch; lớp lạ thì ném; cảnh không có bộ dịch thì Promise hỏng', async () => {
+    const result = { language: 'wgsl', places: [] };
+    const translator = { translation: vi.fn(async () => result) };
+    const { studio, redraw } = setup({ translator });
+    await expect(studio.translation('lop-hai')).resolves.toBe(result);
+    expect(translator.translation.mock.calls).toEqual([['lop-hai']]);
+    expect(() => studio.translation('khong-co')).toThrow('Không có lớp "khong-co"');
+    expect(translator.translation).toHaveBeenCalledTimes(1);
+    expect(redraw).not.toHaveBeenCalled(); // bàn thợ không tự vẽ lại: bộ dịch bắt khung (và vẽ lại khi ?freeze) qua móc lần vẽ
+    await expect(setup().studio.translation('cot')).rejects.toThrow('Cảnh này không có bản dịch');
+  });
+
   it('snapshot → JSON gọn: trọng số lấy ĐÍCH của tween, núm theo địa chỉ "layerId.knobId"', () => {
     const { studio } = setup();
     studio.setWeight('lop-hai', 0, { tween: true });
@@ -274,5 +288,83 @@ describe('createStudio', () => {
     const b = setup().studio;
     await b.restore(a.snapshot());
     expect(b.snapshot()).toEqual(a.snapshot());
+  });
+
+  describe('công thức và onChange (GĐ 9)', () => {
+    const hourDials = () => createDialSet([{ id: 'gio', uniform: uniform(21), min: 18, max: 29.5, step: 0.25 }]);
+
+    it('onChange báo đúng MỘT lần sau setWeight (cả tween), setKnob, setDial, restore; trả hàm bỏ nghe; thí nghiệm thì không', async () => {
+      const { studio } = setup({ dials: hourDials() });
+      const cb = vi.fn();
+      const off = studio.onChange(cb);
+      await studio.setWeight('lop-hai', 0.5, { tween: true });
+      expect(cb).toHaveBeenCalledTimes(1);
+      await studio.setWeight('lop-hai', 0.4);
+      expect(cb).toHaveBeenCalledTimes(2);
+      await studio.setKnob('cot', 'count', 200);
+      expect(cb).toHaveBeenCalledTimes(3);
+      await studio.setDial('gio', 22);
+      expect(cb).toHaveBeenCalledTimes(4);
+      await studio.restore({ weights: { 'lop-hai': 1 }, knobs: { 'cot.openness': 0.7 } });
+      expect(cb).toHaveBeenCalledTimes(5);
+      await studio.toggleExperiment('lop-hai', 'pha', true);
+      expect(cb).toHaveBeenCalledTimes(5);
+      off();
+      await studio.setWeight('lop-hai', 0.1);
+      expect(cb).toHaveBeenCalledTimes(5);
+    });
+
+    it('onChange báo cả khi núm hỏng (setKnob ném): finally, và restore báo sau khi vẽ lại', async () => {
+      const { studio, redraw } = setup();
+      const order = [];
+      redraw.mockImplementation(() => { order.push('redraw'); });
+      studio.onChange(() => order.push('change'));
+      await studio.restore({ weights: { 'lop-hai': 0 } });
+      expect(order).toEqual(['redraw', 'change']);
+    });
+
+    it('recipe().text rỗng ở nguyên bản, đúng chuỗi sau khi đổi; applyRecipe rồi recipe().text ra dạng chuẩn', async () => {
+      const { studio } = setup({ dials: hourDials() });
+      expect(studio.recipe()).toEqual({ text: '', counts: { layers: 0, knobs: 0, dials: [] } });
+      await studio.setWeight('lop-hai', 0.5);
+      await studio.setKnob('cot', 'openness', 0.25);
+      await studio.setDial('gio', 23);
+      expect(studio.recipe().text).toBe('lop-hai:0.5,cot.openness:0.25,gio:23');
+      expect(studio.recipe().counts).toEqual({ layers: 1, knobs: 1, dials: ['gio'] });
+      await studio.applyRecipe('gio:23.0,cot.openness:0.250,lop-hai:0.50');
+      expect(studio.recipe().text).toBe('lop-hai:0.5,cot.openness:0.25,gio:23');
+      await studio.applyRecipe('lop-hai:0');
+      expect(studio.recipe().text).toBe('lop-hai:0');
+      expect(studio.knobs('cot').openness).toBe(0.5);
+      await studio.applyRecipe('');
+      expect(studio.recipe().text).toBe('');
+    });
+
+    it('Dial mặc định lệch nấc: restore giữ đúng giá trị, setDial vẫn làm tròn', async () => {
+      const hour = uniform(21.6167);
+      const dials = createDialSet([{ id: 'gio', uniform: hour, min: 18, max: 29.5, step: 0.25 }]);
+      const { studio } = setup({ dials });
+      expect(studio.recipe().text).toBe('');
+      await studio.restore({ dials: { gio: 21.6167 } });
+      expect(hour.value).toBe(21.6167);
+      await studio.applyRecipe('');
+      await studio.reset();
+      expect([hour.value, studio.recipe().text]).toEqual([21.6167, '']);
+      await studio.applyRecipe('gio:23.1');
+      expect(hour.value).toBe(23);
+      await studio.setDial('gio', 22.1);
+      expect(hour.value).toBe(22);
+    });
+
+    it('reset: trọng số tween về 1, núm và Dial về mặc định', async () => {
+      const { studio, weights } = setup({ dials: hourDials() });
+      await studio.setWeight('lop-hai', 0);
+      await studio.setKnob('cot', 'count', 300);
+      await studio.setDial('gio', 25);
+      await studio.reset();
+      weights.step(1);
+      expect(studio.snapshot()).toEqual(setup({ dials: hourDials() }).studio.snapshot());
+      expect(studio.recipe().text).toBe('');
+    });
   });
 });

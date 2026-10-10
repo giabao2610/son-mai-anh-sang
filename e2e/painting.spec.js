@@ -1,12 +1,13 @@
-// e2e/painting.spec.js — E2E chung cho MỌI bức trong registry: tầng tĩnh; cảnh 3D trên WebGL2 / WebGPU; công cụ học, ?poster (GĐ 4); Từng sợi, quầng trăng (GĐ 5).
+// e2e/painting.spec.js — E2E chung cho MỌI bức trong registry: tầng tĩnh; cảnh 3D trên WebGL2 / WebGPU; công cụ học, ?poster (GĐ 4); Từng sợi, quầng trăng (GĐ 5); Bản dịch và Link công thức (GĐ 9).
 import { readdirSync, readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { paintings } from '../src/paintings/registry.js';
 import t from '../src/ui/strings.vi.js';
 import { HALO_STEPS } from '../src/ui/moon-progress.js';
 import { playStepMs, playStride } from '../src/engine/tools/tung-soi.js';
+import { SMOKE_TAG } from '../scripts/e2e-groups.js';
 import {
-  DARK, FULL, waitForSettled, waitForFrames, canvasStats, canvasRegions, twoFrames, gpuReport, collectConsole, readSma,
+  DARK, FULL, waitForSettled, waitForFrames, canvasStats, canvasRegions, twoFrames, gpuReport, collectConsole, readSma, gpuErrors, GD9,
 } from './helpers.js';
 
 /**
@@ -16,6 +17,20 @@ import {
  * 0,13–0,135. Ngưỡng 0,02 gần gấp ba sợi 0 mà chưa tới một phần sáu khung đủ.
  */
 const ONE_COLOUR_STD = 0.02;
+
+/** Nhãn của những nơi mà hai bản dịch khác nhau (khóa, mã đỉnh hay mã điểm ảnh), hay thiếu ở một bên: so ngắn gọn, không in cả mã. */
+const changedPlaces = (a, b) => {
+  const byKey = new Map(b.places.map((p) => [p.key, p]));
+  const changed = a.places.filter((p) => byKey.get(p.key)?.vertex !== p.vertex || byKey.get(p.key)?.fragment !== p.fragment);
+  const missing = b.places.filter((p) => !a.places.some((q) => q.key === p.key));
+  return [...changed, ...missing].map((p) => p.label);
+};
+/** Số ảnh fragment shader ghi ra (như tests/helpers/nodes.js#countOutputs): scene pass ghi ≥ 2 (output, emissive), vẽ thẳng ra màn hình 1. */
+const outputsOf = (code) => {
+  const struct = /struct Output\w* \{([^}]*)\}/.exec(code);
+  if (struct) return (struct[1].match(/@location\(/g) ?? []).length;
+  return (code.match(/layout\( location = \d+ \) out /g) ?? []).length;
+};
 
 /**
  * URL tương đối (không có '/' đầu) để giữ base '/son-mai-anh-sang/' của baseURL.
@@ -49,7 +64,8 @@ test.afterEach(async ({ page }, testInfo) => {
   await testInfo.attach('console.txt', { body: log.all.join('\n') || '(console trống)', contentType: 'text/plain' });
 });
 
-for (const { meta, page: htmlPage, lang } of paintings) {
+for (const { meta, page: htmlPage, lang, ciWebgpuSmoke } of paintings) {
+  const smoke = ciWebgpuSmoke ? { tag: SMOKE_TAG } : {}; // bức nặng: job WebGPU của CI chỉ chạy test mang tag khói
   const posterImg = `img[src$="${meta.poster.src.replace(/^\//, '')}"]`;
 
   test.describe(`${meta.title} · tầng tĩnh`, () => {
@@ -570,6 +586,151 @@ for (const { meta, page: htmlPage, lang } of paintings) {
       expect(shot.outside.checksum).toBe(base.outside.checksum);
       expect(log.errors).toEqual([]);
       expect(log.warnings).toEqual([]);
+    });
+
+    test('Normal lúc cảnh đang chạy (GĐ 9, lỗi từ GĐ 4): biên dịch lại trong lúc giữ khung, không lỗi GPU, cảnh vẫn live', async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(120_000);
+      const { query } = testInfo.project.metadata;
+      // KHÔNG ?freeze: vòng lặp chạy trong lúc biên dịch lại cả cảnh với MRT mới (spec §21.3, Phụ lục A.105).
+      await page.goto(urlOf(htmlPage, query));
+      const settled = await waitForSettled(page);
+      expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+      await page.evaluate(() => window.__sma.setTool('kinh-mai'));
+      const normal = page.locator('[data-toolbar] [data-view="normal"]');
+      await normal.click();
+      await expect(normal).toHaveAttribute('aria-pressed', 'true', { timeout: 60_000 });
+      const after = (await readSma(page)).frames;
+      await expect.poll(async () => (await readSma(page)).frames, { timeout: 60_000 }).toBeGreaterThan(after + 10);
+      expect((await readSma(page)).state).toBe('live');
+      expect(log.errors).toEqual([]);
+      expect(log.warnings).toEqual([]);
+      // Chromium báo lỗi GL của WebGL2 ("GL_INVALID_OPERATION: … missing fragment shader outputs") ở mức console.warning và không
+      // khớp DEPRECATION, nên `log.errors` / `log.warnings` đều không thấy: quét thẳng toàn bộ console.
+      expect(gpuErrors(log)).toEqual([]);
+    });
+
+    test('Bản dịch (GĐ 9) dưới ?freeze: mã của lượt vẽ cảnh và của quad cuối, đúng ngôn ngữ; dịch lại ra cùng mã; ảnh không đổi', async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(180_000);
+      const { backend } = testInfo.project.metadata;
+      const layer = GD9[meta.slug].layer;
+      await still(page, testInfo);
+      const before = (await canvasRegions(page)).all.checksum;
+      const tr = await page.evaluate((id) => window.__sma.translate(id), layer);
+      expect([tr.backend, tr.language]).toEqual([backend, backend === 'webgpu' ? 'wgsl' : 'glsl']);
+      expect(tr.places.some((p) => p.hits.vertex + p.hits.fragment > 0), 'không nơi nào có uniform của lớp').toBe(true);
+      expect(tr.places.filter((p) => p.error).map((p) => `${p.label}: ${p.error}`)).toEqual([]);
+      for (const p of tr.places.filter((x) => x.drawn && !x.post)) expect(outputsOf(p.fragment), p.label).toBeGreaterThanOrEqual(2);
+      // Khung đứng yên vẽ lại không dựng lại gì: bắt lần hai ra đúng từng ký tự.
+      const again = await page.evaluate((id) => window.__sma.translate(id), layer);
+      expect(changedPlaces(tr, again), 'dịch lại khung đứng yên mà mã khác').toEqual([]);
+      const post = await page.evaluate(() => window.__sma.translate('phu-bong'));
+      expect(post.places.some((p) => p.post && /\bw_phu_bong\b/.test(p.fragment))).toBe(true);
+      expect((await canvasRegions(page)).all.checksum, 'dịch xong mà khung đứng yên đổi').toBe(before);
+      expect(log.errors).toEqual([]);
+    });
+
+    test('Bản dịch (GĐ 9) lúc cảnh đang chạy: bắt khung kế tiếp, hai lần liền ra cùng mã; cảnh vẽ tiếp, không lỗi GPU', smoke, async ({
+      page,
+    }, testInfo) => {
+      // Test khói: job WebGPU SwiftShader của CI chạy nó cho Bức 3 (chừng 0,2 khung/giây) và Bức 4. Chờ như spec riêng của Bức 3: ổn định
+      // 60 s, khung tăng 120 s; hai khung bắt của Bản dịch cũng là hai khung vẽ. Hai khung mới là đủ thấy cảnh vẫn vẽ tiếp sau khi bắt.
+      test.setTimeout(240_000);
+      const { query } = testInfo.project.metadata;
+      const layer = GD9[meta.slug].layer;
+      await page.goto(urlOf(htmlPage, query));
+      expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
+      const first = await page.evaluate((id) => window.__sma.translate(id), layer);
+      const again = await page.evaluate((id) => window.__sma.translate(id), layer);
+      expect(first.places.some((p) => p.hits.vertex + p.hits.fragment > 0), 'không nơi nào có uniform của lớp').toBe(true);
+      expect(changedPlaces(first, again), 'hai lần dịch liền nhau mà mã khác').toEqual([]);
+      const frames = (await readSma(page)).frames;
+      await expect.poll(async () => (await readSma(page)).frames, { timeout: 120_000 }).toBeGreaterThan(frames + 2);
+      expect((await readSma(page)).state).toBe('live');
+      expect(log.errors).toEqual([]);
+      expect(log.warnings).toEqual([]);
+      // Lỗi GL của WebGL2 tới console ở mức warning (Phụ lục A.105): quét thẳng toàn bộ console như test Normal lúc cảnh đang chạy.
+      expect(gpuErrors(log)).toEqual([]);
+    });
+
+    test('Bản dịch qua Sổ tay (GĐ 9): bấm "Bản dịch" ra mã đúng ngôn ngữ, dòng có lớp được tô, rê núm thì dòng sáng, Phủ bóng có mặt ở lượt cuối', smoke, async ({
+      page,
+    }, testInfo) => {
+      // Bức nặng trên WebGPU SwiftShader (Bức 3: chừng 0,2 khung/giây): mỗi lần bắt là một khung vẽ, nên chờ rộng như hai test Bản dịch trên.
+      test.setTimeout(420_000);
+      const { query, backend } = testInfo.project.metadata;
+      const layer = GD9[meta.slug].layer;
+      await page.goto(urlOf(htmlPage, query, 'at=2026-09-28T21:00'));
+      expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
+      const box = await page.locator('[data-stage] canvas').boundingBox();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.8); // lần chạm đầu → lời mời
+      await page.locator('[data-hint] button').click();
+      const notebook = page.locator('[data-notebook]');
+      const status = notebook.locator('.tr-status');
+      const translateLayer = async (id) => {
+        await page.locator(`[data-rail] [data-layer="${id}"] .rail-name`).click();
+        await notebook.locator('[data-tab="chinh"]').click();
+        await expect(notebook.locator('[data-knobs]')).toHaveAttribute('data-state', /^(ready|empty)$/);
+        await notebook.locator('[data-code-translate]').click();
+        await expect(status).toContainText('dòng có lớp', { timeout: 120_000 });
+        await expect(status).toContainText(backend === 'webgpu' ? 'WGSL · WebGPU' : 'GLSL ES 3.0 · WebGL2');
+      };
+      await translateLayer(layer);
+      expect(await notebook.locator('.shader .line.is-layer').count(), 'không dòng nào mang uniform của lớp').toBeGreaterThan(0);
+      // Rê lần lượt các núm tới núm đầu tiên có uniform (núm 'js', 'rebuild' không có dòng nào để sáng).
+      // Núm có thể chỉ có mặt ở một nơi (Bản nét của Bức 4: ở quad cuối), nên duyệt cả các nơi của lớp.
+      const knobs = notebook.locator('[data-knob]');
+      const places = notebook.locator('[data-tr-place] option');
+      let lit = 0;
+      for (let p = 0; p < await places.count() && lit === 0; p += 1) {
+        await notebook.locator('[data-tr-place]').selectOption({ index: p });
+        for (let i = 0; i < await knobs.count() && lit === 0; i += 1) {
+          await knobs.nth(i).hover();
+          lit = await notebook.locator('.shader .line.is-lit').count();
+        }
+      }
+      expect(lit, 'không núm nào của lớp có dòng sáng').toBeGreaterThan(0);
+      // Phủ bóng: nơi "Lượt cuối · hậu kỳ" là quad cuối, nơi mọi lớp hậu kỳ ghép lại.
+      await translateLayer('phu-bong');
+      await notebook.locator('[data-tr-place]').selectOption({ label: t.translation.post });
+      await expect(status).toContainText('dòng có lớp');
+      expect(await notebook.locator('.shader .line.is-layer').count(), 'quad cuối không mang trọng số của Phủ bóng').toBeGreaterThan(0);
+      expect(log.errors).toEqual([]);
+      expect(gpuErrors(log)).toEqual([]);
+    });
+
+    test('Mở link có công thức (GĐ 9): áp đúng giá trị, thanh lớp mở với dòng tóm tắt, ảnh khác ảnh nguyên bản', smoke, async ({ page }, testInfo) => {
+      test.setTimeout(420_000);
+      const { query } = testInfo.project.metadata;
+      const { recipe } = GD9[meta.slug];
+      const url = urlOf(htmlPage, query, 'freeze=10', 'at=2026-09-28T21:00');
+      const open = async (hash) => {
+        await page.goto('about:blank'); // cùng URL chỉ khác hash là điều hướng trong trang, không nạp lại cảnh
+        await page.goto(url + hash);
+        const settled = await waitForSettled(page, { timeout: 60_000 });
+        expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+        await waitForFrames(page, 10, { timeout: 120_000 });
+        return (await canvasRegions(page)).all.checksum;
+      };
+      const plain = await open('');
+      const withRecipe = await open(`#r=${recipe}`);
+      // Giá trị mong đợi đọc thẳng từ chuỗi công thức: `id:0` là trọng số, `id.núm:v` là núm, còn lại là Dial.
+      const snap = await page.evaluate(() => window.__sma.snapshot());
+      for (const part of recipe.split(',')) {
+        const [key, value] = part.split(':');
+        if (key.includes('.')) expect(snap.knobs[key], key).toBe(Number(value));
+        else if (key in snap.weights) expect(snap.weights[key], key).toBe(Number(value));
+        else expect(snap.dials[key], key).toBe(Number(value));
+      }
+      expect(await page.evaluate(() => window.__sma.recipe())).toBe(recipe);
+      await expect(page.locator('[data-rail]')).toBeVisible();
+      await expect(page.locator('[data-recipe-summary] .rail-recipe-text')).not.toBeEmpty();
+      expect(withRecipe, 'công thức mà ảnh vẫn y như nguyên bản').not.toBe(plain);
+      expect(log.errors).toEqual([]);
+      expect(gpuErrors(log)).toEqual([]);
     });
 
     test('?poster (GĐ 4): ngoài canvas không có phần tử UI nào hiện (chữ, huy hiệu, thanh lớp, thanh công cụ)', async ({ page }, testInfo) => {

@@ -65,18 +65,19 @@ export function makeEngineCtx(meta, {
  * Dựng bức như run.js: ngân sách của mức (budgetFor, ghép bảng của bức), setup(ctx) rồi buildLayers (cùng hàm của xưởng).
  * `until` = id lớp cuối cần dựng; `budget` ghi đè vài số của mức; `captions` = ctx.captions giả (fakeCaptions(keys))
  * khi test cần xem bức gọi chữ đi theo vật. `camera` (GĐ 8): mặc định là camera mà sân khấu dựng từ painting.camera (đúng loại,
- * đúng chỗ, khung 640 × 400 của e2e); test đưa camera khác để xem lớp làm gì với loại camera đó. Các tùy chọn khác đi tiếp vào
- * makeEngineCtx (level, now, tier…).
+ * đúng chỗ, khung 640 × 400 của e2e); test đưa camera khác để xem lớp làm gì với loại camera đó. `initial` (GĐ 9): giá trị ban đầu
+ * của núm như công thức của link đưa vào `buildLayers` ({ 'lop.knob': giá trị }, đã đổi kiểu bằng recipe-set.js#classify). Các tùy chọn
+ * khác đi tiếp vào makeEngineCtx (level, now, tier…).
  * @returns {{ ctx: object, setup: object | undefined, shared: object, built: object[], layers: Record<string, object>, knobs: Record<string, object> }}
  */
-export function buildPainting(painting, meta, { until, budget = {}, camera = createCamera(painting.camera, 1.6), ...options } = {}) {
+export function buildPainting(painting, meta, { until, budget = {}, camera = createCamera(painting.camera, 1.6), initial = {}, ...options } = {}) {
   const ctx = makeEngineCtx(meta, {
     ...options, camera, budget: { ...budgetFor(options.level ?? 'cao', painting.quality), ...budget },
   });
   const setup = painting.setup?.(ctx);
   const shared = setup?.shared ?? {};
   const end = until ? painting.layers.findIndex((m) => m.id === until) + 1 : painting.layers.length;
-  const built = buildLayers(painting.layers.slice(0, end), ctx, shared, ctx.env);
+  const built = buildLayers(painting.layers.slice(0, end), ctx, shared, ctx.env, initial);
   return {
     ctx,
     setup,

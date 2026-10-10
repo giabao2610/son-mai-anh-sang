@@ -79,6 +79,19 @@ describe('boot', () => {
     expect(page.note.querySelector('p').textContent).toBe(t.static.noGpu);
   });
 
+  it('(c2) GĐ 9: location.hash có #r= thì run nhận recipe (entries đúng); không có thì null; tầng tĩnh thì showStatic nhận recipe', async () => {
+    const win = { ...webglWin(), location: { search: '?webgl&force3d', hash: '#r=suong:0,gio:23' } };
+    const run = vi.fn(async () => ({ dispose() {} }));
+    await boot(entry, { t, win, doc, loadRun: async () => ({ run }) });
+    expect(run.mock.calls[0][2].recipe).toEqual({ entries: [{ key: 'suong', value: '0' }, { key: 'gio', value: '23' }], problems: [] });
+    const plain = vi.fn(async () => ({ dispose() {} }));
+    await boot(entry, { t, win: webglWin(), doc, loadRun: async () => ({ run: plain }) });
+    expect(plain.mock.calls[0][2].recipe).toBeNull();
+    const staticWin = { ...fakeWin({ search: '?static' }), location: { search: '?static', hash: '#r=suong:0' } };
+    await boot(entry, { t, win: staticWin, doc, loadRun: vi.fn() });
+    expect(page.note.querySelector('p').textContent).toBe(t.recipe.staticNote);
+  });
+
   it('(c) ?webgl&force3d trên SwiftShader → webgl2; run nhận đủ { tier, flags, now, lang, t, sma, onFail }', async () => {
     const win = webglWin('&at=2026-09-28T21:00');
     const handle = { dispose: vi.fn() };
@@ -106,6 +119,15 @@ describe('boot', () => {
     await boot(entry, { t, win, doc, loadRun });
     expect(win.__sma).toMatchObject({ state: 'static', tier: 'webgl2', reason: 'chunk-load' });
     expect(page.note.querySelector('button').textContent).toBe(t.static.reload);
+  });
+
+  it('vỏ trang đưa cho run có đủ hàm mà run.js và cửa xưởng gọi (clearHint của GĐ 9 từng thiếu: về tĩnh "error" ở trình duyệt thật)', async () => {
+    const run = vi.fn(async () => ({ dispose() {} }));
+    await boot(entry, { t, win: webglWin(), doc, loadRun: async () => ({ run }) });
+    const runShell = run.mock.calls[0][1];
+    for (const name of ['setState', 'progress', 'crossfade', 'showBadge', 'showNote', 'showHint', 'clearHint', 'invite', 'showLost']) {
+      expect(typeof runShell[name], name).toBe('function');
+    }
   });
 
   it('(e) run treo quá 10 s → "timeout"; xong muộn thì bị dispose và không kéo được poster đi', async () => {

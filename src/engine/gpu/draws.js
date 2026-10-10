@@ -1,36 +1,10 @@
-// engine/gpu/draws.js — móc lần vẽ cho Từng sợi: đặt renderer.setRenderObjectFunction chỉ khi công cụ bật, ghi lần vẽ của lượt vẽ cảnh, chỉ vẽ k lần đầu.
-
-/** list() khi chưa có khung nào được ghi: đông cứng như list của một khung đã ghi. */
-const NONE = Object.freeze([]);
-
-/** Loại vật như Từng sợi ghi (DrawInfo.kind). */
-const kindOf = (o) => (o.isInstancedMesh ? 'InstancedMesh' : o.isSprite ? 'Sprite' : o.isPoints ? 'Points' : o.isLine ? 'Line' : 'Mesh');
-
-/**
- * Số bản của một lần vẽ, như three tính (RenderObject.getDrawParameters): instanceCount của InstancedBufferGeometry, không thì
- * object.count. Ở r186 Mesh, InstancedMesh và Sprite đều có count (Mesh mặc định 1); Points, Line không có: một bản.
- */
-const instancesOf = (object, geometry) => (geometry?.isInstancedBufferGeometry ? geometry.instanceCount : Math.max(0, object.count ?? 1));
-
-/**
- * Số tam giác, như three đếm đỉnh của lần vẽ (RenderObject.getDrawParameters): khúc drawRange của hình, cắt theo nhóm (group: Mesh
- * nhiều material vẽ mỗi nhóm một lần) và theo số chỉ số (hay số đỉnh, khi không có index); / 3 × số bản. Sprite là một quad;
- * Points, Line không vẽ tam giác.
- */
-function trianglesOf(object, geometry, group, instances) {
-  if (object.isSprite) return 2 * instances;
-  if (object.isPoints || object.isLine) return 0;
-  const range = geometry?.drawRange ?? { start: 0, count: Infinity };
-  const first = Math.max(range.start, group?.start ?? 0, 0);
-  const last = Math.min(range.start + range.count, group ? group.start + group.count : Infinity);
-  const items = geometry?.index ? geometry.index.count : (geometry?.attributes?.position?.count ?? 0);
-  return Math.floor(Math.max(0, Math.min(last, items) - first) / 3) * instances;
-}
+// engine/gpu/draws.js — móc lần vẽ: đặt renderer.setRenderObjectFunction chỉ khi cần; Từng sợi (ghi lần vẽ của lượt vẽ cảnh, chỉ vẽ k lần đầu) và Bản dịch (GĐ 9: mã shader của RenderObject đang vẽ).
+import { NONE, kindOf, instancesOf, trianglesOf } from './draw-info.js';
 
 /**
  * Móc lần vẽ (spec §7 Từng sợi, Phụ lục A.53). Trong mỗi render(), three gọi hàm vẽ hiện tại cho từng mục của render list theo
- * đúng thứ tự đã sắp (đục trước, trong suốt sau): renderObject gốc, hay hàm đặt bằng setRenderObjectFunction. Giữa start() và
- * stop(), móc đứng vào chỗ đó, rồi gọi tiếp hàm vẽ trước nó cho lần vẽ được phép:
+ * đúng thứ tự đã sắp (đục trước, trong suốt sau): renderObject gốc, hay hàm đặt bằng setRenderObjectFunction. Lúc có người cần
+ * (Từng sợi bật, hay một lần bắt của Bản dịch đang chờ), móc đứng vào chỗ đó, rồi gọi tiếp hàm vẽ trước nó cho lần vẽ được phép:
  * - lần vẽ của CAMERA CHÍNH (lượt vẽ cảnh) được ghi lại, và bị bỏ qua nếu không nằm trong k lần đầu của limit(k). Không gọi hàm
  *   vẽ là vật không được vẽ và renderer.info không đếm nó. Móc không đụng visible hay thứ gì trong cache key: không biên dịch lại;
  * - lần vẽ của camera khác LỒNG trong lần vẽ của một vật là phản chiếu: reflector vẽ lại cảnh bằng camera ảo ngay lúc vẽ mặt soi;
@@ -46,14 +20,10 @@ function trianglesOf(object, geometry, group, instances) {
  * ở một sợi. limit(k) so theo vật + material + lượt (khóa object.id:material.id:passId, không theo thứ tự): camera dời làm three
  * sắp lại vật đục theo độ sâu, mà sợi đang xem vẫn là những vật ấy.
  *
- * Chỗ DrawInfo chưa khớp three:
- * - móc ghi cả lần vẽ mà three rồi tự bỏ bên trong renderObject (count 0, pipeline chưa biên dịch xong), nên scene có thể lớn hơn
- *   số lần vẽ thật và other dừng ở 0;
- * - vật wireframe vẽ đoạn thẳng mà vẫn báo số tam giác của hình (Bức 1 gặp chỗ này khi người xem bật núm wireframe của Cốt);
- * - hai nhóm của một Mesh dùng chung một material thì chung một khóa: limit(k) giữ hay bỏ cả hai (Bức 1 không có Mesh nhiều material);
- * - vật trong suốt DoubleSide (forceSinglePass false, không có transmission; Bức 1 không có material như thế): renderObject của three
- *   tự vẽ hai lần ('backSide' rồi mặt trước) ngay trong MỘT lần gọi móc, nên đó là một sợi cho hai draw call (lần thừa vào other),
- *   và limit(k) giữ hay bỏ cả hai. Vật có transmission thì khác: three vẽ hai lượt, mỗi lượt một lần gọi móc (passId, ở dưới).
+ * Bản dịch (GĐ 9, spec §21.3, "bắt lúc vẽ"): capture() cho mã shader của khung vẽ kế tiếp. Ngay sau mỗi lần vẽ, móc tìm lại
+ * RenderObject mà three vừa vẽ, đúng như Renderer._renderObjectDirect tìm (Phụ lục A.102, test ghim), rồi đọc chuỗi mã đã dịch của nó
+ * (getNodeBuilderState): mã trùng từng ký tự với mã GPU đang chạy, không dựng hay biên dịch gì thêm. Chỉ file này đọc hai trường
+ * riêng của renderer (_objects, _currentRenderContext; luật ở tests/rules/files.test.js). Chỗ DrawInfo chưa khớp three: draw-info.js.
  *
  * @param {object} p
  * @param {any} p.renderer       WebGPURenderer
@@ -61,13 +31,15 @@ function trianglesOf(object, geometry, group, instances) {
  * @param {{ id: string, layer: { objects?: any[] } }[]} p.layers   lớp đã dựng; objects là mảng SỐNG (thí nghiệm thêm, bớt vật)
  * @param {import('../contracts/painting.js').PaintingMeta} p.meta   tên lớp: meta.layers[i].name
  * @param {import('../contracts/painting.js').PaintingContent | null} [p.content]   nhãn vật: content.layers[id].objects[name]
- * @returns {import('../contracts/runtime.js').DrawProbe & { begin: () => void, end: () => void }}
+ * @returns {import('../contracts/runtime.js').DrawProbe & { begin: () => void, end: () => void,
+ *   capture: () => Promise<{ scene: object[], post: object[] }>, dispose: () => void }}
  */
 export function createDrawProbe({ renderer, camera, layers, meta, content = null }) {
   const names = new Map(meta.layers.map((l) => [l.id, l.name]));
   // Chữ của bức tải hỏng (content null) thì không vật nào có nhãn: Từng sợi dùng tên vật.
   const labelOf = (layerId, name) => content?.layers?.[layerId]?.objects?.[name];
-  let started = false;
+  let started = false; // Từng sợi đang bật
+  let installed = false; // móc đang gắn: Từng sợi bật, hay còn lần bắt đang chờ
   let prev = null; // hàm vẽ lúc gắn móc: null (renderObject của three) hay hàm ai đó đã đặt trước
   let allowed = null; // limit(k): khóa của k lần vẽ đầu; null = vẽ đủ
   let recording = false; // khung đang vẽ có được ghi không: chỉ khung vẽ đủ, giữa begin() và end()
@@ -76,6 +48,9 @@ export function createDrawProbe({ renderer, camera, layers, meta, content = null
   let callsAtBegin = 0;
   let current = null; // lần vẽ của camera chính đang chạy: lần vẽ lồng bên trong cộng vào nested của nó
   let last = null; // khung vẽ đủ gần nhất: { records, draws (null tới lần list() đầu), counts }
+  let waiting = []; // lần bắt chưa xong của Bản dịch: { resolve, reject }
+  let shot = null; // khung đang bắt: { scene, post }
+  let disposed = false;
 
   /** Vật → id lớp, dựng lại cho mỗi khung được hỏi từ các mảng objects SỐNG. */
   const ownerMap = () => {
@@ -105,26 +80,49 @@ export function createDrawProbe({ renderer, camera, layers, meta, content = null
     });
   };
 
+  /**
+   * Mã của RenderObject mà three dùng cho lần vẽ này, tìm như Renderer._renderObjectDirect: cùng vật, material, render context (lấy LÚC
+   * VÀO móc: lần vẽ lồng bên trong, như phản chiếu hay scene pass trong quad cuối, đổi rồi trả nó) và passId. Lỗi thì ghi vào `error`:
+   * khung và móc vẫn chạy tiếp.
+   */
+  const shaderOf = (object, material, scene, cam, lightsNode, context, clippingContext, passId) => {
+    try {
+      const state = renderer._objects.get(object, material, scene, cam, lightsNode, context, clippingContext, passId).getNodeBuilderState();
+      return { vertex: state.vertexShader ?? null, fragment: state.fragmentShader ?? null };
+    } catch (err) {
+      return { error: String(err?.message ?? err) };
+    }
+  };
+
   /** Hàm vẽ thay chỗ của three (cùng tham số với renderer.renderObject). */
   function hook(object, scene, cam, geometry, material, group, lightsNode, clippingContext, passId) {
+    const context = renderer._currentRenderContext;
     const draw = () => (prev ?? renderer.renderObject).call(renderer, object, scene, cam, geometry, material, group, lightsNode, clippingContext, passId);
+    const read = () => shaderOf(object, material, scene, cam, lightsNode, context, clippingContext, passId);
     if (cam !== camera) {
       if (current) {
         reflection += 1;
         current.nested += 1;
+        draw(); // phản chiếu: Bản dịch không bắt
+        return;
       }
       draw();
+      if (shot && object.isQuadMesh) shot.post.push({ object, ...read() }); // ngoài cùng: quad của lượt cuối
       return;
     }
     // passId: three vẽ vật trong suốt có transmission hai lượt ('backSide' rồi mặt trước), mỗi lượt là một sợi.
     const key = `${object.id}:${material.id}:${passId ?? ''}`;
-    if (allowed && !allowed.has(key)) return;
-    if (!recording) {
+    if (allowed && !allowed.has(key)) {
+      // Từng sợi bỏ lần vẽ này; RenderObject của nó có từ những khung vẽ đủ trước, nên Bản dịch vẫn đọc được.
+      if (shot) shot.scene.push({ object, material, passId, ...read() });
+      return;
+    }
+    if (!recording && !shot) {
       draw();
       return;
     }
     const record = { object, geometry, material, group, key, nested: 0 };
-    records.push(record);
+    if (recording) records.push(record);
     const outer = current;
     current = record;
     try {
@@ -132,7 +130,37 @@ export function createDrawProbe({ renderer, camera, layers, meta, content = null
     } finally {
       current = outer; // lỗi đi tiếp lên render() như mọi lỗi trong khung
     }
+    if (shot) shot.scene.push({ object, material, passId, ...read() });
   }
+
+  /** Gắn móc nếu chưa gắn. Gắn một lần cho cả Từng sợi lẫn Bản dịch: không ai đè hay mất `prev` của ai. */
+  const install = () => {
+    if (installed) return;
+    installed = true;
+    prev = renderer.getRenderObjectFunction();
+    renderer.setRenderObjectFunction(hook);
+  };
+  /** Gỡ móc khi không còn ai cần: Từng sợi đã tắt và không còn lần bắt nào chờ. */
+  const release = () => {
+    if (!installed || started || waiting.length > 0) return;
+    installed = false;
+    renderer.setRenderObjectFunction(prev);
+    prev = null;
+  };
+
+  /**
+   * Tắt Từng sợi: bỏ limit (vẽ đủ như chưa có gì), thả khung đã ghi (bản ghi thô giữ vật, hình và material của nó), gỡ móc nếu không còn
+   * lần bắt nào chờ (công cụ bị gỡ vì lỗi cũng vậy). Gọi hai lần vẫn an toàn.
+   */
+  const stop = () => {
+    if (!started) return;
+    started = false;
+    allowed = null;
+    recording = false;
+    current = null;
+    last = null;
+    release();
+  };
 
   return {
     /** Gắn móc (công cụ bật). Phiên mới: chưa có list, không limit; khung vẽ kế tiếp được ghi. Gọi hai lần vẫn an toàn. */
@@ -141,43 +169,39 @@ export function createDrawProbe({ renderer, camera, layers, meta, content = null
       started = true;
       allowed = null;
       last = null;
-      prev = renderer.getRenderObjectFunction();
-      renderer.setRenderObjectFunction(hook);
+      install();
     },
-    /**
-     * Gỡ móc, trả hàm vẽ trước đó (kể cả khi công cụ bị gỡ vì lỗi), bỏ limit: vẽ đủ như chưa có gì. Thả khung đã ghi: bản ghi thô
-     * giữ vật, hình và material của nó. Gọi hai lần vẫn an toàn.
-     */
-    stop() {
-      if (!started) return;
-      started = false;
-      allowed = null;
-      recording = false;
-      current = null;
-      last = null;
-      renderer.setRenderObjectFunction(prev);
-      prev = null;
-    },
-    /** scene.js gọi ngay trước pipeline.render(). */
+    stop,
+    /** scene.js gọi ngay trước pipeline.render(). Còn lần bắt chờ thì khung này được bắt (render() ném lỗi thì khung sau bắt lại). */
     begin() {
+      shot = waiting.length > 0 ? { scene: [], post: [] } : null;
+      current = null;
       if (!started) return;
       recording = allowed === null;
       records = [];
       reflection = 0;
-      current = null;
       callsAtBegin = renderer.info.render.drawCalls;
     },
     /**
      * scene.js gọi ngay sau pipeline.render(). render() ném lỗi thì không tới đây: list() giữ khung đủ trước đó. Chỉ cất bản
-     * ghi thô: xem đủ khung thì khung nào cũng được ghi, mà Từng sợi chỉ hỏi list() mỗi 250 ms.
+     * ghi thô: xem đủ khung thì khung nào cũng được ghi, mà Từng sợi chỉ hỏi list() mỗi 250 ms. Khung bắt xong thì trả mọi lần bắt
+     * đang chờ, rồi gỡ móc nếu Từng sợi không bật.
      */
     end() {
-      if (!started || !recording) return;
-      recording = false;
-      const scene = records.length;
-      const total = renderer.info.render.drawCalls - callsAtBegin;
-      last = { records, draws: null, counts: { scene, reflection, other: Math.max(0, total - scene - reflection) } };
-      records = [];
+      if (started && recording) {
+        recording = false;
+        const scene = records.length;
+        const total = renderer.info.render.drawCalls - callsAtBegin;
+        last = { records, draws: null, counts: { scene, reflection, other: Math.max(0, total - scene - reflection) } };
+        records = [];
+      }
+      if (!shot) return;
+      const frame = shot;
+      const done = waiting;
+      shot = null;
+      waiting = [];
+      for (const { resolve } of done) resolve(frame);
+      release();
     },
     /**
      * DrawInfo dựng lúc được hỏi lần đầu, rồi giữ tới khung ghi kế tiếp. Chủ, tên và số bản của vật đọc lúc hỏi, không phải lúc
@@ -199,5 +223,27 @@ export function createDrawProbe({ renderer, camera, layers, meta, content = null
       allowed = k === null || k >= keys.length ? null : new Set(keys.slice(0, k));
     },
     counts: () => ({ ...(last?.counts ?? { scene: 0, reflection: 0, other: 0 }) }),
+    /**
+     * Bản dịch (GĐ 9): Promise mã shader của khung vẽ KẾ TIẾP giữa begin() và end(): { scene: [{ object, material, passId, vertex,
+     * fragment }] (lần vẽ của camera chính, kể cả lần Từng sợi bỏ), post: [{ object, vertex, fragment }] (quad của lượt cuối) }; mục đọc
+     * hỏng có `error` thay cho mã. Gắn móc ngay, để khung kế tiếp đi qua nó.
+     */
+    capture() {
+      if (disposed) return Promise.reject(new Error('Cảnh đã gỡ: không còn khung nào để đọc mã shader'));
+      return new Promise((resolve, reject) => {
+        waiting.push({ resolve, reject });
+        install();
+      });
+    },
+    /** Gỡ cảnh (disposer của scene.js): tắt Từng sợi, lần bắt còn chờ thì hỏng (không khung nào tới nữa), gỡ móc. */
+    dispose() {
+      disposed = true;
+      stop();
+      const done = waiting;
+      waiting = [];
+      shot = null;
+      for (const { reject } of done) reject(new Error('Cảnh đã gỡ trước khi vẽ khung để đọc mã shader (Bản dịch)'));
+      release();
+    },
   };
 }

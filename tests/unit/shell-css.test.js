@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { CROSSFADE_MS } from '../../src/ui/moon-progress.js';
 import { CAPTION_FADE } from '../../src/ui/captions.js';
+import { lacquerTheme } from '../../plugins/vite-plugin-code-view.js';
 
 const read = (file) => readFileSync(new URL(`../../src/styles/${file}`, import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const css = read('shell.css');
@@ -115,6 +116,73 @@ describe('shell.css · vùng aria-live', () => {
       expect(d, sel).toMatch(/border: 0/);
       expect(d, sel).not.toMatch(/display: none|visibility: hidden/);
     }
+  });
+});
+
+describe('tools.css · vùng aria-live của mục Công thức (GĐ 9)', () => {
+  it('không có luật :empty nào ẩn vùng bằng display: none hay visibility: hidden (trống thì chỉ bỏ lề)', () => {
+    const emptyRules = blocks(toolsCss).filter((b) => /:empty/.test(b.selectors));
+    expect(emptyRules.length).toBeGreaterThan(0); // .rail-recipe-status:empty, .tool-status:empty…
+    for (const { selectors, body } of emptyRules) expect(body, selectors).not.toMatch(/display:\s*none|visibility:\s*hidden/);
+    for (const sel of ['.rail-recipe-text', '.rail-recipe-status', '.rail-recipe-text:empty', '.rail-recipe-status:empty']) {
+      expect(declarations(sel, toolsCss), sel).not.toMatch(/display:\s*none|visibility:\s*hidden/);
+    }
+  });
+  it('điện thoại: dòng trạng thái trống không giữ chỗ 170px trên dải thanh lớp (flex-basis 0 khi :empty, C2)', () => {
+    const phone = '(max-width: 640px)';
+    expect(declarationsIn(phone, '.rail-recipe-status', toolsCss)).toMatch(/flex: 0 0 170px/);
+    expect(declarationsIn(phone, '.rail-recipe-status:empty', toolsCss)).toMatch(/flex-basis: 0/);
+    // :empty có thêm một lớp giả nên thắng ở đâu cũng được; đứng ngay sau luật 170px thì đọc từ trên xuống là thấy
+    const order = blocks(toolsCss).filter((b) => b.media === phone).map((b) => b.selectors);
+    expect(order.indexOf('.rail-recipe-status:empty')).toBeGreaterThan(order.indexOf('.rail-recipe-status'));
+  });
+});
+
+describe('notebook.css · vị trí thanh lớp (GĐ 9)', () => {
+  it('máy tính: thanh lớp đứng ngay dưới đầu trang (--rail-top do ui/workshop.js đo), không còn giữa theo chiều dọc', () => {
+    const d = declarationsIn('', '.rail', notebookCss);
+    expect(d).toMatch(/top: var\(--rail-top/);
+    expect(d).not.toMatch(/translateY/);
+    expect(d).toMatch(/max-height: calc\(100vh - var\(--rail-top[^)]*\) - var\(--gutter\)\)/);
+    expect(d).toMatch(/overflow: auto/);
+  });
+});
+
+describe('notebook.css · Bản dịch (GĐ 9)', () => {
+  it('.tr-status là vùng aria-live: trống thì chỉ bỏ lề, không display: none hay visibility: hidden (như mọi vùng aria-live)', () => {
+    for (const selector of ['.tr-status', '.tr-status:empty']) {
+      expect(declarations(selector, notebookCss), selector).not.toMatch(/display: none|visibility: hidden/);
+    }
+    expect(declarations('.tr-status:empty', notebookCss)).toMatch(/margin: 0/);
+  });
+
+  it('khung mã: mỗi dòng là một khối xuống dòng được, và <pre> không giữ ký tự \\n giữa các khối (không thì mỗi dòng cách một dòng trống: đo trên Chromium, bước dòng 18 → 37 px)', () => {
+    expect(declarations('.code-view .shader', notebookCss)).toMatch(/white-space: normal/);
+    const line = declarations('.code-view .shader .line', notebookCss);
+    expect(line).toMatch(/display: block/);
+    expect(line).toMatch(/white-space: pre-wrap/);
+    expect(line).toMatch(/overflow-wrap: anywhere/);
+  });
+
+  it('màu từng loại token trùng với theme của code sống (lacquerTheme): từ khóa, kiểu, số, chú thích, thuộc tính, chữ thường', () => {
+    const tokens = Object.fromEntries([...read('tokens.css').matchAll(/(--[a-z0-9-]+)\s*:\s*(#[0-9A-Fa-f]{6})/g)].map(([, name, hex]) => [name, hex.toUpperCase()]));
+    const colorOf = (selector) => {
+      const m = declarations(selector, notebookCss).match(/(?:^|[ ;])color: (?:var\((--[a-z0-9-]+)\)|(#[0-9A-Fa-f]{6}))/);
+      return (m[1] ? tokens[m[1]] : m[2]).toUpperCase();
+    };
+    const theme = (scope) => lacquerTheme().tokenColors.find((rule) => rule.scope.includes(scope)).settings.foreground.toUpperCase();
+    expect(colorOf('.shader .tk-k'), 'từ khóa').toBe(theme('keyword'));
+    expect(colorOf('.shader .tk-t'), 'kiểu').toBe(theme('entity.name.type'));
+    expect(colorOf('.shader .tk-n'), 'số').toBe(theme('constant.numeric'));
+    expect(colorOf('.shader .tk-c'), 'chú thích').toBe(theme('comment'));
+    expect(colorOf('.shader .tk-a'), 'thuộc tính (cùng màu chuỗi của theme)').toBe(theme('string'));
+    expect(colorOf('.code-view .shader'), 'chữ thường').toBe(theme('variable'));
+    expect(declarations('.code-view .shader', notebookCss)).toMatch(/background: var\(--den-then\)/); // nền của theme: đen then
+  });
+
+  it('chỉ dùng màu của bảng sơn mài (biến của tokens.css), ngoài số đỏ son pha ngà của theme code sống', () => {
+    const block = notebookCss.slice(notebookCss.indexOf('.tr-head'), notebookCss.indexOf('.nb-experiments'));
+    expect([...new Set(block.match(/#[0-9A-Fa-f]{3,8}\b/g) ?? [])]).toEqual(['#D08476']);
   });
 });
 
