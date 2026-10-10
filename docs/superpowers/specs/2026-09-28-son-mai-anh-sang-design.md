@@ -2761,6 +2761,10 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
   tới code.
 - **(GĐ 5) Đèn trôi xuyên qua lá.** Đèn nổi cao hơn lá và đi về phía lối trăng, nơi Cốt chừa trống, nên chỉ lướt qua lá một lúc ngắn.
   Tránh lá thật sự để sau (§16).
+- **(GĐ 9) Nút màu của Tweakpane không có tên (axe `button-name`).** Núm màu `rimColor`, `candleColor` của lớp Ánh trăng (Bức 1) dựng nút
+  `tp-colswv_b` không có tên; Task 7 thấy khi test a11y của GĐ 9 mở Chỉnh của lớp ấy. Lỗi có từ trước (không do GĐ 9), nên test a11y của
+  GĐ 9 dùng lớp khác. Sửa ở `ui/knobs.js` (đặt `aria-label` cho nút đó sau khi dựng núm màu) trong một task riêng, rồi cho test a11y quét cả
+  lớp Ánh trăng. Tới lúc đó VoiceOver đọc nút ấy không tên.
 
 ---
 
@@ -5442,6 +5446,16 @@ bằng bảng snapshot. Thay đổi làm một lớp mất khỏi mọi mã thì
   giờ báo xong.
 - a11y (axe) với Bản dịch đang mở và với dòng tóm tắt.
 - Trên GPU thật ở máy local; khung nhìn điện thoại (390 × 844) cho chip công thức và Bản dịch trong tấm trượt.
+
+**Số đo cuối của nhánh** (Task 7, Mac M2):
+- `npm test`: 128 file, 1687 test, xanh.
+- `npm run e2e` local (ba project, 1 giờ 22 phút): static 28 qua; webgl2-swiftshader 187 qua, 0 lỗi; webgpu-swiftshader 182 qua, 2 lỗi
+  "Quá hạn 10000 ms" lúc boot ở test `máy tính 1280×800 (GĐ 5)` của Bức 1 và Bức 2 (hạn boot 10 s khi máy bận; chạy lại riêng thì xanh, test
+  này không do GĐ 9 đổi).
+- `webgpu-real-gpu` (`E2E_REAL_GPU=1`, GPU Apple thật): 184 qua, 32 bỏ qua, 0 lỗi, 9 phút 50 giây.
+- a11y: axe quét Bản dịch đang mở và dòng tóm tắt thì sạch. Một lỗi có từ trước, không do GĐ 9: núm màu của Tweakpane (`rimColor`,
+  `candleColor` của lớp Ánh trăng, Bức 1) có nút `tp-colswv_b` không tên (axe `button-name`, critical); test a11y cũ chỉ mở lớp đầu nên không
+  thấy. Chưa sửa, xem §17.
 
 **Kiểm tay** (thêm vào §12): Safari trên Mac và iPhone (thanh địa chỉ đổi theo khi mài; chép link; mở link nhận được); VoiceOver đọc dòng
 trạng thái của Bản dịch và dòng "Đã chép link".

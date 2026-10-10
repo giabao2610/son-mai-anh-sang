@@ -42,6 +42,9 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
 - Chữ đi theo vật (GĐ 5): bức gọi `ctx.captions.show(khóa, anchor)`; `engine/gpu/caption-set.js` tra `content.captions` và chiếu
   điểm neo mỗi khung, `ui/captions.js` vẽ vùng aria-live phủ lên canvas. Quầng trăng tiến độ: `ui/moon-progress.js` (trong
   `[data-moon]`, theo `setState` và mốc `'chunk'` của boot).
+- Bản dịch và Link công thức (GĐ 9, đều thuộc xưởng): Sổ tay › Chỉnh hiện mã shader (WGSL/GLSL) mà GPU chạy cho các nơi lớp có mặt
+  (`engine/gpu/translate.js`, đọc từ MỘT khung vẽ qua `draws.js#capture`; `ui/translation-view.js`). Hash `#r=…` mang trọng số, núm,
+  Dial khác mặc định (`engine/recipe.js`, `engine/gpu/recipe-set.js`, `recipe-url.js`; `ui/recipe-panel.js`).
 - Cách phân biệt: tên một bước của nghề (cốt, phủ, mài, phủ bóng, con dấu) thuộc xưởng; tên chủ đề (sen, trăng,
   gợn nước, đom đóm) thuộc bức.
 
@@ -169,7 +172,7 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   không cảnh báo); `undefined` hay số không hữu hạn là lỗi (cảnh báo một lần).
 - Công cụ cần móc lần vẽ mà `api.draws` là `null` thì ném lỗi trong `mount()`: `toolbox.js` bỏ riêng công cụ đó kèm cảnh báo, không
   gắn một bảng trống.
-- Chỉ `engine/gpu/draws.js` được gọi `setRenderObjectFunction` (`tests/rules/files.test.js` giữ). Scene pass phải là `updateBefore`
+- Chỉ `engine/gpu/draws.js` được gọi `setRenderObjectFunction`, và (GĐ 9) đọc RenderObject của lần vẽ (`renderer._objects`, `_currentRenderContext`) (`tests/rules/files.test.js` giữ). Scene pass phải là `updateBefore`
   ĐẦU TIÊN của lượt cuối (`views.js`: `Fn(() => { scenePass.toVar(); … })`), vì three chạy `updateBefore` theo hậu thứ tự (con trước
   cha) và RTT/bloom gọi `resetRendererState` (gỡ móc) trong lúc vẽ: scene pass vẽ lần đầu từ bên trong RTT thì móc không thấy lượt
   vẽ cảnh (`tests/unit/pipeline.test.js` giữ).
@@ -312,6 +315,37 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   tiện ích dùng chung (vùng của canvas, tag khói `SMOKE`) ở `e2e/<slug>.helpers.js`, các spec import. `tests/rules/e2e.test.js` gom file
   theo slug dài nhất và đếm test mang tag khói trên mọi file của bức.
 
+### Bản dịch, giữ khung, link công thức (GĐ 9)
+- Việc async để target (hay MRT) của lượt khác qua một lần chờ chạy trong `hold.run()` (`engine/gpu/hold.js`, một bộ giữ cho mỗi cảnh).
+  `NodeMaterial` đọc target + MRT HIỆN TẠI lúc dựng (spec Phụ lục A.105), nên vòng lặp vẽ giữa chừng là vẽ vào target sai. Lúc giữ,
+  `quality.sample()` trả `true` và `scene.step()` bỏ khung; `redraw()` của `?freeze` chờ `hold.idle()`. Người dùng duy nhất:
+  `pipeline.compile()` (`scenePass.compileAsync`), nó sửa view Normal của Kính mài lúc cảnh đang chạy (lỗi từ GĐ 4). Bản dịch KHÔNG giữ khung.
+- Bản dịch là "bắt lúc vẽ": `draws.js#capture()` bắt MỘT khung, và trong móc đọc `renderer._objects.get(object, material, scene, camera,
+  lightsNode, renderer._currentRenderContext, clippingContext, passId).getNodeBuilderState()` đúng như `Renderer._renderObjectDirect`.
+  Quad cuối = lần vẽ ngoài cùng của camera khác mà `isQuadMesh` (công khai). Chỉ `draws.js` đọc `_objects`, `_currentRenderContext`;
+  không file nào trong `src/` gọi `debug.getShaderAsync` (nó trả RenderObject khác: chain map `'default'` thay cho passId `null`, tạo
+  program mới, dựng quad không có `_vertexNode`; A.102). Test ghim ở `draws.test.js` giữ lời gọi với three 0.186.1.
+- Không đổi `renderer.toneMapping` ở đâu cả, kể cả Bản dịch. `translate.js` dựng các nơi theo thứ tự cố định (`drawablesOf`, rồi quad cuối):
+  `post`, `drawn: false`, không `ms`, không `onProgress`.
+- Công thức `#r=` (`engine/recipe.js`, `engine/gpu/recipe-set.js`): khóa `layerId` (trọng số), `layerId.knobId`, `dialId`; chỉ ghi giá
+  trị KHÁC mặc định của máy đang xem, theo thứ tự cố định. Id Dial không trùng id lớp; id lựa chọn của núm `select` khớp
+  `^[A-Za-z0-9-]+$`; id núm khớp `^[A-Za-z][A-Za-z0-9]*$` (test hợp đồng giữ). `recipe.js` thuộc đường nhẹ (không ES2022, không three).
+- Công thức áp lúc dựng, trước `scene.compile()`: `createKnobs` nhận giá trị ban đầu (núm `rebuild` dựng MỘT lần), trọng số và Dial đặt
+  trước lần biên dịch đầu. Giá trị Dial của link làm tròn về nấc MỘT lần, ở `classify` (`snapDial`); `studio.restore` khôi phục Dial
+  CHÍNH XÁC (`dials.restore(v, { exact: true })`), không thì mặc định lệch nấc (giờ thật của Bức 1) thành công thức ma.
+- `studio.onChange(cb)` báo một lần sau mỗi `setWeight`/`setKnob`/`setDial`/`restore`; không báo thí nghiệm, công cụ, nấc chất lượng.
+- Thanh địa chỉ (`engine/gpu/recipe-url.js`): `replaceState` gộp 500 ms (WebKit ném lỗi sau 100 lần trong 30 giây; `SecurityError` thì
+  cảnh báo một lần rồi thôi ghi); ghi nốt khi `pagehide` và khi trang ẩn. `hashchange` áp trạng thái ĐỦ (hash trống = về mặc định). Cờ
+  `applying` chặn ghi cho tới khi áp xong, không thì lần ghi cũ đè hash vừa dán.
+- Mở link có công thức: thanh lớp mở không mài, xóa gợi ý và lời mời bằng `shell.clearHint()`, Sổ tay đóng. `engine/boot.js#runShell` liệt kê
+  TỪNG hàm của vỏ trang: thêm lời gọi mới trong `run.js` hay `workshop-door.js` thì thêm hàm vào đó (thiếu thì trang có link công thức
+  về tĩnh `'error'`; boot test giữ).
+- Thanh lớp ở máy tính đứng dưới đầu trang (`--rail-top`, `ui/workshop.js` đo; không `transform`) và cuộn trong thanh. Vùng `aria-live` của
+  Bản dịch và Công thức thu lại bằng `:empty`, không `display: none` hay `hidden` (test CSS giữ).
+- E2e: test Normal lúc cảnh đang chạy mở KHÔNG `?freeze` (có `?freeze` thì vòng lặp đã dừng, không thấy lỗi). Lỗi GPU và `GL_INVALID_*` ở
+  WebGL2 chỉ là `console.warning` thường: quét `log.all` (`e2e/helpers.js#gpuErrors`), vì `log.warnings` chỉ giữ cảnh báo DEPRECATION.
+  Dữ liệu GĐ 9 dùng chung ở `GD9` của `e2e/helpers.js`.
+
 ### Chuyển động và ngẫu nhiên
 - Không dùng `time`/`deltaTime` của TSL; dùng `ctx.u.time` và `ctx.u.delta` (nhờ vậy `?freeze` cho ảnh tất định).
 - Không dùng `Math.random`; dùng `src/lib/random.js` (PRNG có hạt giống).
@@ -361,3 +395,6 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   số vòng mỗi phút của trống; `__sma.readouts('cot')` của Bức 3 có độ cao cây đang bay; `__sma.readouts('cot')` của Bức 4 có `goc`, độ
   lệch của camera khỏi góc của tranh; `__sma.readouts('dan-ga')` có `rac` (số hạt đã rắc), `dangAn`, `quanhMe` (gà con đang mổ, quanh
   mẹ)). Bức 3: `__sma.setDial('ngay', 15)` đặt ngày âm lịch (rằm).
+- GĐ 9: `__sma.translate(id)` (Promise của Bản dịch: mã WGSL/GLSL của các nơi lớp `id` có mặt), `__sma.recipe()` (công thức hiện tại, không
+  có `#r=`; chuỗi rỗng là nguyên bản), `__sma.applyRecipe(text)`. Hash `#r=suong:0,gio:23` mở bức theo công thức (spec §21.2); query và hash
+  độc lập, nên `?freeze=10#r=…` hợp lệ.
