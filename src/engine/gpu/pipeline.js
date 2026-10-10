@@ -85,8 +85,19 @@ export function createPipeline({ renderer, scene, camera, layers, weight, hold =
   // Biên dịch trước với ĐÚNG render target + MRT của pass. renderer.compileAsync(scene, camera)
   // thì biên dịch cho canvas, không có MRT, nên khung đầu vẫn phải biên dịch lại.
   // GĐ 9: `scenePass.compileAsync` giữ target + MRT của pass suốt lần chờ, mà vòng lặp vẫn vẽ trong lúc đó (view Normal lúc cảnh đang chạy,
-  // Phụ lục A.105): biên dịch trong lúc giữ khung.
-  const compile = () => hold.run(() => scenePass.compileAsync(renderer));
+  // Phụ lục A.105): biên dịch trong lúc giữ khung. Hàm của three chỉ trả lại target + MRT khi xong êm: hỏng giữa chừng thì tự trả, không thì
+  // mọi khung sau (thả giữ rồi) vẽ quad cuối vào target của scene pass.
+  const compile = () => hold.run(async () => {
+    const target = renderer.getRenderTarget();
+    const mrt = renderer.getMRT();
+    try {
+      await scenePass.compileAsync(renderer);
+    } catch (err) {
+      renderer.setRenderTarget(target);
+      renderer.setMRT(mrt);
+      throw err;
+    }
+  });
   const taps = [];
   const final = buildFinalNode({ color: channel('output'), channel, layers, weight, taps });
   const views = createViews({ scenePass, renderPipeline, mrtFor: makeMRT, final, taps, compile, depth });

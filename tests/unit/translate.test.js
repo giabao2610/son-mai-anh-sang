@@ -1,5 +1,5 @@
 // tests/unit/translate.test.js — Bản dịch (GĐ 9, "bắt lúc vẽ"): bắt một khung qua móc lần vẽ rồi vẽ lại; nơi lớp có mặt theo thứ tự cố định, nhãn, vật không vẽ, vật không lớp nào giữ, quad cuối; tên uniform.
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BoxGeometry, Group, Mesh, MeshBasicNodeMaterial } from 'three/webgpu';
 import { createTranslator, countLines, drawablesOf, layerUniforms, weightUniform } from '../../src/engine/gpu/translate.js';
 
@@ -76,6 +76,9 @@ describe('weightUniform, layerUniforms, drawablesOf, countLines', () => {
 });
 
 describe('createTranslator', () => {
+  beforeEach(() => vi.spyOn(console, 'warn').mockImplementation(() => {}));
+  afterEach(() => vi.restoreAllMocks());
+
   it('bắt MỘT khung: gắn lần bắt TRƯỚC khi vẽ lại; mã của nơi là mã của lần vẽ đã bắt', async () => {
     const ctx = setup({ frame: fakeFrame });
     const tr = await ctx.translator.translation('lop-hai');
@@ -164,5 +167,54 @@ describe('createTranslator', () => {
     ctx.draws.capture.mockClear();
     await expect(ctx.translator.translation('cot')).rejects.toThrow('Cảnh đã gỡ');
     expect(ctx.draws.capture).not.toHaveBeenCalled();
+  });
+
+  it('nơi đọc hỏng: ĐÚNG MỘT console.warn cho cả bản dịch, liệt kê nhãn và lỗi của từng nơi; vật không lớp nào giữ mà đọc hỏng vẫn có mặt (H1)', async () => {
+    const stray = mesh('la-roi');
+    const ctx = setup({
+      frame: ({ khoi }) => ({
+        scene: [
+          { object: khoi, material: khoi.material, passId: null, error: 'hỏng một' },
+          { object: stray, material: stray.material, passId: null, error: 'hỏng hai' },
+        ],
+        post: [{ object: { isQuadMesh: true }, error: 'hỏng ba' }],
+      }),
+    });
+    const tr = await ctx.translator.translation('lop-hai');
+    expect(tr.places.map((p) => [p.label, p.error])).toEqual([
+      ['Khối đất · Cốt', 'hỏng một'], ['la-roi', 'hỏng hai'], ['Lượt cuối · hậu kỳ', 'hỏng ba'],
+    ]);
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    const [text] = console.warn.mock.calls[0];
+    for (const part of ['Khối đất · Cốt: hỏng một', 'la-roi: hỏng hai', 'Lượt cuối · hậu kỳ: hỏng ba']) expect(text).toContain(part);
+  });
+
+  it('không nơi nào hỏng: không cảnh báo', async () => {
+    const ctx = setup({ frame: fakeFrame });
+    await ctx.translator.translation('lop-hai');
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('vật của chính lớp đều KHÔNG được vẽ ở khung bắt (trọng số 0 ẩn vật): không phải jsOnly, các nơi là vật của lớp với drawn false (H2)', async () => {
+    const ctx = setup({ frame: ({ khoi }) => ({ scene: [{ object: khoi, material: khoi.material, passId: null, vertex: 'v', fragment: 'f' }], post: [] }) });
+    const tr = await ctx.translator.translation('lop-ba');
+    expect(tr.jsOnly).toBe(false);
+    expect(tr.places.map((p) => [p.label, p.own, p.drawn])).toEqual([['nhom (1/2) · Lớp ba', true, false], ['nhom (2/2) · Lớp ba', true, false]]);
+  });
+
+  it('một vật của lớp được vẽ mà mã không có uniform nào của lớp: jsOnly (H2)', async () => {
+    const ctx = setup({
+      frame: ({ nhom }) => ({ scene: [{ object: nhom.children[0], material: nhom.children[0].material, passId: null, vertex: 'v', fragment: 'f' }], post: [] }),
+    });
+    const tr = await ctx.translator.translation('lop-ba');
+    expect(tr.jsOnly).toBe(true);
+    expect(tr.places.map((p) => p.drawn)).toEqual([true, false]);
+  });
+
+  it('khung bắt không có lần vẽ nào của camera chính: một console.warn tiếng Việt (H2)', async () => {
+    const ctx = setup({ frame: { scene: [], post: [{ object: { isQuadMesh: true }, vertex: 'v', fragment: 'f' }] } });
+    await ctx.translator.translation('cot');
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn.mock.calls[0][0]).toContain('không thấy lần vẽ nào của camera chính');
   });
 });

@@ -77,9 +77,12 @@ export function createTranslator({ renderer, draws, redraw, layers, meta, conten
   return {
     language,
     /**
-     * Bản dịch của một lớp (spec §21.1): những nơi uniform của lớp có mặt, cộng những nơi đọc hỏng. Thứ tự cố định: vật của chính lớp
-     * trước, rồi vật của lớp khác theo thứ tự phủ (drawablesOf), rồi vật không lớp nào giữ mà mã có uniform của lớp, rồi quad cuối. Không
-     * nơi nào có thì trả vật của chính lớp, `jsOnly` true (lớp đổi cảnh bằng JS); vật của lớp mà khung ấy không vẽ có `drawn: false`.
+     * Bản dịch của một lớp (spec §21.1): những nơi uniform của lớp có mặt, cộng những nơi đọc hỏng (cả vật không lớp nào giữ). Thứ tự cố
+     * định: vật của chính lớp trước, rồi vật của lớp khác theo thứ tự phủ (drawablesOf), rồi vật không lớp nào giữ, rồi quad cuối. Không
+     * nơi nào có thì trả vật của chính lớp (vật mà khung ấy không vẽ có `drawn: false`), và `jsOnly` chỉ true khi chắc: có ít nhất một vật
+     * của lớp ĐƯỢC VẼ mà mã không mang uniform nào của lớp (hay lớp không có vật nào). Mọi vật của lớp đều không được vẽ (trọng số 0 ẩn
+     * vật) thì chưa biết gì: `jsOnly` false, các nơi đều `drawn: false` (Sổ tay nói "khung vừa rồi không vẽ vật nào của lớp").
+     * Nơi đọc hỏng ghi MỘT console.warn cho cả bản dịch (Sổ tay nói "chi tiết ở console").
      * @param {string} layerId
      * @returns {Promise<import('../contracts/runtime.js').Translation>}
      */
@@ -91,6 +94,7 @@ export function createTranslator({ renderer, draws, redraw, layers, meta, conten
       const wanted = [uniforms.weight, ...Object.values(uniforms.knobs)].filter(Boolean);
       // Gắn lần bắt TRƯỚC khi vẽ lại. Promise.all: redraw() hỏng thì lần bắt vẫn có người nghe, gỡ cảnh sau đó không thành lỗi lơ lửng.
       const [{ scene, post }] = await Promise.all([draws.capture(), redraw()]);
+      if (scene.length === 0) console.warn(`Bản dịch lớp "${layerId}": móc lần vẽ không thấy lần vẽ nào của camera chính trong khung vừa bắt.`);
       const hitsOf = (p) => ({ vertex: countLines(p.vertex, wanted), fragment: countLines(p.fragment, wanted) });
       const placeOf = (fields) => ({ ...fields, hits: hitsOf(fields) });
       const all = [];
@@ -108,17 +112,23 @@ export function createTranslator({ renderer, draws, redraw, layers, meta, conten
         for (const r of records) {
           const key = `${object.id}:${r.passId ?? ''}`;
           const p = placeOf({ key, label: object.name || object.type, owner: null, own: false, post: false, ...codeOf(r) });
-          if (p.hits.vertex + p.hits.fragment > 0) all.push(p);
+          if (p.error || p.hits.vertex + p.hits.fragment > 0) all.push(p); // đọc hỏng: không biết lớp có mặt ở đó không, vẫn hiện
         }
       }
       post.forEach((r, i) => {
         const label = post.length > 1 ? `${postLabel} (${i + 1}/${post.length})` : postLabel;
         all.push(placeOf({ key: `post:${i}`, label, owner: null, own: false, post: true, ...codeOf(r) }));
       });
-      // Nơi đọc hỏng vẫn hiện (không biết lớp có mặt ở đó hay không: người xem thấy dòng "chưa dịch được").
+      // Nơi đọc hỏng vẫn hiện (không biết lớp có mặt ở đó hay không: người xem thấy dòng "chưa dịch được"); console có chi tiết. Ghi SAU
+      // lần bắt (ngoài móc lần vẽ), một dòng cho cả bản dịch.
+      const broken = all.filter((p) => p.error);
+      if (broken.length > 0) {
+        console.warn(`Bản dịch lớp "${layerId}": ${broken.length} nơi chưa đọc được mã: ${broken.map((p) => `${p.label}: ${p.error}`).join('; ')}`);
+      }
       const shown = all.filter((p) => p.error || p.hits.vertex + p.hits.fragment > 0);
-      const jsOnly = shown.length === 0;
-      const chosen = jsOnly ? all.filter((p) => p.own) : shown;
+      const own = all.filter((p) => p.own);
+      const jsOnly = shown.length === 0 && (own.length === 0 || own.some((p) => p.drawn));
+      const chosen = shown.length === 0 ? own : shown;
       const places = [...chosen.filter((p) => p.own), ...chosen.filter((p) => !p.own)];
       return { language, backend: language === 'wgsl' ? 'webgpu' : 'webgl2', uniforms, places, jsOnly };
     },

@@ -127,7 +127,9 @@ export function createTranslationView(doc, { t, view }) {
         listed = names;
       }
       const any = tr.places.length > 0;
-      const note = !any ? '' : tr.jsOnly ? tt.jsOnly : tr.uniforms.weight ? tt.weightHint(tr.uniforms.weight) : '';
+      // Mọi nơi đều "không được vẽ" (trọng số 0 ẩn vật của lớp): không phải lớp chỉ đổi cảnh bằng JS, chỉ là khung ấy không có gì để đọc.
+      const undrawn = any && !tr.jsOnly && tr.places.every((p) => p.drawn === false);
+      const note = !any ? '' : tr.jsOnly ? tt.jsOnly : undrawn ? tt.undrawn : tr.uniforms.weight ? tt.weightHint(tr.uniforms.weight) : '';
       hint.textContent = note;
       hint.hidden = !note;
       controls.hidden = !any;

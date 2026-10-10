@@ -155,6 +155,17 @@ describe('mã, dòng trạng thái và dòng nhắc', () => {
     expect(select.options).toHaveLength(1);
   });
 
+  it('mọi vật của lớp đều không được vẽ ở khung bắt (trọng số 0): dòng nhắc là t.translation.undrawn, KHÔNG phải câu jsOnly (H2)', () => {
+    const { tr, hint, status, select } = mount();
+    const hidden = (p) => ({ ...p, drawn: false, vertex: null, fragment: null, hits: { vertex: 0, fragment: 0 } });
+    tr.show(translation({ jsOnly: false, places: [hidden(A), hidden(B)] }), { layerName: 'Hai' });
+    expect(hint.textContent).toBe(t.translation.undrawn);
+    expect(hint.hidden).toBe(false);
+    expect(status.textContent).toBe(t.translation.notDrawn);
+    expect(select.options).toHaveLength(2);
+    expect(t.translation.undrawn).not.toBe(t.translation.jsOnly);
+  });
+
   it('không có nơi nào: chỉ câu jsOnly (một lần, ở dòng trạng thái), không ô Vật, không nút', () => {
     const { tr, status, hint, controls, view } = mount();
     tr.show(translation({ jsOnly: true, places: [] }), { layerName: 'Hai' });
