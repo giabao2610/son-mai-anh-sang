@@ -2,7 +2,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { paintings } from '../src/paintings/registry.js';
-import { waitForSettled, waitForFrames, gpuReport, collectConsole, readSma, doubleTapAt } from './helpers.js';
+import { waitForSettled, waitForFrames, gpuReport, collectConsole, readSma, doubleTapAt, GD9 } from './helpers.js';
 
 /** Luật WCAG 2.0 và 2.1, mức A và AA (spec §12). */
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
@@ -94,6 +94,27 @@ for (const { meta, page: htmlPage } of paintings) {
         await page.locator('[data-rail] [data-tool="kinh-mai"]').click();
         await wipe.click();
         errors.push(...await audit(page, 'Kính mài · gạt'));
+        expect(errors).toEqual([]);
+        expect(log.errors).toEqual([]);
+      });
+
+      test('Sổ tay ở Bản dịch và thanh lớp có dòng tóm tắt công thức (GĐ 9): không lỗi serious/critical', async ({ page }, testInfo) => {
+        test.setTimeout(300_000);
+        await openWorkshop(page, testInfo);
+        const notebook = page.locator('[data-notebook]');
+        await page.locator(`[data-rail] [data-layer="${GD9[meta.slug].layer}"] .rail-name`).click();
+        await notebook.locator('[data-tab="chinh"]').click();
+        await expect(notebook.locator('[data-knobs]')).toHaveAttribute('data-state', /^(ready|empty)$/);
+        await notebook.locator('[data-code-translate]').click();
+        await expect(notebook.locator('.tr-status')).toContainText('dòng có lớp', { timeout: 120_000 });
+        const errors = await audit(page, 'Bản dịch');
+        // Mở theo link công thức: thanh lớp mở với dòng tóm tắt và nút "Về nguyên bản".
+        await page.goto('about:blank');
+        await page.goto(`${urlOf(htmlPage, testInfo.project.metadata.query, 'at=2026-09-28T21:00')}#r=${GD9[meta.slug].layer}:0`);
+        expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
+        await expect(page.locator('[data-recipe-summary] .rail-recipe-text')).not.toBeEmpty();
+        await expect(page.locator('[data-recipe-reset]')).toBeVisible();
+        errors.push(...await audit(page, 'thanh lớp có tóm tắt công thức'));
         expect(errors).toEqual([]);
         expect(log.errors).toEqual([]);
       });

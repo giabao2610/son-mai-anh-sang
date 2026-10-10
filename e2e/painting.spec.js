@@ -1,4 +1,4 @@
-// e2e/painting.spec.js — E2E chung cho MỌI bức trong registry: tầng tĩnh; cảnh 3D trên WebGL2 / WebGPU; công cụ học, ?poster (GĐ 4); Từng sợi, quầng trăng (GĐ 5); Bản dịch (GĐ 9).
+// e2e/painting.spec.js — E2E chung cho MỌI bức trong registry: tầng tĩnh; cảnh 3D trên WebGL2 / WebGPU; công cụ học, ?poster (GĐ 4); Từng sợi, quầng trăng (GĐ 5); Bản dịch và Link công thức (GĐ 9).
 import { readdirSync, readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { paintings } from '../src/paintings/registry.js';
@@ -7,7 +7,7 @@ import { HALO_STEPS } from '../src/ui/moon-progress.js';
 import { playStepMs, playStride } from '../src/engine/tools/tung-soi.js';
 import { SMOKE_TAG } from '../scripts/e2e-groups.js';
 import {
-  DARK, FULL, waitForSettled, waitForFrames, canvasStats, canvasRegions, twoFrames, gpuReport, collectConsole, readSma,
+  DARK, FULL, waitForSettled, waitForFrames, canvasStats, canvasRegions, twoFrames, gpuReport, collectConsole, readSma, gpuErrors, GD9,
 } from './helpers.js';
 
 /**
@@ -18,17 +18,6 @@ import {
  */
 const ONE_COLOUR_STD = 0.02;
 
-/**
- * GĐ 9 (spec §21.8): lớp để thử Bản dịch của mỗi bức (lớp có mặt ở vật của lớp khác, hay ở quad cuối) và công thức thử (Task 7).
- * Bức 1: Sương vào shader của mọi vật qua sương mù; Bức 2: Giấy góp vào material đèn của Cốt; Bức 3: Bóng mềm vào khối bao SDF;
- * Bức 4: Bản nét ở quad cuối.
- */
-const GD9 = {
-  'ao-sen-dem': { layer: 'suong', recipe: 'suong:0,suong.density:0.02,gio:23' },
-  'den-keo-quan': { layer: 'giay', recipe: 'giay:0,giay.dye:0.3' },
-  'cung-que': { layer: 'bong-mem', recipe: 'bong-mem:0,ngay:15' },
-  'dan-ga-me-con': { layer: 'ban-net', recipe: 'ban-net:0,ban-net.lineWidth:3' },
-};
 /** Nhãn của những nơi mà hai bản dịch khác nhau (khóa, mã đỉnh hay mã điểm ảnh), hay thiếu ở một bên: so ngắn gọn, không in cả mã. */
 const changedPlaces = (a, b) => {
   const byKey = new Map(b.places.map((p) => [p.key, p]));
@@ -619,7 +608,7 @@ for (const { meta, page: htmlPage, lang, ciWebgpuSmoke } of paintings) {
       expect(log.warnings).toEqual([]);
       // Chromium báo lỗi GL của WebGL2 ("GL_INVALID_OPERATION: … missing fragment shader outputs") ở mức console.warning và không
       // khớp DEPRECATION, nên `log.errors` / `log.warnings` đều không thấy: quét thẳng toàn bộ console.
-      expect(log.all.filter((line) => /GL_INVALID_|Lỗi GPU|Render pipeline creation failed|Invalid (RenderPipeline|CommandBuffer)/.test(line))).toEqual([]);
+      expect(gpuErrors(log)).toEqual([]);
     });
 
     test('Bản dịch (GĐ 9) dưới ?freeze: mã của lượt vẽ cảnh và của quad cuối, đúng ngôn ngữ; dịch lại ra cùng mã; ảnh không đổi', async ({
@@ -664,7 +653,84 @@ for (const { meta, page: htmlPage, lang, ciWebgpuSmoke } of paintings) {
       expect(log.errors).toEqual([]);
       expect(log.warnings).toEqual([]);
       // Lỗi GL của WebGL2 tới console ở mức warning (Phụ lục A.105): quét thẳng toàn bộ console như test Normal lúc cảnh đang chạy.
-      expect(log.all.filter((line) => /GL_INVALID_|Lỗi GPU|Render pipeline creation failed|Invalid (RenderPipeline|CommandBuffer)/.test(line))).toEqual([]);
+      expect(gpuErrors(log)).toEqual([]);
+    });
+
+    test('Bản dịch qua Sổ tay (GĐ 9): bấm "Bản dịch" ra mã đúng ngôn ngữ, dòng có lớp được tô, rê núm thì dòng sáng, Phủ bóng có mặt ở lượt cuối', smoke, async ({
+      page,
+    }, testInfo) => {
+      // Bức nặng trên WebGPU SwiftShader (Bức 3: chừng 0,2 khung/giây): mỗi lần bắt là một khung vẽ, nên chờ rộng như hai test Bản dịch trên.
+      test.setTimeout(420_000);
+      const { query, backend } = testInfo.project.metadata;
+      const layer = GD9[meta.slug].layer;
+      await page.goto(urlOf(htmlPage, query, 'at=2026-09-28T21:00'));
+      expect((await waitForSettled(page, { timeout: 60_000 })).state).toBe('live');
+      const box = await page.locator('[data-stage] canvas').boundingBox();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.8); // lần chạm đầu → lời mời
+      await page.locator('[data-hint] button').click();
+      const notebook = page.locator('[data-notebook]');
+      const status = notebook.locator('.tr-status');
+      const translateLayer = async (id) => {
+        await page.locator(`[data-rail] [data-layer="${id}"] .rail-name`).click();
+        await notebook.locator('[data-tab="chinh"]').click();
+        await expect(notebook.locator('[data-knobs]')).toHaveAttribute('data-state', /^(ready|empty)$/);
+        await notebook.locator('[data-code-translate]').click();
+        await expect(status).toContainText('dòng có lớp', { timeout: 120_000 });
+        await expect(status).toContainText(backend === 'webgpu' ? 'WGSL · WebGPU' : 'GLSL ES 3.0 · WebGL2');
+      };
+      await translateLayer(layer);
+      expect(await notebook.locator('.shader .line.is-layer').count(), 'không dòng nào mang uniform của lớp').toBeGreaterThan(0);
+      // Rê lần lượt các núm tới núm đầu tiên có uniform (núm 'js', 'rebuild' không có dòng nào để sáng).
+      // Núm có thể chỉ có mặt ở một nơi (Bản nét của Bức 4: ở quad cuối), nên duyệt cả các nơi của lớp.
+      const knobs = notebook.locator('[data-knob]');
+      const places = notebook.locator('[data-tr-place] option');
+      let lit = 0;
+      for (let p = 0; p < await places.count() && lit === 0; p += 1) {
+        await notebook.locator('[data-tr-place]').selectOption({ index: p });
+        for (let i = 0; i < await knobs.count() && lit === 0; i += 1) {
+          await knobs.nth(i).hover();
+          lit = await notebook.locator('.shader .line.is-lit').count();
+        }
+      }
+      expect(lit, 'không núm nào của lớp có dòng sáng').toBeGreaterThan(0);
+      // Phủ bóng: nơi "Lượt cuối · hậu kỳ" là quad cuối, nơi mọi lớp hậu kỳ ghép lại.
+      await translateLayer('phu-bong');
+      await notebook.locator('[data-tr-place]').selectOption({ label: t.translation.post });
+      await expect(status).toContainText('dòng có lớp');
+      expect(await notebook.locator('.shader .line.is-layer').count(), 'quad cuối không mang trọng số của Phủ bóng').toBeGreaterThan(0);
+      expect(log.errors).toEqual([]);
+      expect(gpuErrors(log)).toEqual([]);
+    });
+
+    test('Mở link có công thức (GĐ 9): áp đúng giá trị, thanh lớp mở với dòng tóm tắt, ảnh khác ảnh nguyên bản', smoke, async ({ page }, testInfo) => {
+      test.setTimeout(420_000);
+      const { query } = testInfo.project.metadata;
+      const { recipe } = GD9[meta.slug];
+      const url = urlOf(htmlPage, query, 'freeze=10', 'at=2026-09-28T21:00');
+      const open = async (hash) => {
+        await page.goto('about:blank'); // cùng URL chỉ khác hash là điều hướng trong trang, không nạp lại cảnh
+        await page.goto(url + hash);
+        const settled = await waitForSettled(page, { timeout: 60_000 });
+        expect(settled.state, `về tầng tĩnh: ${settled.reason} · ${settled.error}`).toBe('live');
+        await waitForFrames(page, 10, { timeout: 120_000 });
+        return (await canvasRegions(page)).all.checksum;
+      };
+      const plain = await open('');
+      const withRecipe = await open(`#r=${recipe}`);
+      // Giá trị mong đợi đọc thẳng từ chuỗi công thức: `id:0` là trọng số, `id.núm:v` là núm, còn lại là Dial.
+      const snap = await page.evaluate(() => window.__sma.snapshot());
+      for (const part of recipe.split(',')) {
+        const [key, value] = part.split(':');
+        if (key.includes('.')) expect(snap.knobs[key], key).toBe(Number(value));
+        else if (key in snap.weights) expect(snap.weights[key], key).toBe(Number(value));
+        else expect(snap.dials[key], key).toBe(Number(value));
+      }
+      expect(await page.evaluate(() => window.__sma.recipe())).toBe(recipe);
+      await expect(page.locator('[data-rail]')).toBeVisible();
+      await expect(page.locator('[data-recipe-summary] .rail-recipe-text')).not.toBeEmpty();
+      expect(withRecipe, 'công thức mà ảnh vẫn y như nguyên bản').not.toBe(plain);
+      expect(log.errors).toEqual([]);
+      expect(gpuErrors(log)).toEqual([]);
     });
 
     test('?poster (GĐ 4): ngoài canvas không có phần tử UI nào hiện (chữ, huy hiệu, thanh lớp, thanh công cụ)', async ({ page }, testInfo) => {
