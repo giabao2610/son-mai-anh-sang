@@ -6,6 +6,7 @@ import { DeadlineError } from '../../src/engine/deadline.js';
 import { readFlags } from '../../src/engine/flags.js';
 import { createStage } from '../../src/engine/gpu/stage.js';
 import { buildScene } from '../../src/engine/gpu/scene.js';
+import { mountWorkshop } from '../../src/ui/workshop.js';
 
 // Phần nặng (three, GPU, DOM của Sổ tay) là đồ giả; deadline, disposer, guards, clock, palette là thật, cả studioApi của
 // engine/sma.js. Còn __sma thì giả: harness() đưa vào một bản ghi lời gọi, như vỏ trang.
@@ -48,7 +49,16 @@ function fakeStage(record) {
 function fakeScene(record, pass) {
   return {
     level: 'vua',
-    studio: { snapshot: vi.fn(() => ({})), restore: record('scene.restore', () => pass('restore')) },
+    studio: {
+      snapshot: vi.fn(() => ({})),
+      restore: record('scene.restore', () => pass('restore')),
+      // GĐ 9: công thức của cảnh (test đặt text); onChange trả hàm bỏ nghe
+      text: '',
+      recipe() { return { text: this.text }; },
+      onChange: vi.fn(() => () => {}),
+      applyRecipe: vi.fn(async () => ({ counts: {}, problems: [] })),
+      reset: vi.fn(async () => {}),
+    },
     compile: record('scene.compile', () => pass('compile')),
     step: vi.fn(),
     freeze: vi.fn(),
@@ -126,8 +136,8 @@ function harness() {
   return {
     stages, scenes, shell, sma, onFail,
     /** Gọi run() như boot gọi; resolve { dispose } khi cảnh đã live. */
-    start: () => run(entry, shell, {
-      tier: 'webgl2', flags: readFlags(''), now: new Date('2026-09-28T14:00:00Z'), lang: 'vi', t: {}, sma, onFail, win: window,
+    start: (extra = {}) => run(entry, shell, {
+      tier: 'webgl2', flags: readFlags(''), now: new Date('2026-09-28T14:00:00Z'), lang: 'vi', t: {}, sma, onFail, win: window, ...extra,
     }),
     rebuild: () => onRebuild(), // người xem bấm "Dựng lại cảnh"; trả lời hứa của lần dựng lại
     bootTimeout: () => toStatic('timeout'), // boot hết hạn 10 s của lần mở trang: showStatic thẳng, không qua onFail của run
@@ -143,6 +153,7 @@ function harness() {
 }
 
 beforeEach(() => {
+  mountWorkshop.mockClear();
   vi.spyOn(console, 'warn').mockImplementation(() => {}); // "Mất GPU lần đầu…" là cảnh báo có chủ ý
 });
 afterEach(() => {
@@ -249,5 +260,91 @@ describe('run · lần mở trang quá hạn: boot đã về tĩnh (GĐ 5)', () 
     await started;
     expect(page.afterStatic()).toEqual([]);
     expect(page.stages[0].dispose).toHaveBeenCalledTimes(1); // gone() sau compile() dọn lần dựng
+  });
+});
+
+describe('run · công thức trong link (GĐ 9)', () => {
+  // buildScene giả đặt công thức của cảnh vừa dựng (như scene.js áp xong `recipe` lúc dựng).
+  const withRecipe = (page, text) => {
+    const build = buildScene.getMockImplementation();
+    buildScene.mockImplementation((...args) => {
+      const scene = build(...args);
+      scene.studio.text = text;
+      return scene;
+    });
+  };
+  const workshopMock = () => {
+    const open = vi.fn();
+    mountWorkshop.mockReturnValue({ open, dispose() {}, isOpen: false });
+    return open;
+  };
+
+  it('trang mở với công thức khác rỗng sau khi áp: lúc live mở xưởng { grind: false, recipe: true }, không gợi ý, không lời mời', async () => {
+    const page = harness();
+    withRecipe(page, 'lop-hai:0');
+    const open = workshopMock();
+    await page.start({ recipe: 'lop-hai:0' });
+    expect(buildScene).toHaveBeenLastCalledWith(expect.objectContaining({ recipe: 'lop-hai:0' }));
+    expect(open).toHaveBeenCalledWith({ grind: false, recipe: true });
+    expect(page.shell.showHint).not.toHaveBeenCalled();
+    expect(page.shell.invite).not.toHaveBeenCalled();
+    expect(page.scenes[0].input.onFirst).not.toHaveBeenCalled();
+    expect(page.scenes[0].quality.guard).toHaveBeenCalledWith(true);
+  });
+
+  it('công thức áp xong thành rỗng (link toàn mục hỏng): như cũ, chờ cái chạm đầu tiên', async () => {
+    const page = harness();
+    const open = workshopMock();
+    await page.start({ recipe: 'khong-co:1' });
+    expect(open).not.toHaveBeenCalled();
+    expect(page.scenes[0].input.onFirst).toHaveBeenCalledTimes(1);
+  });
+
+  it('không có công thức: như cũ (lời mời vào chế độ mài)', async () => {
+    const page = harness();
+    const open = workshopMock();
+    await page.start();
+    expect(open).not.toHaveBeenCalled();
+    page.scenes[0].input.onFirst.mock.calls[0][0]();
+    expect(page.shell.invite).toHaveBeenCalledTimes(1);
+    page.shell.invite.mock.calls[0][0](); // bấm lời mời: gọi không tham số
+    expect(open).toHaveBeenCalledWith({ grind: true });
+  });
+
+  it('"Dựng lại cảnh" không áp lại công thức của link và không mở xưởng lần nữa', async () => {
+    const page = harness();
+    withRecipe(page, 'lop-hai:0');
+    const open = workshopMock();
+    await page.start({ recipe: 'lop-hai:0' });
+    open.mockClear();
+    page.stages[0].lose(LOST);
+    await page.rebuild();
+    expect(buildScene).toHaveBeenLastCalledWith(expect.objectContaining({ recipe: null }));
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it('syncRecipeUrl gắn lúc live (nghe hashchange) và gỡ cùng disposer', async () => {
+    const page = harness();
+    const add = vi.spyOn(window, 'addEventListener');
+    const remove = vi.spyOn(window, 'removeEventListener');
+    const handle = await page.start();
+    const added = add.mock.calls.filter(([type]) => type === 'hashchange');
+    expect(added).toHaveLength(1);
+    expect(page.scenes[0].studio.onChange).toHaveBeenCalledTimes(1);
+    handle.dispose();
+    expect(remove.mock.calls.filter(([type]) => type === 'hashchange').map(([, fn]) => fn)).toEqual([added[0][1]]);
+  });
+
+  it('người xem dán link khác khi cảnh live: áp công thức rồi mở xưởng theo công thức', async () => {
+    const page = harness();
+    const open = workshopMock();
+    const handle = await page.start();
+    window.history.replaceState(null, '', '#r=lop-hai:0');
+    window.dispatchEvent(new Event('hashchange'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(page.scenes[0].studio.applyRecipe).toHaveBeenCalledWith('lop-hai:0');
+    expect(open).toHaveBeenCalledWith({ grind: false, recipe: true });
+    handle.dispose();
+    window.history.replaceState(null, '', window.location.pathname);
   });
 });

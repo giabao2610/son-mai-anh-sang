@@ -31,6 +31,8 @@ const content = {
   },
 };
 
+const studioRecipe = { text: '' }; // công thức mà bàn thợ giả báo (test đặt)
+
 /** Bàn thợ giả: đủ các hàm mà Sổ tay và thanh lớp gọi, ghi lại lời gọi. */
 function fakeStudio() {
   const weights = { cot: 1, hai: 1, ba: 1 };
@@ -56,6 +58,8 @@ function fakeStudio() {
     setTool: vi.fn(async () => {}),
     dials: () => [],
     setDial: vi.fn(async () => {}),
+    recipe: () => ({ text: studioRecipe.text, counts: { layers: 1, knobs: 0, dials: [] } }),
+    reset: vi.fn(async () => {}),
     gpuMs: 4.56,
     stats() {
       return { drawCalls: 21, triangles: 90000, ms: 16.66, cpuMs: 3.21, gpuMs: this.gpuMs };
@@ -88,6 +92,7 @@ function mount(studio, extra = {}) {
 }
 
 beforeEach(() => {
+  studioRecipe.text = '';
   document.body.replaceChildren();
   knobsModule = { mountKnobs: vi.fn((container, opts) => ({ opts, refresh: vi.fn(), dispose: vi.fn() })) };
   loadKnobs.mockClear();
@@ -135,7 +140,8 @@ describe('chế độ mài', () => {
     workshop.open();
     const section = rail.querySelector('.rail-tools');
     expect(section.previousElementSibling.tagName).toBe('OL');
-    expect(section.nextElementSibling.classList.contains('rail-next')).toBe(true);
+    expect(section.nextElementSibling.classList.contains('rail-recipe-tools')).toBe(true); // GĐ 9: mục Công thức ngay sau Đồ nghề
+    expect(section.nextElementSibling.nextElementSibling.classList.contains('rail-next')).toBe(true);
     expect(section.querySelector('[data-tool="kinh-mai"]').textContent).toBe(t.tools['kinh-mai'].name);
     workshop.dispose();
   });
@@ -530,6 +536,45 @@ describe('Sổ tay', () => {
     notebook.querySelector('.nb-close').click();
     expect(notebook.hidden).toBe(true);
     expect(rail.hidden).toBe(false);
+    workshop.dispose();
+  });
+});
+
+describe('mục Công thức (GĐ 9)', () => {
+  it('open({ recipe }): thanh lớp mở, KHÔNG lớp nào tween về 0, dòng tóm tắt hiện', () => {
+    studioRecipe.text = 'hai:0';
+    const studio = fakeStudio();
+    const { workshop, rail, $ } = mount(studio);
+    workshop.open({ recipe: true });
+    expect(rail.hidden).toBe(false);
+    expect(studio.calls).toEqual([]);
+    expect($('.rail-recipe-text').textContent).toBe('Công thức trong link: 1 lớp đã mài');
+    expect(workshop.layer).toBe(null);
+    workshop.dispose();
+  });
+
+  it('open({ grind }): dòng tóm tắt ẩn, kể cả khi vừa hiện', () => {
+    studioRecipe.text = 'hai:0';
+    const { workshop, $ } = mount(fakeStudio());
+    workshop.open({ recipe: true });
+    workshop.open({ grind: true });
+    expect($('.rail-recipe-text').textContent).toBe('');
+    expect($('[data-recipe-reset]').hidden).toBe(true);
+    workshop.dispose();
+  });
+
+  it('mục Công thức nằm TRONG thanh lớp (Tab đi theo thứ tự DOM), sau Đồ nghề; tóm tắt đứng đầu', () => {
+    const { workshop, rail } = mount(fakeStudio());
+    const kids = [...rail.children].map((c) => c.className.split(' ')[0]);
+    expect(kids.indexOf('rail-recipe')).toBe(0);
+    expect(kids.indexOf('rail-recipe-tools')).toBe(kids.indexOf('rail-tools') + 1);
+    workshop.dispose();
+  });
+
+  it('tầng tĩnh (không có bàn thợ): không có mục Công thức', () => {
+    const { workshop, rail } = mount(null);
+    expect(rail.querySelector('.rail-recipe, .rail-recipe-tools')).toBeNull();
+    workshop.open({ recipe: true });
     workshop.dispose();
   });
 });

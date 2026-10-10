@@ -141,7 +141,20 @@ const t = {
    * Bản dịch (GĐ 9, spec §21.1): khung mã shader thật trong tab Chỉnh. `post`: nhãn của quad cuối (mọi phần hậu kỳ ghép lại).
    * `translating` là chuỗi thường: một bản dịch chỉ là một khung vẽ, nên không có tiến độ để đếm.
    */
-  recipe: { staticNote: 'Link này có công thức mài; công thức chỉ áp được ở bản 3D.' },
+  recipe: {
+    staticNote: 'Link này có công thức mài; công thức chỉ áp được ở bản 3D.',
+    /** Mục Công thức trong thanh lớp (GĐ 9, spec §21.5). */
+    title: 'Công thức',
+    copy: 'Chép link công thức',
+    copied: 'Đã chép link',
+    copyFailed: 'Chưa chép được: link ở ô dưới, chọn rồi chép.',
+    linkLabel: 'Link công thức',
+    reset: 'Về nguyên bản',
+    /** Dòng tóm tắt đầu thanh lớp; phần bằng 0 bị bỏ. dials: [{ label, text }]. */
+    summary: ({ layers, knobs, dials }) => `Công thức trong link: ${[
+      layers ? `${layers} lớp đã mài` : null, knobs ? `${knobs} núm đã chỉnh` : null, ...dials.map((d) => `${d.label} ${d.text}`),
+    ].filter(Boolean).join(' · ')}`,
+  },
   translation: {
     button: 'Bản dịch',
     object: 'Vật',

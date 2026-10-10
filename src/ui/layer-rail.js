@@ -12,8 +12,9 @@ import { h } from './dom.js';
  * @param {boolean} opts.interactive
  * @param {{ open: (id: string) => void, toggle: (id: string, on: boolean) => void, next: () => void, close: () => void }} opts.on
  * @param {HTMLElement | null} [opts.tools]  mục "Đồ nghề" (ui/rail-tools.js, GĐ 4), ngay dưới danh sách lớp
+ * @param {{ summary: HTMLElement, section: HTMLElement } | null} [opts.recipe]  Công thức (ui/recipe-panel.js, GĐ 9): tóm tắt đứng đầu thanh, mục sau Đồ nghề
  */
-export function createRail(doc, { layers, t, interactive, on, tools = null }) {
+export function createRail(doc, { layers, t, interactive, on, tools = null, recipe = null }) {
   const items = new Map();
   const list = h(doc, 'ol', {}, layers.map(({ id, name }, i) => {
     const open = h(doc, 'button', { type: 'button', class: 'rail-name', onclick: () => on.open(id) },
@@ -36,7 +37,7 @@ export function createRail(doc, { layers, t, interactive, on, tools = null }) {
   }));
   const next = h(doc, 'button', { type: 'button', class: 'rail-next', hidden: true, onclick: () => on.next() });
   const close = h(doc, 'button', { type: 'button', class: 'rail-close', 'aria-label': t.rail.close, text: '×', onclick: () => on.close() });
-  const el = h(doc, 'nav', { class: 'rail', 'data-rail': '', 'aria-label': t.rail.label, hidden: true }, list, tools, next, close);
+  const el = h(doc, 'nav', { class: 'rail', 'data-rail': '', 'aria-label': t.rail.label, hidden: true }, recipe?.summary, list, tools, recipe?.section, next, close);
 
   return {
     el,

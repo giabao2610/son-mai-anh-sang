@@ -1041,6 +1041,7 @@ son-mai-anh-sang/
         dial-set.js                  [4] Dial của bức: đọc/ghi (kẹp min/max/step), chữ giá trị, ghi chú, snapshot
         recipe-set.js                [9] công thức của một cảnh: mặc định của máy đang xem, phân loại khóa, khác biệt, tóm tắt
         recipe-url.js                [9] thanh địa chỉ mang công thức: replaceState gộp 500 ms, hashchange
+        workshop-door.js             [9] cửa vào xưởng của một bức (tách từ run.js): mở/đóng thanh lớp, lời mời, gợi ý; trang mở bằng link có công thức thì mở sẵn xưởng không mài
         translate.js                 [9] bản dịch: nơi lớp có mặt, theo thứ tự phủ, từ mã của MỘT khung vẽ thật (draws.capture(); không getShaderAsync, không giữ khung)
         hold.js                      [9] giữ khung: việc async chạy với target của lượt khác đang đặt thì cảnh không vẽ (biên dịch lại giữa chừng: view Normal)
         clock.js                     [3→4] đồng hồ + trần 60 khung/giây; GĐ 4: màn ≤ ~63 Hz không bị bỏ khung nào
