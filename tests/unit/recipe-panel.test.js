@@ -88,6 +88,20 @@ describe('recipe-panel · tóm tắt', () => {
     expect($('[data-recipe-reset]').hidden).toBe(true);
   });
 
+  it('"Về nguyên bản" hỏng (restore ném): không có lời hứa hỏng lơ lửng; một console.warn; dòng tóm tắt và nút ở lại, vì công thức còn đó', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const studio = fakeStudio();
+    studio.reset = vi.fn(async () => { throw new Error('núm rebuild dựng hỏng'); });
+    const { panel, text, $ } = mount(studio);
+    panel.show();
+    frame();
+    $('[data-recipe-reset]').click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(text.textContent).not.toBe('');
+    expect($('[data-recipe-reset]').hidden).toBe(false);
+  });
+
   it('vùng aria-live không bao giờ có hidden', () => {
     const { panel, text, status } = mount(fakeStudio());
     for (const step of [() => {}, () => panel.show(), frame, () => panel.hide()]) {

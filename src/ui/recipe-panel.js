@@ -22,7 +22,13 @@ export function createRecipePanel(doc, { t, content = null, studio, win = doc.de
   const reset = h(doc, 'button', {
     type: 'button', class: 'rail-recipe-reset', 'data-recipe-reset': '', hidden: true, text: t.recipe.reset,
     onclick: async () => {
-      await studio()?.reset();
+      try {
+        await studio()?.reset();
+      } catch (err) {
+        // restore() hỏng giữa chừng (núm 'rebuild' dựng hỏng): công thức còn đó, nên dòng tóm tắt và nút ở lại; sync() viết lại câu.
+        console.warn('Công thức: chưa về nguyên bản được.', err);
+        return;
+      }
       hide();
     },
   });
@@ -130,5 +136,12 @@ export function createRecipePanel(doc, { t, content = null, studio, win = doc.de
     },
     hide,
     sync,
+    /** Gỡ (workshop.dispose): hủy khung chờ của show() và giờ xóa dòng trạng thái, để không đọc bàn thợ của cảnh đã gỡ. */
+    dispose() {
+      showing = false;
+      win.cancelAnimationFrame(armed);
+      armed = 0;
+      win.clearTimeout(statusTimer);
+    },
   };
 }
