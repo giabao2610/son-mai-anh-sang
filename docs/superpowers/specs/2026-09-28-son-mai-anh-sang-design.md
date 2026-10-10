@@ -1016,6 +1016,8 @@ son-mai-anh-sang/
       tier.js                        [0] dò tầng A/B/C, hàm thuần nhận env
       quality.js                     [0→4] GĐ 0: chọn mức, mức mặc định, isMobile; GĐ 3: bộ điều chỉnh có trễ; GĐ 4: bộ điều chỉnh tách ra tuner.js
       tuner.js                       [4] bộ điều chỉnh có trễ (hàm thuần, không three): nhịp rAF, và ms GPU/CPU khi đo được
+      tuner-load.js                  [sau 9] đường tải của bộ điều chỉnh (đủ mẫu ms GPU), tách từ tuner.js
+      tuner-rhythm.js                [sau 9] đường nhịp của bộ điều chỉnh (không đo được GPU), tách từ tuner.js
       palette.js                     [0] 10 token; ghép phần ghi đè của bức (hàm thuần, không three)
       deadline.js                    [0] withDeadline(): hạn 10 s cho khởi động (hàm thuần)
       sma.js                         [0→5] window.__sma: state, tier, backend, level, frames, reason; GĐ 2: expose() (GĐ 4 chỉ thêm hàm qua expose); GĐ 5: readouts(layerId); GĐ 9: recipe(), applyRecipe(text), translate(layerId)
@@ -2672,7 +2674,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | Từng sợi tách hai lần vẽ của vật trong suốt DoubleSide | Khi một bức có material như thế | three vẽ cả hai mặt trong MỘT lần gọi móc (§7, Phụ lục A.53): đặt `forceSinglePass`, hay chia thành hai material |
 | Chữ đi theo vật đo lại khi bố cục đổi giữa chừng | Khi thấy chữ lệch sau khi xoay máy | Hiện cỡ chữ và chân khung chỉ đo lúc `show` (§4.1 mục 10). Đo lại khi `resize`, hay `ResizeObserver` trên các ô của chân khung |
 | Tô sáng sợi vừa vẽ | Khi người xem cần | Vẽ thêm một lượt mặt nạ cho vật của sợi k, rồi overlay trộn viền vàng lá như Kính mài |
-| Tách `engine/tuner.js` (gần 290 dòng sau gói sửa sau GĐ 5, quá mức mềm 250) | Lần sửa bộ điều chỉnh kế tiếp | Đưa đường tải (GĐ 4: `byLoad`, ngưỡng `busy`/`idle`/`light`) ra file riêng; trạng thái hai đường dùng chung (`overRun`, `capped`, `down`/`up`…) đi qua một object |
+| ~~Tách `engine/tuner.js`~~ | Làm sau GĐ 9 (đợt dọn nợ) | Đường tải ở `engine/tuner-load.js` (`byLoad`), đường nhịp ở `engine/tuner-rhythm.js` (`byRhythm`); trạng thái hai đường dùng chung (`overRun`, `capped`, `down`/`up`…) đi qua một object (`createCore` trong `tuner.js`). Cửa sổ đo và lần thử ngừng vẽ ở lại `tuner.js` (225 dòng, từ 289) |
 | Hoa đăng tránh lá, hay bị gợn đẩy đi | Khi thấy cần | Đường trôi hiện tính thẳng theo thời gian (tất định với `?freeze`); bị đẩy thì phải tích phân từng khung, và `update(0, t)` phải giữ đúng khung N |
 | Hoa đăng chiếu sáng thật | Không làm | Mỗi `PointLight` thêm lúc chạy là biên dịch lại mọi material và tốn thêm ở mọi điểm ảnh; vũng sáng trên nước đã cho cảm giác đèn soi nước |
 | (GĐ 6) Hơi nóng trên miệng đèn kéo quân | Khi người xem cần | `post.build` của một lớp: lệch UV của ảnh cảnh theo noise trong vùng phía trên miệng đèn (chiếu vùng đó ra màn hình) |
