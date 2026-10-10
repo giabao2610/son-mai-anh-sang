@@ -162,10 +162,10 @@ Ao Sen Đêm là **Bức 1**. (GĐ 6) Đèn Kéo Quân là **Bức 2** (§18). (
     đúng dòng của núm;
   - lấy link bằng **nút "Chép link công thức" cộng thanh địa chỉ** tự mang công thức (`#r=…`) mỗi khi mài hay chỉnh;
   - mở một link có công thức thì cảnh hiện thẳng theo công thức, **thanh lớp mở sẵn** với một dòng tóm tắt và nút "Về nguyên bản";
-  - lấy mã shader bằng **API công khai** `renderer.debug.getShaderAsync`, đặt đúng render target và MRT của lượt vẽ cảnh; lúc đọc thì
-    cảnh giữ khung. Task đầu thử trước; hỏng thì đổi sang đọc RenderObject của lần vẽ thật. Luật dừng của Task 2 không đạt (mã lệch từng
-    ký tự, thêm program mới: §21.9); ngày 2026-10-09 Bạn đồng ý đường lùi **"bắt lúc vẽ"**: mã đọc từ chính RenderObject của một khung vẽ
-    thật, qua móc lần vẽ (§21.3).
+  - lấy mã shader: **ban đầu** định dùng API công khai `renderer.debug.getShaderAsync`, đặt đúng render target và MRT của lượt vẽ cảnh, cảnh
+    giữ khung lúc đọc, với đường lùi nếu hỏng. Cách đó **không qua luật dừng của Task 2** (mã lệch từng ký tự, thêm program mới: §21.9) nên
+    KHÔNG được dùng. Cái đang chạy là **"bắt lúc vẽ"** (`draws.js#capture()`): mã đọc từ chính RenderObject của một khung vẽ thật, qua móc
+    lần vẽ (§21.3), không giữ khung; Bạn đồng ý đường này ngày 2026-10-09.
 
   Sau phần thiết kế đầu tiên (Bản dịch), Bạn nói "làm luôn đến spec": Claude tự quyết phần còn lại của §21 (dạng link, áp công
   thức lúc dựng, thanh địa chỉ, xưởng, kiểm thử, cách làm), rồi Bạn duyệt một lượt trong spec.
