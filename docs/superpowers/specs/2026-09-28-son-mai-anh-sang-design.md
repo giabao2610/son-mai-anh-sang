@@ -5112,6 +5112,9 @@ Như GĐ 6 và GĐ 7 (§18.9, §19.10): làm thẳng trên nhánh `gd8-dan-ga-me
   material, nên mã đổi. Dịch lại KHÔNG xóa khung: nơi đang xem, phần Đỉnh/Điểm ảnh và núm đang sáng ở nguyên chỗ, dòng "Đang dịch…" không
   hiện, và mã y hệt thì khung không vẽ lại, dòng trạng thái không ghi lại (kéo một núm `uniform` không đổi mã, nên không có gì nhấp nháy,
   trình đọc màn hình không đọc lại câu cũ). Chỉ cú bấm "Bản dịch" xóa khung và bắt đầu lại từ nơi đầu tiên.
+- Bàn thợ đổi từ chỗ khác (công thức áp từ link dán hay Back/Forward, "Về nguyên bản", `__sma.applyRecipe`, `__sma.restore`): Sổ tay nghe
+  `studio.onChange` (`ui/workshop.js`, nghe lại bàn thợ mới sau "Dựng lại cảnh"). Núm của tab Chỉnh đọc lại giá trị thật khi nó khác giá trị
+  đang hiện (cú kéo của chính người xem không bị vẽ đè), kể cả khi Sổ tay đang đóng; Bản dịch đang mở thì dịch lại như sau một cú kéo núm.
 
 **Những nơi lớp có mặt.** Nhiều lớp không có vật riêng (`objects: []`): Sương góp vào shader của lá sen, Bản màu của Bức 4 góp vào material
 của đàn gà, Bản nét và Phủ bóng nằm trong lượt hậu kỳ. Nên danh sách Vật không lấy từ `layer.objects` của riêng lớp:
@@ -5125,7 +5128,10 @@ của đàn gà, Bản nét và Phủ bóng nằm trong lượt hậu kỳ. Nên
 - nhãn: nhãn vật của lớp chủ (`content.layers[chủ].objects[tên]`, như Từng sợi) · tên lớp chủ, ví dụ "Lá sen · Cốt". Group có nhiều material
   thì thêm "(1/3)"; vật thiếu nhãn thì dùng tên vật;
 - lớp không có uniform nào trong mọi mã (chỉ đổi cảnh bằng JS) thì hiện vật của chính nó, kèm câu "Lớp này đổi cảnh bằng JS: trọng số và
-  núm của nó không vào shader." Lớp không có vật nào và không có uniform trong mã: chỉ câu ấy.
+  núm của nó không vào shader." Lớp không có vật nào và không có uniform trong mã: chỉ câu ấy. Câu ấy chỉ nói khi CHẮC: ít nhất một vật
+  của lớp được vẽ ở khung bắt mà mã của nó không có uniform nào của lớp. Mọi vật của lớp đều không được vẽ (thường là lớp ở trọng số 0: Vàng
+  lá của Bức 1, Đàn gà của Bức 4 ẩn vật khi tắt) thì chưa biết gì: dòng nhắc là "Khung vừa rồi không vẽ vật nào của lớp này (lớp đang
+  tắt?), nên chưa biết nó có mặt ở đâu trong mã." (`t.translation.undrawn`), các nơi đều "không được vẽ".
 
 **Để sau** (§16): mã compute (đom đóm, thóc: three không có API công khai để lấy mã compute); bản dịch theo từng sợi của Từng sợi.
 
@@ -5138,7 +5144,10 @@ của đàn gà, Bản nét và Phủ bóng nằm trong lượt hậu kỳ. Nên
   - `<layerId>.<knobId>`: núm;
   - `<dialId>`: Dial (núm của cả bức).
 - Giá trị:
-  - số: ghi ngắn nhất, làm tròn theo số chữ số thập phân của `step` (tối đa 4; trọng số 2), bỏ số 0 thừa: `0.02`, `23`, `-1.5`;
+  - số: ghi ngắn nhất, làm tròn theo số chữ số thập phân của `step` (tối đa 4; trọng số 2), bỏ số 0 thừa: `0.02`, `23`, `-1.5`. Mở link
+    thì số được làm tròn NGAY khi phân loại, đúng như lúc ghi: núm số có `step` về nấc gần nhất tính từ `min` (Math.round, nửa nấc làm tròn
+    lên: `ban-net.lineWidth:2.5` thành 3, `2.4` thành 2), rồi kẹp trong [min, trần của máy]; trọng số làm tròn 0,01 (`0.333` thành 0.33).
+    Cảnh dùng đúng số mà thanh địa chỉ ghi lại, và núm dời mẫu theo điểm ảnh không bao giờ nhận nửa điểm ảnh (Phụ lục A.96);
   - bool: `1` / `0`;
   - select: id của lựa chọn (`aces`);
   - màu: 6 chữ số hex, không `#` (dấu `#` thứ hai trong URL không hợp lệ): `ffcc66`.
@@ -5164,14 +5173,23 @@ của đàn gà, Bản nét và Phủ bóng nằm trong lượt hậu kỳ. Nên
   "Công thức trong link: 2 lớp đã mài · 3 núm đã chỉnh · giờ 23:00". Phần nào bằng 0 thì bỏ; Dial ghi bằng nhãn và chữ giá trị của nó
   (`content.dials[id].label`, `format`). Sổ tay vẫn đóng.
 - Không có gợi ý "Chạm vào…" và lời mời "mài thử?" (thanh lớp đang mở). Mở theo công thức (lúc live hay do dán link khác) thì xóa gợi ý hoặc lời mời đang hiện (`shell.clearHint()`: chữ của vùng `aria-live` về trống, không `hidden`); cái chạm đầu tiên chỉ mời khi thanh lớp đang đóng.
-- "Về nguyên bản": trọng số tween về 1 như công tắc của thanh lớp, núm và Dial về mặc định ngay, hash về trống, dòng tóm tắt biến mất (vùng
+- Dòng tóm tắt là vùng `aria-live`: lần mở đầu thanh lớp bỏ `hidden` (và vùng vừa được tạo) trong chính nhịp đó, nên chữ điền ở khung sau
+  (`requestAnimationFrame`), như tab Phá; cùng một câu thì không ghi lại (kéo núm đổi công thức mà câu tóm tắt giữ nguyên).
+- "Về nguyên bản": nút tự ẩn khi bấm, nên focus chuyển sang nút "Chép link công thức" (không có nút ấy thì sang tên lớp đầu tiên của thanh
+  lớp), không rơi về `<body>`. Trọng số tween về 1 như công tắc của thanh lớp, núm và Dial về mặc định ngay, hash về trống, dòng tóm tắt biến mất (vùng
   `aria-live` để trống, không `hidden`).
 - Đóng thanh lớp vẫn như cũ (§4.1): mọi lớp phủ lại, núm và Dial giữ nguyên; hash theo đó còn núm và Dial.
 - Đang xem mà hash đổi (dán link khác vào cùng tab, sửa tay, Back/Forward): áp công thức mới thành **trạng thái đủ** (mọi thứ không có
   trong link về mặc định), và thanh lớp mở với dòng tóm tắt mới. Hash trống: như "Về nguyên bản".
+  Hash đổi liên tiếp (Back rồi Forward thật nhanh) thì áp lần lượt, lần sau chờ lần trước xong: hai lần áp không bao giờ đan vào nhau, và
+  cảnh cuối cùng là của hash cuối. Link hỏng HOÀN TOÀN (không giải mã được, dài quá 2.048 ký tự, hay mục nào cũng hỏng) thì một dòng
+  `console.warn` và cảnh giữ nguyên: không về mặc định, thanh lớp không mở; thanh địa chỉ ghi lại công thức của cảnh. Hash trống vẫn là
+  "Về nguyên bản".
 - Ở tầng tĩnh: không áp (không có gì để mài). Lời giải thích của trang tĩnh thêm câu "Link này có công thức mài; công thức chỉ áp được ở
   bản 3D."
-- Mục hỏng (khóa lạ, giá trị sai kiểu, lựa chọn không có) thì bỏ, kèm MỘT dòng `console.warn` liệt kê; các mục còn lại vẫn áp. Công thức
+- Mục hỏng (khóa lạ, giá trị sai kiểu, lựa chọn không có) thì bỏ, kèm MỘT dòng `console.warn` liệt kê (phần `khóa:giá trị` người dùng gõ
+  cắt ở 60 ký tự, lý do của xưởng thì đi nguyên); các mục còn lại vẫn áp. Mở xưởng theo link mà hỏng (lỗi JS của thanh lớp, Sổ tay) thì một
+  dòng `console.error`, cảnh vẫn live (`run.js` bọc `door.afterLive`; `run()` hỏng sau khi xưởng đã mở thì gỡ cả xưởng). Công thức
   không bao giờ đưa trang về tĩnh. Giá trị vượt trần của máy này thì kẹp (`normalizeKnob`), như kéo núm.
 
 **Công thức không mang** (§16): thí nghiệm đang bật, công cụ đang bật, góc camera, mức chất lượng.
@@ -5217,7 +5235,11 @@ mã luôn là mã đang chạy (núm `rebuild`, thí nghiệm hay view Normal đ
   nét, Phủ bóng, overlay của công cụ đang bật); bloom và FXAA có lượt vẽ riêng bên trong node của chúng, không nằm trong mục này;
 - khóa: `<object.id>:<passId>` (vật trong suốt có transmission vẽ hai lượt, mỗi lượt một nơi) và `post:<i>`: bền qua các lần dịch, để Sổ tay
   giữ chỗ người xem đang xem;
-- giữ những nơi mà mã có uniform của lớp, cộng nơi đọc hỏng; vật của chính lớp lên đầu. Không nơi nào có thì trả vật của chính lớp, `jsOnly`.
+- giữ những nơi mà mã có uniform của lớp, cộng nơi đọc hỏng (kể cả vật không lớp nào giữ: đọc hỏng thì không biết lớp có mặt ở đó hay
+  không); vật của chính lớp lên đầu. Không nơi nào có thì trả vật của chính lớp; `jsOnly` chỉ true khi có ít nhất một vật của lớp được vẽ
+  (hay lớp không có vật nào). Mọi vật của lớp không được vẽ thì `jsOnly` false và mọi nơi `drawn: false` (§21.1);
+- nơi đọc hỏng: MỘT `console.warn` cho cả bản dịch, ghi sau lần bắt (ngoài móc lần vẽ), liệt kê nhãn và lỗi của từng nơi (Sổ tay nói "chi
+  tiết ở console"). Khung bắt không có lần vẽ nào của camera chính: một `console.warn`.
 
 **Giữ khung** (`engine/gpu/hold.js`, file mới; một bộ giữ cho mỗi cảnh, `scene.js` dựng trước pipeline). Bản dịch không dùng nó: chỉ còn
 `pipeline.compile()` (biên dịch lại giữa chừng, mục dưới). Lúc đang giữ, `step()` bỏ khung, nên lần bắt chờ tới khung vẽ đầu tiên sau khi thả.
@@ -5240,7 +5262,8 @@ lặp vẫn vẽ trong lúc chờ, nên quad cuối vẽ vào target của scene
 
 E2e của GĐ 4 không thấy vì luôn mở với `?freeze` (vòng lặp đã dừng). Sửa: `pipeline.compile()` chạy trong `hold.run`: cảnh đứng yên trong
 lúc "đang mài…" (đo được 0,2 giây trên GPU thật ở WebGPU, 1 giây ở WebGL2), không khung nào vẽ với target sai. Lần biên dịch lúc mở trang
-cũng đi đường này (chưa có vòng lặp nên không khác gì).
+cũng đi đường này (chưa có vòng lặp nên không khác gì). `scenePass.compileAsync` của three chỉ trả lại target + MRT khi xong êm: hỏng giữa
+chừng thì `pipeline.compile()` tự trả (lưu trước, trả trong `catch`, rồi ném tiếp), không thì mọi khung sau khi thả giữ vẽ vào target sai.
 
 **Gỡ cảnh.** `translator.dispose()` thì lần dịch sau hỏng ngay; lần bắt đang chờ thì `draws.dispose()` làm hỏng (draws.js giữ chúng). Không có
 bộ nhớ mã nào để bỏ.
@@ -5251,7 +5274,7 @@ bộ nhớ mã nào để bỏ.
  *   uniforms: { weight: string | null, knobs: Record<string, string> },   // tên trong mã; Cốt: weight null (luật 1)
  *   places: { key: string, label: string, owner: string | null, own: boolean, post: boolean, drawn: boolean, vertex: string | null,
  *             fragment: string | null, hits: { vertex: number, fragment: number }, error?: string }[],
- *   jsOnly: boolean }} Translation   // jsOnly: không mã nào có uniform của lớp (places là vật của chính lớp) */
+ *   jsOnly: boolean }} Translation   // jsOnly: không mã nào có uniform của lớp VÀ có vật của lớp được vẽ (hay lớp không có vật nào) */
 ```
 `__sma.translate(layerId)` trả đúng object đó (DevTools, e2e).
 
@@ -5270,6 +5293,9 @@ bộ nhớ mã nào để bỏ.
 - `classify(entries)` → `{ weights, knobs, dials, problems }`: khóa có dấu chấm là núm (lớp và núm phải có thật; chuỗi đổi sang kiểu của
   núm: số, `1`/`0`, lựa chọn có trong `options`, `#` + hex); khóa không chấm là id lớp (trọng số 0–1; `cot` bỏ qua, luật 1) hay id Dial.
   Còn lại vào `problems`. Giá trị Dial của link được làm tròn MỘT lần ở đây, bằng `snapDial(dial, raw)` của `dial-set.js` (kẹp rồi về nấc).
+  Núm số có `step` cũng về nấc ở đây (`snapToStep` của `dial-set.js`, chung với Dial: tính từ `min`, `toFixed(6)`, không vượt trần của máy),
+  trọng số làm tròn 2 chữ số như `diff` ghi: cảnh và thanh địa chỉ cùng một số (§21.2). Mục hỏng ghi `khóa:giá trị` đã cắt (`clipEntry` của
+  `recipe.js`, 60 ký tự) kèm lý do nguyên vẹn; lý do không nhắc lại giá trị.
 - `diff(snapshot)` → entries: chỉ giá trị khác `defaults` (số so sau khi làm tròn theo `step`, nên 0.0200000004 bằng 0.02).
 - `countsOf(entries)` → `{ layers, knobs, dials }` cho dòng tóm tắt (`dials`: id các Dial đã khác mặc định).
 - Khôi phục Dial (`studio.restore`, nên cả `applyRecipe`, `reset` và "Dựng lại cảnh") dùng `dials.restore(values, { exact: true })`: chỉ kẹp, không
@@ -5293,7 +5319,8 @@ bộ nhớ mã nào để bỏ.
 **Bàn thợ** thêm:
 - `recipe()` → `{ text, counts: { layers, knobs, dials } }` (`text` không có `#r=`; rỗng là nguyên bản; `dials` là id);
 - `applyRecipe(text)` → `Promise`: trạng thái đủ = `defaults` ghép công thức, đi qua `restore()` (trọng số đặt ngay; núm khác giá trị hiện tại
-  thì set lần lượt; Dial); trả `{ counts, problems }`;
+  thì set lần lượt; Dial); trả `{ counts, problems, applied }`. Link hỏng hoàn toàn (không mục nào sống sót, có ít nhất một mục hỏng):
+  không restore, một cảnh báo "cảnh giữ nguyên", `applied: false`; chuỗi rỗng vẫn về `defaults`;
 - `reset()` → `Promise`: về `defaults`, trọng số tween;
 - `onChange(cb)` → hàm bỏ nghe: báo sau mọi `setWeight`, `setKnob`, `setDial`, `restore`, `applyRecipe`, `reset`. Không báo theo khung:
   tween không đổi đích.
@@ -5306,6 +5333,8 @@ bộ nhớ mã nào để bỏ.
 - nghe `hashchange` (`replaceState` không phát sự kiện này, nên chỉ thay đổi của người xem tới đây): `readRecipe` → `applyRecipe` → mở xưởng
   với dòng tóm tắt; hash trống thì `reset()`; hash khác dạng (không bắt đầu bằng `#r=`) thì bỏ qua. Đang áp thì hủy lần ghi đã hẹn và
   chặn ghi (restore chờ núm và vẽ lại, `recipe().text` còn là chuỗi cũ: ghi lúc đó sẽ đè hash vừa dán); áp xong hẹn MỘT lần ghi dạng chuẩn.
+  Các lần áp nối đuôi nhau bằng một chuỗi Promise (thay cho cờ `applying`): lần sau chỉ bắt đầu khi `restore()` của lần trước xong, đếm số lần
+  còn chờ để chặn ghi tới hết lần cuối; một lần áp ném lỗi thì `console.error` và hàng chạy tiếp. `applied: false` thì không mở xưởng.
 
 **`__sma`** thêm `recipe()` (chuỗi `text`) và `applyRecipe(text)`, qua bàn thợ như mọi hàm khác.
 
@@ -5333,7 +5362,9 @@ bộ nhớ mã nào để bỏ.
   danh sách nơi. `code-view.js` đặt `refresh()` (300 ms, gộp lần gọi) vào sau mỗi thay đổi của núm
   hay thí nghiệm: `notebook.js#track` gọi nó, vì cả hai đều đi qua `track`.
 - `ui/recipe-panel.js`: mục "Công thức" của thanh lớp (nút chép link, dòng trạng thái, ô link khi chép hỏng) và dòng tóm tắt + "Về nguyên
-  bản" ở đầu thanh. `workshop.open({ recipe })` hiện dòng tóm tắt.
+  bản" ở đầu thanh. `workshop.open({ recipe })` hiện dòng tóm tắt (điền ở khung sau, §21.2). Chép hỏng thì focus vào ô link rồi mới chọn
+  chữ, kèm một `console.warn`; `recipe()` hỏng thì dòng trạng thái báo `linkFailed`, không có ô link.
+- `ui/knob-pane.js` (tách từ `notebook.js`): ô núm của tab Chỉnh, nhớ giá trị đang hiện; `sync()` vẽ lại khi bàn thợ đổi từ chỗ khác (§21.1).
 
 **Thứ tự Tab** không đổi (thanh lớp → thanh công cụ → Sổ tay, §7): dòng tóm tắt và mục Công thức nằm TRONG thanh lớp, Bản dịch nằm trong
 tab Chỉnh.
@@ -5341,14 +5372,14 @@ tab Chỉnh.
 **Máy tính:** thanh lớp đứng ngay dưới đầu trang (tên bức và hàng lật tranh), không còn giữa theo chiều dọc: `ui/workshop.js` đo đáy của `.frame header` cộng 16px vào `--rail-top` (lúc mở, khi đổi cỡ cửa sổ, khi font tải xong; tên bức xuống dòng hay không, mỗi bức một chiều cao); nội dung dài thì cuộn trong thanh (`max-height` = khung nhìn − `--rail-top` − lề).
 
 **Điện thoại:** thanh lớp là một dải ngang (§7). Dòng tóm tắt thu thành một chip "Công thức · Về nguyên bản" trên dải; mục Công thức là một
-nút trên dải, như nút của Dial. Chép hỏng thì dải cuộn (`scrollIntoView({ block: 'nearest', inline: 'nearest' })`) tới ô link, dòng trạng thái rộng 170px xuống dòng nằm ngay trước ô. Bản dịch trong tấm trượt của Sổ tay: khung mã cuộn riêng, dòng dài xuống dòng.
+nút trên dải, như nút của Dial. Chép hỏng thì dải cuộn (`scrollIntoView({ block: 'nearest', inline: 'nearest' })`) tới ô link, dòng trạng thái rộng 170px xuống dòng nằm ngay trước ô; trống thì không giữ chỗ (`:empty` thì `flex-basis: 0`). Bản dịch trong tấm trượt của Sổ tay: khung mã cuộn riêng, dòng dài xuống dòng.
 
 **Chữ của xưởng** (`strings.vi.js`):
 - `t.translation`: `button` "Bản dịch", `object` "Vật", `stages` "Phần của shader", `vertex` "Đỉnh", `fragment` "Điểm ảnh", `translating`
   "Đang dịch…" (chuỗi thường, không đếm), `status({ language, backend, lines, hits, layer })`, `weightHint(name)`, `jsOnly`, `post` "Lượt
-  cuối · hậu kỳ", `notDrawn` "Vật này không được vẽ ở khung vừa rồi (đang ẩn hay ngoài khung nhìn).", `failed`;
+  cuối · hậu kỳ", `notDrawn` "Vật này không được vẽ ở khung vừa rồi (đang ẩn hay ngoài khung nhìn).", `undrawn` (§21.1), `failed`;
 - `t.recipe`: `title` "Công thức", `copy` "Chép link công thức", `copied` "Đã chép link", `copyFailed`, `summary(parts)`, `reset` "Về nguyên
-  bản", `staticNote`.
+  bản", `staticNote`, `linkFailed`.
 
 Không có chữ mới trong `content` của các bức: nhãn vật đã có từ GĐ 5, nhãn Dial từ GĐ 4.
 
@@ -5387,6 +5418,8 @@ Không có chữ mới trong `content` của các bức: nhãn vật đã có t�
 **Unit (Vitest, node; jsdom cho file `ui/`):**
 - `recipe.js`: đọc/ghi qua lại cho mọi kiểu; thứ tự; làm tròn theo `step`; giải mã phần trăm; khóa lặp; mục hỏng vào `problems`; dài quá
   2.048; hash không phải `#r=` ra `null`; không dùng built-in ES2022 (luật đường nhẹ có sẵn).
+- Hợp đồng (`tests/paintings/recipe-build.test.js`): mọi bức dựng được với từng núm ở `min` và ở trần của máy, từng lựa chọn, cả hai bool,
+  hai màu, ở cả ba mức, qua `classify` rồi `buildPainting(…, { initial })`, và núm dựng đúng với giá trị của công thức.
 - `recipe-set.js`: `defaults` theo `env` (trần theo mức), `classify` (lớp, núm, Dial, `cot`, lựa chọn lạ, màu), `diff` bỏ sai số dấu phẩy
   động, `counts`.
 - `knob-set.js`: giá trị ban đầu từ công thức, kẹp theo trần, hỏng thì về mặc định kèm cảnh báo; `buildLayers` đưa đúng giá trị tới

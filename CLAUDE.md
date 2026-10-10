@@ -326,22 +326,34 @@ Repo có `.nvmrc` ghi `24`; trong thư mục repo, `node -v` phải ra `v24.x`.
   không file nào trong `src/` gọi `debug.getShaderAsync` (nó trả RenderObject khác: chain map `'default'` thay cho passId `null`, tạo
   program mới, dựng quad không có `_vertexNode`; A.102). Test ghim ở `draws.test.js` giữ lời gọi với three 0.186.1.
 - Không đổi `renderer.toneMapping` ở đâu cả, kể cả Bản dịch. `translate.js` dựng các nơi theo thứ tự cố định (`drawablesOf`, rồi quad cuối):
-  `post`, `drawn: false`, không `ms`, không `onProgress`.
+  `post`, `drawn: false`, không `ms`, không `onProgress`. `jsOnly` chỉ true khi CHẮC: có vật của lớp được vẽ mà mã không mang uniform nào
+  của lớp (hay lớp không có vật nào); mọi vật của lớp không được vẽ (trọng số 0 ẩn vật) thì `jsOnly` false, Sổ tay nói `undrawn`. Nơi đọc
+  hỏng (cả vật không lớp nào giữ) vẫn có mặt, và MỘT `console.warn` mỗi bản dịch liệt kê nhãn + lỗi, ghi sau lần bắt (ngoài móc lần vẽ).
 - Công thức `#r=` (`engine/recipe.js`, `engine/gpu/recipe-set.js`): khóa `layerId` (trọng số), `layerId.knobId`, `dialId`; chỉ ghi giá
   trị KHÁC mặc định của máy đang xem, theo thứ tự cố định. Id Dial không trùng id lớp; id lựa chọn của núm `select` khớp
   `^[A-Za-z0-9-]+$`; id núm khớp `^[A-Za-z][A-Za-z0-9]*$` (test hợp đồng giữ). `recipe.js` thuộc đường nhẹ (không ES2022, không three).
 - Công thức áp lúc dựng, trước `scene.compile()`: `createKnobs` nhận giá trị ban đầu (núm `rebuild` dựng MỘT lần), trọng số và Dial đặt
   trước lần biên dịch đầu. Giá trị Dial của link làm tròn về nấc MỘT lần, ở `classify` (`snapDial`); `studio.restore` khôi phục Dial
-  CHÍNH XÁC (`dials.restore(v, { exact: true })`), không thì mặc định lệch nấc (giờ thật của Bức 1) thành công thức ma.
+  CHÍNH XÁC (`dials.restore(v, { exact: true })`), không thì mặc định lệch nấc (giờ thật của Bức 1) thành công thức ma. `classify` cũng
+  đưa núm số có `step` về nấc (`snapToStep`, tính từ `min`, Math.round) và làm tròn trọng số 0,01, đúng như `diff` ghi: cảnh và thanh địa
+  chỉ cùng một số (`lineWidth:2.5` thành 3, không phải nửa điểm ảnh). Mục hỏng cắt phần `khóa:giá trị` ở 60 ký tự (`clipEntry`), không cắt lý do.
+- Link hỏng HOÀN TOÀN (không giải mã được, quá 2.048 ký tự, mọi mục hỏng): `applyRecipe` không restore, một cảnh báo, trả `applied: false`;
+  cảnh giữ nguyên và xưởng không mở. Hash trống vẫn là "về mặc định". Mở xưởng hỏng (`door.afterLive` ném) thì `console.error`, cảnh vẫn
+  live: công thức không bao giờ đưa trang về tĩnh.
 - `studio.onChange(cb)` báo một lần sau mỗi `setWeight`/`setKnob`/`setDial`/`restore`; không báo thí nghiệm, công cụ, nấc chất lượng.
+  Hai người nghe: `recipe-url.js` và `ui/workshop.js` (Sổ tay: `ui/knob-pane.js` đọc lại núm khi giá trị thật khác giá trị đang hiện, Bản
+  dịch đang mở dịch lại); workshop nghe lại bàn thợ mới sau "Dựng lại cảnh".
 - Thanh địa chỉ (`engine/gpu/recipe-url.js`): `replaceState` gộp 500 ms (WebKit ném lỗi sau 100 lần trong 30 giây; `SecurityError` thì
-  cảnh báo một lần rồi thôi ghi); ghi nốt khi `pagehide` và khi trang ẩn. `hashchange` áp trạng thái ĐỦ (hash trống = về mặc định). Cờ
-  `applying` chặn ghi cho tới khi áp xong, không thì lần ghi cũ đè hash vừa dán.
+  cảnh báo một lần rồi thôi ghi); ghi nốt khi `pagehide` và khi trang ẩn. `hashchange` áp trạng thái ĐỦ (hash trống = về mặc định). Các
+  lần áp nối đuôi nhau trong MỘT chuỗi Promise (Back/Forward nhanh không đan hai `restore()` vào nhau); còn lần áp nào chờ thì không ghi,
+  không thì lần ghi cũ đè hash vừa dán; hết hàng thì ghi một lần dạng chuẩn.
 - Mở link có công thức: thanh lớp mở không mài, xóa gợi ý và lời mời bằng `shell.clearHint()`, Sổ tay đóng. `engine/boot.js#runShell` liệt kê
   TỪNG hàm của vỏ trang: thêm lời gọi mới trong `run.js` hay `workshop-door.js` thì thêm hàm vào đó (thiếu thì trang có link công thức
   về tĩnh `'error'`; boot test giữ).
 - Thanh lớp ở máy tính đứng dưới đầu trang (`--rail-top`, `ui/workshop.js` đo; không `transform`) và cuộn trong thanh. Vùng `aria-live` của
-  Bản dịch và Công thức thu lại bằng `:empty`, không `display: none` hay `hidden` (test CSS giữ).
+  Bản dịch và Công thức thu lại bằng `:empty`, không `display: none` hay `hidden` (test CSS giữ). Dòng tóm tắt công thức điền ở khung sau
+  `show()` (rAF: thanh lớp vừa bỏ `hidden` cùng nhịp) và không ghi lại cùng một câu. Nút nào tự ẩn khi đang giữ focus ("Về nguyên bản") thì
+  chuyển focus sang nút kế bên trước khi ẩn.
 - E2e: test Normal lúc cảnh đang chạy mở KHÔNG `?freeze` (có `?freeze` thì vòng lặp đã dừng, không thấy lỗi). Lỗi GPU và `GL_INVALID_*` ở
   WebGL2 chỉ là `console.warning` thường: quét `log.all` (`e2e/helpers.js#gpuErrors`), vì `log.warnings` chỉ giữ cảnh báo DEPRECATION.
   Dữ liệu GĐ 9 dùng chung ở `GD9` của `e2e/helpers.js`.
