@@ -97,10 +97,17 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
       if (notebook.layer) notebook.show(notebook.layer);
     }
   };
-  // Chỉ chạy khi thanh lớp đang mở: người chỉ ngắm tranh không tốn gì.
+  // Chỉ chạy khi thanh lớp đang mở: người chỉ ngắm tranh không tốn gì. Xin khung sau TRƯỚC khi sync: một khung ném lỗi (bàn thợ
+  // đang dở) thì thanh lớp vẫn chạy tiếp, không đứng hình tới lúc tải lại trang. Báo một lần, không báo mỗi khung.
+  let reported = false;
   const loop = () => {
-    sync();
     frame = win.requestAnimationFrame(loop);
+    try {
+      sync();
+    } catch (err) {
+      if (!reported) console.error('Thanh lớp: không vẽ lại được theo bàn thợ.', err);
+      reported = true;
+    }
   };
   const stop = () => {
     win.cancelAnimationFrame(frame);
@@ -148,6 +155,7 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
     },
     dispose() {
       stop();
+      panel?.dispose();
       unwatch?.();
       unwatch = null;
       win.removeEventListener('resize', measureTop);

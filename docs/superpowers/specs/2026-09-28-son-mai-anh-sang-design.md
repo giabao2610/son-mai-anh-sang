@@ -1016,6 +1016,8 @@ son-mai-anh-sang/
       tier.js                        [0] dò tầng A/B/C, hàm thuần nhận env
       quality.js                     [0→4] GĐ 0: chọn mức, mức mặc định, isMobile; GĐ 3: bộ điều chỉnh có trễ; GĐ 4: bộ điều chỉnh tách ra tuner.js
       tuner.js                       [4] bộ điều chỉnh có trễ (hàm thuần, không three): nhịp rAF, và ms GPU/CPU khi đo được
+      tuner-load.js                  [sau 9] đường tải của bộ điều chỉnh (đủ mẫu ms GPU), tách từ tuner.js
+      tuner-rhythm.js                [sau 9] đường nhịp của bộ điều chỉnh (không đo được GPU), tách từ tuner.js
       palette.js                     [0] 10 token; ghép phần ghi đè của bức (hàm thuần, không three)
       deadline.js                    [0] withDeadline(): hạn 10 s cho khởi động (hàm thuần)
       sma.js                         [0→5] window.__sma: state, tier, backend, level, frames, reason; GĐ 2: expose() (GĐ 4 chỉ thêm hàm qua expose); GĐ 5: readouts(layerId); GĐ 9: recipe(), applyRecipe(text), translate(layerId)
@@ -1920,7 +1922,7 @@ Chỉ nhìn nhịp rAF thì không phân biệt được "GPU không kịp" vớ
     điều chỉnh đi đường nhịp.
   - Máy nặng lên đột ngột (bật một thí nghiệm nặng) chỉ lệch một mẫu, vì mẻ sau đã đo theo nhịp mới.
 
-**Phân loại một cửa sổ** (`engine/tuner.js`), khi cửa sổ có từ 3 mẫu GPU trở lên. Tải = max(trung vị ms GPU, trung bình ms CPU):
+**Phân loại một cửa sổ** (`engine/tuner.js`; sau GĐ 9 ở `engine/tuner-load.js`), khi cửa sổ có từ 3 mẫu GPU trở lên. Tải = max(trung vị ms GPU, trung bình ms CPU):
 - **Quá tải:** trung bình nhịp > ngân sách × 1,05 **và** tải > ngân sách × 0,85, tức máy là nút cổ chai.
   - Hạ nấc sau 2 cửa sổ liền, kể cả khi nhịp trông như bị khóa 30 fps.
   - Nhờ vậy laptop yếu không còn kẹt ở 30 fps với đủ chi tiết.
@@ -2492,6 +2494,9 @@ ghi "skipped" vì chúng thuộc project khác. Cổng chặn của CI (`static`
     - (sau GĐ 7) thời gian thật của lượt CI đầu, và vì sao job WebGPU chỉ chạy test khói của Bức 3: §19.9;
     - (sau GĐ 8) thời gian thật của lượt CI đầu có Bức 4 (PR #9), vì sao hai loại test của Bức 4 hỏng trên runner, và vì sao job WebGPU
       của Bức 4 cũng chỉ chạy test khói: §20.9.
+    - (sau GĐ 9, đợt dọn nợ) `e2e` và `e2e-webgpu` có trần 55 phút (từ 40). Ở mọi lượt của PR #10, bước e2e chặn của Cung Quế mất
+      28,9–29,0 phút, của Ao Sen Đêm 16,7–28,6 phút tùy runner; cộng bước cài Chromium (có lúc gần 7 phút) là sát 40, mà job này chặn
+      deploy. Bước e2e WebGPU của Ao Sen Đêm mất 18,7–32,8 phút.
 - **URL:** `https://giabao2610.github.io/son-mai-anh-sang/`.
 - **Luật trong `CLAUDE.md`:**
   - **Nguồn tham chiếu:**
@@ -2534,7 +2539,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | **7 · Bức 3 · Cung Quế** | Bức mới theo luật 7 (§19): tiểu hành tinh SDF, dò tia trong một khối bao; sáu lớp Cốt, Mặt trời, Bóng mềm, Ánh đất, Lá đa, Phủ bóng; pha trăng thật với Dial "Ngày âm lịch"; chạm cho lá rơi, giữ cho cây bay. Kèm theo: Phòng tranh và trình sinh trang (§19.7); CI chia e2e theo bức (§19.9) | Bức 3 chạy trên cả hai backend, 60 khung/giây trên Mac M2 ở mức cao; e2e chặn qua trong CI; Bao duyệt ảnh và thơ; đã deploy |
 | **8 · Bức 4 · Đàn Gà Mẹ Con** | Bức mới theo luật 7 (§20): một tờ tranh Đông Hồ bước vào được; sáu lớp Cốt, Bản màu, Bản nét, Giấy điệp, Đàn gà, Phủ bóng; vẽ phi hiện thực (chia nấc, dò cạnh trên ảnh độ sâu, hạt điệp); chạm để rắc thóc, giữ để gà mẹ gọi con. Kèm theo: camera trực giao và tranh tự khép lại (trường tùy chọn của `CameraSpec`), độ sâu đúng cho camera trực giao, bể hạt `lib/tsl/particles.js` (Bức 1 chuyển sang mà giữ nguyên shader), Sổ tay hiện code của hộp màu | Bức 4 chạy trên cả hai backend, 60 khung/giây trên Mac M2 ở mức cao; mã shader của đom đóm (Bức 1) không đổi; e2e chặn qua trong CI; Bao duyệt ảnh và thơ; đã deploy |
 | **9 · Bản dịch + Link công thức** *(tùy chọn)* | Hai công cụ học của xưởng cho cả bốn bức (§21): **Bản dịch** trong Sổ tay › Chỉnh (mã shader thật của RenderObject đang vẽ, bắt từ một khung qua móc lần vẽ: "bắt lúc vẽ", sau khi `getShaderAsync` không qua luật dừng; mọi nơi lớp có mặt, kể cả lượt cuối; sáng dòng theo núm) và **Link công thức** `#r=…` (đọc được; chỉ giá trị khác mặc định; áp lúc dựng; thanh địa chỉ tự mang công thức; nút chép link; mở link thì thanh lớp mở sẵn với dòng tóm tắt và "Về nguyên bản"). Kèm theo: sửa Normal của Kính mài lúc cảnh đang chạy (lỗi từ GĐ 4) | Hai công cụ chạy trên cả hai backend ở cả bốn bức; mã của Bản dịch trùng mã của lượt vẽ cảnh; e2e chặn qua trong CI; Bao duyệt trang ảnh giữa chừng; đã deploy |
-| 10+ · *(tùy chọn)* | Chọn từ §16 khi muốn: công cụ học (tô sáng sợi vừa vẽ, bản dịch của compute và theo từng sợi); thêm cho các bức đã có (Bức 3 quay hành tinh, Hằng Nga; Bức 2 Dial gió, hơi nóng; Bức 1 cánh sen sáng xuyên; Bức 4 camera phối cảnh để so); âm thanh (đàn bầu); bản tiếng Anh (§15 d); dọn nợ (tách `tuner.js`); bức mới, như một tranh Đông Hồ khác (lúc đó rút Bản nét, Giấy điệp lên lớp dùng chung theo luật hai lần) | tùy |
+| 10+ · *(tùy chọn)* | Chọn từ §16 khi muốn: công cụ học (tô sáng sợi vừa vẽ, bản dịch của compute và theo từng sợi); thêm cho các bức đã có (Bức 3 quay hành tinh, Hằng Nga; Bức 2 Dial gió, hơi nóng; Bức 1 cánh sen sáng xuyên; Bức 4 camera phối cảnh để so); âm thanh (đàn bầu); bản tiếng Anh (§15 d); bức mới, như một tranh Đông Hồ khác (lúc đó rút Bản nét, Giấy điệp lên lớp dùng chung theo luật hai lần) | tùy |
 
 **GĐ 0 · Nền móng gồm:**
 - **Máy và công cụ:** Node 24 (hướng dẫn fnm), Vite 8, Vitest 5, Playwright; `.gitignore`; `CLAUDE.md`; README khung.
@@ -2672,7 +2677,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | Từng sợi tách hai lần vẽ của vật trong suốt DoubleSide | Khi một bức có material như thế | three vẽ cả hai mặt trong MỘT lần gọi móc (§7, Phụ lục A.53): đặt `forceSinglePass`, hay chia thành hai material |
 | Chữ đi theo vật đo lại khi bố cục đổi giữa chừng | Khi thấy chữ lệch sau khi xoay máy | Hiện cỡ chữ và chân khung chỉ đo lúc `show` (§4.1 mục 10). Đo lại khi `resize`, hay `ResizeObserver` trên các ô của chân khung |
 | Tô sáng sợi vừa vẽ | Khi người xem cần | Vẽ thêm một lượt mặt nạ cho vật của sợi k, rồi overlay trộn viền vàng lá như Kính mài |
-| Tách `engine/tuner.js` (gần 290 dòng sau gói sửa sau GĐ 5, quá mức mềm 250) | Lần sửa bộ điều chỉnh kế tiếp | Đưa đường tải (GĐ 4: `byLoad`, ngưỡng `busy`/`idle`/`light`) ra file riêng; trạng thái hai đường dùng chung (`overRun`, `capped`, `down`/`up`…) đi qua một object |
+| ~~Tách `engine/tuner.js`~~ | Làm sau GĐ 9 (đợt dọn nợ) | Đường tải ở `engine/tuner-load.js` (`byLoad`), đường nhịp ở `engine/tuner-rhythm.js` (`byRhythm`); trạng thái hai đường dùng chung (`overRun`, `capped`, `down`/`up`…) đi qua một object (`createCore` trong `tuner.js`). Cửa sổ đo và lần thử ngừng vẽ ở lại `tuner.js` (225 dòng, từ 289) |
 | Hoa đăng tránh lá, hay bị gợn đẩy đi | Khi thấy cần | Đường trôi hiện tính thẳng theo thời gian (tất định với `?freeze`); bị đẩy thì phải tích phân từng khung, và `update(0, t)` phải giữ đúng khung N |
 | Hoa đăng chiếu sáng thật | Không làm | Mỗi `PointLight` thêm lúc chạy là biên dịch lại mọi material và tốn thêm ở mọi điểm ảnh; vũng sáng trên nước đã cho cảm giác đèn soi nước |
 | (GĐ 6) Hơi nóng trên miệng đèn kéo quân | Khi người xem cần | `post.build` của một lớp: lệch UV của ảnh cảnh theo noise trong vùng phía trên miệng đèn (chiếu vùng đó ra màn hình) |
@@ -2688,6 +2693,7 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
 | (GĐ 9) Bản dịch theo từng sợi | Khi người xem cần | Bảng của Từng sợi thêm nút "Xem bản dịch" của sợi đang xem; dùng chung `translate.js` |
 | (GĐ 9) Công thức mang thí nghiệm, góc camera | Khi Bao chọn | Thêm loại khóa riêng cho thí nghiệm và cho camera; Bức 4 tự khép lại, nên góc camera chỉ có nghĩa ở Bức 1–3 |
 | (GĐ 9) Chia sẻ bằng bảng chia sẻ của điện thoại | Khi thấy cần | Nút chép link dùng `navigator.share` trên máy có bảng chia sẻ, chép link ở máy khác |
+| (Sau GĐ 9) Chia e2e của một bức nặng thành nhiều job | Khi job chặn của một bức tới gần trần 55 phút (Cung Quế: 29 phút sau GĐ 9) | `scripts/e2e-groups.js` cho bức nặng nhiều nhóm theo file spec (`e2e/<slug>-<phần>.spec.js` đã có từ GĐ 8) hay theo `--shard` riêng trong nhóm đó; test luật vẫn đòi mỗi test thuộc đúng một nhóm |
 
 **Không làm**, và lý do:
 - **npm workspaces:** một repo, một người đọc; thư mục cộng test ranh giới là đủ.
@@ -2763,8 +2769,8 @@ Mỗi giai đoạn có kế hoạch triển khai riêng (`docs/superpowers/plans
   Tránh lá thật sự để sau (§16).
 - **(GĐ 9) Nút màu của Tweakpane không có tên (axe `button-name`).** Núm màu `rimColor`, `candleColor` của lớp Ánh trăng (Bức 1) dựng nút
   `tp-colswv_b` không có tên; Task 7 thấy khi test a11y của GĐ 9 mở Chỉnh của lớp ấy. Lỗi có từ trước (không do GĐ 9), nên test a11y của
-  GĐ 9 dùng lớp khác. Sửa ở `ui/knobs.js` (đặt `aria-label` cho nút đó sau khi dựng núm màu) trong một task riêng, rồi cho test a11y quét cả
-  lớp Ánh trăng. Tới lúc đó VoiceOver đọc nút ấy không tên.
+  GĐ 9 dùng lớp khác. **Đã sửa sau GĐ 9** (đợt dọn nợ): `ui/knobs.js` đặt `aria-label` (nhãn của núm) cho mọi `input`, `select` và
+  `button` của blade, và test a11y quét Chỉnh của MỌI lớp ở cả bốn bức, có ô màu thì quét cả lúc bảng chọn màu mở.
 
 ---
 
@@ -5513,7 +5519,8 @@ bằng bảng snapshot. Thay đổi làm một lớp mất khỏi mọi mã thì
   - Đèn Kéo Quân gần gấp đôi ở cả hai job (8,7 → 16,7 và 9,5 → 18,1 phút), vì mỗi bức có thêm test Bản dịch, Mở link, Normal lúc cảnh chạy.
   - Ao Sen Đêm ở job WebGPU lên 33,4 phút (GĐ 8: 27,0), trên trần 40.
   - Đàn Gà Mẹ Con ở job chặn giảm (21,5 → 11,4 phút): ở GĐ 8 có một test hỏng, chạy hai lần.
-- Bức sau thêm test chung cho mọi bức mà job WebGPU của Bức 1 vượt trần thì bật `ciWebgpuSmoke` cho Bức 1, như Bức 3 và Bức 4.
+- Bức sau thêm test chung cho mọi bức mà job WebGPU của Bức 1 vượt trần thì bật `ciWebgpuSmoke` cho Bức 1, như Bức 3 và Bức 4. (Đợt dọn
+  nợ sau GĐ 9: chưa vượt lần nào, nên chưa bật; trần của cả hai job e2e lên 55 phút, §13.)
 
 **Kiểm tay** (thêm vào §12): Safari trên Mac và iPhone (thanh địa chỉ đổi theo khi mài; chép link; mở link nhận được); VoiceOver đọc dòng
 trạng thái của Bản dịch và dòng "Đã chép link".

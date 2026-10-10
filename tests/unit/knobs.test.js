@@ -41,6 +41,14 @@ describe('mountKnobs', () => {
     expect(container.querySelector('[data-knob="size"] input').getAttribute('aria-label')).toBe('Cỡ');
   });
 
+  it('nút ô màu của núm màu (mở bảng chọn màu) có aria-label là nhãn của núm (axe: luật button-name, sau GĐ 9)', () => {
+    const { container } = mount();
+    const buttons = [...container.querySelectorAll('[data-knob] button')];
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const button of buttons) expect(button.getAttribute('aria-label'), button.outerHTML.slice(0, 60)).toBeTruthy();
+    expect(container.querySelector('[data-knob="rim"] button').getAttribute('aria-label')).toBe('rim');
+  });
+
   it('mỗi núm một blade có data-knob; nhãn từ content, thiếu thì dùng id', () => {
     const { blade, pane } = mount();
     for (const { id } of knobs) expect(blade(id), id).not.toBeNull();

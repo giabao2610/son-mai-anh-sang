@@ -11,8 +11,10 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
  * Quét trang bằng axe-core; chỉ lỗi mức serious hay critical làm hỏng test (spec §12). Trả danh sách lỗi đọc được:
  * luật, mức, lời giải thích và vài phần tử bị bắt, để biết sửa ở đâu.
  */
-async function audit(page, where) {
-  const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+async function audit(page, where, { include } = {}) {
+  const axe = new AxeBuilder({ page }).withTags(TAGS);
+  if (include) axe.include(include);
+  const { violations } = await axe.analyze();
   return violations
     .filter((v) => v.impact === 'serious' || v.impact === 'critical')
     .map((v) => `${where} · ${v.id} (${v.impact}): ${v.help} → ${v.nodes.slice(0, 4).map((n) => n.target.join(' ')).join(' | ')}`);
@@ -71,7 +73,8 @@ for (const { meta, page: htmlPage } of paintings) {
       }
 
       test('thanh lớp + Sổ tay (Hiểu, Chỉnh, Phá) và khi một công cụ bật: không lỗi serious/critical', async ({ page }, testInfo) => {
-        test.setTimeout(180_000);
+        // 300 s (từ 180, sau GĐ 9): thêm một lần quét cho Chỉnh của mỗi lớp, mà runner vẽ Cung Quế chỉ 1–2 khung/giây.
+        test.setTimeout(300_000);
         await openWorkshop(page, testInfo);
         const notebook = page.locator('[data-notebook]');
         const errors = await audit(page, 'Hiểu');
@@ -80,6 +83,20 @@ for (const { meta, page: htmlPage } of paintings) {
         errors.push(...await audit(page, 'Chỉnh'));
         await notebook.locator('[data-tab="pha"]').click();
         errors.push(...await audit(page, 'Phá'));
+        // Chỉnh của MỌI lớp, không chỉ lớp đầu: mỗi kiểu núm dựng ô khác nhau, và nút ô màu của Ánh trăng (Bức 1) từng không có tên
+        // (button-name) mà không test nào thấy. Có ô màu thì quét cả lúc bảng chọn màu mở. Chỉ quét Sổ tay: phần còn lại đã quét ở trên.
+        await notebook.locator('[data-tab="chinh"]').click();
+        for (const { id } of await page.evaluate(() => window.__sma.layers())) {
+          await page.locator(`[data-rail] [data-layer="${id}"] .rail-name`).click();
+          await expect(notebook.locator('[data-knobs]')).toHaveAttribute('data-state', /^(ready|empty)$/);
+          errors.push(...await audit(page, `Chỉnh · ${id}`, { include: '[data-notebook]' }));
+          const swatch = notebook.locator('[data-knob] button').first();
+          if (await swatch.count()) {
+            await swatch.click();
+            errors.push(...await audit(page, `Chỉnh · ${id} · bảng chọn màu`, { include: '[data-notebook]' }));
+            await swatch.click();
+          }
+        }
         for (const { id } of await page.evaluate(() => window.__sma.tools())) {
           await page.locator(`[data-rail] [data-tool="${id}"]`).click();
           await expect(page.locator('body')).toHaveAttribute('data-tool', id);

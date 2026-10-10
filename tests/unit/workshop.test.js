@@ -112,6 +112,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks(); // spyOn (console.error…): trả lại cả khi một expect hỏng giữa test
 });
 
 describe('chế độ mài', () => {
@@ -207,6 +208,29 @@ describe('chế độ mài', () => {
     current = fakeStudio(); // dựng lại xong: thí nghiệm về tắt hết
     workshop.open(); // (vòng rAF gọi sync mỗi khung)
     expect(button().getAttribute('aria-pressed')).toBe('false');
+    workshop.dispose();
+  });
+
+  it('vòng rAF của thanh lớp: một khung ném lỗi (bàn thợ đang dở) thì các khung sau vẫn vẽ lại thanh lớp; một console.error, không báo mỗi khung', () => {
+    vi.useFakeTimers();
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const studio = fakeStudio();
+    const { workshop, rail } = mount(studio);
+    workshop.open();
+    const weight = studio.weight;
+    let broken = 2; // hai khung liền ném
+    studio.weight = (id) => {
+      if (broken > 0) {
+        broken -= 1;
+        throw new Error('bàn thợ đang dựng lại');
+      }
+      return weight(id);
+    };
+    vi.advanceTimersByTime(16 * 2);
+    studio.setWeight('hai', 0); // đổi sau hai khung hỏng: thanh lớp phải theo kịp
+    vi.advanceTimersByTime(16 * 2);
+    expect(rail.querySelector('[data-layer="hai"] [role="switch"]').getAttribute('aria-checked')).toBe('false');
+    expect(error).toHaveBeenCalledTimes(1);
     workshop.dispose();
   });
 });
@@ -638,6 +662,18 @@ describe('mục Công thức (GĐ 9)', () => {
     expect($('.rail-recipe-text').textContent).toBe('Công thức trong link: 1 lớp đã mài');
     expect(workshop.layer).toBe(null);
     workshop.dispose();
+  });
+
+  it('dispose() ngay sau open({ recipe }): khung chờ của dòng tóm tắt bị hủy, không đọc bàn thợ của cảnh đã gỡ', () => {
+    vi.useFakeTimers();
+    studioRecipe.text = 'hai:0';
+    const studio = fakeStudio();
+    const { workshop } = mount(studio);
+    workshop.open({ recipe: true });
+    workshop.dispose();
+    studio.recipe = vi.fn(() => { throw new Error('bàn thợ đã gỡ'); });
+    vi.advanceTimersByTime(16 * 2);
+    expect(studio.recipe).not.toHaveBeenCalled();
   });
 
   it('open({ grind }): dòng tóm tắt ẩn, kể cả khi vừa hiện', () => {

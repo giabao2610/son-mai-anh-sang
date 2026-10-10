@@ -23,8 +23,8 @@ Trang web 3D để học về vẻ đẹp của 3D, không thương mại. Spec 
 - Phần nhẹ của xưởng (`src/engine/*.js`: boot, flags, tier, quality, palette, deadline, sma, static) chạy khi poster
   đang hiện và **không kéo theo three**. Phần nặng (`src/engine/gpu/`) chỉ được tải bằng `import()` động ở tầng 3D.
 - Chất lượng: `engine/quality.js` chọn mức; `engine/tuner.js` QUYẾT định hạ/nâng nấc (hàm thuần, test bằng chuỗi khung giả;
-  GĐ 4: máy đo được ms GPU thì chẩn đoán theo tải; sau GĐ 5: đường nhịp thử ngừng vẽ 6 khung trước lần hạ đầu, để tách trình duyệt
-  khóa nhịp khỏi máy không kịp); `engine/gpu/ladder.js` ÁP nấc (`'dpr'` và `layer.degrade`);
+  GĐ 3: đường nhịp, `tuner-rhythm.js`; GĐ 4: máy đo được ms GPU thì chẩn đoán theo tải, `tuner-load.js`; sau GĐ 5: đường nhịp trả
+  `'skip'` và `tuner.js` thử ngừng vẽ 6 khung trước lần hạ đầu, để tách trình duyệt khóa nhịp khỏi máy không kịp); `engine/gpu/ladder.js` ÁP nấc (`'dpr'` và `layer.degrade`);
   `engine/gpu/gpu-timer.js` đo ms GPU. Bảng số và thứ tự nấc của mỗi bức: `paintings/<slug>/quality.js`.
 - Lớp dùng chung (thuộc kỹ thuật, bức nào cũng lắp được): `src/engine/stock/<id>/`, hiện có Phủ bóng.
 - Camera (GĐ 8): `engine/gpu/camera.js` dựng camera theo `CameraSpec` (phối cảnh, hay trực giao với `kind: 'ortho'`), khớp khung, giới hạn
