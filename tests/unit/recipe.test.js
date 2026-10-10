@@ -25,6 +25,10 @@ describe('readRecipe', () => {
   it('khóa lặp: mục sau thắng, đứng ở chỗ của mục sau', () => {
     expect(readRecipe('#r=a:1,b:2,a:3').entries).toEqual([{ key: 'b', value: '2' }, { key: 'a', value: '3' }]);
   });
+  it('mục sai dạng dài (người dùng gõ): problem cắt ở 60 ký tự kèm "…" (C7)', () => {
+    const r = readRecipe(`#r=suong:0,Bad${'x'.repeat(300)}:1`);
+    expect(r.problems).toEqual([`Bad${'x'.repeat(57)}…`]);
+  });
   it(`dài quá ${MAX_RECIPE} ký tự: bỏ cả công thức kèm một problem`, () => {
     const r = readRecipe(`#r=${'a:1,'.repeat(600)}`);
     expect([r.entries, r.problems.length]).toEqual([[], 1]);

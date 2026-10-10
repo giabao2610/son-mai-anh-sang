@@ -1,14 +1,16 @@
 // engine/gpu/recipe-set.js — công thức của MỘT cảnh (GĐ 9): mặc định của máy đang xem, phân loại mục của #r= thành trọng số/núm/Dial, khác biệt, tóm tắt, và ba hàm của bàn thợ.
-import { RECIPE_PREFIX, formatValue, readRecipe, stepDecimals, writeRecipe } from '../recipe.js';
-import { snapDial } from './dial-set.js';
-import { knobValue, normalizeKnob } from './knob-set.js';
+import { RECIPE_PREFIX, clipEntry, formatValue, readRecipe, stepDecimals, writeRecipe } from '../recipe.js';
+import { snapDial, snapToStep } from './dial-set.js';
+import { knobMax, knobValue, normalizeKnob } from './knob-set.js';
 
 const WEIGHT_DECIMALS = 2;
 const kindOf = (knob) => knob.kind ?? 'number';
-const MAX_PROBLEM = 60;
 
-/** Mục hỏng của link có thể mang chữ dài do người dùng gõ: cắt mỗi mục trước khi đưa vào console. */
-export const showProblems = (problems) => problems.map((p) => (p.length > MAX_PROBLEM ? `${p.slice(0, MAX_PROBLEM)}…` : p)).join(', ');
+/**
+ * Các mục hỏng thành một dòng cho console. Phần người dùng gõ đã được cắt lúc tạo mục (`clipEntry`: link dài tới 2.048 ký tự); lý do của
+ * xưởng đi nguyên, không bao giờ bị cắt.
+ */
+export const showProblems = (problems) => problems.join(', ');
 
 /** Người nghe thay đổi của bàn thợ (studio.onChange): add(cb) trả hàm bỏ nghe, fire() báo tất cả. */
 export function createListeners() {
@@ -24,24 +26,28 @@ export function createListeners() {
   };
 }
 
-/** Chữ của công thức thành giá trị của núm (chưa kẹp: normalizeKnob làm); không đổi được thì ném lỗi. */
+/**
+ * Chữ của công thức thành giá trị của núm (chưa kẹp: normalizeKnob làm); không đổi được thì ném lỗi. Lý do KHÔNG nhắc lại giá trị: dòng
+ * cảnh báo đã ghi `khóa:giá trị` (cắt ở 60 ký tự), còn lý do thì đi nguyên.
+ */
 function parseKnob(knob, raw) {
   const kind = kindOf(knob);
   if (kind === 'number') {
     const v = Number(raw);
-    if (!Number.isFinite(v)) throw new Error(`"${raw}" không phải số`);
+    if (!Number.isFinite(v)) throw new Error('không phải số');
     return v;
   }
   if (kind === 'bool') {
     if (raw === '1' || raw === 'true') return true;
     if (raw === '0' || raw === 'false') return false;
-    throw new Error(`"${raw}" không phải 1 hay 0`);
+    throw new Error('không phải 1 hay 0');
   }
   if (kind === 'color') {
-    if (!/^[0-9a-f]{6}$/i.test(raw)) throw new Error(`"${raw}" không phải màu rrggbb`);
+    if (!/^[0-9a-f]{6}$/i.test(raw)) throw new Error('không phải màu rrggbb');
     return `#${raw.toLowerCase()}`;
   }
-  return raw; // select: normalizeKnob kiểm có trong options
+  if (!(knob.options ?? []).includes(raw)) throw new Error('không có trong options');
+  return raw;
 }
 
 /**
@@ -64,29 +70,42 @@ export function createRecipeSet({ modules, env, dials = [], dialDefaults = {} })
   const knobText = ({ knob }, v) => formatValue(kindOf(knob), v, stepDecimals(knob.step));
   const dialText = (dial, v) => formatValue('number', v, stepDecimals(dial.step));
   const one = formatValue('number', 1, WEIGHT_DECIMALS);
+  /**
+   * Giá trị của núm từ chữ của link: đổi kiểu, kẹp theo trần của máy này, và núm số có `step` thì về nấc (như thanh trượt của Sổ tay).
+   * Nhờ vậy cảnh dùng đúng số mà diff() ghi lại: `lineWidth:2.5` thành 3 ở cả cảnh lẫn thanh địa chỉ, không có độ lệch nửa điểm ảnh (A.96).
+   */
+  const knobFrom = ({ layerId, knob }, raw) => {
+    const v = normalizeKnob(layerId, knob, parseKnob(knob, raw), env);
+    if (kindOf(knob) !== 'number' || !(knob.step > 0)) return v;
+    return snapToStep(v, { min: knob.min ?? 0, max: knobMax(knob, env) ?? Infinity, step: knob.step });
+  };
 
   return {
     defaults,
-    /** Mục của readRecipe → { weights, knobs, dials, problems } (spec §21.4). Giá trị đã đổi kiểu và kẹp theo trần của máy này. */
+    /**
+     * Mục của readRecipe → { weights, knobs, dials, problems } (spec §21.4). Giá trị đã đổi kiểu, kẹp theo trần của máy này và làm tròn
+     * đúng như diff() sẽ ghi (núm số về nấc của `step`, trọng số 2 chữ số, Dial về nấc): thanh địa chỉ nói đúng số cảnh đang dùng.
+     */
     classify(entries) {
       const out = { weights: {}, knobs: {}, dials: {}, problems: [] };
       for (const { key, value } of entries) {
         try {
           const knob = knobs.get(key);
           if (knob) {
-            out.knobs[key] = normalizeKnob(knob.layerId, knob.knob, parseKnob(knob.knob, value), env);
+            out.knobs[key] = knobFrom(knob, value);
           } else if (layerIds.includes(key)) {
             if (key === 'cot') throw new Error('Cốt luôn là 1 (luật 1)');
             const w = Number(value);
-            if (!Number.isFinite(w)) throw new Error(`"${value}" không phải số`);
-            out.weights[key] = Math.min(Math.max(w, 0), 1);
+            if (!Number.isFinite(w)) throw new Error('không phải số');
+            out.weights[key] = Number(formatValue('number', Math.min(Math.max(w, 0), 1), WEIGHT_DECIMALS));
           } else if (dialById.has(key)) {
+            if (!Number.isFinite(Number(value))) throw new Error('không phải số');
             out.dials[key] = snapDial(dialById.get(key), value); // làm tròn theo step MỘT lần, ở đây
           } else {
             throw new Error('khóa lạ');
           }
         } catch (err) {
-          out.problems.push(`${key}:${value} (${err.message})`);
+          out.problems.push(`${clipEntry(`${key}:${value}`)} (${err.message})`);
         }
       }
       return out;
@@ -141,15 +160,24 @@ export function recipeMethods(recipes, { snapshot, restore, tweenAll }) {
   return {
     /** Công thức hiện tại: text (không có '#r='; rỗng là nguyên bản) và counts cho dòng tóm tắt. */
     recipe,
-    /** Áp một công thức (chuỗi sau '#r=') thành trạng thái ĐỦ: thứ gì công thức không nói thì về mặc định (spec §21.2). */
+    /**
+     * Áp một công thức (chuỗi sau '#r=') thành trạng thái ĐỦ: thứ gì công thức không nói thì về mặc định (spec §21.2). Link hỏng HOÀN TOÀN
+     * (không giải mã được, quá dài, hay mục nào cũng hỏng) thì cảnh giữ nguyên, chỉ một cảnh báo: `applied` false. Chuỗi rỗng vẫn là
+     * "về mặc định".
+     */
     async applyRecipe(text) {
       const read = readRecipe(RECIPE_PREFIX + text) ?? { entries: [], problems: [] };
       const { weights, knobs, dials, problems } = recipes.classify(read.entries);
       const all = [...read.problems, ...problems];
+      const kept = Object.keys(weights).length + Object.keys(knobs).length + Object.keys(dials).length;
+      if (kept === 0 && all.length > 0) {
+        console.warn(`Công thức: không mục nào áp được, cảnh giữ nguyên. Bỏ ${all.length} mục: ${showProblems(all)}`);
+        return { counts: recipe().counts, problems: all, applied: false };
+      }
       if (all.length > 0) console.warn(`Công thức: bỏ ${all.length} mục không áp được: ${showProblems(all)}`);
       const d = recipes.defaults;
       await restore({ weights: { ...d.weights, ...weights }, knobs: { ...d.knobs, ...knobs }, dials: { ...d.dials, ...dials } });
-      return { counts: recipe().counts, problems: all };
+      return { counts: recipe().counts, problems: all, applied: true };
     },
     /** Về nguyên bản: trọng số phủ lại dần (như công tắc của thanh lớp), núm và Dial về mặc định ngay. */
     async reset() {

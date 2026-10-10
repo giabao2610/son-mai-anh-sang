@@ -218,4 +218,63 @@ describe('syncRecipeUrl · hashchange', () => {
     expect(win.history.replaceState).toHaveBeenCalledTimes(1);
     expect(win.location.hash).toBe('#r=a:1');
   });
+
+  it('hai lần đổi hash liền nhau (Back rồi Forward): áp nối đuôi, lần sau chờ lần trước xong; không ghi chuỗi cũ; cuối cùng là công thức sau (C3)', async () => {
+    const win = fakeWindow();
+    const studio = fakeStudio();
+    const onApplied = vi.fn();
+    syncRecipeUrl({ win, studio, onApplied });
+    const gates = [deferred(), deferred()];
+    const order = [];
+    studio.applyRecipe.mockImplementation(async (text) => {
+      const gate = gates[order.filter((e) => e.startsWith('bắt đầu')).length];
+      order.push(`bắt đầu ${text}`);
+      await gate.promise;
+      studio.change(text);
+      order.push(`xong ${text}`);
+      return { applied: true };
+    });
+    win.location.hash = '#r=a:1';
+    win.dispatchEvent(new Event('hashchange'));
+    win.location.hash = '#r=b:2';
+    win.dispatchEvent(new Event('hashchange'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(order).toEqual(['bắt đầu a:1']); // lần sau chưa chen vào restore() của lần trước
+    gates[0].resolve();
+    await vi.advanceTimersByTimeAsync(WRITE_MS * 2); // lần trước xong, lần sau đang chạy: không ghi a:1 đè lên hash b:2
+    expect(win.history.replaceState).not.toHaveBeenCalled();
+    expect(order).toEqual(['bắt đầu a:1', 'xong a:1', 'bắt đầu b:2']);
+    gates[1].resolve();
+    await vi.advanceTimersByTimeAsync(WRITE_MS * 2);
+    expect(order.at(-1)).toBe('xong b:2');
+    expect(studio.text).toBe('b:2');
+    expect(win.location.hash).toBe('#r=b:2');
+    expect(win.history.replaceState).not.toHaveBeenCalled(); // hash đã là dạng chuẩn của cảnh
+    expect(onApplied).toHaveBeenCalledTimes(2);
+  });
+
+  it('một lần áp ném lỗi: một console.error, lần đổi hash sau vẫn áp (hàng không kẹt)', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const win = fakeWindow();
+    const studio = fakeStudio();
+    syncRecipeUrl({ win, studio, onApplied: vi.fn() });
+    studio.applyRecipe.mockRejectedValueOnce(new Error('hỏng'));
+    await hashChange(win, '#r=a:1');
+    expect(error).toHaveBeenCalledTimes(1);
+    await hashChange(win, '#r=b:2');
+    expect(studio.applyRecipe).toHaveBeenLastCalledWith('b:2');
+  });
+
+  it('link hỏng hoàn toàn (applyRecipe trả applied false): cảnh giữ nguyên, không mở xưởng, thanh địa chỉ về công thức của cảnh (C6)', async () => {
+    const win = fakeWindow('#r=a:1');
+    const studio = fakeStudio('a:1');
+    const onApplied = vi.fn();
+    syncRecipeUrl({ win, studio, onApplied });
+    studio.applyRecipe.mockResolvedValue({ counts: {}, problems: ['khong-co:1 (khóa lạ)'], applied: false });
+    await hashChange(win, '#r=khong-co:1');
+    expect(studio.reset).not.toHaveBeenCalled();
+    expect(onApplied).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(WRITE_MS);
+    expect(win.location.hash).toBe('#r=a:1');
+  });
 });

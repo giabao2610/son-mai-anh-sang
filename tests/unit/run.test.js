@@ -378,4 +378,35 @@ describe('run · công thức trong link (GĐ 9)', () => {
     handle.dispose();
     window.history.replaceState(null, '', window.location.pathname);
   });
+
+  it('mở xưởng theo link ném lỗi (mountWorkshop hỏng): cảnh vẫn live, MỘT console.error, không về tĩnh (M1a, spec §21.2)', async () => {
+    const page = harness();
+    withRecipe(page, 'lop-hai:0');
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mountWorkshop.mockImplementationOnce(() => { throw new Error('xưởng hỏng'); });
+    const handle = await page.start({ recipe: 'lop-hai:0' });
+    expect(page.sma.state).toBe('live');
+    expect(page.onFail).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(String(error.mock.calls[0][1])).toContain('xưởng hỏng');
+    expect(page.stages[0].renderer.setAnimationLoop).toHaveBeenCalledWith(expect.any(Function)); // vòng lặp vẫn chạy
+    handle.dispose();
+  });
+
+  it('lỗi sau khi xưởng đã mở mà run() chưa trả: run() gỡ cả xưởng (door.dispose), không để thanh lớp mồ côi (M1a)', async () => {
+    const page = harness();
+    withRecipe(page, 'lop-hai:0');
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const dispose = vi.fn();
+    mountWorkshop.mockReturnValueOnce({ open: vi.fn(), dispose, isOpen: true });
+    const compile = page.hold('compile');
+    const started = page.start({ recipe: 'lop-hai:0' });
+    await compile.reached;
+    page.stages[0].renderer.setAnimationLoop.mockImplementation((fn) => {
+      if (fn) throw new Error('vòng lặp hỏng');
+    });
+    compile.resolve();
+    await expect(started).rejects.toThrow('vòng lặp hỏng');
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
 });

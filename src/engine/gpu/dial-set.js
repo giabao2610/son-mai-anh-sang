@@ -1,10 +1,16 @@
 // engine/gpu/dial-set.js — núm của cả bức (Dial): đọc/ghi uniform (kẹp min/max, làm tròn theo step), chữ giá trị, ghi chú, snapshot.
 
 /**
- * Xưởng không biết Dial nghĩa là gì (giờ của Bức 1, mùa của một bức khác…): nó chỉ biết một uniform, khoảng giá trị,
- * cách ghi chữ (`format`) và khóa ghi chú (`note`). Đổi Dial chỉ đổi `.value` của uniform: không biên dịch lại.
- * @param {import('../contracts/runtime.js').Dial[]} [dials]  setup().dials của bức
+ * Số đã kẹp trong [min, max] về nấc gần nhất tính từ min (Math.round: nửa nấc làm tròn lên), bỏ sai số dấu phẩy động, rồi không vượt max
+ * (max lệch nấc thì về nấc ngay dưới nó). Hàm thuần, dùng chung cho Dial và (GĐ 9) núm số của công thức trong link.
+ * @param {number} clamped
+ * @param {{ min: number, max: number, step: number }} range
  */
+export function snapToStep(clamped, { min, max, step }) {
+  const stepped = min + Math.round((clamped - min) / step) * step;
+  return Math.min(Number(stepped.toFixed(6)), max);
+}
+
 /**
  * Kẹp trong [min, max], rồi về nấc gần nhất tính từ min (0,25 giờ là 15 phút). Hàm thuần: công thức của link làm tròn bằng nó MỘT lần.
  * exact: chỉ kẹp, không làm tròn (giá trị mặc định lúc dựng có thể lệch nấc, như giờ thật của Bức 1).
@@ -16,10 +22,14 @@ export function snapDial(dial, raw, exact = false) {
   if (!Number.isFinite(v)) throw new Error(`Dial "${dial.id}": "${raw}" không phải số`);
   const clamped = Math.min(Math.max(v, dial.min), dial.max);
   if (!dial.step || exact) return clamped;
-  const stepped = dial.min + Math.round((clamped - dial.min) / dial.step) * dial.step;
-  return Math.min(Number(stepped.toFixed(6)), dial.max);
+  return snapToStep(clamped, dial);
 }
 
+/**
+ * Xưởng không biết Dial nghĩa là gì (giờ của Bức 1, mùa của một bức khác…): nó chỉ biết một uniform, khoảng giá trị,
+ * cách ghi chữ (`format`) và khóa ghi chú (`note`). Đổi Dial chỉ đổi `.value` của uniform: không biên dịch lại.
+ * @param {import('../contracts/runtime.js').Dial[]} [dials]  setup().dials của bức
+ */
 export function createDialSet(dials = []) {
   const byId = new Map();
   for (const dial of dials) {

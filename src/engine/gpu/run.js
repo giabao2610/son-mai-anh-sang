@@ -171,7 +171,12 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     d.add(sma.expose(studioApi(() => studio)));
     // GĐ 9: thanh địa chỉ mang công thức; người xem đổi hash (dán link khác) thì áp rồi mở xưởng theo công thức.
     d.add(syncRecipeUrl({ win, studio: scene.studio, onApplied: () => door.open({ grind: false, recipe: true }) }));
-    door.afterLive({ input: scene.input, rebuilt: Boolean(snapshot) });
+    try {
+      door.afterLive({ input: scene.input, rebuilt: Boolean(snapshot) });
+    } catch (err) {
+      // Xưởng (thanh lớp, Sổ tay) là phần thêm: mở hỏng (kể cả mở theo link công thức) thì ghi log, cảnh vẫn live (spec §21.2).
+      console.error('Không mở được xưởng; cảnh vẫn chạy:', err);
+    }
 
     // Công cụ ?debug tải SAU khi live (không tính vào hạn 10 s); hỏng thì null, cảnh vẫn chạy.
     openDebug(flags.debug, stage.renderer, win.document).then((tool) => {
@@ -232,6 +237,7 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
     return handle;
   } catch (err) {
     disposer.closeAll();
+    door.dispose(); // xưởng có thể đã mở (link công thức) trước khi lần dựng hỏng: không để thanh lớp mồ côi trên trang tĩnh
     // fail() đã báo tầng tĩnh với lý do đúng (vd. 'device-lost'); đừng để boot ghi đè thành 'error'.
     if (failed) return handle;
     throw err;

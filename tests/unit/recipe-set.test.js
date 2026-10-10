@@ -1,7 +1,8 @@
 // tests/unit/recipe-set.test.js — công thức của một cảnh (GĐ 9): mặc định theo máy, phân loại, khác biệt, tóm tắt, ba hàm của bàn thợ.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { createRecipeSet, recipeMethods } from '../../src/engine/gpu/recipe-set.js';
+import { createRecipeSet, recipeMethods, showProblems } from '../../src/engine/gpu/recipe-set.js';
 import { createDialSet } from '../../src/engine/gpu/dial-set.js';
+import { writeRecipe } from '../../src/engine/recipe.js';
 import { uniform } from 'three/tsl';
 
 const vua = { tier: 'webgl2', level: 'vua', budget: {}, now: new Date('2026-09-28T14:00:00Z'), mobile: false };
@@ -169,5 +170,75 @@ describe('Dial mặc định không nằm trên nấc (GĐ 9, giờ thật của
     expect(recipes.classify(pairs(['gio', '23.1'])).dials).toEqual({ gio: 23 });
     await m.applyRecipe('gio:23.1');
     expect([hour.value, m.recipe().text]).toEqual([23, 'gio:23']);
+  });
+});
+
+describe('classify làm tròn như cảnh dùng (F2): thanh địa chỉ = cảnh', () => {
+  const net = () => createRecipeSet({
+    modules: [{ id: 'cot', knobs: [] }, { id: 'ban-net', knobs: [{ id: 'lineWidth', min: 1, max: 3, step: 1, value: 1 }] }], env: vua,
+  });
+  it('núm số có step về nấc gần nhất tính từ min (Math.round: nửa nấc làm tròn lên): lineWidth 2.5 → 3, 2.4 → 2; hash ghi đúng số đó', () => {
+    const r = net();
+    expect(r.classify(pairs(['ban-net.lineWidth', '2.5'])).knobs['ban-net.lineWidth']).toBe(3);
+    const two = r.classify(pairs(['ban-net.lineWidth', '2.4'])).knobs['ban-net.lineWidth'];
+    expect(two).toBe(2);
+    expect(writeRecipe(r.diff({ weights: {}, knobs: { 'ban-net.lineWidth': two } }))).toBe('ban-net.lineWidth:2');
+    expect(r.classify(pairs(['ban-net.lineWidth', '1.4'])).knobs['ban-net.lineWidth'], '1 là mặc định: hash rỗng').toBe(1);
+    expect(r.diff({ weights: {}, knobs: { 'ban-net.lineWidth': 1 } })).toEqual([]);
+  });
+  it('kẹp trong [min, trần của máy này] sau khi về nấc; số không còn sai số dấu phẩy động', () => {
+    expect(make(thap).classify(pairs(['to-mau.density', '0.047'])).knobs['to-mau.density']).toBe(0.05); // trần của mức thấp
+    expect(make().classify(pairs(['to-mau.density', '0.0449'])).knobs['to-mau.density']).toBe(0.04);
+    expect(make().classify(pairs(['to-mau.density', '-3'])).knobs['to-mau.density']).toBe(0);
+    expect(make().classify(pairs(['phu-bong.exposure', '1.26'])).knobs['phu-bong.exposure']).toBe(1.3);
+  });
+  it('trọng số làm tròn 0,01 (diff cũng ghi 2 chữ số): 0.333 → 0.33', () => {
+    const r = make();
+    const { weights } = r.classify(pairs(['to-mau', '0.333'], ['phu-bong', '0.005']));
+    expect(weights).toEqual({ 'to-mau': 0.33, 'phu-bong': 0.01 });
+    expect(writeRecipe(r.diff({ weights }))).toBe('to-mau:0.33,phu-bong:0.01');
+  });
+});
+
+describe('link hỏng hoàn toàn giữ nguyên cảnh (C6)', () => {
+  const rig = () => {
+    const state = { weights: { cot: 1, 'to-mau': 0, 'phu-bong': 1 }, knobs: { ...make().defaults.knobs, 'phu-bong.exposure': 3 }, dials: { gio: 21 } };
+    const restore = vi.fn(async (s) => Object.assign(state, s));
+    return { state, restore, m: recipeMethods(make(), { snapshot: () => JSON.parse(JSON.stringify(state)), restore, tweenAll: vi.fn() }) };
+  };
+  it.each([
+    ['mọi mục đều hỏng', 'khong-co:1,cot:0,to-mau.tone:xyz'],
+    ['không giải mã được', 'to-mau:%E0%A4%A'],
+    ['dài quá 2.048 ký tự', `to-mau:0,${'x:1,'.repeat(600)}`],
+  ])('%s: không restore, MỘT cảnh báo nói cảnh giữ nguyên, applied false', async (_name, text) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { m, restore, state } = rig();
+    const res = await m.applyRecipe(text);
+    expect(restore).not.toHaveBeenCalled();
+    expect(state.weights['to-mau']).toBe(0);
+    expect(res.applied).toBe(false);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('giữ nguyên');
+  });
+  it('chuỗi rỗng vẫn là "về mặc định"; một mục hợp lệ giữa các mục hỏng vẫn áp thành trạng thái đủ', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { m, restore, state } = rig();
+    expect((await m.applyRecipe('')).applied).toBe(true);
+    expect(state.knobs['phu-bong.exposure']).toBe(1);
+    expect((await m.applyRecipe('khong-co:1,to-mau:0.5')).applied).toBe(true);
+    expect(restore).toHaveBeenCalledTimes(2);
+    expect(state.weights['to-mau']).toBe(0.5);
+  });
+});
+
+describe('cảnh báo mục hỏng (C7)', () => {
+  it('chỉ cắt phần khóa:giá trị người dùng gõ (60 ký tự), không bao giờ cắt lý do', () => {
+    const long = 'x'.repeat(200);
+    const { problems } = make().classify(pairs(['to-mau.tone', long], ['to-mau.density', `9${'e'.repeat(80)}`], ['gio', long]));
+    const text = showProblems(problems);
+    expect(text).toContain(`${`to-mau.tone:${long}`.slice(0, 60)}… (không có trong options)`);
+    expect(text).toContain('(không phải số)');
+    expect(problems).toHaveLength(3);
+    for (const p of problems) expect(p.length, p).toBeLessThan(100);
   });
 });

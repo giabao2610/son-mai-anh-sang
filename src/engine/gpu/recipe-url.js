@@ -9,8 +9,8 @@ export const WRITE_MS = 500;
  * replaceState không phát 'hashchange', nên chỉ thay đổi của người xem (dán link khác, sửa tay, Back/Forward) tới onHash.
  * @param {object} p
  * @param {Window} p.win
- * @param {{ recipe: () => { text: string }, onChange: (cb: () => void) => () => void, applyRecipe: (text: string) => Promise<any>,
- *   reset: () => Promise<void> }} p.studio   bàn thợ của cảnh này
+ * @param {{ recipe: () => { text: string }, onChange: (cb: () => void) => () => void,
+ *   applyRecipe: (text: string) => Promise<{ applied?: boolean } | void>, reset: () => Promise<void> }} p.studio   bàn thợ của cảnh này
  * @param {() => void} p.onApplied   người xem đổi hash và công thức đã áp: mở xưởng với dòng tóm tắt
  * @returns {() => void}  gỡ
  */
@@ -20,11 +20,14 @@ export function syncRecipeUrl({ win, studio, onApplied }) {
   let timer = null;
   let broken = false;
   let disposed = false;
-  let applying = false; // đang áp hash của người xem: restore chạy dở, text chưa phải của họ
+  // Các lần áp hash của người xem nối đuôi nhau (Back rồi Forward thật nhanh): lần sau chỉ bắt đầu khi restore() của lần trước xong, nên
+  // hai lần không bao giờ đan vào nhau. `waiting` > 0: còn lần áp đang chạy hay đang chờ, recipe().text chưa phải của hash cuối: không ghi.
+  let queue = Promise.resolve();
+  let waiting = 0;
 
   const write = () => {
     timer = null;
-    if (broken || applying) return;
+    if (broken || waiting > 0) return;
     const { text } = studio.recipe();
     if (text === written) return;
     const { pathname, search } = win.location;
@@ -45,24 +48,35 @@ export function syncRecipeUrl({ win, studio, onApplied }) {
     win.clearTimeout(timer);
     write();
   };
-  const onHash = async () => {
+  /** Áp MỘT hash (đã tới lượt trong hàng). Gỡ rồi (mất GPU) thì thôi: bàn thợ đã gỡ, không mở xưởng của cảnh đã gỡ. */
+  const apply = async (hash) => {
+    if (disposed) return;
+    if (hash === '' || hash === '#') {
+      await studio.reset();
+      return;
+    }
+    const result = await studio.applyRecipe(fromHash(hash));
+    // Link hỏng hoàn toàn: cảnh giữ nguyên (applyRecipe đã cảnh báo), không mở xưởng; lần ghi sau đưa thanh địa chỉ về công thức của cảnh.
+    if (!disposed && result?.applied !== false) onApplied();
+  };
+  const onHash = () => {
     const { hash } = win.location;
     const isReset = hash === '' || hash === '#';
-    if (!isReset && !hash.startsWith(RECIPE_PREFIX)) return; // hash khác dạng: không phải của xưởng
+    if (!isReset && !hash.startsWith(RECIPE_PREFIX)) return queue; // hash khác dạng: không phải của xưởng
     // Hủy lần ghi đang hẹn và chặn ghi tới khi áp xong: restore chờ núm và vẽ lại, nên recipe().text còn là chuỗi CŨ hay dở dang;
     // ghi lúc đó sẽ đè lên hash vừa dán (kể cả mục Back/Forward).
     win.clearTimeout(timer);
     timer = null;
-    applying = true;
-    written = isReset ? '' : fromHash(hash);
-    try {
-      if (isReset) await studio.reset();
-      else await studio.applyRecipe(written);
-    } finally {
-      applying = false;
-      if (!disposed) schedule(); // một lần ghi dạng chuẩn (số làm tròn, mục hỏng bỏ)
-    }
-    if (!isReset && !disposed) onApplied(); // gỡ giữa lúc áp (mất GPU): không mở xưởng của cảnh đã gỡ
+    waiting += 1;
+    written = isReset ? '' : fromHash(hash); // chuỗi đang nằm trên thanh địa chỉ, ngay lúc này
+    queue = queue
+      .then(() => apply(hash))
+      .catch((err) => console.error('Công thức: áp hash mới không được, cảnh giữ trạng thái đang có:', err))
+      .finally(() => {
+        waiting -= 1;
+        if (waiting === 0 && !disposed) schedule(); // MỘT lần ghi dạng chuẩn (số làm tròn, mục hỏng bỏ), sau lần áp cuối
+      });
+    return queue;
   };
   const onHide = () => flush();
   const onVisibility = () => {

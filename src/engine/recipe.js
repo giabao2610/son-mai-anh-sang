@@ -8,6 +8,14 @@ export const MAX_RECIPE = 2048;
 const KEY = /^[a-z0-9-]+(\.[A-Za-z][A-Za-z0-9]*)?$/;
 /** Giá trị: số, 1/0, id lựa chọn, màu hex: không có dấu phẩy, hai chấm, '#'. */
 const VALUE = /^[A-Za-z0-9.+-]+$/;
+/** Phần người dùng gõ trong một dòng cảnh báo (mục hỏng) dài tối đa chừng này ký tự. */
+const MAX_SHOWN = 60;
+
+/**
+ * Cắt phần người dùng gõ (một mục `khóa:giá trị` hỏng) cho dòng cảnh báo: link có thể dài 2.048 ký tự. Lý do của xưởng thì không bao giờ cắt.
+ * @param {string} text
+ */
+export const clipEntry = (text) => (text.length > MAX_SHOWN ? `${text.slice(0, MAX_SHOWN)}…` : text);
 
 /**
  * Đọc công thức từ location.hash. Mục sai dạng vào `problems` (người gọi cảnh báo MỘT dòng); khóa lặp thì mục sau thắng. Không biết bức
@@ -32,7 +40,7 @@ export function readRecipe(hash) {
     const key = colon < 0 ? part : part.slice(0, colon);
     const value = colon < 0 ? '' : part.slice(colon + 1);
     if (!KEY.test(key) || !VALUE.test(value)) {
-      problems.push(part);
+      problems.push(clipEntry(part));
       continue;
     }
     byKey.delete(key); // khóa lặp: mục sau thắng, đứng ở chỗ của mục sau
