@@ -42,7 +42,7 @@ function loadContent(entry, lang) {
  * @param {Window} [opts.win]
  * @returns {Promise<{ dispose: () => void }>}
  */
-export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail, win = window }) {
+export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail, recipe = null, win = window }) {
   const { meta } = entry;
   let disposer = createDisposer(); // của lần dựng hiện tại; "Dựng lại cảnh" thay bằng một cái mới
   let studio = null; // bàn thợ của cảnh đang live (null khi chưa live, hoặc đang mất GPU)
@@ -129,7 +129,7 @@ export async function run(entry, shell, { tier, flags, now, lang, t, sma, onFail
       console.error(`Lỗi GPU ${info?.type ?? ''}: ${info?.message ?? ''}`);
       if (gpuErrors.hit(win.performance.now())) fail('gpu-error', new Error(info?.message ?? 'Lỗi GPU'));
     });
-    const scene = buildScene({ stage, disposer: d, painting, meta, flags, now, reducedMotion, win, tools, t, content });
+    const scene = buildScene({ stage, disposer: d, painting, meta, flags, now, reducedMotion, win, tools, t, content, recipe: snapshot ? null : recipe });
     sma.set({ backend: stage.backend, level: scene.level });
     if (snapshot) await scene.studio.restore(snapshot);
     if (gone()) return false;

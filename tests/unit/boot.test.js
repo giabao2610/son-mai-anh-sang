@@ -79,6 +79,19 @@ describe('boot', () => {
     expect(page.note.querySelector('p').textContent).toBe(t.static.noGpu);
   });
 
+  it('(c2) GĐ 9: location.hash có #r= thì run nhận recipe (entries đúng); không có thì null; tầng tĩnh thì showStatic nhận recipe', async () => {
+    const win = { ...webglWin(), location: { search: '?webgl&force3d', hash: '#r=suong:0,gio:23' } };
+    const run = vi.fn(async () => ({ dispose() {} }));
+    await boot(entry, { t, win, doc, loadRun: async () => ({ run }) });
+    expect(run.mock.calls[0][2].recipe).toEqual({ entries: [{ key: 'suong', value: '0' }, { key: 'gio', value: '23' }], problems: [] });
+    const plain = vi.fn(async () => ({ dispose() {} }));
+    await boot(entry, { t, win: webglWin(), doc, loadRun: async () => ({ run: plain }) });
+    expect(plain.mock.calls[0][2].recipe).toBeNull();
+    const staticWin = { ...fakeWin({ search: '?static' }), location: { search: '?static', hash: '#r=suong:0' } };
+    await boot(entry, { t, win: staticWin, doc, loadRun: vi.fn() });
+    expect(page.note.querySelector('p').textContent).toBe(t.recipe.staticNote);
+  });
+
   it('(c) ?webgl&force3d trên SwiftShader → webgl2; run nhận đủ { tier, flags, now, lang, t, sma, onFail }', async () => {
     const win = webglWin('&at=2026-09-28T21:00');
     const handle = { dispose: vi.fn() };

@@ -141,6 +141,7 @@ const t = {
    * Bản dịch (GĐ 9, spec §21.1): khung mã shader thật trong tab Chỉnh. `post`: nhãn của quad cuối (mọi phần hậu kỳ ghép lại).
    * `translating` là chuỗi thường: một bản dịch chỉ là một khung vẽ, nên không có tiến độ để đếm.
    */
+  recipe: { staticNote: 'Link này có công thức mài; công thức chỉ áp được ở bản 3D.' },
   translation: {
     button: 'Bản dịch',
     object: 'Vật',

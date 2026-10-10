@@ -101,8 +101,9 @@ function assignUniform(u, knob, value) {
  * @param {string} layerId
  * @param {import('../contracts/runtime.js').Knob[]} knobs
  * @param {import('../contracts/runtime.js').KnobEnv} env
+ * @param {Record<string, any>} [initial]   GĐ 9: giá trị ban đầu từ công thức của link { knobId: value }, đã đổi kiểu (recipe-set.js)
  */
-export function createKnobs(layerId, knobs, env) {
+export function createKnobs(layerId, knobs, env, initial = {}) {
   const specs = new Map();
   const uniforms = {};
   const values = {};
@@ -110,7 +111,15 @@ export function createKnobs(layerId, knobs, env) {
     if (specs.has(knob.id)) throw new Error(`Lớp "${layerId}" khai báo núm "${knob.id}" hai lần`);
     checkMax(layerId, knob, env);
     specs.set(knob.id, knob);
-    const value = normalizeKnob(layerId, knob, knobValue(knob, env), env);
+    let value = normalizeKnob(layerId, knob, knobValue(knob, env), env);
+    // GĐ 9: giá trị ban đầu từ công thức của link (spec §21.4), đã đổi kiểu ở recipe-set.js. Hỏng thì giữ mặc định.
+    if (Object.hasOwn(initial, knob.id)) {
+      try {
+        value = normalizeKnob(layerId, knob, initial[knob.id], env);
+      } catch (err) {
+        console.warn(`Công thức: núm "${layerId}.${knob.id}" không nhận "${initial[knob.id]}", giữ mặc định.`, err.message);
+      }
+    }
     values[knob.id] = value;
     if (viaOf(knob) === 'uniform') uniforms[knob.id] = knobUniform(knob, value).setName(uniformName(layerId, knob.id));
   }

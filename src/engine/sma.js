@@ -72,6 +72,8 @@ export function studioApi(getStudio) {
     dials: () => s()?.dials() ?? [],
     setDial: (id, v) => s()?.setDial(id, v),
     readouts: (layerId) => s()?.readouts(layerId) ?? [],
+    recipe: () => s()?.recipe().text ?? null,
+    applyRecipe: (text) => s()?.applyRecipe(text),
     translate: (layerId) => s()?.translation(layerId) ?? null,
   };
 }

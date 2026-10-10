@@ -65,6 +65,16 @@ describe('showStatic', () => {
     expect(page.seal.textContent).toBe('18 tháng Tám · Bính Ngọ');
   });
 
+  it('có công thức (GĐ 9): thêm câu giải thích, kể cả lý do "flag" vốn không có chữ; không có thì như cũ', () => {
+    const recipe = { entries: [{ key: 'suong', value: '0' }], problems: [] };
+    showStatic(entry, shell, { reason: 'flag', t, sma, recipe });
+    expect(page.note.querySelector('p').textContent).toBe(t.recipe.staticNote);
+    showStatic(entry, shell, { reason: 'no-gpu', t, sma, recipe });
+    expect(page.note.querySelector('p').textContent).toBe(`${t.static.noGpu} ${t.recipe.staticNote}`);
+    showStatic(entry, shell, { reason: 'error', t, sma, recipe: { entries: [], problems: ['x'] } });
+    expect(page.note.querySelector('p').textContent).toBe(`${t.static.error} ${t.static.debugHint}`);
+  });
+
   it("'no-gpu': hướng dẫn bật tăng tốc phần cứng, không nút, không gợi ý ?debug", () => {
     showStatic(entry, shell, { reason: 'no-gpu', t, sma });
     expect(page.note.querySelector('p').textContent).toBe(t.static.noGpu);

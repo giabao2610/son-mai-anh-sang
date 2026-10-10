@@ -236,6 +236,7 @@
  * @property {(id: string, v: number) => Promise<void>} setDial   [4] kẹp theo min/max/step
  * @property {(layerId: string) => Promise<Translation>} translation   [9] Bản dịch: mã WGSL/GLSL thật của những nơi uniform của lớp
  *   có mặt, bắt từ khung vẽ kế tiếp (spec §21.3); lớp lạ thì ném
+ * @property {Function} recipe  [9] recipe() · applyRecipe(text) · reset() · onChange(cb): công thức #r= (spec §21.2, recipe-set.js)
  */
 /** [9] Bản dịch của một lớp (engine/gpu/translate.js). uniforms: tên trong mã (Cốt: weight null, luật 1). places: vật của chính lớp,
  * vật của lớp khác theo thứ tự phủ, vật không lớp nào giữ (owner null), rồi quad cuối (post); key bền qua các lần dịch; drawn false:

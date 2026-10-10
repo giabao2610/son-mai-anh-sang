@@ -11,6 +11,7 @@ import { createStudio } from './studio.js';
 import { createInput } from './input.js';
 import { createToolbox } from './toolbox.js';
 import { createDialSet } from './dial-set.js';
+import { createRecipeSet, showProblems } from './recipe-set.js';
 import { createCaptionSet } from './caption-set.js';
 import { createDrawProbe } from './draws.js';
 import { createTranslator } from './translate.js';
@@ -34,8 +35,9 @@ import { mountCaptions } from '../../ui/captions.js';
  * @param {import('../contracts/runtime.js').Tool[]} [p.tools]   công cụ học (engine/tools/index.js)
  * @param {Record<string, any>} [p.t]        chữ giao diện (nhãn view của công cụ; GĐ 9: nhãn quad cuối của Bản dịch)
  * @param {object | null} [p.content]        chữ của bức (nhãn tap của lớp, chữ đi theo vật)
+ * @param {{ entries: { key: string, value: string }[], problems: string[] } | null} [p.recipe]   GĐ 9: kết quả readRecipe (#r=), áp lúc dựng
  */
-export function buildScene({ stage, disposer, painting, meta, flags, now, reducedMotion, win, tools = [], t = {}, content = null }) {
+export function buildScene({ stage, disposer, painting, meta, flags, now, reducedMotion, win, tools = [], t = {}, content = null, recipe = null }) {
   stage.useCamera(painting.camera);
   const mobile = isMobile(win.navigator);
   // Mức chọn theo backend THẬT (three có thể đã lùi WebGPU → WebGL2); ?level ép một mức khác (xem mức thấp trên máy tính).
@@ -63,7 +65,19 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
   const setup = painting.setup?.(ctx);
   if (setup?.dispose) disposer.add(() => setup.dispose());
   const shared = setup?.shared ?? {};
-  const layers = buildLayers(painting.layers, ctx, shared, env);
+  // Dial dựng ngay sau setup: giá trị lúc này là mặc định của máy đang xem (Bức 1: giờ của "bây giờ"). GĐ 9: công thức của link (#r=)
+  // phân loại theo id của bức rồi áp TRƯỚC khi dựng lớp: Dial và trọng số đặt ngay, núm đi vào createKnobs, nên núm 'rebuild' dựng
+  // MỘT lần với giá trị của công thức, và lần biên dịch đầu đã là cảnh của công thức (spec §21.4).
+  const dials = createDialSet(setup?.dials ?? []);
+  const recipes = createRecipeSet({ modules: painting.layers, env, dials: setup?.dials ?? [], dialDefaults: dials.snapshot() });
+  const applied = recipe ? recipes.classify(recipe.entries) : null;
+  const problems = [...(recipe?.problems ?? []), ...(applied?.problems ?? [])];
+  if (problems.length > 0) console.warn(`Công thức trong link: bỏ ${problems.length} mục không áp được: ${showProblems(problems)}`);
+  if (applied) {
+    dials.restore(applied.dials);
+    for (const [id, v] of Object.entries(applied.weights)) weights.set(id, v);
+  }
+  const layers = buildLayers(painting.layers, ctx, shared, env, applied?.knobs ?? {});
   for (const { layer } of layers) disposer.add(() => layer.dispose());
   // Lưới an toàn của luật 8: material nào thiếu emissiveNode thì gán vec3(0) trước khi biên dịch.
   ensureEmissive(stage.scene, {
@@ -173,7 +187,8 @@ export function buildScene({ stage, disposer, painting, meta, flags, now, reduce
     redraw,
     quality,
     toolbox,
-    dials: createDialSet(setup?.dials ?? []), // núm của cả bức (Bức 1: thanh giờ)
+    dials, // núm của cả bức (Bức 1: thanh giờ), dựng cạnh setup để công thức áp được
+    recipes, // GĐ 9: mặc định của máy này, cho recipe()/applyRecipe()/reset()
     translator, // Bản dịch (GĐ 9)
   });
 

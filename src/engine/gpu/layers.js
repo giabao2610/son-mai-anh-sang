@@ -115,19 +115,26 @@ export function createCtx({ meta, stage, level, budget, mobile, reducedMotion, n
   return { ctx, weights, env };
 }
 
+/** Phần của một lớp trong giá trị ban đầu { 'lop.knob': v }: khóa bắt đầu bằng `${layerId}.`, bỏ tiền tố (id 'ban' không lẫn 'ban-net'). */
+function ownInitial(initial, layerId) {
+  const prefix = `${layerId}.`;
+  return Object.fromEntries(Object.entries(initial).filter(([k]) => k.startsWith(prefix)).map(([k, v]) => [k.slice(prefix.length), v]));
+}
+
 /**
  * Dựng các lớp theo ĐÚNG thứ tự của painting.layers. Mỗi lớp nhận ctx cộng knob()/knobValue() của riêng nó,
  * và CÙNG một object shared (lớp trước ghi shared.<id>, lớp sau đọc). Ngay sau createLayer, onKnob
  * của lớp được nối vào bộ núm: núm 'js'/'rebuild' nào thiếu hàm xử lý thì báo lỗi ngay lúc dựng.
  * Nếu một lớp ném lỗi: gỡ các lớp đã dựng theo thứ tự ngược rồi ném lại lỗi gốc,
  * để run.js về tầng tĩnh mà không để sót object nào trong scene.
+ * `initial` (GĐ 9): giá trị núm từ công thức của link, khóa 'lop.knob'; mỗi lớp chỉ nhận phần của mình.
  * @returns {{ id: string, module: object, layer: object, knobs: ReturnType<typeof createKnobs> }[]}
  */
-export function buildLayers(modules, ctx, shared, env) {
+export function buildLayers(modules, ctx, shared, env, initial = {}) {
   const built = [];
   try {
     for (const module of modules) {
-      const knobs = createKnobs(module.id, module.knobs ?? [], env);
+      const knobs = createKnobs(module.id, module.knobs ?? [], env, ownInitial(initial, module.id));
       // knob(id): uniform của núm 'uniform'; knobValue(id): giá trị ban đầu của MỌI núm (kể cả 'js'/'rebuild').
       const layer = module.createLayer({ ...ctx, knob: knobs.knob, knobValue: knobs.get }, shared);
       built.push({ id: module.id, module, layer, knobs });

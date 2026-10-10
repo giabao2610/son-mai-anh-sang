@@ -289,4 +289,66 @@ describe('createStudio', () => {
     await b.restore(a.snapshot());
     expect(b.snapshot()).toEqual(a.snapshot());
   });
+
+  describe('công thức và onChange (GĐ 9)', () => {
+    const hourDials = () => createDialSet([{ id: 'gio', uniform: uniform(21), min: 18, max: 29.5, step: 0.25 }]);
+
+    it('onChange báo đúng MỘT lần sau setWeight (cả tween), setKnob, setDial, restore; trả hàm bỏ nghe; thí nghiệm thì không', async () => {
+      const { studio } = setup({ dials: hourDials() });
+      const cb = vi.fn();
+      const off = studio.onChange(cb);
+      await studio.setWeight('lop-hai', 0.5, { tween: true });
+      expect(cb).toHaveBeenCalledTimes(1);
+      await studio.setWeight('lop-hai', 0.4);
+      expect(cb).toHaveBeenCalledTimes(2);
+      await studio.setKnob('cot', 'count', 200);
+      expect(cb).toHaveBeenCalledTimes(3);
+      await studio.setDial('gio', 22);
+      expect(cb).toHaveBeenCalledTimes(4);
+      await studio.restore({ weights: { 'lop-hai': 1 }, knobs: { 'cot.openness': 0.7 } });
+      expect(cb).toHaveBeenCalledTimes(5);
+      await studio.toggleExperiment('lop-hai', 'pha', true);
+      expect(cb).toHaveBeenCalledTimes(5);
+      off();
+      await studio.setWeight('lop-hai', 0.1);
+      expect(cb).toHaveBeenCalledTimes(5);
+    });
+
+    it('onChange báo cả khi núm hỏng (setKnob ném): finally, và restore báo sau khi vẽ lại', async () => {
+      const { studio, redraw } = setup();
+      const order = [];
+      redraw.mockImplementation(() => { order.push('redraw'); });
+      studio.onChange(() => order.push('change'));
+      await studio.restore({ weights: { 'lop-hai': 0 } });
+      expect(order).toEqual(['redraw', 'change']);
+    });
+
+    it('recipe().text rỗng ở nguyên bản, đúng chuỗi sau khi đổi; applyRecipe rồi recipe().text ra dạng chuẩn', async () => {
+      const { studio } = setup({ dials: hourDials() });
+      expect(studio.recipe()).toEqual({ text: '', counts: { layers: 0, knobs: 0, dials: [] } });
+      await studio.setWeight('lop-hai', 0.5);
+      await studio.setKnob('cot', 'openness', 0.25);
+      await studio.setDial('gio', 23);
+      expect(studio.recipe().text).toBe('lop-hai:0.5,cot.openness:0.25,gio:23');
+      expect(studio.recipe().counts).toEqual({ layers: 1, knobs: 1, dials: ['gio'] });
+      await studio.applyRecipe('gio:23.0,cot.openness:0.250,lop-hai:0.50');
+      expect(studio.recipe().text).toBe('lop-hai:0.5,cot.openness:0.25,gio:23');
+      await studio.applyRecipe('lop-hai:0');
+      expect(studio.recipe().text).toBe('lop-hai:0');
+      expect(studio.knobs('cot').openness).toBe(0.5);
+      await studio.applyRecipe('');
+      expect(studio.recipe().text).toBe('');
+    });
+
+    it('reset: trọng số tween về 1, núm và Dial về mặc định', async () => {
+      const { studio, weights } = setup({ dials: hourDials() });
+      await studio.setWeight('lop-hai', 0);
+      await studio.setKnob('cot', 'count', 300);
+      await studio.setDial('gio', 25);
+      await studio.reset();
+      weights.step(1);
+      expect(studio.snapshot()).toEqual(setup({ dials: hourDials() }).studio.snapshot());
+      expect(studio.recipe().text).toBe('');
+    });
+  });
 });

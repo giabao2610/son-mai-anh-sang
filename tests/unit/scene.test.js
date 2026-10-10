@@ -7,6 +7,7 @@ import { buildScene } from '../../src/engine/gpu/scene.js';
 import { createDisposer } from '../../src/engine/gpu/disposer.js';
 import { CAPTION_SECONDS } from '../../src/ui/captions.js';
 import { fakeRenderer } from '../helpers/fake-ctx.js';
+import { readRecipe } from '../../src/engine/recipe.js';
 
 /** Test gắn hàm vào đây để nghe update() của lớp tô màu. */
 const hooks = { update: null };
@@ -85,14 +86,14 @@ function fakeWin(doc) {
   return { win, frames, flush: () => frames.splice(0).forEach((cb) => cb(16)) };
 }
 
-function build({ backend = 'webgpu', reducedMotion = false, flags = {}, setup, tools = [], content = null } = {}) {
+function build({ backend = 'webgpu', reducedMotion = false, flags = {}, setup, tools = [], content = null, recipe = null, paintingOverride = null } = {}) {
   // Trang là DOM thật: [data-stage] chứa canvas và vùng chữ đi theo vật; thanh công cụ gắn vào body.
   const doc = new JSDOM('<div data-stage></div>').window.document;
   const stage = fakeStage(backend, doc);
   const disposer = createDisposer();
   const { win, frames, flush } = fakeWin(doc);
   const scene = buildScene({
-    stage, disposer, painting: setup ? { ...painting, setup } : painting, meta, flags,
+    stage, disposer, painting: { ...(paintingOverride ?? painting), ...(setup ? { setup } : {}) }, meta, flags, recipe,
     now: new Date('2026-09-28T14:00:00Z'), reducedMotion, win, tools, content,
   });
   const renders = () => stage.renderer.render.mock.calls.length;
@@ -131,6 +132,45 @@ function buildWithCaptions() {
 const captionX = (caption) => Number(/translate\(([-+\d.e]+)px/.exec(caption.style.transform)[1]);
 
 describe('buildScene', () => {
+  it('công thức của link (GĐ 9): trọng số đặt trước lần render đầu, đúng một console.warn nhắc khóa lạ, recipe().text khớp', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { scene, stage, renders } = build({ recipe: readRecipe('#r=to-mau:0,khong-co:1') });
+    expect(renders()).toBe(0);
+    expect(scene.studio.weight('to-mau').value).toBe(0);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('khong-co');
+    expect(scene.studio.recipe().text).toBe('to-mau:0');
+    expect(stage).toBeTruthy();
+    warn.mockRestore();
+  });
+
+  it('công thức + Dial + núm rebuild (GĐ 9): Dial đặt trước setup trả về dùng, onKnob KHÔNG gọi lúc dựng, createLayer thấy giá trị của công thức', () => {
+    const hour = uniform(21);
+    const seen = [];
+    const onKnob = vi.fn();
+    const rebuildPainting = {
+      ...painting,
+      layers: [
+        painting.layers[0],
+        {
+          id: 'to-mau',
+          knobs: [{ id: 'count', via: 'rebuild', min: 1, max: 100, value: 10 }],
+          createLayer(ctx, shared) {
+            seen.push(ctx.knobValue('count'));
+            shared.cot.material.colorNode = mix(color(ctx.palette.hex.datSet), color(ctx.palette.hex.doSon), ctx.weight('to-mau'));
+            return { onKnob: { count: onKnob }, dispose() {} };
+          },
+        },
+      ],
+    };
+    const dial = { id: 'gio', uniform: hour, min: 18, max: 29.5, step: 0.25 };
+    const { scene } = build({ paintingOverride: rebuildPainting, setup: () => ({ dials: [dial] }), recipe: readRecipe('#r=to-mau.count:42,gio:23') });
+    expect(seen).toEqual([42]);
+    expect(onKnob).not.toHaveBeenCalled();
+    expect(hour.value).toBe(23);
+    expect(scene.studio.recipe().text).toBe('to-mau.count:42,gio:23');
+  });
+
   it('mức theo backend THẬT: WebGPU máy tính → cao (dpr 2), WebGL2 → vừa (dpr 1.5); camera theo CameraSpec của bức', () => {
     const a = build();
     expect(a.scene.level).toBe('cao');

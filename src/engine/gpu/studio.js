@@ -3,6 +3,7 @@ import { knobMax } from './knob-set.js';
 import { TWEEN_SECONDS } from './layers.js';
 import { createMeter } from './meter.js';
 import { createDialSet } from './dial-set.js';
+import { createListeners, recipeMethods, recipesFromState } from './recipe-set.js';
 
 /** Cảnh không có hộp đồ nghề (test): không có công cụ nào. */
 const NO_TOOLS = Object.freeze({
@@ -39,12 +40,14 @@ const NO_QUALITY = Object.freeze({
  * @param {{ list: () => { id: string, on: boolean }[], set: (id: string | null) => void }} [p.toolbox]  công cụ học (toolbox.js)
  * @param {ReturnType<typeof createDialSet>} [p.dials]   núm của cả bức (dial-set.js)
  * @param {ReturnType<import('./translate.js').createTranslator> | null} [p.translator]   Bản dịch (GĐ 9); test không có
+ * @param {ReturnType<import('./recipe-set.js').createRecipeSet> | null} [p.recipes]   công thức (GĐ 9, scene.js đưa vào); thiếu thì dựng từ trạng thái hiện tại
  * @returns {ReturnType<typeof createMeter> & object}  measure() và gpu() của bộ đo: scene.js đưa số vào mỗi khung
  */
 export function createStudio({
   meta, layers, weights, env, redraw = () => {}, tweenSeconds = TWEEN_SECONDS, quality = NO_QUALITY, toolbox = NO_TOOLS,
-  dials = createDialSet(), translator = null,
+  dials = createDialSet(), translator = null, recipes = null,
 }) {
+  const listeners = createListeners();
   const byId = new Map(layers.map((b) => [b.id, b]));
   const names = new Map(meta.layers.map((l) => [l.id, l.name]));
   const experimentsOn = new Set(); // 'layerId.expId' đang bật
@@ -72,7 +75,7 @@ export function createStudio({
     }
   };
 
-  return {
+  const studio = {
     /** Khai báo tĩnh cho Sổ tay, theo thứ tự phủ: núm (trần đã tính theo tầng), thí nghiệm, số đo. */
     layers() {
       return layers.map(({ id, module, layer }) => ({
@@ -93,26 +96,24 @@ export function createStudio({
     },
 
     /** Trọng số hiện tại và đích đang hướng tới (thanh lớp vẽ cả hai khi đang tween). */
-    weight(id) {
-      layerOf(id);
-      return { value: weights.weight(id).value, target: weights.target(id) };
-    },
-    /** tween: true cho thanh lớp (lớp "phủ" dần); false (mặc định) đặt ngay rồi vẽ lại: __sma và e2e dùng. */
+    weight: (id) => ({ value: weights.weight(layerOf(id).id).value, target: weights.target(id) }),
+    /** tween: true cho thanh lớp ("phủ" dần); false (mặc định) đặt ngay rồi vẽ lại: __sma và e2e dùng. */
     async setWeight(id, v, { tween = false } = {}) {
       layerOf(id);
       if (tween) {
         weights.tween(id, v, tweenSeconds);
-        return;
+      } else {
+        weights.set(id, v);
+        await redraw();
       }
-      weights.set(id, v);
-      await redraw();
+      listeners.fire(); // cả hai nhánh
     },
 
     /** Giá trị hiện tại của mọi núm của một lớp: { knobId: value }. */
     knobs: (layerId) => layerOf(layerId).knobs.values(),
-    /** Đổi một núm; Promise xong khi lớp đã áp giá trị (núm 'rebuild' có thể mất vài chục ms). */
+    /** Đổi một núm; xong khi lớp đã áp giá trị (núm 'rebuild' có thể mất vài chục ms). */
     setKnob(layerId, knobId, value) {
-      return settle(() => layerOf(layerId).knobs.set(knobId, value));
+      return settle(() => layerOf(layerId).knobs.set(knobId, value)).finally(listeners.fire);
     },
 
     experiment(layerId, expId) {
@@ -167,7 +168,7 @@ export function createStudio({
       });
       return done;
     },
-    /** Báo mỗi lần nấc đổi (run.js vẽ lại huy hiệu). Trả hàm bỏ nghe. */
+    /** Báo mỗi lần nấc đổi (run.js vẽ lại huy hiệu); trả hàm bỏ nghe. */
     onQuality: (cb) => quality.onChange(cb),
 
     /** Công cụ học (GĐ 4): [{ id, on }] theo thứ tự tools/index.js (nút "Đồ nghề" của thanh lớp). */
@@ -181,12 +182,11 @@ export function createStudio({
     dials: () => dials.list(),
     /** Đổi một Dial (kẹp theo min/max/step); xong khi khung đã vẽ lại. */
     setDial(id, v) {
-      return settle(() => dials.set(id, v));
+      return settle(() => dials.set(id, v)).finally(listeners.fire);
     },
 
     /**
-     * Bản dịch của một lớp (GĐ 9, spec §21.3): Promise<Translation>, bắt từ khung vẽ kế tiếp (dưới ?freeze, bộ dịch vẽ lại khung đứng yên).
-     * Cảnh không có bộ dịch (test) thì Promise hỏng.
+     * Bản dịch của một lớp (GĐ 9, spec §21.3): Promise<Translation>, bắt từ khung vẽ kế tiếp; cảnh không có bộ dịch (test) thì Promise hỏng.
      */
     translation(layerId) {
       layerOf(layerId);
@@ -235,7 +235,15 @@ export function createStudio({
         }
       } finally {
         await redraw();
+        listeners.fire();
       }
     },
+    /** GĐ 9: onChange(cb) báo sau mỗi thay đổi của người xem (không báo thí nghiệm, công cụ, nấc), trả hàm bỏ nghe; recipe/applyRecipe/reset: recipe-set.js. */
+    onChange: listeners.add,
+    ...recipeMethods(recipes ?? recipesFromState(layers, env, dials), {
+      snapshot: () => studio.snapshot(), restore: (s) => studio.restore(s),
+      tweenAll: () => weights.ids.forEach((id) => weights.tween(id, 1, tweenSeconds)),
+    }),
   };
+  return studio;
 }
