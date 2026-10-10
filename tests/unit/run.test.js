@@ -120,6 +120,7 @@ function harness() {
     crossfade: record('crossfade', () => pass('crossfade')), // hòa xong ngay, trừ khi test giữ lại
     showBadge: record('showBadge'),
     showHint: record('showHint'),
+    clearHint: record('clearHint'),
     invite: record('invite'),
     showLost: record('showLost', (cb) => {
       sma.state = 'lost'; // vỏ thật: showLost gọi setState('lost')
@@ -321,6 +322,36 @@ describe('run · công thức trong link (GĐ 9)', () => {
     await page.rebuild();
     expect(buildScene).toHaveBeenLastCalledWith(expect.objectContaining({ recipe: null }));
     expect(open).not.toHaveBeenCalled();
+  });
+
+  it('trang mở theo công thức: xóa gợi ý/lời mời (clearHint) và cái chạm đầu tiên không mời nữa vì thanh lớp đã mở', async () => {
+    const page = harness();
+    withRecipe(page, 'lop-hai:0');
+    const open = workshopMock();
+    let isOpen = false;
+    open.mockImplementation(() => { isOpen = true; });
+    mountWorkshop.mockReturnValue({ open, dispose() {}, get isOpen() { return isOpen; } });
+    await page.start({ recipe: 'lop-hai:0' });
+    expect(page.shell.clearHint).toHaveBeenCalledTimes(1);
+    // mở xưởng bằng đường khác trước cái chạm đầu: không có onFirst nào được gắn ở nhánh công thức
+    expect(page.scenes[0].input.onFirst).not.toHaveBeenCalled();
+  });
+
+  it('chạm đầu tiên sau khi người xem đã mở thanh lớp bằng link dán: không mời mài (mời chỉ khi thanh lớp đóng)', async () => {
+    const page = harness();
+    let isOpen = false;
+    const open = vi.fn(() => { isOpen = true; });
+    mountWorkshop.mockReturnValue({ open, dispose() {}, get isOpen() { return isOpen; } });
+    const handle = await page.start();
+    window.history.replaceState(null, '', '#r=lop-hai:0');
+    window.dispatchEvent(new Event('hashchange'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(open).toHaveBeenCalledWith({ grind: false, recipe: true });
+    expect(page.shell.clearHint).toHaveBeenCalledTimes(1); // gợi ý đang hiện bị xóa
+    page.scenes[0].input.onFirst.mock.calls[0][0](); // cái chạm đầu tiên
+    expect(page.shell.invite).not.toHaveBeenCalled();
+    handle.dispose();
+    window.history.replaceState(null, '', window.location.pathname);
   });
 
   it('syncRecipeUrl gắn lúc live (nghe hashchange) và gỡ cùng disposer', async () => {

@@ -159,13 +159,63 @@ describe('syncRecipeUrl · hashchange', () => {
     expect(onApplied).not.toHaveBeenCalled();
   });
 
-  it('công thức người xem vừa dán không bị ghi đè bằng chuỗi cũ: chuỗi áp xong ghi lại dạng chuẩn', async () => {
+  /** Promise điều khiển bằng tay. */
+  const deferred = () => {
+    let resolve;
+    const promise = new Promise((r) => { resolve = r; });
+    return { promise, resolve };
+  };
+
+  it('áp dở dang: lần ghi đang hẹn không đè hash vừa dán; áp xong thì ghi MỘT lần dạng chuẩn', async () => {
     const win = fakeWindow();
     const studio = fakeStudio();
     syncRecipeUrl({ win, studio, onApplied: vi.fn() });
-    studio.applyRecipe.mockImplementation(async (text) => studio.change(text.replace('1.50', '1.5')));
-    await hashChange(win, '#r=a:1.50');
+    studio.change('cu:1'); // lần ghi đã hẹn, sắp tới 500 ms
+    await vi.advanceTimersByTimeAsync(400);
+    const gate = deferred();
+    studio.applyRecipe.mockImplementation(async (text) => {
+      await gate.promise; // restore chờ núm và vẽ lại
+      studio.change(text.replace('1.50', '1.5')); // onChange chỉ báo ở cuối (finally của restore)
+    });
+    win.location.hash = '#r=moi:1.50';
+    win.dispatchEvent(new Event('hashchange'));
+    await vi.advanceTimersByTimeAsync(WRITE_MS * 2); // hẹn cũ có tới hạn cũng không ghi gì
+    expect(win.history.replaceState).not.toHaveBeenCalled();
+    expect(win.location.hash).toBe('#r=moi:1.50');
+    gate.resolve();
     await vi.advanceTimersByTimeAsync(WRITE_MS);
-    expect(win.location.hash).toBe('#r=a:1.5');
+    expect(win.history.replaceState).toHaveBeenCalledTimes(1);
+    expect(win.location.hash).toBe('#r=moi:1.5');
+  });
+
+  it('reset dở dang: cũng không bị ghi đè bằng chuỗi cũ; xong thì ghi một lần', async () => {
+    const win = fakeWindow('#r=a:1');
+    const studio = fakeStudio('a:1');
+    syncRecipeUrl({ win, studio, onApplied: vi.fn() });
+    const gate = deferred();
+    studio.reset.mockImplementation(async () => {
+      await gate.promise;
+      studio.change('');
+    });
+    win.location.hash = '';
+    win.dispatchEvent(new Event('hashchange'));
+    await vi.advanceTimersByTimeAsync(WRITE_MS * 2);
+    expect(win.history.replaceState).not.toHaveBeenCalled();
+    gate.resolve();
+    await vi.advanceTimersByTimeAsync(WRITE_MS);
+    expect(win.history.replaceState).not.toHaveBeenCalled(); // hash đã rỗng, chuỗi rỗng: không có gì để ghi
+    expect(studio.recipe().text).toBe('');
+  });
+
+  it('áp xong mà chuỗi khác hash đã dán (mục hỏng bỏ): ghi dạng chuẩn một lần', async () => {
+    const win = fakeWindow();
+    const studio = fakeStudio();
+    syncRecipeUrl({ win, studio, onApplied: vi.fn() });
+    studio.applyRecipe.mockImplementation(async () => { studio.text = 'a:1'; });
+    win.location.hash = '#r=a:1,hong';
+    win.dispatchEvent(new Event('hashchange'));
+    await vi.advanceTimersByTimeAsync(WRITE_MS);
+    expect(win.history.replaceState).toHaveBeenCalledTimes(1);
+    expect(win.location.hash).toBe('#r=a:1');
   });
 });

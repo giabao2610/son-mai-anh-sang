@@ -8,7 +8,7 @@ import { mountWorkshop } from '../../ui/workshop.js';
  * @param {Window} p.win
  * @param {import('../contracts/painting.js').PaintingMeta} p.meta
  * @param {Record<string, any>} p.t
- * @param {object} p.shell   vỏ trang: invite, showHint
+ * @param {object} p.shell   vỏ trang: invite, showHint, clearHint
  * @param {() => object | null} p.getContent   chữ của bức (tải xong sau khi cửa được tạo)
  * @param {() => any} p.getStudio   bàn thợ của cảnh đang live (null khi chưa live)
  * @param {() => any} p.getQuality   bộ điều chỉnh của cảnh đang live
@@ -25,6 +25,8 @@ export function createWorkshopDoor({ win, meta, t, shell, getContent, getStudio,
   /** Không tham số (lời mời gọi như vậy) = vào chế độ mài. */
   function open(options = { grind: true }) {
     workshop ??= mountWorkshop(win.document, { meta, content: getContent(), t, studio: getStudio, onClose });
+    // Mở theo công thức (lúc live, hay người xem dán link khác): gợi ý và lời mời đang hiện không còn đúng chỗ; bấm lời mời cũ là mài hết, xóa công thức vừa áp.
+    if (options.recipe) shell.clearHint();
     workshop.open(options);
     getQuality()?.guard(true);
   }
@@ -44,7 +46,8 @@ export function createWorkshopDoor({ win, meta, t, shell, getContent, getStudio,
       // Gợi ý của bức ("Chạm vào…") chỉ lúc mở trang; lần chạm đầu tiên đổi thành lời mời mài lớp.
       const content = getContent();
       if (!rebuilt && content?.hint) shell.showHint(content.hint);
-      if (!workshop) input.onFirst(() => shell.invite(open));
+      // Chạm đầu tiên: chỉ mời khi thanh lớp đang đóng (người xem có thể đã mở nó bằng link công thức).
+      if (!workshop) input.onFirst(() => { if (!workshop?.isOpen) shell.invite(open); });
       // Dựng lại cảnh xong mà thanh lớp đang đóng: poster lúc mất GPU đã xóa lời mời, nên mời lại ngay.
       else if (!workshop.isOpen) shell.invite(open);
     },

@@ -121,6 +121,15 @@ describe('boot', () => {
     expect(page.note.querySelector('button').textContent).toBe(t.static.reload);
   });
 
+  it('vỏ trang đưa cho run có đủ hàm mà run.js và cửa xưởng gọi (clearHint của GĐ 9 từng thiếu: về tĩnh "error" ở trình duyệt thật)', async () => {
+    const run = vi.fn(async () => ({ dispose() {} }));
+    await boot(entry, { t, win: webglWin(), doc, loadRun: async () => ({ run }) });
+    const runShell = run.mock.calls[0][1];
+    for (const name of ['setState', 'progress', 'crossfade', 'showBadge', 'showNote', 'showHint', 'clearHint', 'invite', 'showLost']) {
+      expect(typeof runShell[name], name).toBe('function');
+    }
+  });
+
   it('(e) run treo quá 10 s → "timeout"; xong muộn thì bị dispose và không kéo được poster đi', async () => {
     vi.useFakeTimers();
     const win = webglWin();

@@ -67,6 +67,17 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
     toolbar.after(notebook.el);
   } else doc.body.append(rail.el, notebook.el);
 
+  // Máy tính: thanh lớp bắt đầu ngay dưới đầu trang (tên bức + lật tranh), nên đo đáy của nó vào --rail-top (notebook.css).
+  // Đo lúc mở, lúc đổi cỡ cửa sổ và khi font tải xong (tên bức xuống dòng hay không). Điện thoại đặt thanh ở đáy: biến không dùng.
+  const measureTop = () => {
+    const header = doc.querySelector('.frame header');
+    if (!header) return;
+    const gap = 16;
+    rail.el.style.setProperty('--rail-top', `${Math.ceil(header.getBoundingClientRect().bottom + gap)}px`);
+  };
+  win.addEventListener('resize', measureTop);
+  doc.fonts?.ready?.then(measureTop);
+
   /** Vẽ lại thanh lớp theo bàn thợ: vạch trọng số chạy theo tween, công tắc theo đích, nút "tiếp theo". */
   const sync = () => {
     const s = studio();
@@ -110,6 +121,7 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
      */
     open({ grind = false, recipe = false } = {}) {
       rail.el.hidden = false;
+      measureTop();
       if (recipe) panel?.show();
       if (grind) {
         panel?.hide();
@@ -130,6 +142,7 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
     },
     dispose() {
       stop();
+      win.removeEventListener('resize', measureTop);
       notebook.dispose();
       rail.el.remove();
     },

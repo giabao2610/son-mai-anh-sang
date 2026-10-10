@@ -117,7 +117,7 @@
 .dial-chip { display: none; }
 
 /* ── Công thức (GĐ 9, ui/recipe-panel.js): dòng tóm tắt ở đầu thanh lớp, và mục chép link sau Đồ nghề ───────────────────
-   Hai dòng chữ (tóm tắt, trạng thái) là vùng aria-live: luôn có mặt, trống thì thu lại bằng :empty, không bao giờ hidden. */
+   Hai dòng chữ (tóm tắt, trạng thái) là vùng aria-live: luôn có mặt, trống thì thu lại bằng margin 0 (không hidden, không display: none: trình đọc chỉ đọc chữ điền vào vùng ĐÃ có mặt). */
 .rail-recipe { display: grid; gap: 6px; }
 /* Khối viền vàng chỉ hiện khi có tóm tắt (ui/recipe-panel.js đặt data-on); không dùng :has() cho trình duyệt cũ. */
 .rail-recipe[data-on] {
@@ -128,7 +128,6 @@
 }
 .rail-recipe-label { display: none; }
 .rail-recipe-text { margin: 0; font-size: 12px; line-height: 1.5; color: var(--vang-la-sang); }
-.rail-recipe-text:empty { display: none; }
 .rail-recipe-reset {
   justify-self: start;
   padding: 3px 10px;
@@ -139,9 +138,10 @@
   border-radius: 999px;
 }
 .rail-recipe-reset:hover { color: var(--den-then); background: var(--vang-la); }
-.rail-recipe-tools { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--vang-la) 25%, transparent); }
+.rail-recipe-tools { display: grid; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--vang-la) 25%, transparent); }
 .rail-recipe-copy {
   justify-self: start;
+  margin-top: 8px;
   padding: 5px 12px;
   font-size: 12px;
   font-weight: 600;
@@ -150,11 +150,12 @@
   border-radius: 999px;
 }
 .rail-recipe-copy:hover { color: var(--den-then); background: var(--vang-la); }
-.rail-recipe-status { margin: 0; font-size: 12px; line-height: 1.5; color: var(--bac-la); }
-.rail-recipe-status:empty { display: none; }
+.rail-recipe-status { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--bac-la); }
+.rail-recipe-status:empty { margin: 0; }
 .rail-recipe-link {
   width: 100%;
   box-sizing: border-box;
+  margin-top: 8px;
   padding: 5px 8px;
   font: 400 12px/1.4 var(--mono);
   color: var(--nga);
@@ -211,9 +212,9 @@ body[data-tool] .foot { visibility: hidden; }
   .rail-recipe-reset { flex-shrink: 0; white-space: nowrap; }
   .rail-recipe-tools { display: flex; align-items: center; flex-shrink: 0; gap: 6px; padding: 0 0 0 10px; border-top: 0; border-left: 1px solid color-mix(in srgb, var(--vang-la) 25%, transparent); }
   .rail-recipe-tools .rail-title { display: none; }
-  .rail-recipe-copy { white-space: nowrap; }
-  .rail-recipe-status { flex-shrink: 0; white-space: nowrap; }
-  .rail-recipe-link { flex-shrink: 0; width: 200px; }
+  .rail-recipe-copy { margin-top: 0; white-space: nowrap; }
+  .rail-recipe-status { flex: 0 0 170px; margin: 0; } /* hai ba dòng: chữ chép hỏng không nằm vừa một dòng trên dải 390px */
+  .rail-recipe-link { flex-shrink: 0; width: 200px; margin-top: 0; }
 }
 
 /* ── Xưởng mở (GĐ 5): bảng công cụ không bao giờ nằm dưới thanh lớp hay Sổ tay ─────────────────────────────────────────

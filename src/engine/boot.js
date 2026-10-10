@@ -59,6 +59,7 @@ export async function boot(entry, { lang = 'vi', t, win = window, doc = document
     showBadge: unlessLate(shell.showBadge),
     showNote: unlessLate(shell.showNote),
     showHint: unlessLate(shell.showHint),
+    clearHint: unlessLate(shell.clearHint),
     invite: unlessLate(shell.invite),
     showLost: unlessLate(shell.showLost),
   };

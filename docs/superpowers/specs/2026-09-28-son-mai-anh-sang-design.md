@@ -5159,7 +5159,7 @@ của đàn gà, Bản nét và Phủ bóng nằm trong lượt hậu kỳ. Nên
 - Thanh lớp mở sẵn, **không** vào chế độ mài (không tween mọi lớp về 0). Đầu thanh có một dòng tóm tắt và nút **"Về nguyên bản"**:
   "Công thức trong link: 2 lớp đã mài · 3 núm đã chỉnh · giờ 23:00". Phần nào bằng 0 thì bỏ; Dial ghi bằng nhãn và chữ giá trị của nó
   (`content.dials[id].label`, `format`). Sổ tay vẫn đóng.
-- Không có gợi ý "Chạm vào…" và lời mời "mài thử?" (thanh lớp đang mở).
+- Không có gợi ý "Chạm vào…" và lời mời "mài thử?" (thanh lớp đang mở). Mở theo công thức (lúc live hay do dán link khác) thì xóa gợi ý hoặc lời mời đang hiện (`shell.clearHint()`: chữ của vùng `aria-live` về trống, không `hidden`); cái chạm đầu tiên chỉ mời khi thanh lớp đang đóng.
 - "Về nguyên bản": trọng số tween về 1 như công tắc của thanh lớp, núm và Dial về mặc định ngay, hash về trống, dòng tóm tắt biến mất (vùng
   `aria-live` để trống, không `hidden`).
 - Đóng thanh lớp vẫn như cũ (§4.1): mọi lớp phủ lại, núm và Dial giữ nguyên; hash theo đó còn núm và Dial.
@@ -5300,7 +5300,8 @@ bộ nhớ mã nào để bỏ.
 - ghi: `history.replaceState(history.state, '', pathname + search + (text ? '#r=' + text : ''))`. Lỗi thì cảnh báo một lần và thôi ghi cho
   phiên đó; nút chép link vẫn chạy;
 - nghe `hashchange` (`replaceState` không phát sự kiện này, nên chỉ thay đổi của người xem tới đây): `readRecipe` → `applyRecipe` → mở xưởng
-  với dòng tóm tắt; hash trống thì `reset()`; hash khác dạng (không bắt đầu bằng `#r=`) thì bỏ qua.
+  với dòng tóm tắt; hash trống thì `reset()`; hash khác dạng (không bắt đầu bằng `#r=`) thì bỏ qua. Đang áp thì hủy lần ghi đã hẹn và
+  chặn ghi (restore chờ núm và vẽ lại, `recipe().text` còn là chuỗi cũ: ghi lúc đó sẽ đè hash vừa dán); áp xong hẹn MỘT lần ghi dạng chuẩn.
 
 **`__sma`** thêm `recipe()` (chuỗi `text`) và `applyRecipe(text)`, qua bàn thợ như mọi hàm khác.
 
@@ -5333,8 +5334,10 @@ bộ nhớ mã nào để bỏ.
 **Thứ tự Tab** không đổi (thanh lớp → thanh công cụ → Sổ tay, §7): dòng tóm tắt và mục Công thức nằm TRONG thanh lớp, Bản dịch nằm trong
 tab Chỉnh.
 
+**Máy tính:** thanh lớp đứng ngay dưới đầu trang (tên bức và hàng lật tranh), không còn giữa theo chiều dọc: `ui/workshop.js` đo đáy của `.frame header` cộng 16px vào `--rail-top` (lúc mở, khi đổi cỡ cửa sổ, khi font tải xong; tên bức xuống dòng hay không, mỗi bức một chiều cao); nội dung dài thì cuộn trong thanh (`max-height` = khung nhìn − `--rail-top` − lề).
+
 **Điện thoại:** thanh lớp là một dải ngang (§7). Dòng tóm tắt thu thành một chip "Công thức · Về nguyên bản" trên dải; mục Công thức là một
-nút trên dải, như nút của Dial. Bản dịch trong tấm trượt của Sổ tay: khung mã cuộn riêng, dòng dài xuống dòng.
+nút trên dải, như nút của Dial. Chép hỏng thì dải cuộn (`scrollIntoView({ block: 'nearest', inline: 'nearest' })`) tới ô link, dòng trạng thái rộng 170px xuống dòng nằm ngay trước ô. Bản dịch trong tấm trượt của Sổ tay: khung mã cuộn riêng, dòng dài xuống dòng.
 
 **Chữ của xưởng** (`strings.vi.js`):
 - `t.translation`: `button` "Bản dịch", `object` "Vật", `stages` "Phần của shader", `vertex` "Đỉnh", `fragment` "Điểm ảnh", `translating`

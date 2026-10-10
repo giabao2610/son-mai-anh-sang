@@ -20,10 +20,11 @@ export function syncRecipeUrl({ win, studio, onApplied }) {
   let timer = null;
   let broken = false;
   let disposed = false;
+  let applying = false; // đang áp hash của người xem: restore chạy dở, text chưa phải của họ
 
   const write = () => {
     timer = null;
-    if (broken) return;
+    if (broken || applying) return;
     const { text } = studio.recipe();
     if (text === written) return;
     const { pathname, search } = win.location;
@@ -46,15 +47,22 @@ export function syncRecipeUrl({ win, studio, onApplied }) {
   };
   const onHash = async () => {
     const { hash } = win.location;
-    if (hash === '' || hash === '#') {
-      written = '';
-      await studio.reset();
-      return;
+    const isReset = hash === '' || hash === '#';
+    if (!isReset && !hash.startsWith(RECIPE_PREFIX)) return; // hash khác dạng: không phải của xưởng
+    // Hủy lần ghi đang hẹn và chặn ghi tới khi áp xong: restore chờ núm và vẽ lại, nên recipe().text còn là chuỗi CŨ hay dở dang;
+    // ghi lúc đó sẽ đè lên hash vừa dán (kể cả mục Back/Forward).
+    win.clearTimeout(timer);
+    timer = null;
+    applying = true;
+    written = isReset ? '' : fromHash(hash);
+    try {
+      if (isReset) await studio.reset();
+      else await studio.applyRecipe(written);
+    } finally {
+      applying = false;
+      if (!disposed) schedule(); // một lần ghi dạng chuẩn (số làm tròn, mục hỏng bỏ)
     }
-    if (!hash.startsWith(RECIPE_PREFIX)) return; // hash khác dạng: không phải của xưởng
-    written = fromHash(hash);
-    await studio.applyRecipe(written);
-    if (!disposed) onApplied(); // gỡ giữa lúc áp (mất GPU): không mở xưởng của cảnh đã gỡ
+    if (!isReset && !disposed) onApplied(); // gỡ giữa lúc áp (mất GPU): không mở xưởng của cảnh đã gỡ
   };
   const onHide = () => flush();
   const onVisibility = () => {

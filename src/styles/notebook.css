@@ -32,13 +32,14 @@ body:is([data-state='lost'], [data-state='loading'], [data-state='compiling'], [
 /* ── Thanh lớp: máy tính đặt dọc bên trái, điện thoại đặt ngang dưới đáy ─────────────── */
 .rail {
   left: var(--gutter);
-  top: 50%;
-  transform: translateY(-50%);
+  /* Ngay dưới đầu trang (tên bức + lật tranh); ui/workshop.js đo đáy của đầu trang vào --rail-top mỗi lần đổi cỡ (tên có thể xuống dòng,
+     mỗi bức một chiều cao). 168px là số dự phòng khi chưa đo. Nội dung dài thì cuộn trong thanh. */
+  top: var(--rail-top, 168px);
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: var(--rail-w);
-  max-height: calc(100vh - 2 * var(--gutter));
+  max-height: calc(100vh - var(--rail-top, 168px) - var(--gutter));
   padding: 14px 14px 12px;
   overflow: auto;
 }

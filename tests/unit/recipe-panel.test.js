@@ -108,6 +108,20 @@ describe('recipe-panel · chép link', () => {
     expect(status.textContent).toBe('');
   });
 
+  it('chép hỏng: cuộn dải thanh lớp tới ô link (scrollIntoView nearest, không cuộn trang theo chiều dọc ép cả khối); chép được thì không cuộn', async () => {
+    const { $, field } = mount(fakeStudio());
+    const scroll = vi.fn();
+    field.scrollIntoView = scroll;
+    stubClipboard(vi.fn(async () => {}));
+    $('[data-recipe-copy]').click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(scroll).not.toHaveBeenCalled();
+    stubClipboard(undefined);
+    $('[data-recipe-copy]').click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(scroll).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+  });
+
   it('công thức rỗng: link không có #r=', async () => {
     const writeText = vi.fn(async () => {});
     stubClipboard(writeText);

@@ -52,6 +52,8 @@ export function createRecipePanel(doc, { t, content = null, studio, win = doc.de
         field.value = url;
         field.hidden = false;
         field.select();
+        // Điện thoại: dải thanh lớp cuộn ngang, ô link nằm cuối dải; kéo nó vào tầm nhìn (nearest: không đổi gì khi đã thấy).
+        field.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
         say(t.recipe.copyFailed);
       }
     },

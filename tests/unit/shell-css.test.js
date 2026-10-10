@@ -119,6 +119,27 @@ describe('shell.css · vùng aria-live', () => {
   });
 });
 
+describe('tools.css · vùng aria-live của mục Công thức (GĐ 9)', () => {
+  it('không có luật :empty nào ẩn vùng bằng display: none hay visibility: hidden (trống thì chỉ bỏ lề)', () => {
+    const emptyRules = blocks(toolsCss).filter((b) => /:empty/.test(b.selectors));
+    expect(emptyRules.length).toBeGreaterThan(0); // .rail-recipe-status:empty, .tool-status:empty…
+    for (const { selectors, body } of emptyRules) expect(body, selectors).not.toMatch(/display:\s*none|visibility:\s*hidden/);
+    for (const sel of ['.rail-recipe-text', '.rail-recipe-status', '.rail-recipe-text:empty', '.rail-recipe-status:empty']) {
+      expect(declarations(sel, toolsCss), sel).not.toMatch(/display:\s*none|visibility:\s*hidden/);
+    }
+  });
+});
+
+describe('notebook.css · vị trí thanh lớp (GĐ 9)', () => {
+  it('máy tính: thanh lớp đứng ngay dưới đầu trang (--rail-top do ui/workshop.js đo), không còn giữa theo chiều dọc', () => {
+    const d = declarationsIn('', '.rail', notebookCss);
+    expect(d).toMatch(/top: var\(--rail-top/);
+    expect(d).not.toMatch(/translateY/);
+    expect(d).toMatch(/max-height: calc\(100vh - var\(--rail-top[^)]*\) - var\(--gutter\)\)/);
+    expect(d).toMatch(/overflow: auto/);
+  });
+});
+
 describe('notebook.css · Bản dịch (GĐ 9)', () => {
   it('.tr-status là vùng aria-live: trống thì chỉ bỏ lề, không display: none hay visibility: hidden (như mọi vùng aria-live)', () => {
     for (const selector of ['.tr-status', '.tr-status:empty']) {

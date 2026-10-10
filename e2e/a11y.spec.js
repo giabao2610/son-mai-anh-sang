@@ -174,17 +174,19 @@ for (const { meta, page: htmlPage } of paintings) {
         const tools = (await page.evaluate(() => window.__sma.tools())).map((x) => x.id);
         const laterTools = tools.slice(tools.indexOf('tung-soi') + 1).map((id) => `button@rail:${id}`);
         const next = (await page.locator('[data-rail] .rail-next').isVisible()) ? ['button@rail'] : [];
+        // GĐ 9: mục Công thức (nút "Chép link công thức") nằm trong thanh lớp, sau Đồ nghề và thanh giờ, trước "Phủ lớp tiếp theo".
+        const recipeStops = ['button@rail'];
         const toolStops = ['input@tool:range', 'button@tool'];
         // Khung hẹp (640px, như điện thoại): thanh giờ ở sau nút nhỏ "◷ 21:00", ô trượt đã mở ở lượt đi trên; Sổ tay thu lại.
         if (dials.length > 0) await expect(page.locator('[data-rail] .dial-chip')).toHaveAttribute('aria-expanded', 'true');
         const narrowDials = dials.length > 0 ? ['button@rail:chip', ...dials.map(() => 'input@rail:range')] : [];
-        const narrow = [...laterTools, ...narrowDials, ...next, 'button@rail', ...toolStops];
+        const narrow = [...laterTools, ...narrowDials, ...recipeStops, ...next, 'button@rail', ...toolStops];
         expect(await tabsFromWeave(narrow.length), 'khung hẹp: từ nút Từng sợi tới bảng của nó').toEqual(narrow);
         // Máy tính: thanh giờ nằm thẳng trong thanh lớp, và Sổ tay (mở lại, đủ chỗ ở 1280px) đứng SAU bảng công cụ.
         await page.setViewportSize({ width: 1280, height: 800 });
         await page.locator(`[data-rail] [data-layer="${meta.layers[0].id}"] .rail-name`).click();
         await expect(page.locator('[data-notebook]')).toBeVisible();
-        const wide = [...laterTools, ...dials.map(() => 'input@rail:range'), ...next, 'button@rail', ...toolStops, 'button@nb'];
+        const wide = [...laterTools, ...dials.map(() => 'input@rail:range'), ...recipeStops, ...next, 'button@rail', ...toolStops, 'button@nb'];
         expect(await tabsFromWeave(wide.length), 'máy tính: từ nút Từng sợi tới bảng của nó, rồi Sổ tay').toEqual(wide);
         // Mũi tên trên thanh đổi sợi đang xem; trình đọc màn hình nghe qua aria-valuetext.
         await range.focus();
