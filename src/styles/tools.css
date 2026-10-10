@@ -214,6 +214,7 @@ body[data-tool] .foot { visibility: hidden; }
   .rail-recipe-tools .rail-title { display: none; }
   .rail-recipe-copy { margin-top: 0; white-space: nowrap; }
   .rail-recipe-status { flex: 0 0 170px; margin: 0; } /* hai ba dòng: chữ chép hỏng không nằm vừa một dòng trên dải 390px */
+  .rail-recipe-status:empty { flex-basis: 0; } /* chưa có gì để nói: không giữ một khoảng trống 170px trên dải */
   .rail-recipe-link { flex-shrink: 0; width: 200px; margin-top: 0; }
 }
 

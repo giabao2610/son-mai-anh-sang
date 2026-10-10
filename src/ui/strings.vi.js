@@ -148,6 +148,8 @@ const t = {
     copy: 'Chép link công thức',
     copied: 'Đã chép link',
     copyFailed: 'Chưa chép được: link ở ô dưới, chọn rồi chép.',
+    /** Không đọc được công thức của cảnh (cảnh vừa gỡ, hay lỗi của xưởng): không có link nào để đưa ra ô. */
+    linkFailed: 'Chưa lấy được công thức của cảnh; chi tiết ở console của trình duyệt.',
     linkLabel: 'Link công thức',
     reset: 'Về nguyên bản',
     /** Dòng tóm tắt đầu thanh lớp; phần bằng 0 bị bỏ. dials: [{ label, text }]. */
@@ -169,6 +171,8 @@ const t = {
     jsOnly: 'Lớp này đổi cảnh bằng JS: trọng số và núm của nó không vào shader.',
     /** Vật của chính lớp mà khung vừa bắt không vẽ (đang ẩn, hay nằm ngoài khung nhìn): không có mã để đọc. */
     notDrawn: 'Vật này không được vẽ ở khung vừa rồi (đang ẩn hay ngoài khung nhìn).',
+    /** Dòng nhắc khi KHÔNG vật nào của lớp được vẽ (thường là lớp đang ở trọng số 0): chưa biết lớp có vào shader hay không. */
+    undrawn: 'Khung vừa rồi không vẽ vật nào của lớp này (lớp đang tắt?), nên chưa biết nó có mặt ở đâu trong mã.',
     failed: 'Chưa dịch được vật này; chi tiết ở console của trình duyệt.',
   },
   /** Sổ tay của một lớp: ba tab Hiểu / Chỉnh / Phá. */

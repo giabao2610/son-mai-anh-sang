@@ -28,6 +28,10 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
   let bound = studio(); // bàn thợ đang vẽ Sổ tay; "Dựng lại cảnh" tạo bàn thợ mới
 
   const notebook = createNotebook(doc, { meta, content, t, studio, ...notebookOptions });
+  // GĐ 9: bàn thợ đổi từ chỗ khác (công thức áp, "Về nguyên bản", Back/Forward, __sma.restore): Sổ tay đọc lại núm, dịch lại Bản dịch đang
+  // mở. Nghe bàn thợ đang có; "Dựng lại cảnh" thì sync() chuyển sang nghe bàn thợ mới.
+  const watch = (s) => s?.onChange?.(() => notebook.sync()) ?? null;
+  let unwatch = watch(bound);
   // Đồ nghề (công cụ học) và thanh trượt của các Dial: chỉ khi có cảnh 3D.
   const tools = interactive ? createRailTools(doc, { t, content, studio }) : null;
   // Công thức (GĐ 9): dòng tóm tắt đầu thanh và nút chép link; cũng chỉ khi có cảnh 3D (công thức là trạng thái của cảnh).
@@ -85,9 +89,11 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
     rail.setNext(nextLayer()?.name ?? null);
     tools?.sync();
     panel?.sync();
-    // Cảnh vừa được dựng lại (bàn thợ mới, thí nghiệm về tắt hết): vẽ lại Sổ tay đang mở theo bàn thợ mới.
+    // Cảnh vừa được dựng lại (bàn thợ mới, thí nghiệm về tắt hết): nghe bàn thợ mới, vẽ lại Sổ tay đang mở theo nó.
     if (s && s !== bound) {
       bound = s;
+      unwatch?.();
+      unwatch = watch(s);
       if (notebook.layer) notebook.show(notebook.layer);
     }
   };
@@ -142,6 +148,8 @@ export function mountWorkshop(doc, { meta, content, t, studio = () => null, onCl
     },
     dispose() {
       stop();
+      unwatch?.();
+      unwatch = null;
       win.removeEventListener('resize', measureTop);
       notebook.dispose();
       rail.el.remove();

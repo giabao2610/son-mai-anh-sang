@@ -24,6 +24,8 @@ function mount(studio, win = window) {
   const $ = (sel) => document.querySelector(sel);
   return { panel, $, status: $('.rail-recipe-status'), field: $('.rail-recipe-link'), text: $('.rail-recipe-text') };
 }
+/** Một khung (rAF giả của vitest: 16 ms): dòng tóm tắt điền ở khung sau show() (F5). */
+const frame = () => vi.advanceTimersByTime(16);
 
 function stubClipboard(writeText) {
   Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: writeText ? { writeText } : undefined });
@@ -35,6 +37,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
   stubClipboard(undefined);
 });
 
@@ -42,6 +45,7 @@ describe('recipe-panel · tóm tắt', () => {
   it('show(): viết tóm tắt theo t.recipe.summary; Dial ghi nhãn của bức và text của bàn thợ', () => {
     const { panel, text, $ } = mount(fakeStudio());
     panel.show();
+    frame();
     expect(text.textContent).toBe('Công thức trong link: 1 lớp đã mài · 2 núm đã chỉnh · Giờ 23:00');
     expect($('[data-recipe-reset]').hidden).toBe(false);
   });
@@ -51,6 +55,7 @@ describe('recipe-panel · tóm tắt', () => {
     studio.counts = { layers: 0, knobs: 0, dials: ['gio'] };
     const { panel, text } = mount(studio);
     panel.show();
+    frame();
     expect(text.textContent).toBe('Công thức trong link: Giờ 23:00');
   });
 
@@ -60,6 +65,7 @@ describe('recipe-panel · tóm tắt', () => {
     panel.sync();
     expect(text.textContent).toBe('');
     panel.show();
+    frame();
     studio.text = 'suong:0';
     studio.counts = { layers: 1, knobs: 0, dials: [] };
     panel.sync();
@@ -74,6 +80,7 @@ describe('recipe-panel · tóm tắt', () => {
     const studio = fakeStudio();
     const { panel, text, $ } = mount(studio);
     panel.show();
+    frame();
     $('[data-recipe-reset]').click();
     await vi.advanceTimersByTimeAsync(0);
     expect(studio.reset).toHaveBeenCalledTimes(1);
@@ -83,13 +90,81 @@ describe('recipe-panel · tóm tắt', () => {
 
   it('vùng aria-live không bao giờ có hidden', () => {
     const { panel, text, status } = mount(fakeStudio());
-    for (const step of [() => {}, () => panel.show(), () => panel.hide()]) {
+    for (const step of [() => {}, () => panel.show(), frame, () => panel.hide()]) {
       step();
       expect(text.hasAttribute('hidden')).toBe(false);
       expect(status.hasAttribute('hidden')).toBe(false);
       expect(text.getAttribute('aria-live')).toBe('polite');
       expect(status.getAttribute('aria-live')).toBe('polite');
     }
+  });
+});
+
+describe('recipe-panel · a11y (GĐ 9, đợt sửa cuối)', () => {
+  it('show(): vùng aria-live chưa điền ngay (thanh lớp vừa bỏ hidden cùng nhịp), điền ở khung sau (F5)', () => {
+    const { panel, text, $ } = mount(fakeStudio());
+    panel.show();
+    expect(text.textContent).toBe('');
+    frame();
+    expect(text.textContent).toBe('Công thức trong link: 1 lớp đã mài · 2 núm đã chỉnh · Giờ 23:00');
+    expect($('[data-recipe-reset]').hidden).toBe(false);
+  });
+
+  it('show() rồi hide() trước khung sau: không điền gì', () => {
+    const { panel, text } = mount(fakeStudio());
+    panel.show();
+    panel.hide();
+    frame();
+    expect(text.textContent).toBe('');
+  });
+
+  it('sync() với cùng một câu tóm tắt không ghi lại vùng aria-live (F4)', () => {
+    const studio = fakeStudio('suong:0');
+    studio.counts = { layers: 1, knobs: 0, dials: [] };
+    const { panel, text } = mount(studio);
+    panel.show();
+    frame();
+    const watch = new MutationObserver(() => {});
+    watch.observe(text, { childList: true, characterData: true, subtree: true });
+    studio.text = 'suong:0.5'; // công thức đổi (kéo công tắc, núm), câu tóm tắt vẫn "1 lớp đã mài"
+    panel.sync();
+    studio.text = 'suong:0.4';
+    panel.sync();
+    expect(watch.takeRecords()).toHaveLength(0);
+    studio.counts = { layers: 2, knobs: 0, dials: [] };
+    studio.text = 'suong:0.4,mat-nuoc:0';
+    panel.sync();
+    expect(watch.takeRecords().length).toBeGreaterThan(0);
+    expect(text.textContent).toBe('Công thức trong link: 2 lớp đã mài');
+    watch.disconnect();
+  });
+
+  it('"Về nguyên bản" đang giữ focus mà ẩn đi: focus sang nút chép link, không rơi về <body> (F3)', async () => {
+    const { panel, $ } = mount(fakeStudio());
+    panel.show();
+    frame();
+    const reset = $('[data-recipe-reset]');
+    reset.focus();
+    reset.click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reset.hidden).toBe(true);
+    expect(document.activeElement).toBe($('[data-recipe-copy]'));
+  });
+
+  it('không có nút chép link trong trang: focus sang tên lớp đầu tiên của thanh lớp (F3)', async () => {
+    document.body.replaceChildren();
+    const panel = createRecipePanel(document, { t, content, studio: () => fakeStudio(), win: window });
+    const first = Object.assign(document.createElement('button'), { className: 'rail-name' });
+    const rail = document.createElement('nav');
+    rail.append(panel.summary, first);
+    document.body.append(rail);
+    panel.show();
+    frame();
+    const reset = document.querySelector('[data-recipe-reset]');
+    reset.focus();
+    reset.click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(document.activeElement).toBe(first);
   });
 });
 
@@ -147,5 +222,33 @@ describe('recipe-panel · chép link', () => {
     expect(select).toHaveBeenCalled();
     expect(status.textContent).toBe(t.recipe.copyFailed);
     expect(field.getAttribute('aria-label')).toBe(t.recipe.linkLabel);
+  });
+
+  it('chép hỏng: focus vào ô link TRƯỚC khi chọn chữ (Safari chỉ chọn trong ô đang có focus), một console.warn kèm lỗi (C1)', async () => {
+    const blocked = new Error('bị chặn');
+    stubClipboard(vi.fn(async () => { throw blocked; }));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { $, field } = mount(fakeStudio());
+    const calls = [];
+    vi.spyOn(field, 'focus').mockImplementation(() => calls.push('focus'));
+    vi.spyOn(field, 'select').mockImplementation(() => calls.push('select'));
+    $('[data-recipe-copy]').click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(calls).toEqual(['focus', 'select']);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]).toContain(blocked);
+  });
+
+  it('recipe() của bàn thợ ném lỗi: không có lời hứa hỏng lơ lửng; một console.warn, dòng trạng thái báo, ô link không hiện (C1)', async () => {
+    stubClipboard(vi.fn(async () => {}));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const studio = fakeStudio();
+    studio.recipe = () => { throw new Error('cảnh đã gỡ'); };
+    const { $, status, field } = mount(studio);
+    $('[data-recipe-copy]').click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(status.textContent).toBe(t.recipe.linkFailed);
+    expect(field.hidden).toBe(true);
   });
 });

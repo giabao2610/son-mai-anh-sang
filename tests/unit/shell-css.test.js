@@ -128,6 +128,14 @@ describe('tools.css · vùng aria-live của mục Công thức (GĐ 9)', () => 
       expect(declarations(sel, toolsCss), sel).not.toMatch(/display:\s*none|visibility:\s*hidden/);
     }
   });
+  it('điện thoại: dòng trạng thái trống không giữ chỗ 170px trên dải thanh lớp (flex-basis 0 khi :empty, C2)', () => {
+    const phone = '(max-width: 640px)';
+    expect(declarationsIn(phone, '.rail-recipe-status', toolsCss)).toMatch(/flex: 0 0 170px/);
+    expect(declarationsIn(phone, '.rail-recipe-status:empty', toolsCss)).toMatch(/flex-basis: 0/);
+    // :empty có thêm một lớp giả nên thắng ở đâu cũng được; đứng ngay sau luật 170px thì đọc từ trên xuống là thấy
+    const order = blocks(toolsCss).filter((b) => b.media === phone).map((b) => b.selectors);
+    expect(order.indexOf('.rail-recipe-status:empty')).toBeGreaterThan(order.indexOf('.rail-recipe-status'));
+  });
 });
 
 describe('notebook.css · vị trí thanh lớp (GĐ 9)', () => {

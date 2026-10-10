@@ -37,8 +37,21 @@ const studioRecipe = { text: '' }; // công thức mà bàn thợ giả báo (te
 function fakeStudio() {
   const weights = { cot: 1, hai: 1, ba: 1 };
   const on = new Set();
+  const listeners = new Set();
+  let knobValues = { size: 0.5 };
   return {
     calls: [],
+    /** studio.onChange (GĐ 9): báo sau mỗi thay đổi của người xem; trả hàm bỏ nghe. */
+    onChange(cb) {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    listeners,
+    /** Thay đổi từ chỗ khác ("Về nguyên bản", link dán, Back/Forward, __sma): núm đổi rồi báo, như studio.restore. */
+    external(values) {
+      knobValues = { ...knobValues, ...values };
+      listeners.forEach((cb) => cb());
+    },
     layers: () => [
       { id: 'cot', knobs: [{ id: 'size', kind: 'number', via: 'uniform', min: 0, max: 1, step: 0.1 }], experiments: [], readouts: [] },
       { id: 'hai', knobs: [], experiments: [{ id: 'pha', kind: 'toggle' }, { id: 'so', kind: 'compare' }], readouts: [{ id: 'dinh', unit: '' }] },
@@ -49,7 +62,7 @@ function fakeStudio() {
       this.calls.push(['setWeight', id, v, options]);
       weights[id] = v;
     },
-    knobs: () => ({ size: 0.5 }),
+    knobs: () => ({ ...knobValues }),
     setKnob: vi.fn(async () => {}),
     experiment: (layerId, id) => on.has(`${layerId}.${id}`),
     toggleExperiment: vi.fn(async (layerId, id, value) => (value ? on.add(`${layerId}.${id}`) : on.delete(`${layerId}.${id}`))),
@@ -367,6 +380,77 @@ describe('Sổ tay', () => {
     workshop.dispose();
   });
 
+  it('bàn thợ đổi từ chỗ khác (Về nguyên bản, link dán, Back/Forward, __sma): núm đọc lại giá trị thật; Bản dịch đang mở thì dịch lại (F1)', async () => {
+    const studio = fakeStudio();
+    const { workshop, notebook } = mount(studio);
+    workshop.open({ grind: true });
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(knobsModule.mountKnobs).toHaveBeenCalledTimes(1));
+    const pane = knobsModule.mountKnobs.mock.results[0].value;
+    studio.external({ size: 0.2 });
+    expect(pane.refresh).toHaveBeenLastCalledWith({ size: 0.2 });
+    pane.refresh.mockClear();
+    studio.external({}); // thay đổi khác (trọng số, Dial): núm không đổi thì ô núm không vẽ lại
+    expect(pane.refresh).not.toHaveBeenCalled();
+
+    await vi.waitFor(() => expect(notebook.querySelector('[data-code-translate]')).not.toBeNull());
+    notebook.querySelector('[data-code-translate]').click();
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-status').textContent).toContain('dòng có lớp'));
+    expect(studio.translation).toHaveBeenCalledTimes(1);
+    vi.useFakeTimers();
+    studio.external({ size: 0.9 }); // núm 'rebuild' áp qua restore(): mã có thể đổi
+    await vi.advanceTimersByTimeAsync(300);
+    expect(studio.translation).toHaveBeenCalledTimes(2);
+    workshop.dispose();
+    expect(studio.listeners.size, 'gỡ xưởng thì bỏ nghe').toBe(0);
+  });
+
+  it('Sổ tay đang đóng lúc bàn thợ đổi: mở lại đúng lớp ấy thì núm đã là giá trị thật, không phải giá trị cũ (F1)', async () => {
+    const studio = fakeStudio();
+    const { workshop, rail, notebook } = mount(studio);
+    workshop.open({ grind: true });
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(knobsModule.mountKnobs).toHaveBeenCalledTimes(1));
+    const pane = knobsModule.mountKnobs.mock.results[0].value;
+    notebook.querySelector('.nb-close').click();
+    studio.external({ size: 0.1 });
+    rail.querySelector('[data-layer="cot"] .rail-name').click();
+    expect(knobsModule.mountKnobs).toHaveBeenCalledTimes(1); // cùng ô núm, không dựng lại
+    expect(pane.refresh).toHaveBeenLastCalledWith({ size: 0.1 });
+    workshop.dispose();
+  });
+
+  it('"Dựng lại cảnh" (bàn thợ mới): nghe bàn thợ mới, bỏ nghe bàn thợ cũ (F1)', () => {
+    let current = fakeStudio();
+    const workshop = mountWorkshop(document, { meta, content, t, studio: () => current, notebook: { loadCode, loadKnobs } });
+    const old = current;
+    expect(old.listeners.size).toBe(1);
+    current = null; // mất GPU: chưa có bàn thợ
+    workshop.open();
+    current = fakeStudio();
+    workshop.open(); // (vòng rAF gọi sync mỗi khung)
+    expect([old.listeners.size, current.listeners.size]).toEqual([0, 1]);
+    workshop.dispose();
+    expect(current.listeners.size).toBe(0);
+  });
+
+  it('mất GPU sau khi Sổ tay dựng nút "Bản dịch": bấm thì báo "chưa dịch được" kèm lỗi tiếng Việt, không TypeError (C5)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let current = fakeStudio();
+    const workshop = mountWorkshop(document, { meta, content, t, studio: () => current, notebook: { loadCode, loadKnobs } });
+    const notebook = document.querySelector('[data-notebook]');
+    workshop.open({ grind: true });
+    notebook.querySelector('[data-tab="chinh"]').click();
+    await vi.waitFor(() => expect(notebook.querySelector('[data-code-translate]')).not.toBeNull());
+    current = null;
+    notebook.querySelector('[data-code-translate]').click();
+    await vi.waitFor(() => expect(notebook.querySelector('.tr-status').textContent).toBe(t.translation.failed));
+    const err = warn.mock.calls.find(([text]) => text === 'Sổ tay: không dịch được:')?.[1];
+    expect(err?.message).toBe('Cảnh chưa sẵn sàng: không có bản dịch');
+    warn.mockRestore();
+    workshop.dispose();
+  });
+
   it('Chỉnh: Tweakpane tải hỏng → báo lỗi thay vì "Đang tải…" mãi; mở lại tab thì tải lại', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     loadKnobs.mockRejectedValueOnce(new Error('Failed to fetch dynamically imported module: knobs-abc.js'));
@@ -541,13 +625,16 @@ describe('Sổ tay', () => {
 });
 
 describe('mục Công thức (GĐ 9)', () => {
-  it('open({ recipe }): thanh lớp mở, KHÔNG lớp nào tween về 0, dòng tóm tắt hiện', () => {
+  it('open({ recipe }): thanh lớp mở, KHÔNG lớp nào tween về 0; dòng tóm tắt trống ngay lúc mở, điền ở khung sau (F5: VoiceOver)', () => {
+    vi.useFakeTimers();
     studioRecipe.text = 'hai:0';
     const studio = fakeStudio();
     const { workshop, rail, $ } = mount(studio);
     workshop.open({ recipe: true });
     expect(rail.hidden).toBe(false);
     expect(studio.calls).toEqual([]);
+    expect($('.rail-recipe-text').textContent, 'cùng nhịp với lúc bỏ hidden: chưa điền').toBe('');
+    vi.advanceTimersByTime(16); // một khung
     expect($('.rail-recipe-text').textContent).toBe('Công thức trong link: 1 lớp đã mài');
     expect(workshop.layer).toBe(null);
     workshop.dispose();
