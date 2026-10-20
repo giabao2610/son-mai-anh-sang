@@ -52,6 +52,34 @@ function threeChunks() {
   return files.filter((f) => /^three-[\w-]+\.js$/.test(f));
 }
 
+/**
+ * Chữ của huy hiệu khi đo khung chữ trên điện thoại dọc (sửa sau GĐ 9). Ở tầng tĩnh huy hiệu chỉ ghi "Tranh tĩnh"; lúc cảnh 3D chạy nó dài
+ * hơn, và máy yếu bị hạ nấc thì dài nhất. `label: null` giữ chữ thật của trang. `whole`: link lật tranh phải đủ chữ. Với huy hiệu dài
+ * nhất trên màn hẹp, header chỉ còn chừng 100px, nên một link dài được cắt bằng dấu …; điều cấm là tràn ra ngoài màn hình.
+ */
+const BADGE_LABELS = [
+  { label: null, whole: true },
+  { label: `${t.tierName.webgpu} · ${t.levelName.vua}`, whole: true },
+  { label: `${t.tierName.webgl2} · ${t.levelName.thap} · ${t.badge.steps(9)}`, whole: false },
+];
+/** Gợi ý dài nhất trong các bức (content.hint của Bức 4). Chép lại ở đây vì content.vi.js import sơ đồ bằng ?raw, mà Node của Playwright không nạp được. */
+const LONG_HINT = 'Chạm để rắc thóc · giữ để gà mẹ gọi con · kéo để bước vào tranh';
+
+/**
+ * Chạy trong trang: các phần tử của khung chữ ra ngoài bề ngang màn hình, và các link lật tranh bị cắt bằng dấu ….
+ * body có overflow: hidden, nên phần tràn không cuộn tới được mà mất hẳn, còn body.scrollWidth vẫn bằng bề ngang: phải đo mép từng phần tử.
+ */
+function frameFit() {
+  const vw = document.documentElement.clientWidth;
+  const name = (el) => [el.tagName.toLowerCase(), ...(el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean)].join('.');
+  const outside = [...document.querySelectorAll('.frame *')].filter((el) => {
+    const box = el.getBoundingClientRect();
+    return box.width > 0 && box.height > 0 && (box.left < -0.5 || box.right > vw + 0.5);
+  }).map(name);
+  const cut = [...document.querySelectorAll('.series a')].filter((a) => a.scrollWidth > a.clientWidth).map((a) => a.textContent.trim());
+  return { outside, cut };
+}
+
 let log;
 test.beforeEach(({ page }) => {
   log = collectConsole(page);
@@ -122,6 +150,25 @@ for (const { meta, page: htmlPage, lang, ciWebgpuSmoke } of paintings) {
       await waitForSettled(page);
       await expect(page.locator('[data-seal]')).toHaveText('18 tháng Tám · Bính Ngọ');
     });
+
+    // Điện thoại dọc (sửa sau GĐ 9): Bức 2, Bức 3 có ba link lật tranh, và khung chữ từng rộng hơn màn hình 99–182px: huy hiệu, con dấu
+    // và gợi ý bị đẩy ra ngoài mép phải.
+    for (const width of [360, 390]) {
+      test(`khung ${width}px: khung chữ nằm trọn trong bề ngang, cả với gợi ý dài và huy hiệu dài nhất; link lật tranh đủ chữ`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 800 });
+        await page.goto(urlOf(htmlPage, 'static'));
+        expect((await waitForSettled(page)).state).toBe('static');
+        await page.locator('[data-hint]').evaluate((el, text) => { el.textContent = text; }, LONG_HINT);
+        for (const { label, whole } of BADGE_LABELS) {
+          if (label) await page.locator('[data-badge]').evaluate((el, text) => { el.textContent = text; }, label);
+          const { outside, cut } = await page.evaluate(frameFit);
+          const badge = label ?? t.tierName.static;
+          expect(outside, `ra ngoài màn hình ${width}px (huy hiệu "${badge}")`).toEqual([]);
+          if (whole) expect(cut, `link lật tranh bị cắt (huy hiệu "${badge}")`).toEqual([]);
+        }
+        expect(log.errors).toEqual([]);
+      });
+    }
   });
 
   test.describe(`${meta.title} · 3D`, () => {

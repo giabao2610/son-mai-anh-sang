@@ -105,6 +105,14 @@ describe('shell.css · khung chữ', () => {
     // điện thoại 390px), đầu và chân trang chỉ còn cột 1 nên huy hiệu và con dấu lệch vào giữa màn hình máy tính.
     expect(declarations('.frame > *')).toMatch(/grid-column: 1(;|\s|$)/);
   });
+
+  it('không rộng hơn màn hình (sửa sau GĐ 9): cột minmax(0, 1fr), header co được, dải link lật tranh xuống hàng', () => {
+    // Cột ngầm là auto: nó giãn theo min-content của khối rộng nhất. header (phần tử flex của .top) giữ min-width: auto nên không co
+    // dưới dải link không xuống dòng: Bức 3 có ba link, .top rộng 549px trên điện thoại 390px, huy hiệu và con dấu ra ngoài màn hình.
+    expect(declarations('.frame')).toMatch(/grid-template-columns: minmax\(0, 1fr\)/);
+    expect(declarations('.top > header')).toMatch(/min-width: 0(;|\s|$)/);
+    expect(declarations('.series')).toMatch(/flex-wrap: wrap/);
+  });
 });
 
 describe('shell.css · vùng aria-live', () => {
