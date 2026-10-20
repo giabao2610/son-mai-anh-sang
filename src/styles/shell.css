@@ -73,12 +73,15 @@ body[data-state='static'] [data-stage] { display: none; }
 
 /* ── Lớp 2: chữ ───────────────────────────────────────────────────────────────────────── */
 /* Lưới 3 hàng: đầu (tên + huy hiệu) · giữa (ghi chú tầng tĩnh) · chân (thơ + con dấu).
-   pointer-events: none để thao tác kéo/chạm rơi xuống canvas; chỗ bấm được thì bật lại. */
+   pointer-events: none để thao tác kéo/chạm rơi xuống canvas; chỗ bấm được thì bật lại.
+   Cột tường minh minmax(0, 1fr) (sửa sau GĐ 9): cột ngầm là auto, giãn theo min-content của khối rộng nhất. Dải link lật tranh từng
+   kéo cả khung rộng hơn điện thoại 99–182px; body không cuộn, nên huy hiệu, con dấu và gợi ý mất ngoài mép phải. */
 .frame {
   position: fixed;
   inset: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   padding: var(--gutter);
   pointer-events: none;
@@ -98,6 +101,8 @@ body[data-state='static'] [data-stage] { display: none; }
   justify-content: space-between;
   gap: 16px;
 }
+/* header là phần tử flex: giữ min-width: auto thì nó không co dưới min-content của mình, và đẩy huy hiệu ra ngoài màn hình. */
+.top > header { min-width: 0; }
 
 header small {
   display: block;
@@ -113,17 +118,18 @@ header h1 {
   letter-spacing: 0.01em;
 }
 
-/* Lật tranh (GĐ 6): link tới bức kề trước và kề sau, HTML thuần nên chạy cả ở tầng tĩnh. Một hàng; màn hẹp thì cắt bằng dấu …
+/* Lật tranh (GĐ 6): link tới bức kề trước và kề sau, HTML thuần nên chạy cả ở tầng tĩnh. Màn hẹp thì link xuống hàng (sửa sau GĐ 9:
+   ba link mà cắt cả ba bằng dấu … thì còn "Phò…"); mỗi link vẫn liền một dòng, chỉ link dài hơn cả hàng mới cắt bằng dấu ….
    .frame tắt pointer-events cho canvas: link tự bật lại (khoảng trống của hàng vẫn là của canvas).
    Không transform hay filter: header nằm trong khung có con position: fixed. ?poster ẩn cả .frame nên không cần luật riêng. */
 .series {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 2px 12px;
   margin-top: 6px;
   font: 400 13px/1.4 var(--sans);
   color: var(--bac-la);
   white-space: nowrap;
-  min-width: 0;
 }
 .series a {
   pointer-events: auto;
